@@ -18,14 +18,36 @@ where the head hides it: the graze, two lips frames, the turn facing the camera)
     head_delta(key)       the head's (dx, dy) against the standing frame by the ear bases: the same for the eye and the
                           muzzle wherever the head only moves (walk, ear, chew, lips); a rotated head (graze 02-05,
                           turn 02-06) needs a picture of its own
+    rig(key)              the frame's body points from rig.json (rig.py, checked by eye on its page): hip, back,
+                          withers, chest, tail, ear_left, ear_right, eye, eye2, poll, muzzle, each (x, y) or None. The
+                          one source a generator is to hang its pieces from (docs/sprite-tools.md "Catching what the
+                          user caught"); a head piece is placed by the move (and turn) that takes the standing frame's
+                          ear_left, eye and muzzle onto the frame's
 """
-import json, os, sys
+import hashlib, json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from contact import ORDER, load  # noqa: F401  (re-exported for the generators)
+from contact import GAME, ORDER, load  # noqa: F401  (re-exported for the generators)
 
 HORNS = json.load(open(os.path.join(HERE, "horn_bases.json")))
 ANCHORS = json.load(open(os.path.join(HERE, "anchors.json")))
+_RIG = None
+_RIG_SEEN = set()
+
+
+def rig(key):
+    """A frame's body points from rig.json: {name: (x, y) or None}. Says once per frame (on stderr) when its picture is
+    not the one the points were measured and checked on (a game update: rig.py check, then the page again)."""
+    global _RIG
+    if _RIG is None:
+        _RIG = json.load(open(os.path.join(HERE, "rig.json"), encoding="utf-8"))["frames"]
+    f = _RIG[key]
+    if key not in _RIG_SEEN:
+        _RIG_SEEN.add(key)
+        if hashlib.sha1(open(os.path.join(GAME, key + ".png"), "rb").read()).hexdigest() != f.get("sha1"):
+            print(f"anatomy.rig: {key}'s picture is not the one its points were measured on (python -I tools/skins/donkey/rig.py check)",
+                  file=sys.stderr)
+    return {n: (tuple(p) if p else None) for n, p in f["points"].items()}
 
 
 def body(key, donkey):

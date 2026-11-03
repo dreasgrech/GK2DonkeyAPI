@@ -384,15 +384,42 @@ frames where that showed and was patched after the user saw it. And no automatic
 the outline changes shape: on the walk and lips 04-08, `body()`, the rump match and the rump's own outline (read over
 different rows) disagree by a column or two (2026-11-03), so a rule tuned on one clip moves a piece in another.
 
-### 1. One set of body points (proposed, not built)
+### 1. One set of body points (built 2026-11-03: `tools/skins/donkey/rig.py`, `rig.json`; not used by a generator yet)
 
-One file of points per frame, read by every generator instead of its own rules: the body's hip (x) and back level
-over the rump (y), the collar (the strap's rear edge), the chest's front; the head's ear bases (`HORNS`), the eye
-(`ANCHORS`) and its pose (a translation of the standing head in the walk, ear, chew and lips frames; a head of its own in
-graze 02-05 and turn 02-06). Coordinates only, no game art, so it lives in the repo
-(`tools/skins/donkey/rig.json`, `anatomy.py` the reader). The tables above then go: a body piece hangs from the hip
-and back, a head piece from the head's points, nothing reads the eye for the body or the ears for the back. Moving a
-skin onto it is one regeneration and a page review per skin; Hellfire first (the most rules of its own).
+The user: "yes build the body points and the page because any tool that can help us accelerate this work is vital".
+`tools/skins/donkey/rig.json` holds, per frame of the probe's donkey frames, eleven points, each read by a generator
+today through a rule of its own (the table above), so each retires rules or tables when the generators move onto it:
+
+| Point | What it is | Read today by (retires) |
+|---|---|---|
+| `hip` | the rump's end at back level | Royal Parade's cloth, Armored's plates, Hellfire's cracks (`body()`'s hip, `body_by_rump`, `HIP_FROM_RUMP`) |
+| `back` | the back's level over the rump, 4 columns before the hip | Hellfire's cracks, Royal Parade's back level |
+| `withers` | the back where the collar strap's rear edge crosses it | Royal Parade's cloth front, Armored's plates; the back line per column stays a pixel read, from here to the hip only (the turned head's far ear can't become the back again) |
+| `chest` | the breast collar's lowest point (Armored `cutter()`'s `end_x` and `last`) | Armored's chest plate and skirt front (`chest_delta`, `LOW_HEAD`) |
+| `tail` | where the tail leaves the rump | Hellfire's rump fill and devil's tail (`STILL_RUMP`, the tail finder), Armored's tail guard |
+| `ear_left`, `ear_right` | the ear bases, left and right on the picture | Hellfire's horns (`EAR_FRAMES`, `HORN_FRAMES`, `NO_TUFT`), Royal Parade's crown, Armored's helmet |
+| `eye`, `eye2` | the eye; both where the face looks at us | Hellfire's glow, Royal Parade's crown (`MOVED_HEAD`), Armored's head |
+| `poll` | the top of the head between the ears | a crown, a plume (`BETWEEN_EARS`, `TURN_NUDGE`, `PLUME_SHIFT`) |
+| `muzzle` | the nose's tip; the light muzzle's lowest pixel where the face looks at us | Armored's visor, any head piece's turn |
+
+A head piece is placed by the move (and in graze 02-05 and turn 02-06 the turn) that takes the standing frame's
+`ear_left`, `eye` and `muzzle` onto the frame's: no pose is stored, it is derived from those three points, so no
+generator works one out of its own again. Each frame also keeps the SHA-1 of the picture it was measured on, and
+`anatomy.rig(key)` (the reader) says on stderr when the game's frame is not that one any more (a game update).
+
+`python -I tools/skins/donkey/rig.py build` fills it in. A frame whose donkey is pixel for pixel an earlier frame's
+behind x 50 copies that frame's hip, back and tail (20 of the 41 body frames); a clip whose rump outline reads one
+shift in every frame takes one hip for the whole clip (the walk: 66 in all eight, where the measure picked per frame
+alternated 65, 65, 66, 66, 65, 65, 66, 66, Royal Parade's shipped jitter again); the eyes and ears of the frames the
+user approved in Hellfire's rounds come from its tables. Where the measures disagree, the frame is flagged with each
+one's answer: 18 frames (the walk's hip, graze 02-03, lips 04-08 where the tail lifts and the rump's top edge moves,
+lips 04-05's shut eye taken from the standing one, turn 04-06's muzzle). `rig.py check` lists every move of the
+rump's points between neighbour frames (none allowed where the rump doesn't move; the walk's bob and lips 04-08 are
+what it lists now), a frame whose picture changed, and a frame with an earlier one's body but other rump points;
+`rig.py sheet <out.png> [--keys ...] [--scale 8]` draws the points on the frames (outside the repo only).
+
+The order to move the generators onto it, each a regeneration and a page review, after the user's pass on the page:
+Hellfire (the most rules of its own), Royal Parade, Armored; the consistency check (2) run on each before the page.
 
 ### 2. The check (built 2026-11-03: `tools/skins/consistency.py`)
 
@@ -419,12 +446,28 @@ design; the check only says where the skin moves and the donkey doesn't.
 To do: run it in every generator after `review.write_all` and in `preview.py`, with each skin's lines the user has
 judged "by design" kept in a list next to the generator; then into `tools/release-scans.sh`.
 
-### 3. The points checked once by eye (proposed, not built)
+### 3. The points checked once by eye (built 2026-11-03: `rig.py page`)
 
-A local page like the skins preview: every distinct pose (30 bodies: 11 of the 41 body frames are, behind the neck,
-pixel for pixel an earlier one) with today's measured points drawn on it, zoomed; a wrong point dragged to its place;
-"Save" downloads `rig.json`. Most points are already right, so the work is looking and fixing the few; who does it is
-open (the user, or me with the check as the judge and the user's look at the end).
+`python -I tools/skins/donkey/rig.py page` writes `BepInEx\GK2-asset-probe\rig.html` (the template is
+`tools/skins/donkey/rig_page.html`; the built page carries the game's frames, so it stays in the probe folder):
+
+- the frames listed flagged first (with what the measures said), then by clip; a frame with an earlier one's body
+  is shown under it, and its rump's points follow the earlier frame's when that one is edited;
+- the frame zoomed (8 by default) with the standing frame faintly underneath (or the previous one), every point drawn
+  and named; a point is dragged, or picked (click, Tab) and moved a pixel with the arrow keys; the hip's measures are
+  hollow rings and buttons, so one is taken with a click, and one button sets the hip's column for the whole clip
+  (the walk's one hip); a copy's hip, back or tail moved moves its source's and every copy's; [ and ] go through the
+  frames, C ticks "looks right",
+  Space plays the clip with the points on it;
+- the clip as a strip with its points, and a table of every point's offset from the standing frame's per frame, a
+  move of the rump's points between neighbour frames in red;
+- **Save rig.json** downloads the file (Copy JSON puts it on the clipboard); the changes are kept in the browser
+  until then; `python -I tools/skins/donkey/rig.py import <file>` checks the file (every frame, every point two
+  whole numbers on the canvas or none), lists each change and writes the repo's `rig.json`.
+
+Tested 2026-11-03: the page renders in a headless Chrome (the list, the editor, the strip); `import` listed exactly a
+moved point and a ticked frame, refused a broken point, and the original went back byte for byte. The first thing
+asked of the user on the page is one moved point saved and sent, so the loop is proved before any checking.
 
 ### Outside tools, looked at again (2026-11-03)
 
@@ -436,7 +479,7 @@ open (the user, or me with the check as the judge and the user's look at the end
 
 ### Open (the user's)
 
-- Build the points file (1) and its page (3)?
+- The user's pass on the page (the 18 flagged frames first), then the generators onto the points, Hellfire first.
 - Royal Parade's 15 frames (the cloth in the walk, graze 02-05, lips 04-08) and Armored's five lines: fix or by design?
 
 ## Open

@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Donkey body points</title>
+<style>
+  :root { --bg: #1d1f22; --panel: #26292d; --line: #3a3e44; --text: #e6e6e6; --dim: #9aa0a6; --accent: #f0c040; --bad: #ff6b6b; --ok: #7bd389; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 10px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0 8px 0 0; }
+  button { background: #33373c; color: var(--text); border: 1px solid #4a4f56; border-radius: 6px; padding: 6px 11px; font: inherit; cursor: pointer; }
+  button:hover { background: #3d4248; }
+  button.primary { background: #5a4a10; border-color: var(--accent); }
+  .first { margin: 10px 16px; padding: 10px 14px; border: 1px solid var(--accent); border-radius: 8px; background: #2f2a16; }
+  .first b { color: var(--accent); }
+  main { display: grid; grid-template-columns: 260px minmax(0, 1fr) 300px; gap: 12px; padding: 0 16px 16px; }
+  aside, .side { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; overflow: auto; max-height: calc(100vh - 160px); }
+  .group { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; margin: 10px 4px 4px; }
+  .fr { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 3px 6px; border-radius: 4px; cursor: pointer; color: var(--text); }
+  .fr:hover { background: #32363b; }
+  .fr.sel { background: #44391a; }
+  .fr .tag { color: var(--dim); font-size: 12px; }
+  .fr .flag { color: var(--accent); }
+  .fr .ok { color: var(--ok); }
+  .fr.copy { padding-left: 20px; color: var(--dim); }
+  .center { min-width: 0; }
+  .editor { position: relative; background: #44503f; border: 1px solid var(--line); border-radius: 8px; overflow: auto; }
+  canvas { image-rendering: pixelated; display: block; }
+  .bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+  .bar label { color: var(--dim); }
+  .flags { color: var(--accent); margin: 6px 0; white-space: pre-wrap; }
+  .pt { display: grid; grid-template-columns: 14px 78px 1fr; gap: 6px; align-items: center; padding: 4px; border-radius: 4px; cursor: pointer; }
+  .pt.sel { background: #3a3420; }
+  .sw { width: 12px; height: 12px; border-radius: 2px; }
+  .pt .xy { font-variant-numeric: tabular-nums; }
+  .pt .about { grid-column: 2 / 4; color: var(--dim); font-size: 12px; }
+  .cands button { font-size: 12px; padding: 2px 6px; margin: 2px 4px 0 0; }
+  .strip { display: flex; gap: 6px; overflow-x: auto; padding: 6px 0; }
+  .strip canvas { border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+  .strip canvas.sel { border-color: var(--accent); }
+  table { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+  td, th { border: 1px solid var(--line); padding: 2px 5px; text-align: center; }
+  td.jump { color: var(--bad); font-weight: 600; }
+  .note { color: var(--dim); font-size: 12px; }
+  .toast { position: fixed; right: 16px; bottom: 16px; background: #2f3a2c; border: 1px solid var(--ok); padding: 8px 12px; border-radius: 6px; display: none; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } aside, .side { max-height: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Donkey body points</h1>
+  <button class="primary" id="save">Save rig.json</button>
+  <button id="copy">Copy JSON</button>
+  <button id="load">Load a rig.json…</button>
+  <input type="file" id="file" accept=".json,application/json" hidden>
+  <button id="reset">Forget my unsaved changes</button>
+  <span class="note" id="status"></span>
+</header>
+<div class="first"><b>First, to test saving:</b> move any point a pixel (click it, then an arrow key), press <b>Save rig.json</b>
+  and send me the file from your Downloads folder. If that works, check the <b>flagged</b> frames first: each lists what the
+  measures disagreed on, and the hollow markers are their answers (click one to take it). Tick <b>looks right</b> on each
+  frame you have checked. Keys: arrows move the selected point, Tab picks the next point, [ and ] go to the previous and
+  next frame, C ticks the frame, Space plays the clip. Your changes are kept in this browser until you save.</div>
+<main>
+  <aside id="list"></aside>
+  <section class="center">
+    <div class="bar">
+      <strong id="title"></strong>
+      <label><input type="checkbox" id="checked"> looks right</label>
+      <label><input type="checkbox" id="ghost" checked> standing frame underneath</label>
+      <label><input type="checkbox" id="ghostprev"> previous frame underneath</label>
+      <label><input type="checkbox" id="labels" checked> names</label>
+      <label>zoom <select id="zoom"><option>6</option><option selected>8</option><option>10</option><option>12</option></select></label>
+    </div>
+    <div class="flags" id="flags"></div>
+    <div class="editor"><canvas id="cv"></canvas></div>
+    <div class="bar"><strong>The clip</strong> <button id="play">Play</button> <span class="note">the points drawn on every frame; click a frame to edit it</span></div>
+    <div class="strip" id="strip"></div>
+    <div class="bar"><strong>Each point against the standing frame</strong> <span class="note">(x, y offsets; red: the rump's points move between neighbour frames)</span></div>
+    <div id="trail"></div>
+  </section>
+  <section class="side" id="points"></section>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const DATA = __DATA__;
+const POINTS = DATA.points, BODY = DATA.body, REAR = DATA.rear, COLOURS = DATA.colours, ABOUT = DATA.about;
+const ORDER = DATA.order, CLIPS = DATA.clips, STANDING = DATA.standing;
+const STORE = "gk2-donkey-rig-" + DATA.build;
+let rig = JSON.parse(JSON.stringify(DATA.rig));
+try { const saved = localStorage.getItem(STORE); if (saved) { rig = JSON.parse(saved); note("your unsaved changes from before are back"); } } catch (e) {}
+const imgs = {};
+let cur = ORDER.find(k => rig.frames[k].flags.length && !rig.frames[k].checked) || STANDING, sel = "hip", playing = null, drag = false;
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+function note(t) { document.getElementById("status").textContent = t; }
+function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => el.style.display = "none", 2600); }
+function keep() { try { localStorage.setItem(STORE, JSON.stringify(rig)); } catch (e) {} }
+function copiesOf(k) { return ORDER.filter(o => rig.frames[o].same_body_as === k); }
+function edited(k) { return JSON.stringify(rig.frames[k].points) !== JSON.stringify(DATA.rig.frames[k].points); }
+function clipOf(k) { return /\d\d$/.test(k) ? k.replace(/_\d\d$/, "") : k; }
+function short(k) { return k.replace("bdy_", "").replace("hed_", "head ").replace("_left", ""); }
+
+function loadImages(done) {
+  let n = ORDER.length;
+  for (const k of ORDER) { const im = new Image(); im.onload = () => { if (--n === 0) done(); }; im.src = DATA.frames[k]; imgs[k] = im; }
+}
+
+function list() {
+  const el = document.getElementById("list"); el.innerHTML = "";
+  const add = (k, cls) => {
+    const f = rig.frames[k], b = document.createElement("button");
+    b.className = "fr" + (k === cur ? " sel" : "") + (cls || "");
+    b.innerHTML = short(k) + " " + (f.checked ? '<span class="ok">✓</span>' : "") + (f.flags.length ? ' <span class="flag">●</span>' : "")
+      + (edited(k) ? ' <span class="tag">edited</span>' : "") + (f.same_body_as ? ' <span class="tag">= ' + short(f.same_body_as) + "</span>" : "");
+    b.onclick = () => { cur = k; draw(); };
+    el.appendChild(b);
+  };
+  const flagged = ORDER.filter(k => rig.frames[k].flags.length && !rig.frames[k].checked);
+  if (flagged.length) { el.insertAdjacentHTML("beforeend", '<div class="group">flagged: look first (' + flagged.length + ")</div>"); flagged.forEach(k => add(k)); }
+  for (const c of CLIPS) {
+    el.insertAdjacentHTML("beforeend", '<div class="group">' + short(c.name) + "</div>");
+    for (const k of c.frames) add(k, rig.frames[k].same_body_as ? " copy" : "");
+  }
+}
+
+function drawFrame(c, k, S, opts) {
+  const g = c.getContext("2d");
+  c.width = 96 * S; c.height = 96 * S;
+  g.imageSmoothingEnabled = false;
+  g.fillStyle = "#44503f"; g.fillRect(0, 0, c.width, c.height);
+  if (opts.ghost && k !== STANDING) { g.globalAlpha = 0.32; g.drawImage(imgs[STANDING], 0, 0, 96 * S, 96 * S); g.globalAlpha = 1; }
+  if (opts.ghostPrev) { const ks = clipFrames(k), i = ks.indexOf(k); if (i > 0) { g.globalAlpha = 0.32; g.drawImage(imgs[ks[i - 1]], 0, 0, 96 * S, 96 * S); g.globalAlpha = 1; } }
+  g.globalAlpha = opts.ghost || opts.ghostPrev ? 0.85 : 1; g.drawImage(imgs[k], 0, 0, 96 * S, 96 * S); g.globalAlpha = 1;
+  const f = rig.frames[k];
+  if (opts.cands) for (const [name, c2] of Object.entries(f.candidates || {})) {
+    if (name !== "hip") continue;
+    const y = f.points.hip ? f.points.hip[1] : 0;
+    for (const v of new Set(Object.values(c2))) { g.strokeStyle = COLOURS.hip; g.lineWidth = 2; g.beginPath(); g.arc((v + .5) * S, (y + .5) * S, S * .7, 0, 7); g.stroke(); }
+  }
+  for (const n of POINTS) {
+    const p = f.points[n]; if (!p) continue;
+    const x = (p[0] + .5) * S, y = (p[1] + .5) * S, r = Math.max(3, S * .9);
+    g.strokeStyle = "#000"; g.lineWidth = 4; g.beginPath(); g.moveTo(x - r, y); g.lineTo(x + r, y); g.moveTo(x, y - r); g.lineTo(x, y + r); g.stroke();
+    g.strokeStyle = COLOURS[n]; g.lineWidth = n === opts.sel ? 3 : 1.6; g.beginPath(); g.moveTo(x - r, y); g.lineTo(x + r, y); g.moveTo(x, y - r); g.lineTo(x, y + r); g.stroke();
+    if (n === opts.sel) { g.strokeStyle = "#fff"; g.lineWidth = 1; g.strokeRect(p[0] * S, p[1] * S, S, S); }
+    if (opts.labels) { g.font = "12px system-ui"; g.fillStyle = "#000"; g.fillText(n, x + r + 3, y - 3); g.fillStyle = COLOURS[n]; g.fillText(n, x + r + 2, y - 4); }
+  }
+}
+
+function clipFrames(k) { const c = CLIPS.find(c => c.frames.includes(k)); return c ? c.frames : [k]; }
+
+function draw() {
+  const S = +document.getElementById("zoom").value, f = rig.frames[cur];
+  document.getElementById("title").textContent = short(cur) + (f.same_body_as ? "  (the body of " + short(f.same_body_as) + ": moving its hip, back or tail moves them there and in every copy)" : "");
+  document.getElementById("checked").checked = !!f.checked;
+  document.getElementById("flags").textContent = f.flags.join("\n");
+  drawFrame(cv, cur, S, { ghost: document.getElementById("ghost").checked, ghostPrev: document.getElementById("ghostprev").checked,
+                          labels: document.getElementById("labels").checked, sel, cands: true });
+  points(); strip(); trail(); list();
+}
+
+function points() {
+  const el = document.getElementById("points"), f = rig.frames[cur]; el.innerHTML = "<strong>Points</strong>";
+  for (const n of POINTS) {
+    const p = f.points[n], d = document.createElement("div");
+    d.className = "pt" + (n === sel ? " sel" : "");
+    d.innerHTML = '<span class="sw" style="background:' + COLOURS[n] + '"></span><span>' + n + '</span><span class="xy">' + (p ? p[0] + ", " + p[1] : "none") + "</span>"
+      + '<span class="about">' + ABOUT[n] + "</span>";
+    if (n === "hip" && f.candidates && f.candidates.hip) {
+      const cd = document.createElement("div"); cd.className = "cands about";
+      cd.textContent = "measures: ";
+      for (const [src, v] of Object.entries(f.candidates.hip)) {
+        const b = document.createElement("button"); b.textContent = src + " " + v;
+        b.onclick = (e) => { e.stopPropagation(); setPoint("hip", [v, f.points.hip[1]]); };
+        cd.appendChild(b);
+      }
+      d.appendChild(cd);
+    }
+    if (n === "hip" && p && clipFrames(cur).length > 1) {
+      const b = document.createElement("button"); b.className = "about";
+      b.textContent = "this hip column (" + p[0] + ") for the whole clip";
+      b.onclick = (e) => {
+        e.stopPropagation();
+        for (const k of clipFrames(cur)) { const q = rig.frames[k].points.hip; if (q) setPoint("hip", [p[0], q[1]], k); }
+        toast("hip column " + p[0] + " in every frame of " + short(clipOf(cur)));
+      };
+      d.appendChild(b);
+    }
+    if (!p) { const b = document.createElement("button"); b.textContent = "place it"; b.className = "about";
+      b.onclick = (e) => { e.stopPropagation(); setPoint(n, [48, 40]); }; d.appendChild(b); }
+    else if (n === "eye2") { const b = document.createElement("button"); b.textContent = "none here"; b.className = "about";
+      b.onclick = (e) => { e.stopPropagation(); setPoint(n, null); }; d.appendChild(b); }
+    d.onclick = () => { sel = n; draw(); };
+    el.appendChild(d);
+  }
+}
+
+function setPoint(n, p, k) {
+  k = k || cur;
+  // a copy's rump points are its source's: an edit there goes to the source and so to every copy
+  if (REAR.includes(n) && rig.frames[k].same_body_as) k = rig.frames[k].same_body_as;
+  rig.frames[k].points[n] = p ? [Math.round(p[0]), Math.round(p[1])] : null;
+  if (REAR.includes(n)) for (const c of copiesOf(k)) rig.frames[c].points[n] = p ? [Math.round(p[0]), Math.round(p[1])] : null;
+  keep(); draw();
+}
+
+function strip() {
+  const el = document.getElementById("strip"); el.innerHTML = "";
+  for (const k of clipFrames(cur)) {
+    const c = document.createElement("canvas"); drawFrame(c, k, 2, { sel: null });
+    c.className = k === cur ? "sel" : ""; c.title = short(k); c.onclick = () => { cur = k; draw(); };
+    el.appendChild(c);
+  }
+}
+
+function trail() {
+  const ks = clipFrames(cur), s = rig.frames[STANDING].points;
+  let h = "<table><tr><th></th>" + ks.map(k => "<th>" + short(k).split("_").pop() + "</th>").join("") + "</tr>";
+  for (const n of POINTS) {
+    h += '<tr><th style="color:' + COLOURS[n] + '">' + n + "</th>";
+    ks.forEach((k, i) => {
+      const p = rig.frames[k].points[n], q = s[n];
+      const prev = i > 0 ? rig.frames[ks[i - 1]].points[n] : null;
+      const jump = REAR.includes(n) && p && prev && (p[0] !== prev[0] || p[1] !== prev[1]);
+      h += "<td" + (jump ? ' class="jump"' : "") + ">" + (p && q ? (p[0] - q[0]) + "," + (p[1] - q[1]) : p ? p.join(",") : "-") + "</td>";
+    });
+    h += "</tr>";
+  }
+  document.getElementById("trail").innerHTML = h + "</table>";
+}
+
+function at(e) {
+  const S = +document.getElementById("zoom").value, r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) / S - .5, (e.clientY - r.top) / S - .5];
+}
+cv.onmousedown = (e) => {
+  const [x, y] = at(e), f = rig.frames[cur];
+  let best = null, bd = 2.5;
+  for (const n of POINTS) { const p = f.points[n]; if (!p) continue; const d = Math.hypot(p[0] - x, p[1] - y); if (d < bd) { bd = d; best = n; } }
+  if (best) { sel = best; drag = true; draw(); }
+};
+window.onmousemove = (e) => { if (!drag) return; const [x, y] = at(e); const p = rig.frames[cur].points[sel];
+  const q = [Math.round(x), Math.round(y)]; if (!p || p[0] !== q[0] || p[1] !== q[1]) setPoint(sel, q); };
+window.onmouseup = () => { drag = false; };
+window.onkeydown = (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  const f = rig.frames[cur], p = f.points[sel];
+  const mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+  if (mv && p) { e.preventDefault(); setPoint(sel, [p[0] + mv[0], p[1] + mv[1]]); }
+  else if (e.key === "Tab") { e.preventDefault(); const i = POINTS.indexOf(sel); sel = POINTS[(i + (e.shiftKey ? POINTS.length - 1 : 1)) % POINTS.length]; draw(); }
+  else if (e.key === "[" || e.key === "]") { const i = ORDER.indexOf(cur); cur = ORDER[(i + (e.key === "]" ? 1 : ORDER.length - 1)) % ORDER.length]; draw(); }
+  else if (e.key === "c" || e.key === "C") { f.checked = !f.checked; keep(); draw(); }
+  else if (e.key === " ") { e.preventDefault(); play(); }
+};
+document.getElementById("checked").onchange = (e) => { rig.frames[cur].checked = e.target.checked; keep(); draw(); };
+for (const id of ["ghost", "ghostprev", "labels", "zoom"]) document.getElementById(id).onchange = draw;
+function play() {
+  if (playing) { clearInterval(playing); playing = null; document.getElementById("play").textContent = "Play"; return; }
+  const ks = clipFrames(cur); let i = ks.indexOf(cur);
+  document.getElementById("play").textContent = "Stop";
+  playing = setInterval(() => { i = (i + 1) % ks.length; cur = ks[i]; draw(); }, 125);
+}
+document.getElementById("play").onclick = play;
+function json() { return JSON.stringify(rig, null, 1) + "\n"; }
+document.getElementById("save").onclick = () => {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([json()], { type: "application/json" }));
+  a.download = "rig.json"; document.body.appendChild(a); a.click(); a.remove();
+  toast("Saved rig.json to your Downloads folder: send it to me");
+};
+document.getElementById("copy").onclick = async () => {
+  try { await navigator.clipboard.writeText(json()); toast("Copied"); }
+  catch (e) { const t = document.createElement("textarea"); t.value = json(); document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); toast("Copied"); }
+};
+document.getElementById("load").onclick = () => document.getElementById("file").click();
+document.getElementById("file").onchange = (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(t => { try { const r = JSON.parse(t); if (!r.frames) throw 0; rig = r; keep(); draw(); toast("Loaded " + f.name); } catch (x) { toast("Not a rig.json"); } });
+};
+document.getElementById("reset").onclick = () => {
+  if (!confirm("Forget every change you haven't saved, and go back to the points this page was built with?")) return;
+  try { localStorage.removeItem(STORE); } catch (e) {}
+  rig = JSON.parse(JSON.stringify(DATA.rig)); draw(); toast("Back to the page's points");
+};
+loadImages(draw);
+</script>
+</body>
+</html>

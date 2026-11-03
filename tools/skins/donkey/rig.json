@@ -1,0 +1,2532 @@
+{
+ "version": 1,
+ "canvas": [
+  96,
+  96
+ ],
+ "about": {
+  "hip": "the rump's end at back level: body pieces hang from it",
+  "back": "the back's level over the rump, 4 columns before the hip",
+  "withers": "the back where the collar strap's rear edge crosses it: the body's columns start here",
+  "chest": "the breast collar's lowest point, the strap's end under the chest",
+  "tail": "where the tail leaves the rump",
+  "ear_left": "the left ear's base on the picture",
+  "ear_right": "the right ear's base on the picture",
+  "eye": "the eye (the left one where the face looks at us)",
+  "eye2": "the other eye where the face looks at us, else none",
+  "poll": "the top of the head between the ears",
+  "muzzle": "the nose's tip (the lowest point of the face where it looks at us)"
+ },
+ "frames": {
+  "bdy_static_left": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": null,
+   "head_from": null,
+   "checked": false,
+   "sha1": "c1d37d9e7ce2dc2ebb05d5e090444605f4e711eb"
+  },
+  "bdy_walk_left_01": {
+   "points": {
+    "hip": [
+     66,
+     42
+    ],
+    "back": [
+     62,
+     42
+    ],
+    "withers": [
+     45,
+     39
+    ],
+    "chest": [
+     34,
+     52
+    ],
+    "tail": [
+     64,
+     47
+    ],
+    "ear_left": [
+     34,
+     36
+    ],
+    "ear_right": [
+     39,
+     37
+    ],
+    "eye": [
+     30,
+     40
+    ],
+    "eye2": null,
+    "poll": [
+     37,
+     36
+    ],
+    "muzzle": [
+     21,
+     42
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 65,
+     "rump match": 65,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 65, rump match 65, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     -4,
+     2
+    ]
+   },
+   "checked": false,
+   "sha1": "610f29580d37d97a573bec5456425a93ee7662f9"
+  },
+  "bdy_walk_left_02": {
+   "points": {
+    "hip": [
+     66,
+     41
+    ],
+    "back": [
+     62,
+     41
+    ],
+    "withers": [
+     44,
+     38
+    ],
+    "chest": [
+     33,
+     51
+    ],
+    "tail": [
+     64,
+     46
+    ],
+    "ear_left": [
+     33,
+     36
+    ],
+    "ear_right": [
+     38,
+     37
+    ],
+    "eye": [
+     29,
+     40
+    ],
+    "eye2": null,
+    "poll": [
+     36,
+     36
+    ],
+    "muzzle": [
+     20,
+     42
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 65,
+     "rump match": 65,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 65, rump match 65, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     -5,
+     2
+    ]
+   },
+   "checked": false,
+   "sha1": "f7817fe68cef1622777ece144cd123e731ace2cc"
+  },
+  "bdy_walk_left_03": {
+   "points": {
+    "hip": [
+     66,
+     40
+    ],
+    "back": [
+     62,
+     40
+    ],
+    "withers": [
+     43,
+     39
+    ],
+    "chest": [
+     32,
+     52
+    ],
+    "tail": [
+     64,
+     45
+    ],
+    "ear_left": [
+     32,
+     37
+    ],
+    "ear_right": [
+     37,
+     38
+    ],
+    "eye": [
+     28,
+     41
+    ],
+    "eye2": null,
+    "poll": [
+     35,
+     37
+    ],
+    "muzzle": [
+     19,
+     43
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 66,
+     "rump match": 65,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 66, rump match 65, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     -6,
+     3
+    ]
+   },
+   "checked": false,
+   "sha1": "718e9dda0f04e612463fc74836919a27d6f7fc80"
+  },
+  "bdy_walk_left_04": {
+   "points": {
+    "hip": [
+     66,
+     41
+    ],
+    "back": [
+     62,
+     41
+    ],
+    "withers": [
+     44,
+     39
+    ],
+    "chest": [
+     33,
+     52
+    ],
+    "tail": [
+     64,
+     46
+    ],
+    "ear_left": [
+     33,
+     36
+    ],
+    "ear_right": [
+     38,
+     37
+    ],
+    "eye": [
+     29,
+     40
+    ],
+    "eye2": null,
+    "poll": [
+     36,
+     36
+    ],
+    "muzzle": [
+     20,
+     42
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 66,
+     "rump match": 64,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 66, rump match 64, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     -5,
+     2
+    ]
+   },
+   "checked": false,
+   "sha1": "0eec98099c02fc0d69785ea46f6d68eef0b4873d"
+  },
+  "bdy_walk_left_05": {
+   "points": {
+    "hip": [
+     66,
+     42
+    ],
+    "back": [
+     62,
+     42
+    ],
+    "withers": [
+     45,
+     39
+    ],
+    "chest": [
+     34,
+     52
+    ],
+    "tail": [
+     64,
+     47
+    ],
+    "ear_left": [
+     34,
+     36
+    ],
+    "ear_right": [
+     39,
+     37
+    ],
+    "eye": [
+     30,
+     40
+    ],
+    "eye2": null,
+    "poll": [
+     37,
+     36
+    ],
+    "muzzle": [
+     21,
+     42
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 65,
+     "rump match": 64,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 65, rump match 64, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     -4,
+     2
+    ]
+   },
+   "checked": false,
+   "sha1": "9cc2dabf43cd5fb6dae9216ac6e3ef8daaedad6f"
+  },
+  "bdy_walk_left_06": {
+   "points": {
+    "hip": [
+     66,
+     41
+    ],
+    "back": [
+     62,
+     41
+    ],
+    "withers": [
+     44,
+     38
+    ],
+    "chest": [
+     33,
+     51
+    ],
+    "tail": [
+     64,
+     46
+    ],
+    "ear_left": [
+     33,
+     36
+    ],
+    "ear_right": [
+     38,
+     37
+    ],
+    "eye": [
+     29,
+     40
+    ],
+    "eye2": null,
+    "poll": [
+     36,
+     36
+    ],
+    "muzzle": [
+     20,
+     42
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 65,
+     "rump match": 64,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 65, rump match 64, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     -5,
+     2
+    ]
+   },
+   "checked": false,
+   "sha1": "52d47105cac139ea59519880aeb6d61006dfb967"
+  },
+  "bdy_walk_left_07": {
+   "points": {
+    "hip": [
+     66,
+     40
+    ],
+    "back": [
+     62,
+     40
+    ],
+    "withers": [
+     43,
+     39
+    ],
+    "chest": [
+     32,
+     52
+    ],
+    "tail": [
+     64,
+     45
+    ],
+    "ear_left": [
+     32,
+     37
+    ],
+    "ear_right": [
+     37,
+     38
+    ],
+    "eye": [
+     28,
+     41
+    ],
+    "eye2": null,
+    "poll": [
+     35,
+     37
+    ],
+    "muzzle": [
+     19,
+     43
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 66,
+     "rump match": 65,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 66, rump match 65, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     -6,
+     3
+    ]
+   },
+   "checked": false,
+   "sha1": "6dc94ea7a1c0df23a466c3135433a22bfd4f1b3e"
+  },
+  "bdy_walk_left_08": {
+   "points": {
+    "hip": [
+     66,
+     41
+    ],
+    "back": [
+     62,
+     41
+    ],
+    "withers": [
+     44,
+     39
+    ],
+    "chest": [
+     33,
+     52
+    ],
+    "tail": [
+     64,
+     46
+    ],
+    "ear_left": [
+     33,
+     36
+    ],
+    "ear_right": [
+     38,
+     37
+    ],
+    "eye": [
+     29,
+     40
+    ],
+    "eye2": null,
+    "poll": [
+     36,
+     36
+    ],
+    "muzzle": [
+     20,
+     42
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 66,
+     "rump match": 65,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 66, rump match 65, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     -5,
+     2
+    ]
+   },
+   "checked": false,
+   "sha1": "d23025f9c932c640b6b57ef58a522e0a0a9de567"
+  },
+  "bdy_ear_left_01": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "c1d37d9e7ce2dc2ebb05d5e090444605f4e711eb"
+  },
+  "bdy_ear_left_02": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "7417011b616df58a1ff81824c139584398e12fc3"
+  },
+  "bdy_ear_left_03": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "60d8156f02a7265012c332eb5f75cebb9e35cd8f"
+  },
+  "bdy_ear_left_04": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "963415092033d23184aa622546ee35d3f74b0263"
+  },
+  "bdy_ear_left_05": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "e9c83688c5cb50ca095c5ba0cb7918afa113323d"
+  },
+  "bdy_graze_left_01": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": null,
+   "checked": false,
+   "sha1": "c1d37d9e7ce2dc2ebb05d5e090444605f4e711eb"
+  },
+  "bdy_graze_left_02": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     45,
+     40
+    ],
+    "chest": [
+     35,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     31,
+     40
+    ],
+    "ear_right": [
+     36,
+     41
+    ],
+    "eye": [
+     27,
+     44
+    ],
+    "eye2": null,
+    "poll": [
+     34,
+     40
+    ],
+    "muzzle": [
+     22,
+     47
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 66,
+     "rump match": 65,
+     "rump outline": 65
+    }
+   },
+   "flags": [
+    "hip: body() 66, rump match 65, rump outline 65; the clip's rump outline reads one shift in every frame: 65 in all"
+   ],
+   "same_body_as": null,
+   "head_from": null,
+   "checked": false,
+   "sha1": "e5b7d77cf42ec9c4fde615762669454348e3f7b0"
+  },
+  "bdy_graze_left_03": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     44,
+     41
+    ],
+    "chest": [
+     35,
+     53
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     26,
+     41
+    ],
+    "ear_right": [
+     30,
+     43
+    ],
+    "eye": [
+     25,
+     53
+    ],
+    "eye2": null,
+    "poll": [
+     28,
+     41
+    ],
+    "muzzle": [
+     20,
+     54
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 66,
+     "rump match": 65,
+     "rump outline": 65
+    }
+   },
+   "flags": [
+    "hip: body() 66, rump match 65, rump outline 65; the clip's rump outline reads one shift in every frame: 65 in all"
+   ],
+   "same_body_as": null,
+   "head_from": null,
+   "checked": false,
+   "sha1": "7925b5873d70c2987148df1d9ffd091268e24743"
+  },
+  "bdy_graze_left_04": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     42,
+     41
+    ],
+    "chest": [
+     36,
+     54
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     28,
+     45
+    ],
+    "ear_right": [
+     32,
+     46
+    ],
+    "eye": [
+     27,
+     57
+    ],
+    "eye2": null,
+    "poll": [
+     30,
+     45
+    ],
+    "muzzle": [
+     23,
+     58
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_graze_left_03",
+   "head_from": null,
+   "checked": false,
+   "sha1": "4eb426c99c53cc257acb36745c672af768ac3ac7"
+  },
+  "bdy_graze_left_05": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     42,
+     42
+    ],
+    "chest": [
+     36,
+     54
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     28,
+     45
+    ],
+    "ear_right": [
+     32,
+     46
+    ],
+    "eye": [
+     27,
+     57
+    ],
+    "eye2": null,
+    "poll": [
+     30,
+     45
+    ],
+    "muzzle": [
+     23,
+     58
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_graze_left_03",
+   "head_from": null,
+   "checked": false,
+   "sha1": "1934130ab2898fe0297f4e785fa3dba26e259951"
+  },
+  "bdy_chew_left_01": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "c237ba6892fabda23e8306e0af39c02c8570775e"
+  },
+  "bdy_chew_left_02": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     26,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "2c3e221939b0717cc1a13869572215b0e760150a"
+  },
+  "bdy_chew_left_03": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "20697be2b3f4ffb795c99fd66cc3a462434c97a0"
+  },
+  "bdy_lips_left_01": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "624dfaaa9da8adb40b9484a92474ee974f8a2377"
+  },
+  "bdy_lips_left_02": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "0a45b602c8669c2c02f553e2621380e8bce13ea3"
+  },
+  "bdy_lips_left_03": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "c1d37d9e7ce2dc2ebb05d5e090444605f4e711eb"
+  },
+  "bdy_lips_left_04": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 66,
+     "rump match": 65,
+     "rump outline": 65
+    }
+   },
+   "flags": [
+    "hip: body() 66, rump match 65, rump outline 65",
+    "eye: none found here (a blink?), the standing one moved with the head"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "8793c4371d79db8ce56c59aa396a0da46683ac23"
+  },
+  "bdy_lips_left_05": {
+   "points": {
+    "hip": [
+     66,
+     42
+    ],
+    "back": [
+     62,
+     42
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     33
+    ],
+    "ear_right": [
+     43,
+     34
+    ],
+    "eye": [
+     34,
+     37
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     33
+    ],
+    "muzzle": [
+     25,
+     39
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 66,
+     "rump match": 65,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 66, rump match 65, rump outline 66",
+    "eye: none found here (a blink?), the standing one moved with the head"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     -1
+    ]
+   },
+   "checked": false,
+   "sha1": "75c5e82e89d464b96224e6de72f612024d90049c"
+  },
+  "bdy_lips_left_06": {
+   "points": {
+    "hip": [
+     66,
+     42
+    ],
+    "back": [
+     62,
+     42
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 67,
+     "rump match": 65,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 67, rump match 65, rump outline 66"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "193ced643a55f5e5b95ac0b115389b2bc5b9fc92"
+  },
+  "bdy_lips_left_07": {
+   "points": {
+    "hip": [
+     66,
+     42
+    ],
+    "back": [
+     62,
+     42
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 66,
+     "rump match": 65,
+     "rump outline": 66
+    }
+   },
+   "flags": [
+    "hip: body() 66, rump match 65, rump outline 66"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "f34f0b0629e60926776ab4c00aa0fb0838f1467b"
+  },
+  "bdy_lips_left_08": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     41
+    ]
+   },
+   "candidates": {
+    "hip": {
+     "body()": 66,
+     "rump match": 65,
+     "rump outline": 65
+    }
+   },
+   "flags": [
+    "hip: body() 66, rump match 65, rump outline 65"
+   ],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "de0d759b8f32db8f2907ff2e575fce1d21f53bef"
+  },
+  "bdy_lips_left_09": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     41
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "02142ccc986b35510677e45fb1de18e695038c10"
+  },
+  "bdy_lips_left_10": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     41
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "a147313da3a808901083c1a488c6386e3161a51a"
+  },
+  "bdy_lips_left_11": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": null,
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "5408b9864da3d6cec4920aa00cd1d2139e52886b"
+  },
+  "bdy_lips_left_12": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "c1d37d9e7ce2dc2ebb05d5e090444605f4e711eb"
+  },
+  "bdy_lips_left_13": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": {
+    "frame": "bdy_static_left",
+    "delta": [
+     0,
+     0
+    ]
+   },
+   "checked": false,
+   "sha1": "c1d37d9e7ce2dc2ebb05d5e090444605f4e711eb"
+  },
+  "bdy_turn_left_01": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": null,
+   "checked": false,
+   "sha1": "c1d37d9e7ce2dc2ebb05d5e090444605f4e711eb"
+  },
+  "bdy_turn_left_02": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     37
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     37,
+     35
+    ],
+    "ear_right": [
+     42,
+     36
+    ],
+    "eye": [
+     36,
+     40
+    ],
+    "eye2": null,
+    "poll": [
+     40,
+     35
+    ],
+    "muzzle": [
+     26,
+     43
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": null,
+   "checked": false,
+   "sha1": "68c242369e324981ee8f0a1f317585fffe5d8008"
+  },
+  "bdy_turn_left_03": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     36
+    ],
+    "chest": [
+     36,
+     52
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     32,
+     36
+    ],
+    "ear_right": [
+     38,
+     36
+    ],
+    "eye": [
+     38,
+     42
+    ],
+    "eye2": null,
+    "poll": [
+     35,
+     36
+    ],
+    "muzzle": [
+     29,
+     48
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": "bdy_static_left",
+   "head_from": null,
+   "checked": false,
+   "sha1": "005675867808814f3508d9c6bd94a325e273a102"
+  },
+  "bdy_turn_left_04": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     40,
+     48
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     32,
+     34
+    ],
+    "ear_right": [
+     42,
+     34
+    ],
+    "eye": [
+     32,
+     41
+    ],
+    "eye2": [
+     39,
+     41
+    ],
+    "poll": [
+     37,
+     34
+    ],
+    "muzzle": [
+     33,
+     52
+    ]
+   },
+   "candidates": {},
+   "flags": [
+    "muzzle: the face looks at us, the lowest pixel of its light muzzle taken"
+   ],
+   "same_body_as": "bdy_static_left",
+   "head_from": null,
+   "checked": false,
+   "sha1": "36b6205f2c749416ce1f636faf8b3358336d081a"
+  },
+  "bdy_turn_left_05": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     40,
+     48
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     32,
+     33
+    ],
+    "ear_right": [
+     42,
+     33
+    ],
+    "eye": [
+     33,
+     41
+    ],
+    "eye2": [
+     39,
+     41
+    ],
+    "poll": [
+     37,
+     33
+    ],
+    "muzzle": [
+     34,
+     52
+    ]
+   },
+   "candidates": {},
+   "flags": [
+    "muzzle: the face looks at us, the lowest pixel of its light muzzle taken"
+   ],
+   "same_body_as": "bdy_static_left",
+   "head_from": null,
+   "checked": false,
+   "sha1": "aa47cc03689628033d99b8987d2aeedac1111f05"
+  },
+  "bdy_turn_left_06": {
+   "points": {
+    "hip": [
+     65,
+     41
+    ],
+    "back": [
+     61,
+     41
+    ],
+    "withers": [
+     47,
+     39
+    ],
+    "chest": [
+     40,
+     48
+    ],
+    "tail": [
+     63,
+     45
+    ],
+    "ear_left": [
+     32,
+     33
+    ],
+    "ear_right": [
+     42,
+     33
+    ],
+    "eye": [
+     33,
+     41
+    ],
+    "eye2": [
+     39,
+     41
+    ],
+    "poll": [
+     37,
+     33
+    ],
+    "muzzle": [
+     34,
+     52
+    ]
+   },
+   "candidates": {},
+   "flags": [
+    "muzzle: the face looks at us, the lowest pixel of its light muzzle taken"
+   ],
+   "same_body_as": "bdy_static_left",
+   "head_from": null,
+   "checked": false,
+   "sha1": "2abe4c34a89b17bd75582758fd7afd7233986cba"
+  },
+  "hed_static_down": {
+   "points": {
+    "hip": null,
+    "back": null,
+    "withers": null,
+    "chest": null,
+    "tail": null,
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": null,
+   "head_from": null,
+   "checked": false,
+   "sha1": "3d784a404c45f1733f6b0092857f344826246c03"
+  },
+  "hed_static_down_02": {
+   "points": {
+    "hip": null,
+    "back": null,
+    "withers": null,
+    "chest": null,
+    "tail": null,
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": null,
+   "head_from": null,
+   "checked": false,
+   "sha1": "222c18f06c9a513daf9282404e6081bb5576842f"
+  },
+  "hed_static_down_03": {
+   "points": {
+    "hip": null,
+    "back": null,
+    "withers": null,
+    "chest": null,
+    "tail": null,
+    "ear_left": [
+     38,
+     34
+    ],
+    "ear_right": [
+     43,
+     35
+    ],
+    "eye": [
+     34,
+     38
+    ],
+    "eye2": null,
+    "poll": [
+     41,
+     34
+    ],
+    "muzzle": [
+     25,
+     40
+    ]
+   },
+   "candidates": {},
+   "flags": [],
+   "same_body_as": null,
+   "head_from": null,
+   "checked": false,
+   "sha1": "f9ee475ce5bd007c7f1ab95ca1c7337dfb33238b"
+  }
+ }
+}

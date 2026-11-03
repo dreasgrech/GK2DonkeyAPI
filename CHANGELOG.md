@@ -279,7 +279,21 @@ Development:
   kept as shipped), Armored 5 (graze 02-05's lames seam and hem, lips 04's tail guard, fitted to the lifted tail), for the user to judge. The
   investigation behind it: the three generators find the body with rules of their own and carry 15 tables of frames
   named by hand where a rule failed; one set of body points for all of them (`rig.json`) and a page to check them
-  once are proposed, not built.
+  once are proposed (built since: the next entry).
+- **The donkey's body points, and a page to check them** (2026-11-03, the user: "yes build the body points and the
+  page because any tool that can help us accelerate this work is vital"; docs/sprite-tools.md "Catching what the user
+  caught" 1 and 3). `tools/skins/donkey/rig.json`: per frame the hip, back, withers, chest, tail, both ear bases, the
+  eye (and the second one where the face looks at us), the poll and the muzzle, with the SHA-1 of the frame they were
+  measured on; `anatomy.rig(key)` reads it (and says when the game's frame changed). `tools/skins/donkey/rig.py`:
+  `build` fills it in (a frame with an earlier one's body behind x 50 copies its rump points, 20 of 41; a clip whose
+  rump outline reads one shift takes one hip, the walk 66 in all eight where the per-frame pick alternated 65 and
+  66; Hellfire's approved eye and ear tables; the frames where the measures disagree flagged with each answer, 18),
+  `check` (rump points moving between neighbour frames, changed frames), `sheet` (the points drawn, outside the repo),
+  `page` (`BepInEx\GK2-asset-probe\rig.html` from `rig_page.html`: flagged frames first, the frame zoomed over the
+  standing one, drag or arrow keys, the measures as rings to pick, the clip played with its points, every point's
+  offset per frame, Save as a download) and `import` (checks a saved file, lists each change, writes `rig.json`). The
+  page renders headless; import listed a moved point and a ticked frame, refused a broken point, and put the original
+  back byte for byte. No generator reads the points yet: that waits for the user's pass on the page.
 - **A one-run probe for a walled-in landing, taken out again** (2026-11-02; F11 1785/1, the same in the rerun: the yard
   test's jump at the ruins sent back to the take-off spot). The trace: the run started 1.1 east of the yard's box
   between two rock walls the test doesn't know, went over a knee-high stone and came down in a gap between the ruin
