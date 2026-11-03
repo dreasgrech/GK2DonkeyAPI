@@ -1,7 +1,8 @@
 """Shapes for drawing a skin's pieces in code (docs/sprite-tools.md "Catching what the user caught" 4): a tapered
 stroke (a hat's point, a horn, a strap) along a polyline or a curve, a polygon filled, the ring just outside a shape
 (its outline), a shape lit from the top left, a small bell, a pose (a shape drawn on one frame moved and turned onto
-another by two points), and a picture written from pixels. Pixels are {(x, y): (r, g, b, a)} on the frame's canvas;
+another by two points), a hanging part's swing (a pendulum over a clip, the parts of a picture that hang free moved
+each by its own), and a picture written from pixels. Pixels are {(x, y): (r, g, b, a)} on the frame's canvas;
 a ramp is [shade, base, light]. First used for the Jester (tools/skins/jester/draw_jester.py); tools/skins/pixgrid.py
 is the way to touch the result up pixel by pixel.
 """
@@ -118,6 +119,47 @@ def pose(src_a, src_b, dst_a, dst_b):
 def side(p, a, b):
     """Which side of the line a-b a point lies on (positive: to the right going from a to b, in the picture)."""
     return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])
+
+
+def pendulum(i, phase, amp=2, period=8):
+    """A hanging part's swing in frame i of a clip 'period' frames long (the walk's 8): across by amp times a sine over
+    the clip, a row up at the ends of its arc when amp is 2 or more (five places in all), a pixel a frame. phase: whole
+    frames behind the clip's start, so the parts swing in turn (half frames made them jump two pixels at once). Moved
+    by the frame-to-frame lag, the Jester's bells had shown two places ("more framerate", the user, 2026-11-03)."""
+    x = int(round(amp * math.sin(2 * math.pi * (i + phase) / period)))
+    return x, (-1 if amp >= 2 and abs(x) >= amp else 0)
+
+
+def hanging(px, free):
+    """The parts of a picture that hang free (a fringe's tassels, a hem's point, a bell): its pixels for which
+    free((x, y)) is true (lambda p: p[1] >= 58: from row 58 down), split into the ones touching (corner to corner
+    too), the frontmost (smallest x) first."""
+    left = {p for p in px if free(p)}
+    parts = []
+    while left:
+        todo, part = [left.pop()], set()
+        while todo:
+            x, y = todo.pop()
+            part.add((x, y))
+            for q in [(x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]:
+                if q in left:
+                    left.remove(q)
+                    todo.append(q)
+        parts.append(part)
+    return sorted(parts, key=min)
+
+
+def swing(px, free, moves):
+    """A picture with each of its hanging parts (hanging(px, free), frontmost first) moved by its own of 'moves'
+    ((dx, dy), one per part); the rest kept, a moved pixel drawn over a kept one."""
+    parts = hanging(px, free)
+    if len(moves) != len(parts):
+        raise ValueError(f"swing: {len(moves)} moves for {len(parts)} hanging parts")
+    out = {p: c for p, c in px.items() if not free(p)}
+    for part, (dx, dy) in zip(parts, moves):
+        for x, y in part:
+            out[(x + dx, y + dy)] = px[(x, y)]
+    return out
 
 
 def save(px, path, canvas=96):

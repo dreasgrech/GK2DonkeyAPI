@@ -310,11 +310,13 @@ Development:
     byte the same.
   - Royal Parade, in review: the cloth hangs from the rig's hip (`HIP_FROM_RUMP` gone): walk 03, 04, 07, 08, graze
     02-05 and lips 04-08 change, the cloth now on columns 47-63 in every frame of those clips (shipped 47-48, 49 in
-    lips 06); `consistency.py` lists none of its frames where it listed 4. On the preview page as "Royal Parade (in
-    progress)"; the pack not written yet.
+    lips 06); `consistency.py` lists none of its frames where it listed 4. Reviewed on the preview page as "Royal
+    Parade (in progress)"; the user took the drawn-once cut instead (`stamp.py` below), written into the pack
+    2026-11-03.
   - Armored, in review: `body_of` takes the rig's hip, where the rump match said 64 in walk 04-06 for a rump at 65:
     those three frames change (its rump plate, rearmost lames, skirt rear and tail guard a column back); the phase
-    checks ok. On the page as "Armored (in progress)".
+    checks ok. Reviewed on the page as "Armored (in progress)" (the user: "i cant spot the differences between the
+    armored ones so i guess the tool one is good"), written into the pack 2026-11-03.
 - **Draw once: `tools/skins/stamp.py`** (2026-11-03 night, the user: "continue working on the rig tool and any other
   tools that can help us create skins/mounts in a more straight forward way to minimize guessing"; docs/sprite-tools.md
   "Catching what the user caught" 4).
@@ -407,7 +409,7 @@ Development:
     a lump in ear 02-04 in three reviews; on a forehead cap that is a choice, not a bug).
   - **Left:** the second review's lips 04-06 (the rig's ear points from Hellfire's table move in 05 only, the head's
     top in 04 and 06 a pixel up in part).
-  - **The second design** (2026-11-04, the user on the two cards: "it looks like parade one with a messed up hat right
+  - **The second design** (2026-11-03, the user on the two cards: "it looks like parade one with a messed up hat right
     now, so not amazing"; docs/sprite-tools.md "Catching what the user caught" 5, part 12). One card, "Jester"; the
     two first cards are gone.
     - **The cap is the silhouette:** a fool's hood with two points arching up where the ears were (the ears cleared
@@ -430,7 +432,7 @@ Development:
       the graze hat's tilt, the stepped brim of turn 02 and graze 02, and whether the head-only frames
       (`hed_static_down`) double the collar over a walking body in the game.
     - check_skin all good, consistency 0, no erase on the harness or below the poll.
-  - **The third design** (2026-11-04; the user on the second: "it looks like a 5year old drew it, compare it to the
+  - **The third design** (2026-11-03; the user on the second: "it looks like a 5year old drew it, compare it to the
     others", "the parts of the skin look like stickers"). Measured against the shipped skins first: 34% of the
     second design's pixels were near-black outline (Royal Parade 0%), it drew 717 px (Royal Parade 311), its fills
     were flat pure red and blue, and every piece moved rigidly. It was drawn with no references. It is redrawn from the
@@ -453,7 +455,7 @@ Development:
 - **`stamp.py build` marks consistency lines in frames with a body drawing of their own** ("its own body drawing:
   the skin's motion"): the Jester's hem sways in the lips and graze clips while the body stands still, which the
   check rightly lists; the mark says where the motion is deliberate, so the line is read, not taken for a slip.
-- **A collar piece in `stamp.py`: `neck.png`** (2026-11-04, for the Jester's second design; before it, "nothing can sit
+- **A collar piece in `stamp.py`: `neck.png`** (2026-11-03, for the Jester's second design; before it, "nothing can sit
   on the neck").
   - **It moves with the collar strap**, by the rig's chest point (the breast collar's lowest point). Measured first:
     in the walk the strap moves 2-4 px forward of the body as one piece, and the chest point's move lays the
@@ -465,6 +467,20 @@ Development:
     bends.
 - **`shapes.curve` and `shapes.polygon`**: a smooth path bent towards its middle points (a jester's point arching
   over and drooping), and a polygon filled (a hood's outline, corner by corner, where a stroke can only round it).
+- **`shapes.pendulum`, `shapes.hanging` and `shapes.swing`**: a hanging part's swing over a clip (out of the
+  Jester's drawing, which now uses it; its pieces the same), the parts of a picture that hang free (by a test of the
+  pixel: a fringe's tassels, a hem's point), and each of those moved by its own. **"Royal Parade (drawn once)"
+  sways** with them (the user: "it just looks a little bit too staticey, maybe we just need to add very very slight
+  animation to it"):
+  `drawn_once.py` writes a cloth of its own for each walk and lips frame, where stamp places `body.png` there, its
+  hanging bits swinging a pixel either way, over the stride and slowly over the lips clip: the front fringe's three
+  tassels together, the point's tassel and the rear fringe's end together a frame behind them. Only the
+  tassels' ends had moved at first, too little to see (a fresh review: "it reads as a stiff cloth riding the body");
+  moving the point's bottom edge too slid its red middle off the red above, and tassels a frame apart closed into a
+  block, and the rear end a frame behind the point's tassel made the gap between them blink. The cloth's edges, its
+  fleur and the crown as they were; the other 24 frames unchanged. `check_skin.py` all
+  good; `consistency.py` lists the 11 lips frames where the bits hang off their resting place, each marked as the
+  skin's own motion.
 - **`page_frames.py --blind`**: the rows titled A, B ... instead of the skins' names, for a fresh reviewer asked
   "which is a jester, and what tells you so?" beside a shipped skin. Six reviews of the Jester's first design had asked
   only whether its pieces slide; the first blind one found its cloth was Royal Parade's block recoloured.

@@ -1,5 +1,5 @@
 """The Jester's pieces, drawn once (docs/sprite-tools.md "Catching what the user caught" 4, 5 and 13:
-tools/skins/stamp.py places them into all 44 frames). The third design (2026-11-04), after the user's references
+tools/skins/stamp.py places them into all 44 frames). The third design (2026-11-03), after the user's references
 (a reenactment fool's hood in burgundy and navy, a manuscript fool, jesters on donkeys, donkeys in costume) and against
 our shipped skins' construction (Royal Parade's cloth edged in its own dark with a light line inside its top, Armored's
 plates shaded light to dark): the second design was "stickers" ("like a 5 year old drew it", the user: a third of its pixels
@@ -33,7 +33,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "donkey"))
 from anatomy import body, load, rig
-from shapes import curve, polygon, pose, save, side, stroke
+from shapes import curve, pendulum, polygon, pose, save, side, stroke
 
 hexc = lambda h: (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), 255)
 BURG = [hexc(h) for h in ("3A0A14", "641A28", "862534", "A23444", "C2485A")]   # edge, shade, base, lit, light: Harness
@@ -81,15 +81,6 @@ def small_bell(x, y, px):
         px.setdefault(q, GOLD[0])
 
 
-def pendulum(i, phase, amp=2, period=8):
-    """A hanging part's swing in walk frame i (0-7): across by amp times a sine over the stride, a row up at the ends
-    of its arc, five places in all, a pixel a frame (moved by the frame-to-frame lag, the bells showed two: "they only
-    seem to be animating from two different positions", the user). phase: whole frames behind the stride, so the parts
-    swing in turn (half frames made them jump two pixels at once)."""
-    x = int(round(amp * math.sin(2 * math.pi * (i + phase) / period)))
-    return x, (-1 if amp >= 2 and abs(x) >= amp else 0)
-
-
 # --- the cap -------------------------------------------------------------------------------------------------------
 
 def brim(shape):
@@ -117,7 +108,7 @@ def cap(c, tf=None):
     front of the split line and navy behind it; the band its lowest pixels, gold; a point out of each half, a stroke
     tapering from c["w"] along a curve, the burgundy forward, the navy back; all shaded like soft tubes and edged in
     their own dark; a small bell at each point's end. A straight band under a flat-topped dome with two points stuck
-    on read as "an anvil on his head" (the user, 2026-11-04)."""
+    on read as "an anvil on his head" (the user, 2026-11-03)."""
     tf = tf or (lambda p: p)
     path = lambda ps: [tf(p) for p in ps]
     body_ = polygon(path(c["body"]))

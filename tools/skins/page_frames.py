@@ -13,7 +13,7 @@ at this, not at a separate composite (2026-11-02: a review render without the re
     --scale         pixel scale (default 4)
     --box x0 y0 x1 y1   the part of the 96 canvas to show (default: the whole canvas)
     --blind         rows titled A, B ... in the order of --skins instead of the skins' names: for a fresh reviewer
-                    asked "which is a jester?" against a shipped skin (2026-11-04: six reviews had asked only
+                    asked "which is a jester?" against a shipped skin (2026-11-03: six reviews had asked only
                     whether pieces slide, and the Jester's cloth was Royal Parade's block recoloured)
 
 The output holds the game's art (the donkey's frames): write it outside the repository (the scratchpad, the probe

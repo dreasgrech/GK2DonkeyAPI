@@ -601,6 +601,20 @@ numbers below):
   sideways slide or cloth past the rump as the shipped card has. Its three findings (the front-bottom corner doubled
   in the walk and graze; walk 08's hem and tip) were the strap and the column moves above, and are gone in the cut on
   the page.
+- **The sway** (the user, on the card: "it just looks a little bit too staticey, maybe we just need to add very very
+  slight animation to it"): moved as one, the cloth stood still. `drawn_once.py` now writes a cloth of its own for
+  every walk and lips frame (`body@<frame>.png`, placed where stamp places `body.png`), its hanging bits swung by
+  `shapes.swing`, a pixel either way on `shapes.pendulum`: the front fringe's three tassels from their tops, together,
+  then under the point's bottom edge its tassel and the rear fringe's end, together a frame behind. What hangs free is
+  `drawn_once.hangs_free`, a test of the pixel:
+  - only the ends (from row 58): too little to see ("it reads as a stiff cloth riding the body", a fresh review);
+  - from row 57 with the point: the point's bottom edge moved, its red middle sliding off the red above;
+  - tassels a frame apart from each other closed into a 3-px block; swinging together, their spacing holds;
+  - the rear end a frame behind the point's tassel made the pixel's gap between them blink (closed or doubled for one
+    frame); together, it holds. The front fringe's tassels are single pixels in a row, so their swing reads as a slight
+    shimmer, and at its rear end the last one touches the tassel beside the point (minor at game size, the review).
+
+  The cloth's edges, its fleur and its hem's gold row stay one shape, so nothing steps.
 
 Not done: the body's other parts. A piece on the neck (a collar, a mane ribbon) moves with neither the body nor the
 head, and there is no piece type for it. Nor is there one for the tail or the legs.
@@ -746,7 +760,7 @@ design, which replaced it, is part 12 below):
     erase check (none on the harness or below the poll), not by a seventh review. Left as it is: lips 04's 1-px lag
     (the rig, the user's call).
 
-12. **The second design (2026-11-04).** The user, on the two cards: "it looks like parade one with a messed up hat
+12. **The second design (2026-11-03).** The user, on the two cards: "it looks like parade one with a messed up hat
     right now, so not amazing". Six reviews had asked whether the pieces slide or jump, and none had asked what
     the skin is. **The first blind review** (Royal Parade and the Jester side by side, names blanked, "which is a
     jester, and what tells you so?") put it the user's way: the cloth was "the same cloth block in the same place

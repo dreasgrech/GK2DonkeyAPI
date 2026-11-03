@@ -92,7 +92,7 @@ VIEWS = {  # a view of the head drawn on its own: (the frame it is drawn on, the
 SIDE_ONLY_MOVED = {"bdy_turn_left_02", "bdy_graze_left_02"}   # no view of their own: the side head moved, said
 # where the collar strap bends: the standing frame's strap laid over the frame's by its best shift fits 29-42 of its 50
 # pixels (graze 02-05: the neck lowers, the strap's top goes down with it and its end stays; turn 04-06: the breast
-# collar turns to us), where every other frame fits 47-50 by the chest point's own move (measured 2026-11-04)
+# collar turns to us), where every other frame fits 47-50 by the chest point's own move (measured 2026-11-03)
 STRAP_BENDS = {"bdy_graze_left_02", "bdy_graze_left_03", "bdy_graze_left_04", "bdy_graze_left_05",
                "bdy_turn_left_04", "bdy_turn_left_05", "bdy_turn_left_06"}
 LAYERS = ["body_drape", "body", "neck", "head"]   # the pieces on the standing frame, bottom first (the order laid)
