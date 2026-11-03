@@ -21,7 +21,9 @@ from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(HERE))
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "donkey"))
 from gamedir import donkey_frames
+from anatomy import body_by_rump, load as donkey_load
 import hellfire_proto as HP
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
@@ -49,10 +51,61 @@ def phase_of(key):
     return 0.0
 
 
+WALK_REF = "bdy_walk_left_01"   # the walk starts here from the standing pose: the same hip (65) and back (41)
+_WALK_REL = None
+
+
+def body_anchor(key):
+    """Where the body is in a frame: the hip matched from the rump (anatomy.body_by_rump) and the back's level over
+    the rump (the median of the back line over the 8 columns before the hip)."""
+    b = body_by_rump(key, donkey_load(key))
+    hip = b["hip"]
+    cols = sorted(b["top"][x] for x in range(hip - 8, hip) if x in b["top"])
+    return hip, cols[len(cols) // 2]
+
+
+def crack_pixels(key):
+    """The cracks of a frame: the walk's own, drawn (the user, 2026-11-03: the walk's red lines "look good", "none of
+    the other animations red lines match the good ones in the walking animation"); every other clip copies walk
+    01's crack pixels, placed by the body, put where the frame has coat (the strap and the outline stay in front).
+    Drawn into their own torso box, which starts 10 columns past the eye, they came out elsewhere on the body: the
+    eye sits 2-6 columns further back when the head isn't reaching forward (the standing pose's box 22 wide where the
+    walk's are 27-28, its front edge 4 columns back and 2 rows lower; graze and lips 04-05 differed again), and walk
+    01's box placed by the body still drew 2 pixels more in graze 04-05, where the lowered neck uncovers coat under
+    the strap (the gate review). None for the walk and the head frames (the prototype's own)."""
+    global _WALK_REL
+    if "_walk_" in key or key.startswith("hed_"):
+        return None
+    if _WALK_REL is None:
+        HP.hellfire("0301_" + WALK_REF, phase_of(WALK_REF))
+        hip, back = body_anchor(WALK_REF)
+        _WALK_REL = [(x - hip, y - back, c) for x, y, c in HP.LAST_CRACK_PIXELS]
+    hip, back = body_anchor(key)
+    return [(hip + dx, back + dy, c) for dx, dy, c in _WALK_REL]
+
+
+STILL_RUMP = {f"bdy_lips_left_{i:02d}" for i in range(4, 9)}  # the donkey lifts its tail in lips 04-08 and the rump's
+# edge just above it moves back 1-2 columns (x 66, 67 in lips 06, against 65 standing; the rest of the rump stays): the
+# fill drew its curve from that edge, a column wider over 12 rows (two in lips 06; "why is the donkeys ass growing
+# larger in hellfire lips animation?", the user, 2026-11-03); those frames set the standing frame's curve
+_STANDING_RUMP = None
+
+
+def rump_curve(key):
+    """The standing frame's rump curve for the frames in STILL_RUMP, else None (the frame's own)."""
+    global _STANDING_RUMP
+    if key not in STILL_RUMP:
+        return None
+    if _STANDING_RUMP is None:
+        HP.hellfire("0301_bdy_static_left", phase_of("bdy_static_left"), crack_pixels=crack_pixels("bdy_static_left"))
+        _STANDING_RUMP = dict(HP.LAST_RUMP)
+    return _STANDING_RUMP
+
+
 def pack_frame(key):
     """The pack's picture for one frame: the prototype's result against the original, pixel by pixel."""
     orig = HP.load("0301_" + key)
-    res = HP.hellfire("0301_" + key, phase_of(key))
+    res = HP.hellfire("0301_" + key, phase_of(key), crack_pixels=crack_pixels(key), rump_curve=rump_curve(key))
     assert res.size == orig.size, (key, res.size, orig.size)
     w, h = orig.size
     op, rp = orig.load(), res.load()

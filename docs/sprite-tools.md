@@ -360,6 +360,85 @@ Tested 2026-10-19: the export equals the layers exactly (44 frames, 0 pixel diff
 the walk tag kept each frame's crown bottom where it was (the bob kept) and left the other tags alone; the checker
 caught a planted lone pixel, a donkey colour and a half-transparent pixel.
 
+## Catching what the user caught (2026-11-03)
+
+The user, after a night of fixes: "we are moving very slowly ... we are not making good enough progress with constant
+mistakes and artifacts and sloppiness". That night's four complaints were all on the preview page and all in the
+pictures since the skins were made (the 10-28 and 11-02 commits have them): walk 08's bit of Armored's skirt in front
+of the strap (one frame in eight), Hellfire's cracks jumping through the turn and drawn elsewhere on the body in every
+clip but the walk, Royal Parade's cloth pulled 2-4 columns in turn 02-03, Hellfire's rump a column wider in lips
+04-08. Each fix was quick once the cause was measured; each was found by the user, one at a time.
+
+### Why: every generator finds the body its own way, frame by frame
+
+| Generator | How it finds the body and the head | Frames named by hand because a rule failed there |
+|---|---|---|
+| Armored | `anatomy.body_by_rump` (the hip), its own `back_line`, `chest_delta`, `head_place`, `landmarks`, `HORNS`, `ANCHORS` | `LOW_HEAD`, `POKE_ERASE`, `PLUME_SHIFT`, `HEAD_MOVE`, `EXTRA_SEAL` |
+| Royal Parade | `anatomy.body()` (the hip, collar, back line), `belly`, `head_delta`, `HORNS`, `ANCHORS` | `HIP_FROM_RUMP`, `TURN_NUDGE`, `MOVED_HEAD`, `BETWEEN_EARS` |
+| Hellfire | its own: `torso_box` (10 columns past the eye), `find_eye`, `skull_top`, the tail's start, the rump's edge; `body_by_rump` only for the cracks since 2026-11-03 | `EAR_FRAMES`, `HORN_FRAMES`, `FAR_EAR`, `NO_TUFT`, `STILL_BODY`, `STILL_RUMP` |
+
+Each rule reads a landmark off the frame's pixels and is right where the head and tail keep still; where they move it
+reads something else (the eye moves with the head and took the cracks' box along; the turned head's far ear became the
+back's top and moved the hip; the lifted tail moved the rump's edge and the fill with it). The fifteen tables are the
+frames where that showed and was patched after the user saw it. And no automatic measure is exact to the pixel where
+the outline changes shape: on the walk and lips 04-08, `body()`, the rump match and the rump's own outline (read over
+different rows) disagree by a column or two (2026-11-03), so a rule tuned on one clip moves a piece in another.
+
+### 1. One set of body points (proposed, not built)
+
+One file of points per frame, read by every generator instead of its own rules: the body's hip (x) and back level
+over the rump (y), the collar (the strap's rear edge), the chest's front; the head's ear bases (`HORNS`), the eye
+(`ANCHORS`) and its pose (a translation of the standing head in the walk, ear, chew and lips frames; a head of its own in
+graze 02-05 and turn 02-06). Coordinates only, no game art, so it lives in the repo
+(`tools/skins/donkey/rig.json`, `anatomy.py` the reader). The tables above then go: a body piece hangs from the hip
+and back, a head piece from the head's points, nothing reads the eye for the body or the ears for the back. Moving a
+skin onto it is one regeneration and a page review per skin; Hellfire first (the most rules of its own).
+
+### 2. The check (built 2026-11-03: `tools/skins/consistency.py`)
+
+`python -I tools/skins/consistency.py <skin folder> [--body-x 52] [--walk] [--maps <folder outside the repo>]`, for any
+skin drawn over the donkey, read only:
+
+- **The body stays put**: each frame against the frame before it whose donkey body (behind x 52) is most like its own;
+  on every pixel where the plain donkey is the same and opaque in both, the worn skin must be the same too, so what
+  differs there is the skin's own doing. The walk is left out unless `--walk` (the body bobs, no two walk frames share
+  one, and a piece moving with it reads as a change: 21 of the 24 walk frames of the three skins were listed).
+- **Nothing lives for one frame**: a piece of the skin's pixels (4-connected, 3 or more) with no skin pixel within 2 of
+  it in either neighbour frame of its clip (the walk loops).
+- `--maps` writes each listed frame with the pixels boxed; the exit code is 1 when anything is listed.
+
+Run on the three skins as committed before that night's fixes (6c7c748) it lists all four complaints: walk 08's piece
+of 12 px at x 32-36 y 56-59 (exactly the bit), Hellfire's turn 02-06, graze 02-05 and lips 04, 06, 07, Royal Parade's
+turn 02-03 (109 and 145 px). On the packs after the fixes: **Hellfire none**; **Royal Parade** graze 02-03, lips 04 and 06
+(the cloth a column or two off a rump that stays: the 15 frames kept as shipped, see "Hellfire's cracks where the walk
+has them" in CHANGELOG.md); **Armored** graze 02-05 (the seam between the first two lames moves a column as the
+collar follows the lowered neck, over a body that stays; a few hem pixels in 04-05) and lips 04 (the tail guard, a column at x 65-66
+fitted to the tail, which lifts there: by design). Those are for the user's eye: a cloth or a plate may follow the shoulder by
+design; the check only says where the skin moves and the donkey doesn't.
+
+To do: run it in every generator after `review.write_all` and in `preview.py`, with each skin's lines the user has
+judged "by design" kept in a list next to the generator; then into `tools/release-scans.sh`.
+
+### 3. The points checked once by eye (proposed, not built)
+
+A local page like the skins preview: every distinct pose (30 bodies: 11 of the 41 body frames are, behind the neck,
+pixel for pixel an earlier one) with today's measured points drawn on it, zoomed; a wrong point dragged to its place;
+"Save" downloads `rig.json`. Most points are already right, so the work is looking and fixing the few; who does it is
+open (the user, or me with the check as the judge and the user's look at the end).
+
+### Outside tools, looked at again (2026-11-03)
+
+- **Claude Motion** (an Anthropic beta of 2026-10-08, Team and Enterprise plans): explainer animations from text,
+  charts and images, exported as MP4. Not pixel art and nothing to do with placing pixels on the game's frames.
+- The 2026-10-19 findings above stand: Aseprite (built here with saving, the command line and Lua) for touching up
+  frames by hand in the `.aseprite` files the generators write; the AI generators for drawing a new creature, not for
+  pieces that must sit to the pixel on the game's donkey. The slow part is not the drawing but finding the body.
+
+### Open (the user's)
+
+- Build the points file (1) and its page (3)?
+- Royal Parade's 15 frames (the cloth in the walk, graze 02-05, lips 04-08) and Armored's five lines: fix or by design?
+
 ## Open
 
 - Which editor: decided 2026-10-19, Aseprite built from source.

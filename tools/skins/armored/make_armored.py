@@ -46,7 +46,7 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "donkey"))
-from anatomy import ORDER, load, HORNS, ANCHORS, body, head_delta
+from anatomy import ORDER, load, HORNS, ANCHORS, body, body_by_rump, head_delta
 import ase_write
 import review
 from gamedir import game_dir
@@ -145,34 +145,7 @@ S_KEY = "bdy_static_left"
 S = None
 
 
-RUMP_BOX = (52, 40, 64, 57)   # the hindquarters on the standing frame, the tail's band left out (x0, y0, x1, y1)
-RUMP = None
-
-
-def body_of(key, donkey):
-    """anatomy.body() with the hip measured by the rump itself: the standing frame's hindquarters (RUMP_BOX) laid
-    over this frame where its pixels match best, the hip moved by that shift. body() takes the back's level from the
-    highest body pixel behind the collar, and in turn 02-03 that is the turned head's far ear lying back (rows
-    36-37): its hip came out at 63 and 61 on a rump the same as the standing one, and the rump plate, the lames and
-    the tail guard slid forward onto the rump."""
-    global RUMP
-    b = body(key, donkey)
-    if b is None:
-        return None
-    if RUMP is None:
-        sp = load(S_KEY).load()
-        x0, y0, x1, y1 = RUMP_BOX
-        RUMP = (body(S_KEY, load(S_KEY))["hip"], {(x, y): sp[x, y] for y in range(y0, y1) for x in range(x0, x1)})
-    s_hip, box = RUMP
-    px = donkey.load()
-    best = None
-    for dy in range(-3, 4):
-        for dx in range(-3, 4):
-            score = sum(1 for (x, y), c in box.items() if px[x + dx, y + dy] == c)
-            if best is None or score > best[0] or (score == best[0] and abs(dx) + abs(dy) < abs(best[1]) + abs(best[2])):
-                best = (score, dx, dy)
-    b["hip"] = s_hip + best[1]
-    return b
+body_of = body_by_rump   # the hip from the rump itself (anatomy.py; the turned head's far ear moved body()'s)
 
 
 def standing():
@@ -1021,13 +994,9 @@ def sealed(px, donkey, zone):
 SCRAP = 8   # a piece of a plate the head's region cut off from the rest, smaller than this, is dropped
 
 
-def drop_scraps(px, op):
-    """A plate cut behind the head (graze 02, turn 02: the head coming down or round over the chest) left loose bits of
-    1-3 pixels standing in the neck (a fresh review, 2026-11-02: "a stray light-grey 2-px cluster") and, in graze 02,
-    a 9-pixel corner hanging in the air before the neck with no outline on its cut edge (the gate review): the
-    pieces (4-connected) smaller than SCRAP go, and those mostly off the donkey (`op`); an uncut plate is one piece
-    on the body and stays whole."""
-    left, out = set(px), {}
+def pieces(px):
+    """The 4-connected pieces of a layer's pixels, as sets."""
+    left, out = set(px), []
     while left:
         part, todo = set(), [left.pop()]
         while todo:
@@ -1037,9 +1006,31 @@ def drop_scraps(px, op):
                 if q in left:
                     left.discard(q)
                     todo.append(q)
+        out.append(part)
+    return out
+
+
+def drop_scraps(px, op):
+    """A plate cut behind the head (graze 02, turn 02: the head coming down or round over the chest) left loose bits of
+    1-3 pixels standing in the neck (a fresh review, 2026-11-02: "a stray light-grey 2-px cluster") and, in graze 02,
+    a 9-pixel corner hanging in the air before the neck with no outline on its cut edge (the gate review): the
+    pieces (4-connected) smaller than SCRAP go, and those mostly off the donkey (`op`); an uncut plate is one piece
+    on the body and stays whole."""
+    out = {}
+    for part in pieces(px):
         if len(part) >= SCRAP and 2 * sum(1 for p in part if op(*p)) > len(part):
             out.update({p: px[p] for p in part})
     return out
+
+
+def main_piece(px):
+    """The layer's biggest piece alone (the skirt behind the breast strap: what the strap's end cuts off in front of
+    it goes whatever its size)."""
+    parts = pieces(px)
+    if not parts:
+        return px
+    biggest = max(parts, key=len)
+    return {p: px[p] for p in biggest}
 
 
 LOW_HEAD = {  # under the breast collar the lowered head itself: (first row, last row, last column)
@@ -1089,6 +1080,11 @@ def frame(key):
             # the head covers anyway is not counted (turn 05/06 kept a 6-px stub of a lame, 12 more of it under the
             # helmet: the gate review)
             layers[name] = drop_scraps({p: c for p, c in layers[name].items() if p not in head}, op)
+        # the skirt hangs behind the strap: walk 08 kept a 12-px corner in front of it (the strap a column further
+        # back, the chest filling the corner) where walks 01-07 drop theirs as scraps of 2-4 ("walk_08 is the only
+        # frame where that marked bit of red cloth is shown", the user, 2026-11-02); in no other frame and layer is
+        # a piece cut off
+        layers["skirt"] = main_piece(layers["skirt"])
     layers["head"] = head
     im = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
     px = im.load()

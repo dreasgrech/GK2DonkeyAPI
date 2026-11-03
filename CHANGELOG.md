@@ -216,6 +216,70 @@ Development:
   strap whole and in one piece in every frame and nothing coming and going. The user looked on the preview page; written
   into the pack (check_skin all good), built and deployed with the game closed, the deployed DLL holds all 45 files
   byte for byte.
+- **Armored: walk 08's bit of cloth in front of the strap gone** (2026-11-02, the user: "in the walking
+  animation, walk_08 is the only frame where that marked bit of red cloth is shown"). In every walk frame the skirt
+  is drawn forward to about x 32 at the chest's foot and the strap's end cuts that front off; in walks 01-07 it
+  leaves 2-4 pixels, dropped as scraps (`drop_scraps`, under 8), in walk 08 (the strap a column further back, the
+  chest filling the corner) 12, kept. The skirt now keeps its main piece only (`main_piece`, on `pieces()` split out
+  of `drop_scraps`): it ends at the strap in every frame. Measured first: of all 44 frames and the five body layers
+  only walk 08's skirt was ever more than one piece; the new cut differs from the pack in those 12 pixels alone
+  (check_skin all good, phase checks ok). The user looked on the preview page ("ok looks good"); written into the
+  pack (only walk 08's picture changed), built and deployed with the game closed, the deployed DLL holds all 135
+  files byte for byte.
+  The same evening's two checks: the helmet over 2-14 harness pixels in turn 02-06 is the strap's edge passing
+  behind the helmet's back (in front of the neck: right, the strap whole in every frame); the cloth's five reds are
+  named Muzzle (the Second tone) and used by the skirt and the plume alone, no colour of the skin is one of the
+  donkey's regions' (18 colours: the exact swap), no half-transparent pixel.
+- **Hellfire's cracks where the walk has them, Royal Parade's cloth steady** (2026-11-03, the user on
+  the preview page: "the hellfire one, the red lines on his back are moving all over the place and the royal parade,
+  the red rug is being pulled back", then "none of the other animations red lines match the good ones in the walking
+  animation"). Both in the pictures since the skins were made (the 10-28 commit's frames have them the same); in the
+  turn the donkey's body behind the neck is pixel for pixel the standing frame's, only the head and neck move.
+  - Hellfire: the cracks are scaled into a torso box that starts 10 columns past the eye. The eye sits 2-6 columns
+    further back when the head isn't reaching forward as in the walk, so the standing pose's box came out 22 wide
+    where the walk's are 27-28 (its front edge 4 columns back, 2 rows lower), graze 02-05 and lips 04-05 differed
+    again, and through the turn it moved with the head (left edge 44-48, width 22-26, height 14-21). Every clip but
+    the walk now copies walk 01's crack pixels, placed by the body (`make_hellfire.crack_pixels`: the rump-matched
+    hip and the back over the rump; walk 01 starts the walk from the standing pose with the same hip and back) and
+    put where the frame has coat (`stamp_cracks`; the strap stays in front): every crack pixel of those 33 frames is
+    one of walk 01's (44 of its 45, the 45th under the strap), against 19-34% before. A first cut drew the lines
+    into walk 01's box placed by the body; the gate review found it 43 of 45 and 2 pixels more in graze 04-05,
+    where the lowered neck uncovers coat under the strap. The walk and the head frames byte for byte as before. The
+    rump's fill and the devil's tail's root in turn 02-06 take the standing frame's box (`STILL_BODY`,
+    `standing_box()` in hellfire_proto.py), not the moving one: the tail no longer flips up in turn 02, 03, 05 and
+    06 and back in 04.
+  - Hellfire's rump in lips 04-08 (the user: "why is the donkeys ass growing larger in hellfire lips animation?"):
+    the donkey lifts its tail there and the rump's edge just above it moves back 1-2 columns (x 66, 67 in lips 06,
+    against 65 standing); the rump fill drew its curve from that edge, a column wider over 12 rows (two in lips 06).
+    Those frames now set the standing frame's curve (`STILL_RUMP`, `make_hellfire.rump_curve`, `fill_rump(...,
+    curve_from)`); the devil's tail's root follows. Checked over every frame but the walk, behind x 56 against the
+    standing frame: what the skin itself makes differ went from 8-76 pixels (graze 02-05, lips 04-08, turn 02-06) to
+    none; what is left (2-6 pixels in lips 04-09) is the donkey's own frame.
+  - Royal Parade: the cloth hangs from the hip, and anatomy.body()'s hip read the turned head's far ear as the
+    back's top in turn 02-03 (63 and 61 for a rump at 65: the cloth's rear edge 2 and 4 columns forward). Armored's
+    rump-matched hip (make_armored.body_of: the standing frame's hindquarters laid over the frame) is now the shared
+    `anatomy.body_by_rump()` (Armored byte for byte as before), and turn 02-03 hang the cloth from it
+    (`HIP_FROM_RUMP`): those 2 frames change. A first cut hung every frame from it (17 changed): the gate review found
+    walk 04-06 a column forward of a rump that doesn't move, the hem stepped in walk 04 and 06, a corner poking out
+    in graze 02-05, and no measure tried (body(), the rump match, the rump's outline by rows) agreed to the pixel on
+    the walk and lips 04-08; those 15 stay as shipped until the body's points are verified once.
+  Both generators reproduced their packs exactly before the change. On the preview page as "Hellfire (in progress)"
+  and "Royal Parade (in progress)" beside the shipped ones, the gate reviews' findings fixed; the user's yes ("ok make
+  all fixes in game"): written into the pack (Hellfire 33 pictures, Royal Parade 2, equal to the reviewed studies byte
+  for byte; check_skin all good), built and deployed with the game closed, the deployed DLL holds all 135 files byte
+  for byte, the page rebuilt from the packs.
+- **`tools/skins/consistency.py`, and why the skins kept slipping** (2026-11-03, the user: "we are not making good
+  enough progress with constant mistakes and artifacts and sloppiness"; docs/sprite-tools.md "Catching what the user
+  caught"). Read only, for any skin drawn over the donkey: (1) on every pixel behind the neck where the plain donkey is
+  the same as in the frame most like it, the worn skin must be the same too (the walk left out unless `--walk`: the
+  body bobs and 21 of the 24 walk frames were listed); (2) a piece of the skin with no skin pixel near it in either neighbour
+  frame of its clip is listed; `--maps` writes the listed frames with the pixels boxed (outside the repo only). On the
+  skins as committed before that night's fixes it lists all four of the user's complaints (walk 08's 12-px bit, Hellfire's
+  turn, graze and lips, Royal Parade's turn); on the packs after them Hellfire none, Royal Parade 4 frames (the 15
+  kept as shipped), Armored 5 (graze 02-05's lames seam and hem, lips 04's tail guard, fitted to the lifted tail), for the user to judge. The
+  investigation behind it: the three generators find the body with rules of their own and carry 15 tables of frames
+  named by hand where a rule failed; one set of body points for all of them (`rig.json`) and a page to check them
+  once are proposed, not built.
 - **A one-run probe for a walled-in landing, taken out again** (2026-11-02; F11 1785/1, the same in the rerun: the yard
   test's jump at the ruins sent back to the take-off spot). The trace: the run started 1.1 east of the yard's box
   between two rock walls the test doesn't know, went over a knee-high stone and came down in a gap between the ruin

@@ -11,6 +11,8 @@ where the head hides it: the graze, two lips frames, the turn facing the camera)
     ANCHORS[key]          eye, torso box, back line, collar_rear, bottom per column (measure.py)
     body(key, donkey)     op (opaque test), collar (the strap's rear edge + 1), top (the back line per column inside
                           the torso box), hip, ground; None for a frame without a body (the head frames)
+    body_by_rump(key, d)  body() with the hip from the rump matched to the standing frame's (the one to hang body
+                          pieces from: body()'s own hip moves in the turn and where the tail swings)
     belly(b)              the belly row per torso column from a body(): the end of the run down from the back, legs
                           left out and bridged
     head_delta(key)       the head's (dx, dy) against the standing frame by the ear bases: the same for the eye and the
@@ -53,6 +55,40 @@ def body(key, donkey):
     hip = max(x for y in range(back, back + 6) for x in range(collar, tx1 + 1) if op(x, y))
     ground = max(y for y in range(96) for x in range(96) if op(x, y))
     return {"op": op, "collar": collar, "top": top, "hip": hip, "ground": ground}
+
+
+RUMP_BOX = (52, 40, 64, 57)   # the hindquarters on the standing frame, the tail's band left out (x0, y0, x1, y1)
+_RUMP = None
+
+
+def body_by_rump(key, donkey):
+    """body() with the hip measured by the rump itself: the standing frame's hindquarters (RUMP_BOX) laid over this
+    frame where its pixels match best, the hip moved by that shift. body() takes the back's level from the highest
+    body pixel behind the collar, and in turn 02-03 that is the turned head's far ear lying back (rows 36-37): its hip
+    came out at 63 and 61 on a rump the same as the standing one (Armored's plates slid forward onto the rump; Royal
+    Parade's cloth's rear edge jumped 2 and 4 columns forward, the user, 2026-11-03: "the red rug is being pulled
+    back"). Not exact to the pixel elsewhere: in walk 04-06 it reads a column forward of a rump that doesn't move,
+    and where the tail swings (walk 03-08, graze 02-05, lips 04-08) body(), this and the rump's own outline disagree
+    by a column or two. Armored's measure first (make_armored.body_of), shared since 2026-11-03."""
+    global _RUMP
+    b = body(key, donkey)
+    if b is None:
+        return None
+    if _RUMP is None:
+        s = load("bdy_static_left")
+        sp = s.load()
+        x0, y0, x1, y1 = RUMP_BOX
+        _RUMP = (body("bdy_static_left", s)["hip"], {(x, y): sp[x, y] for y in range(y0, y1) for x in range(x0, x1)})
+    s_hip, box = _RUMP
+    px = donkey.load()
+    best = None
+    for dy in range(-3, 4):
+        for dx in range(-3, 4):
+            score = sum(1 for (x, y), c in box.items() if px[x + dx, y + dy] == c)
+            if best is None or score > best[0] or (score == best[0] and abs(dx) + abs(dy) < abs(best[1]) + abs(best[2])):
+                best = (score, dx, dy)
+    b["hip"] = s_hip + best[1]
+    return b
 
 
 def belly(b):

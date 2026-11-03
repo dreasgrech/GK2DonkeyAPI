@@ -28,6 +28,28 @@ CRACKS = [
     [(0.52, 0.40), (0.42, 0.56)],
     [(0.80, 0.34), (0.86, 0.52), (0.78, 0.70), (0.84, 0.86)],
 ]
+# turn 02-06: the head swings round to face us while the body stays as it stands (pixel for pixel behind the neck),
+# but the torso box starts 10 columns past the eye, so it moved and changed size with the head (left edge 44-48,
+# width 22-26, height 14-21) and the cracks, the rump's fill and the tail's root with it ("the red lines on his back
+# are moving all over the place", the user, 2026-11-03): those frames take the standing frame's box for the rump and the
+# tail (the cracks: make_hellfire.crack_pixels, the walk's)
+STILL_BODY = {"bdy_turn_left_02", "bdy_turn_left_03", "bdy_turn_left_04", "bdy_turn_left_05", "bdy_turn_left_06"}
+_STANDING_BOX = None
+LAST_CRACK_PIXELS = []   # the last frame's crack pixels as drawn, (x, y, colour) (make_hellfire copies walk 01's)
+LAST_RUMP = {}   # the last frame's rump curve, row -> column (make_hellfire sets the standing frame's where only the tail moves)
+
+
+def standing_box():
+    """The standing frame's torso box as hellfire() builds it (the tail erased first)."""
+    global _STANDING_BOX
+    if _STANDING_BOX is None:
+        im = load("0301_bdy_static_left")
+        w, h = im.size
+        px = im.load()
+        eye = find_eye(px, w, h)
+        erase_tail_drawn(px, w, h, DARK)
+        _STANDING_BOX = torso_box(px, w, h, eye[0] if eye else None)
+    return _STANDING_BOX
 
 
 def load(name):
@@ -219,30 +241,38 @@ def thigh_row(px, w, h, y0, top):
     return None
 
 
-def fill_rump(px, w, h, y0, yb, bulge_per_row=1 / 7.0):
+def fill_rump(px, w, h, y0, yb, bulge_per_row=1 / 7.0, curve_from=None):
     """the rump's back where the tail was, as one curve: from the edge just above where the tail branched off (y0 - 1)
     down to the back of the thigh (thigh_row), bowed out mid-way and turning in as it reaches the thigh, so it rounds
     into the leg instead of meeting the belly at a right angle (2026-10-19). Every row between is set to the curve:
-    filled out in its coat colour or trimmed, the outline at the end. Returns the curve, row -> column."""
+    filled out in its coat colour or trimmed, the outline at the end. Returns the curve, row -> column, with the edge
+    row above it (y0 - 1). curve_from: another frame's curve, as returned, set instead (that row too)."""
     def edge(y):
         r = runs(px, y, w, h)
         return r[-1][1] if r else None
     top = edge(y0 - 1)
-    th = thigh_row(px, w, h, y0, top) if top is not None else None
-    if top is None or th is None:
+    if top is None:
         return {}
-    yl, bot = th
     outline = px[top, y0 - 1]
-    n = yl - (y0 - 1)
-    bulge = max(1.0, n * bulge_per_row)
-    # fullest about a third of the way down (SHAPE), turning in gradually to the thigh
-    want = {y: top + rh((bot - top) * (y - (y0 - 1)) / n + bulge * math.sin(math.pi * ((y - (y0 - 1)) / n) ** SHAPE)) for y in range(y0, yl)}
-    want[y0 - 1], want[yl] = top, bot
-    for y in range(y0, yl):  # no single row past both neighbours
-        want[y] = min(want[y], max(want[y - 1], want[y + 1]))
+    if curve_from is not None:
+        want = dict(curve_from)
+        rows = sorted(want)
+    else:
+        th = thigh_row(px, w, h, y0, top)
+        if th is None:
+            return {}
+        yl, bot = th
+        n = yl - (y0 - 1)
+        bulge = max(1.0, n * bulge_per_row)
+        # fullest about a third of the way down (SHAPE), turning in gradually to the thigh
+        want = {y: top + rh((bot - top) * (y - (y0 - 1)) / n + bulge * math.sin(math.pi * ((y - (y0 - 1)) / n) ** SHAPE)) for y in range(y0, yl)}
+        want[y0 - 1], want[yl] = top, bot
+        for y in range(y0, yl):  # no single row past both neighbours
+            want[y] = min(want[y], max(want[y - 1], want[y + 1]))
+        rows = range(y0, yl)
     lava = {(255, 150, 40), (255, 90, 24), (150, 34, 12)}
-    curve = {}
-    for y in range(y0, yl):
+    curve = {y0 - 1: top} if curve_from is None else {}
+    for y in rows:
         target = want[y]
         e = edge(y)
         if e is None:
@@ -415,6 +445,7 @@ def line(a, b):
 
 def cracks(px, w, h, box):
     x0, y0, x1, y1 = box
+    touched = set()
     for poly in CRACKS:
         # relative to the torso box, rounded there, then placed: the same cracks wherever the frame sits on its canvas
         pts = [(u * (x1 - x0), v * (y1 - y0)) for u, v in poly]
@@ -424,8 +455,19 @@ def cracks(px, w, h, box):
         for i, (x, y) in enumerate(path):
             if is_coat(px, x, y, w, h):
                 put(px, x, y, LAVA[0] if i % 4 == 0 else LAVA[1], w, h)
+                touched.add((x, y))
                 if is_coat(px, x, y + 1, w, h):
                     put(px, x, y + 1, LAVA[2], w, h)
+                    touched.add((x, y + 1))
+    LAST_CRACK_PIXELS[:] = sorted((x, y, px[x, y][:3]) for (x, y) in touched)
+
+
+def stamp_cracks(px, w, h, pixels):
+    """Cracks copied pixel for pixel: (x, y, colour) put wherever the frame has coat there (the strap and the outline
+    stay in front)."""
+    for x, y, c in pixels:
+        if is_coat(px, x, y, w, h):
+            put(px, x, y, c, w, h)
 
 
 def horn(px, w, h, bx, by, lean):
@@ -479,7 +521,10 @@ def devil_tail(px, w, h, rx, ry, phase):
     put(px, tx - 1, ty - 2, (120, 20, 16), w, h)
     put(px, tx + 1, ty - 2, (120, 20, 16), w, h)
 
-def hellfire(name, phase=0.0):
+def hellfire(name, phase=0.0, crack_pixels=None, rump_curve=None):
+    """One frame: the donkey's frame turned Hellfire. crack_pixels: the cracks as (x, y, colour) to copy (default:
+    drawn into the torso box). rump_curve: the rump's curve to set (default: drawn from this frame's edge)."""
+    global LAST_RUMP
     im = load(name)
     w, h = im.size
     px = im.load()
@@ -494,20 +539,26 @@ def hellfire(name, phase=0.0):
         se = [(e[0] + tdx, e[1] + tdy) for e in special_eyes]
         eye = (sum(e[0] for e in se) / len(se), sum(e[1] for e in se) / len(se), se)
     root = None
+    key = name[5:] if name.startswith("0301_") else name
     body_eye = found if "_graze_" in name else eye   # graze 3-5's table eyes light the glow only: the body's box (the
     if not head_only:                                # cracks, the rump) stays as it was built
         box = torso_box(px, w, h, body_eye[0] if body_eye else None)
         if box:
             root = erase_tail_drawn(px, w, h, DARK)
             box = torso_box(px, w, h, body_eye[0] if body_eye else None)  # without the tail
-            cracks(px, w, h, box)  # before the coat darkens: the cracks sit on coat pixels and keep their own colours
+            if key in STILL_BODY:
+                box = standing_box()
+            # before the coat darkens: the cracks sit on coat pixels and keep their own colours
+            if crack_pixels is None:
+                cracks(px, w, h, box)
+            else:
+                stamp_cracks(px, w, h, crack_pixels)
             if root:
                 y0 = root[0]
-                curve = fill_rump(px, w, h, y0, box[3])
+                LAST_RUMP = fill_rump(px, w, h, y0, box[3], curve_from=rump_curve)
                 ry = y0 + (box[3] - y0) // 3  # the tail grows from the upper third of the rump's curve
                 rr = runs(px, ry, w, h)
                 root = (rr[-1][1], ry) if rr else None  # the row's actual edge (the body may be wider than the curve there)
-    key = name[5:] if name.startswith("0301_") else name
     special = EAR_FRAMES.get(key)
     if special:
         erase_boxes(px, w, h, [(a + tdx, b + tdx, c + tdy, d + tdy) for (a, b, c, d) in special["erase"]])
