@@ -536,10 +536,15 @@ def caparison(sway=0, ripple=None):
 # over the cloth with a seam and a hem stepping 2 px. So each frame's cloth reaches that frame's own strap: on each
 # row from just behind the strap's back edge (its orange, and the dark column behind it) to the cloth's front, its
 # colours and quarters continued from an inner column, edged where it meets the donkey, one more point under its
-# hem (FRONT_POINT) with a bell. Not in turn 04-06, where the strap turns to us (the front collar).
+# hem (FRONT_POINT) with a bell. In turn 04-06 too (the donkey facing us): the strap still runs down its near shoulder
+# there, and the chest showed between the front collar and the cloth ("now fix the turn 04-06 chest gap too").
 FRONT_POINT = 45
-FRONT_FOLD = 47   # the new part's fold: the cloth's vertical lines are 5 apart (the folds 52, 62, the seam 57); at 42
-#                   it lay under the collar's bells, a lone pixel of it showing beside them (a fresh review)
+# the new part's folds: the cloth's vertical lines are 5 apart (the folds 52, 62, the seam 57), so 47 and 42 (with
+# one, the part from its front to 47 ran 6-10 px without a line in the walk: "that part of the cloth needs another
+# seem because it looks too wide to not have a seem", the user); a stretch of a fold showing under 2 rows outside the
+# collar in a frame is left out (at 42 it once lay under the collar's bells, a lone pixel showing beside them; with 3,
+# a fold showing 2 rows between the collar and the hem's band was left out: "some seems are missing", walk 05)
+FRONT_FOLDS = (42, 47)
 
 
 def strap_back(key, before):
@@ -560,11 +565,12 @@ def strap_back(key, before):
     return rows
 
 
-def tucked(px, key, d, sw=(0, 0)):
+def tucked(px, key, d, sw=(0, 0), over=frozenset()):
     """A frame's cloth (its pixels on frame 'key', placed there by d, stamp's body move) carried forward on each row
     to just behind the strap's back edge, down to its hem: the colour of the cloth's inner column (three in from that
     row's front) on that row, its darkest where the new part meets the donkey (not against the strap's own dark edge,
-    which is the line there), a fold at FRONT_FOLD a shade darker, moved with its row's sway; the row's old front edge
+    which is the line there), folds at FRONT_FOLDS a shade darker, moved with its row's sway, kept where they show 2
+    rows or more outside 'over' (the collar's pixels in that frame); the row's old front edge
     (its first two pixels) made inner cloth; a point under the new hem at FRONT_POINT, its tip moved by 'sw', a bell
     hanging from its lowest pixel; and the cloth's top brought up over the donkey's back where it shows 1-2 px above
     it (the walk's back line has bumps: coat poked above the cloth behind the collar). Each row is filled to its own
@@ -593,15 +599,28 @@ def tucked(px, key, d, sw=(0, 0)):
         point = set(shades)
         shape = fill | set(px) | point
         ramp = lambda col: BURG if col in BURG else NAVY
+        fold = {}
         for (x, y) in fill | old_edge:
             r = ramp(inner[y])
             at_strap = x - 1 == back[y] + 1 and don[x - 1, y][3] > 0   # the strap's dark edge is the line here
             if any(q not in shape for q in ((x, y - 1), (x, y + 1))) or ((x - 1, y) not in shape and not at_strap):
                 out[(x, y)] = r[0]
-            elif x == FRONT_FOLD + d[0] + (fronts[y] - x0) and (x, y - 2) in shape and r.index(inner[y]) > 1:
-                out[(x, y)] = r[r.index(inner[y]) - 1]   # the fold, as the cloth's: a shade darker, not at the top
-            else:
-                out[(x, y)] = inner[y]
+                continue
+            out[(x, y)] = inner[y]
+            if (x in [f + d[0] + (fronts[y] - x0) for f in FRONT_FOLDS] and (x, y - 2) in shape
+                    and r.index(inner[y]) > 1):
+                fold[(x, y)] = r[r.index(inner[y]) - 1]   # a fold, as the cloth's: a shade darker, not at the top
+        # each fold's stretches showing outside the collar: 3 rows or more, else left out
+        for q, col in fold.items():
+            if q in over:
+                continue
+            run = 1
+            for step in (-1, 1):
+                y = q[1] + step
+                while any((x, y) in fold and (x, y) not in over for x in (q[0] - 1, q[0], q[0] + 1)):
+                    run, y = run + 1, y + step
+            if run >= 2:   # 3 left the folds out where only 2 rows show between the collar and the hem's band
+                out[q] = col
         for q, v in shades.items():   # coloured as the cloth's other points (the front ones navy, under the navy
             out[q] = NAVY[v]           # quarter), shaded as at rest
         low = max(y for x, y in point)
@@ -760,11 +779,12 @@ def main(argv):
     bodies = {n: px for n, k, px in moving if n.startswith("body@")}
     tucked_ = []
     for k in stamp.ORDER:
-        d = stamp.body_move(k, cols) if k.startswith("bdy_") and k not in FRONT_VIEW else None
+        d = stamp.body_move(k, cols) if k.startswith("bdy_") else None   # turn 04-06 too: their chest showed
         if d is None:
             continue
         name = f"body@{k}.png"
-        tucked_.append((name, tucked(bodies.get(name) or shift(caparison(), d), k, d, front_swing(k))))
+        neck = dict(necks).get(f"neck@{k}.png") or shift(dict(necks)["neck.png"], stamp.neck_move(k))
+        tucked_.append((name, tucked(bodies.get(name) or shift(caparison(), d), k, d, front_swing(k), set(neck))))
     pieces = [("body.png", caparison())] + tucked_ + [(n, px) for n, px in bodies.items()
                                                       if n not in {t[0] for t in tucked_}] + necks
     pieces += [(n, ears_off(px, k, *reach.get(n, (9, 9, None, 2)))) for n, k, px in heads]

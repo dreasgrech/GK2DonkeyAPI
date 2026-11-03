@@ -548,8 +548,9 @@ Development:
   edge and a wedge over the hem). `draw_jester.tucked`: every side frame's cloth its own (body@ for all 41 frames but
   turn 04-06), carried forward on each row to just behind that frame's own strap (its orange) down to the hem, its
   colours and quarters continued from an inner column, edged where it meets the donkey; one more hem point (x 45)
-  and a bell under every point, four (two before). Not in turn 04-06, where the strap turns to us: the chest shows
-  between the collar and the cloth there.
+  and a bell under every point, four (two before). In turn 04-06 too (the donkey facing us; left out at first,
+  the chest showed between the front collar and the cloth: "now fix the turn 04-06 chest gap too"): the strap
+  still runs down the near shoulder there, and the cloth carried to it fills the strip to the front collar.
   - **A dark bar inside it, fixed** (the user: "many frames have horrible artifacts, very bad artifacts, like walk_04",
     marked; "Is the process we wrote not good enough to be able to spot these artifacts?"). The walk's and the lips'
     sway move the cloth's lower rows a column; `tucked` filled to the unswayed front, so the gap left at the old
@@ -559,7 +560,12 @@ Development:
     looked for it. The new part has a fold of its own (x 42, ten columns before the cloth's first, a shade darker), as
     the user asked ("needs another one of those vertical cuts on the extended part to make it like the rest"); at
     x 42 it lay under the collar's bells, so it is at 47 (the cloth's vertical lines are 5 apart), moving with its
-    row's sway.
+    row's sway. Then a second at 42 (the user: "that part of the cloth needs another seem because it looks too wide
+    to not have a seem": in the walk the part from its front to 47 ran 6-10 px without a line); a stretch of a fold
+    showing under 2 rows outside that frame's collar is left out, so neither leaves a lone pixel beside the collar's
+    points (with 3, a fold showing 2 rows between the collar and the hem's band was left out: "some seems are
+    missing", walk 05). Both show in every side frame but walk 07 (42 under the collar there) and turn 04-06 (42 under
+    the front collar).
   - **What a fresh review of every frame then found, fixed:** the hem's bells were placed by the swing's numbers and
     hung a row under their tips where the swing lifted a point (a gap; more of them with a bell under every point):
     each now hangs from its point's lowest pixel; points a frame apart swung into each other and their bells touched,
