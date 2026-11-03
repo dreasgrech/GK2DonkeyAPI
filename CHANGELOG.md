@@ -430,6 +430,29 @@ Development:
       the graze hat's tilt, the stepped brim of turn 02 and graze 02, and whether the head-only frames
       (`hed_static_down`) double the collar over a walking body in the game.
     - check_skin all good, consistency 0, no erase on the harness or below the poll.
+  - **The third design** (2026-11-04; the user on the second: "it looks like a 5year old drew it, compare it to the
+    others", "the parts of the skin look like stickers"). Measured against the shipped skins first: 34% of the
+    second design's pixels were near-black outline (Royal Parade 0%), it drew 717 px (Royal Parade 311), its fills
+    were flat pure red and blue, and every piece moved rigidly. It was drawn with no references. It is redrawn from the
+    user's references (a reenactment fool's hood, a manuscript fool, jesters on donkeys, donkeys in costume) in the
+    shipped skins' construction:
+    - **colours:** deep burgundy (Harness) and navy (the Second tone), five shades each, every edge in its own
+      colour's darkest (no black), gold only on the band and the bells;
+    - **the cap:** smaller, its points shaded like soft tubes, its band curving round the head and its top dipping
+      between the points (a straight band under a flat top read as "an anvil on his head", the user);
+    - **the collar:** laid along the donkey's own strap, which fits the neck in every frame, three belled points over
+      the shoulder (a band round the throat across the strap read as a second strap);
+    - **the cloth:** quartered, shaded light at the top to dark under the belly, soft folds, a pointed hem with two
+      small bells;
+    - **motion in every clip:** each hanging part (the cap's tips, the collar's points, the hem's points, the cloth's
+      lower half in the walk) on its own path, a pixel a step, the walk's on a pendulum through five places (the bells
+      had toggled between two: "more framerate", the user), the ear flick kicking the cap's back point, the chew bobbing
+      the bells, the lips clip swaying slowly, the graze and the turn trailing the head;
+    - **two sketches first** on the page ("Jester sketch A" and "B", the cloth halved or quartered), the user's pick
+      taken into the third design.
+- **`stamp.py build` marks consistency lines in frames with a body drawing of their own** ("its own body drawing:
+  the skin's motion"): the Jester's hem sways in the lips and graze clips while the body stands still, which the
+  check rightly lists; the mark says where the motion is deliberate, so the line is read, not taken for a slip.
 - **A collar piece in `stamp.py`: `neck.png`** (2026-11-04, for the Jester's second design; before it, "nothing can sit
   on the neck").
   - **It moves with the collar strap**, by the rig's chest point (the breast collar's lowest point). Measured first:

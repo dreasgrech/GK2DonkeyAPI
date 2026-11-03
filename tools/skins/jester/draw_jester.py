@@ -1,8 +1,8 @@
 """The Jester's pieces, drawn once (docs/sprite-tools.md "Catching what the user caught" 4, 5 and 13:
-tools/skins/stamp.py places them into all 44 frames). The third design (2026-11-04), after the user's references (a reenactment fool's
-hood in burgundy and navy, a manuscript fool, jesters on donkeys, donkeys in costume) and against our shipped skins'
-construction (Royal Parade's cloth edged in its own dark with a light line inside its top, Armored's plates shaded
-light to dark): the second design was "stickers" ("like a 5 year old drew it", the user: a third of its pixels
+tools/skins/stamp.py places them into all 44 frames). The third design (2026-11-04), after the user's references
+(a reenactment fool's hood in burgundy and navy, a manuscript fool, jesters on donkeys, donkeys in costume) and against
+our shipped skins' construction (Royal Parade's cloth edged in its own dark with a light line inside its top, Armored's
+plates shaded light to dark): the second design was "stickers" ("like a 5 year old drew it", the user: a third of its pixels
 near-black outline, flat pure red and blue, a hat as big as the head, nothing moving with the donkey).
 
 - body.png: the caparison, quartered burgundy and navy, shaded top light to bottom dark with soft folds, edged in each
@@ -81,44 +81,60 @@ def small_bell(x, y, px):
         px.setdefault(q, GOLD[0])
 
 
-def lag(prev, now):
-    """How a trailing part moves against its frame's move: where the move changed since the frame before, a pixel
-    the other way."""
-    return max(-1, min(1, prev[0] - now[0])), max(-1, min(1, prev[1] - now[1]))
+def pendulum(i, phase, amp=2, period=8):
+    """A hanging part's swing in walk frame i (0-7): across by amp times a sine over the stride, a row up at the ends
+    of its arc, five places in all, a pixel a frame (moved by the frame-to-frame lag, the bells showed two: "they only
+    seem to be animating from two different positions", the user). phase: whole frames behind the stride, so the parts
+    swing in turn (half frames made them jump two pixels at once)."""
+    x = int(round(amp * math.sin(2 * math.pi * (i + phase) / period)))
+    return x, (-1 if amp >= 2 and abs(x) >= amp else 0)
 
 
 # --- the cap -------------------------------------------------------------------------------------------------------
 
-def smaller(points, k=0.72):
-    """A point's curve drawn shorter: every control point pulled towards its root by k (the second design's points
-    made 72% as long: its cap, 27 px wide on an 18-px head, read as "huge")."""
-    (x0, y0) = points[0]
-    return [points[0]] + [(x0 + (x - x0) * k, y0 + (y - y0) * k) for x, y in points[1:]]
+def brim(shape):
+    """A cap's band: the lowest pixel of each column of its body, so it follows the body's curved bottom edge, a
+    pixel-art curve whose steps are diagonal; where it drops more than a row between columns, the column between is
+    filled down so the band stays whole."""
+    low = {}
+    for x, y in shape:
+        if (x, y + 1) not in shape:
+            low[x] = max(low.get(x, y), y)
+    band = {(x, y) for x, y in low.items()}
+    xs = sorted(low)
+    for a, b in zip(xs, xs[1:]):
+        ya, yb = low[a], low[b]
+        if ya - yb > 1:
+            band |= {(a, y) for y in range(yb + 1, ya)}
+        elif yb - ya > 1:
+            band |= {(b, y) for y in range(ya + 1, yb)}
+    return band
 
 
 def cap(c, tf=None):
-    """The cap from its shapes 'c' (on the frame it is drawn on), each point taken through tf (a pose) first: a dome
-    round the skull (a polygon), burgundy in front of the split line and navy behind it, its lowest row a gold band
-    along the brim line; a point out of each half, a stroke tapering from c["w"] along a curve, the burgundy forward,
-    the navy back; all shaded like soft tubes and edged in their own dark; a small bell at each point's end."""
+    """The cap from its shapes 'c' (on the frame it is drawn on), each point taken through tf (a pose) first: its
+    body (a polygon) rising from a band that curves round the skull, its top dipping between its points, burgundy in
+    front of the split line and navy behind it; the band its lowest pixels, gold; a point out of each half, a stroke
+    tapering from c["w"] along a curve, the burgundy forward, the navy back; all shaded like soft tubes and edged in
+    their own dark; a small bell at each point's end. A straight band under a flat-topped dome with two points stuck
+    on read as "an anvil on his head" (the user, 2026-11-04)."""
     tf = tf or (lambda p: p)
     path = lambda ps: [tf(p) for p in ps]
-    dome = polygon(path(c["hood"]))
+    body_ = polygon(path(c["body"]))
     a, b = tf(c["split"][0]), tf(c["split"][1])
-    front = {q for q in dome if side(q, a, b) > 0}
-    back = dome - front
-    b0, b1 = tf(c["brim"][0]), tf(c["brim"][1])
-    blen = math.hypot(b1[0] - b0[0], b1[1] - b0[1])
-    # a strip along the brim line (only its lowest pixels, tilted, broke into steps: turn 02, graze 02)
-    band = {(x, y) for x, y in dome if 0 <= -side((x, y), b0, b1) / blen <= 1.3 or
-            (x, y + 1) not in dome and abs(side((x, y), b0, b1)) / blen <= 1.3}
-    red = stroke(curve(path(c["red"])), c["w"], 1.5) - dome
-    blue = stroke(curve(path(c["blue"])), c["w"], 1.5) - dome
+    front = {q for q in body_ if side(q, a, b) > 0}
+    back = body_ - front
+    band = brim(body_)
+    red = stroke(curve(path(c["red"])), c["w"], 1.5) - body_
+    blue = stroke(curve(path(c["blue"])), c["w"], 1.5) - body_
     px = {}
     tube(red | front, BURG, px)
     tube(blue | back, NAVY, px)
     for x, y in band:
-        px[(x, y)] = GOLD[3] if (x - 1, y) not in band else GOLD[1] if (x + 1, y) not in band else GOLD[2]
+        px[(x, y)] = GOLD[3] if (x - 1, y) not in band and (x - 1, y - 1) not in band else GOLD[2]
+    for x, y in band:   # the band's underside a step darker where it turns down: it rounds with the head
+        if (x + 1, y + 1) in band or (x - 1, y + 1) in band:
+            px[(x, y)] = GOLD[1] if px[(x, y)] == GOLD[2] else px[(x, y)]
     edge([(red | front, BURG), (blue | back, NAVY)], px)
     for name in ("red", "blue"):
         x, y = path(c[name])[-1]
@@ -126,36 +142,38 @@ def cap(c, tf=None):
     return px
 
 
-def spec(red, blue, **kw):
-    """A cap's shapes with its points drawn shorter (smaller())."""
-    return dict(kw, red=smaller(red), blue=smaller(blue), w=5.5)
-
-
 # The side cap on the standing head. The skull's top runs from (30, 36) up the forehead to (36, 31); the ear rises
 # from (37-41, 30-35) to its tip at (43, 23) and sweeps, in the ear clip, over x 32-45 and rows 23-32 (stamp.moving):
-# all of that is cleared, and the dome stands over the skull from the brow to behind the poll, its band straight
-# along row 36 (the eye under it at (34, 38)), its back to x 49 (the head's back showed behind it at 47 in walk 02,
-# 03, 06 and 07, where the head moves forward over the neck).
-SIDE = spec(hood=[(29, 36.9), (29.8, 34.6), (31.8, 32.4), (34.8, 30.8), (38.5, 30.2), (42.5, 30.8), (46.5, 32),
-                  (48.5, 34), (49, 36.9)], brim=[(29, 36.9), (49, 36.9)], split=[(38.5, 0), (38.5, 90)],
-            red=[(34, 32.5), (31.5, 23.5), (26.5, 23), (25.5, 28)],
-            blue=[(41.5, 32), (44, 21), (49.5, 21.5), (50, 27)])
+# all of that is cleared. The band curves round the skull: across the brow just over the eye (34, 38), lowest behind
+# the eye over the temple, rising round the back of the head to the nape (x 48, row 35); the cap's body rises from it
+# and dips between its points, the burgundy one forward over the brow, the navy one back; its back reaches x 48-49
+# (the head's back showed behind it at 47 in walk 02, 03, 06 and 07, where the head moves forward over the neck).
+SIDE = {"body": [(29, 36.8), (29.4, 34.8), (30.8, 32.6), (33, 31), (35.6, 30.6), (37.6, 31.6), (38.6, 32.4),
+                 (40, 31.4), (42.5, 30.2), (45.5, 30.2), (47.4, 31.6), (48.6, 33), (48.8, 34.6), (46, 36.4),
+                 (42, 38.3), (38.5, 38.3), (35.5, 37.2), (33, 36.7)],
+        "split": [(38.6, 0), (38.6, 90)], "w": 6,
+        "red": [(33.5, 31.5), (31.5, 25.5), (27, 25.5), (26, 30.5)],
+        "blue": [(44, 30.5), (46, 24.5), (50.5, 25), (51, 29.5)]}
 
 # Turn 05, the face looking at us: the ears at x 28-33 and 39-45 (cleared), the forehead between them at rows 33-36,
-# the eyes at row 41, the face x 31-42 down to the chin at row 53. The dome over the forehead, its band at row 38,
-# burgundy on our left and navy on our right, its right end over the strap's top beside it (a wedge of it read as
-# one ear poking out).
-FRONT = spec(hood=[(29.5, 38.6), (29, 35), (30.6, 32.2), (33.5, 30.6), (36.5, 30.2), (39.5, 30.6), (42.4, 32.2),
-                   (45, 34), (46.2, 36.5), (45.8, 38.8), (36.5, 38.3)], brim=[(29.5, 38.6), (45.8, 38.6)],
-             split=[(36.5, 0), (36.5, 90)], red=[(33, 33), (30.5, 25), (25, 25), (24.5, 30)],
-             blue=[(40, 33), (42.5, 25), (48, 25), (48.5, 30)])
+# the eyes at row 41, the face x 31-42 down to the chin at row 53. The band a U round the forehead, lowest over its
+# middle (row 39, the eyes two rows under it), up at both sides; the body dipping between its points, burgundy on our
+# left and navy on our right; its right end over the strap's top beside it (a wedge of it read as one ear poking out).
+FRONT = {"body": [(29.5, 37.2), (29, 35.5), (30.5, 32.6), (33, 30.8), (35.5, 31), (36.5, 32), (37.5, 31), (40, 30.8),
+                  (42.5, 32.6), (44.5, 35), (46.2, 36.2), (45.8, 37.2), (42, 38.7), (38.5, 39.8), (35, 39.8),
+                  (31.5, 38.7)],
+         "split": [(36.5, 0), (36.5, 90)], "w": 6,
+         "red": [(33, 32), (31, 26.5), (27, 26.5), (26, 30.5)],
+         "blue": [(40, 32), (42, 26.5), (46, 26.5), (47, 30.5)]}
 
 # Turn 03, the face three-quarters to us: the upright ear at x 30-34 (cleared), the far ear lying back along rows
-# 33-37 to x 47 (its tip cleared), the eye at (38, 42). Between the side cap (turn 02, posed) and the front one.
-TURN = spec(hood=[(27.5, 38.6), (27.4, 35.2), (29.2, 32.4), (32.4, 30.6), (36, 30.2), (40, 30.8), (43.5, 32.8),
-                  (45.6, 35.6), (46, 38.6), (36, 38.4)], brim=[(27.5, 38.6), (46, 38.6)], split=[(36, 0), (36, 90)],
-            red=[(31.5, 34), (29, 25.5), (23.5, 25.5), (23, 30.5)],
-            blue=[(39, 33.5), (41.5, 23.5), (47, 24), (47.5, 29)])
+# 33-37 to x 47 (its tip cleared), the eye at (38, 42). Between the side cap (turn 02, posed) and the front one: the
+# band curving round the forehead, lowest a little left of the middle (the face turned to us), up to the back.
+TURN = {"body": [(27.5, 37.6), (27.4, 35.4), (29, 32.6), (31.5, 30.8), (34, 31), (35.5, 32), (37, 31), (40, 30.6),
+                 (43.5, 32.4), (45.6, 35.4), (46, 37), (42, 38.7), (37, 39.8), (32, 39.4)],
+        "split": [(35.5, 0), (35.5, 90)], "w": 6,
+        "red": [(31.5, 32.5), (29.5, 26.5), (25, 26.5), (24, 30.5)],
+        "blue": [(39.5, 32), (42, 26), (46.5, 26.5), (47.5, 30.5)]}
 
 # Graze 04, the head down at the grass, seen from the front and above (the ear upright at x 27-30 cleared, the face
 # under the skull's top down to the muzzle at (23, 58)): the front cap tilted 15 degrees forward with the head.
@@ -167,12 +185,12 @@ TILTED = {"bdy_turn_left_02": (0, 0), "bdy_graze_left_02": (1, -1)}
 VIEW_FRAMES = {STANDING, "bdy_turn_left_03", "bdy_turn_left_05", "bdy_graze_left_04"}   # stamp moves these drawings
 
 
-def down_cap():
-    """The front cap turned and moved onto graze 04 by DOWN_TILT."""
+def down_cap(moves=None):
+    """The front cap turned and moved onto graze 04 by DOWN_TILT, its points' tips moved by 'moves' first."""
     (sx, sy), (dx, dy), turn = DOWN_TILT
     c, s_ = math.cos(math.radians(turn)), math.sin(math.radians(turn))
     tf = lambda p: (dx + c * (p[0] - sx) - s_ * (p[1] - sy), dy + s_ * (p[0] - sx) + c * (p[1] - sy))
-    return cap(FRONT, tf)
+    return cap(tips_moved(FRONT, moves or {}), tf)
 
 
 def ears_off(px, key, left=9, right=9, outer=None, above=2):
@@ -200,40 +218,44 @@ def ears_off(px, key, left=9, right=9, outer=None, above=2):
     return out
 
 
-def tips_moved(c, d, names=("red", "blue")):
-    """A cap's shapes with the named points' ends moved by d (and so their bells)."""
+def tips_moved(c, moves):
+    """A cap's shapes with each named point's end moved by its own (dx, dy) (and so its bell): {"red": d, ...}. The
+    point bends with its bell: its middle control points take half the move."""
     out = dict(c)
-    for name in names:
-        out[name] = c[name][:-1] + [(c[name][-1][0] + d[0], c[name][-1][1] + d[1])]
+    for name, d in moves.items():
+        pts = c[name]
+        out[name] = [pts[0]] + [(x + d[0] / 2, y + d[1] / 2) for x, y in pts[1:-1]] + [(pts[-1][0] + d[0],
+                                                                                        pts[-1][1] + d[1])]
     return out
 
 
-def posed(key, nudge=(0, 0)):
-    """The side cap posed onto a frame whose head tilts: turned about the poll by the turn of the poll-muzzle line,
-    then moved by 'nudge'."""
+def posed(key, nudge=(0, 0), c=None):
+    """The side cap (or its shapes 'c') posed onto a frame whose head tilts: turned about the poll by the turn of the
+    poll-muzzle line, then moved by 'nudge'."""
     s, f = rig(STANDING), rig(key)
     tf = pose(s["poll"], s["muzzle"], f["poll"], f["muzzle"])
-    return cap(SIDE, lambda p: (tf(p)[0] + nudge[0], tf(p)[1] + nudge[1]))
+    return cap(c or SIDE, lambda p: (tf(p)[0] + nudge[0], tf(p)[1] + nudge[1]))
 
 
 # --- the collar ----------------------------------------------------------------------------------------------------
 
-# On the standing frame: the neck behind the jaw, from its crest (the strap's top at (45-46, 39), the neck's back
-# outline at x 47) round to the throat (the neck's front outline at x 33-35 under the jaw's bottom row 44). The band
-# curves round it, bulging towards the shoulder as a ring does seen from the side, and is cut to inside the neck's
-# outline, so both its ends tuck into the neck's edges (the second design's collar, a straight bar from the hat to
-# the throat, "doesn't wrap around the donkey properly", the user). Three points hang from it, burgundy and navy.
-COLLAR = {"line": [(47.5, 39.5), (43, 47), (34.5, 47.5)], "band": 2.5,
-          "points": [(0.3, 90), (0.55, 90), (0.8, 95)], "len": 4.5, "w": 4}
+# On the standing frame: laid along the collar strap's upper half (the strap from (45-46, 39) at the neck's crest down
+# to (40-43, 47), 4 px wide; it goes on to the chest point (36, 52)), covering it, cut to inside the neck's outline:
+# the strap is the donkey's own collar, fitted to the neck in every frame, and stamp moves this with it. A band round
+# the throat across it read as a second strap crossing the first ("the harness needs to be fitted better", the user;
+# before that, a straight bar from the hat to the throat "doesn't wrap around the donkey properly"). The strap goes on
+# under it to the chest, tinted the burgundy. Three points hang from it over the shoulder, burgundy and navy.
+COLLAR = {"line": [(45.4, 40.6), (44.6, 42.6), (43, 45.5), (40.6, 48.2)], "band": 4.5,
+          "points": [(0.35, 80), (0.65, 85), (0.95, 95)], "len": 4.5, "w": 4}
 FRONT_COLLAR = {"line": [(31, 51.5), (36.5, 56.5), (42, 51.5)], "band": 2.5,
                 "points": [(0.2, 105), (0.5, 90), (0.8, 75)], "len": 4, "w": 4}   # turn 05: a short U under the chin
 
 
-def collar(c, key, tf=None, swing=(0, 0)):
+def collar(c, key, tf=None, swings=None):
     """The collar from 'c' on frame 'key', its line's points taken through tf (a pose) first: a navy band along the
     curve, shaded like a tube and cut to inside the donkey's outline there, a point hanging from it at each (t along
-    the band, angle: 90 straight down, the points' tips moved by 'swing'), burgundy and navy in turn, edged in their
-    own dark, a small bell at each tip."""
+    the band, angle: 90 straight down, each point's tip moved by its own of 'swings'), burgundy and navy in turn, edged
+    in their own dark, a small bell at each tip."""
     tf = tf or (lambda p: p)
     line = curve([tf(p) for p in c["line"]])
     band = stroke(line, c["band"], c["band"])
@@ -253,7 +275,8 @@ def collar(c, key, tf=None, swing=(0, 0)):
         hy = line[i][1] + (line[i + 1][1] - line[i][1]) * f
         ux, uy = math.cos(math.radians(ang)), math.sin(math.radians(ang))
         w = c["w"] / 2
-        tip = (hx + ux * c["len"] + swing[0], hy + uy * c["len"] + swing[1])
+        sw = swings[n] if swings else (0, 0)
+        tip = (hx + ux * c["len"] + sw[0], hy + uy * c["len"] + sw[1])
         parts.append((polygon([(hx - uy * w, hy + ux * w), tip, (hx + uy * w, hy - ux * w)]) - band,
                       (BURG, NAVY)[n % 2]))
         tips.append(tip)
@@ -280,10 +303,10 @@ def strap_ends(key):
     return (sum(x for x, y in top) / len(top), sum(y for x, y in top) / len(top)), tuple(rig(key)["chest"])
 
 
-def collar_posed(key):
+def collar_posed(key, swings=None):
     """The side collar posed onto a frame where the strap bends (the graze): by the strap's two ends there."""
     (st, sc), (ft, fc) = strap_ends(STANDING), strap_ends(key)
-    return collar(COLLAR, key, pose(st, sc, ft, fc))
+    return collar(COLLAR, key, pose(st, sc, ft, fc), swings)
 
 
 # --- the caparison -------------------------------------------------------------------------------------------------
@@ -296,9 +319,17 @@ CLOTH = {"x0": 48, "x1": 66, "hem": 56, "split": 57, "quarter": 48, "folds": (52
          "bells": (50, 60)}
 
 
-def caparison(swing=(0, 0)):
-    """The caparison from CLOTH on the standing frame, the hem's points' tips (and their bells) moved by 'swing'."""
+SWING_FROM = 50   # the cloth's rows from this one down swing with the stride; above, it lies on the back
+
+
+def caparison(sway=0, ripple=None):
+    """The caparison from CLOTH on the standing frame, its lower part swung across by 'sway' (its rows from
+    SWING_FROM down, the lower the more, so its folds and its corners move too) and each of the hem's points' tips
+    moved by its own of 'ripple', a bell with each of two ("make the cloth draped on his back a bit less staticey",
+    the user: only the hem's points had moved, a pixel)."""
     c = CLOTH
+    shear = lambda y: int(round(sway * (y - SWING_FROM + 1) / (c["hem"] - SWING_FROM + 1))) if y >= SWING_FROM else 0
+    ripple = ripple or [(0, 0)] * len(c["points"])
     top = body(STANDING, load(STANDING))["top"]
 
     def ramp_of(x, y):
@@ -310,8 +341,8 @@ def caparison(swing=(0, 0)):
         return BURG if front else NAVY
     cloth = {(x, y) for x in range(c["x0"], c["x1"] + 1) for y in range(top.get(x, 44), c["hem"] + 1)}
     points = []
-    for p0 in c["points"]:
-        tip = (p0 + 2 + swing[0], c["hem"] + 3 + swing[1])
+    for p0, sw in zip(c["points"], ripple):
+        tip = (p0 + 2 + sw[0], c["hem"] + 3 + sw[1])
         points.append(polygon([(p0 - 0.5, c["hem"] + 0.5), (p0 + 4.5, c["hem"] + 0.5), (tip[0] + 0.5, tip[1] + 0.5)]))
     shape = set(cloth)
     for p in points:
@@ -339,32 +370,96 @@ def caparison(swing=(0, 0)):
             edge_ = any(q not in shape for q in ((x - 1, y), (x + 1, y), (x, y + 1)))
             px[(x, y)] = r[0] if edge_ else r[3] if (x - 2, y) not in p else r[2]
     for b in c["bells"]:
-        small_bell(b + 2 + swing[0], c["hem"] + 4 + swing[1], px)
-    return px
+        sw = ripple[c["points"].index(b)]
+        small_bell(b + 2 + sw[0], c["hem"] + 4 + sw[1], px)
+    # the swing: each row from SWING_FROM down moved across (the points and bells under the hem by the hem's own)
+    return {(x + shear(min(y, c["hem"])), y): col for (x, y), col in px.items()}
 
 
 # --- the frames ----------------------------------------------------------------------------------------------------
 
 def walk():
-    """Each walk frame's own drawings, where stamp would place the pieces, their trailing parts a pixel behind the
-    frame's move: the cap's tips behind the head, the collar's points behind the neck, the hem's points and bells
-    behind the body's bob and the stride's surge (the head's). The second design moved its pieces rigidly ("like a
-    static picture", the user)."""
+    """Each walk frame's own drawings, where stamp would place the pieces (the head's, the strap's and the body's
+    moves), every hanging part swinging on its own pendulum over the stride, each a little behind the one before: the
+    cap's points (the burgundy, then the navy), the collar's three points, the cloth's lower part and its hem's
+    points. The bells hang from those tips, so they swing through five places. The second design moved its pieces
+    rigidly ("like a static picture", the user), then its tips a pixel each way ("two different positions")."""
     import stamp
     keys = [k for k in stamp.ORDER if k.startswith("bdy_walk_left_")]
     cols = list(range(CLOTH["x0"], CLOTH["x1"] + 1))
+    shift = lambda px, d: {(x + d[0], y + d[1]): c for (x, y), c in px.items()}
     out = []
     for i, k in enumerate(keys):
-        prev = keys[i - 1]
-        hd, hp = stamp.head_move(k, STANDING), stamp.head_move(prev, STANDING)
-        nd, np_ = stamp.neck_move(k), stamp.neck_move(prev)
-        bd, bp = stamp.body_move(k, cols), stamp.body_move(prev, cols)
-        shift = lambda px, d: {(x + d[0], y + d[1]): c for (x, y), c in px.items()}
-        h = cap(tips_moved(SIDE, lag(hp, hd)), lambda p, d=hd: (p[0] + d[0], p[1] + d[1]))
-        out.append((f"head@{k}.png", k, h))
-        out.append((f"neck@{k}.png", k, shift(collar(COLLAR, STANDING, swing=lag(np_, nd)), nd)))
-        surge = lag(hp, hd)[0]
-        out.append((f"body@{k}.png", k, shift(caparison((surge, lag(bp, bd)[1])), bd)))
+        hd, nd, bd = stamp.head_move(k, STANDING), stamp.neck_move(k), stamp.body_move(k, cols)
+        tips = {"red": pendulum(i, -1), "blue": pendulum(i, -2)}
+        out.append((f"head@{k}.png", k, cap(tips_moved(SIDE, tips), lambda p, d=hd: (p[0] + d[0], p[1] + d[1]))))
+        swings = [pendulum(i, -1 - n) for n in range(len(COLLAR["points"]))]
+        out.append((f"neck@{k}.png", k, shift(collar(COLLAR, STANDING, swings=swings), nd)))
+        ripple = [pendulum(i, -2 - n) for n in range(len(CLOTH["points"]))]
+        out.append((f"body@{k}.png", k, shift(caparison(pendulum(i, -2, 1)[0], ripple), bd)))
+    return out
+
+
+# The other clips, frame by frame: each hanging part's offset (a pixel a step, back to its start at the loop). Ear: the
+# ear flicks under the cap in 02-04, its navy point kicked up and settling, the burgundy one jiggling with it. Chew:
+# the jaw bobs the cap's bells and the collar's points in 02. Graze: the head goes down in 02-04, the cap's tips and
+# the collar's points trailing up and back, then settling, the hem stirred after. Turn: the head swings round to us
+# in 02-04, the tips and the points trailing it. Lips (13 frames, the long idle): every bell on a slow pendulum.
+Z = (0, 0)
+CLIP_MOTION = {
+    "ear": {"red": [Z, Z, (1, 0), Z, Z], "blue": [Z, (1, -1), (1, -2), (0, -1), (-1, 0)]},
+    "chew": {"red": [Z, (0, 1), Z], "blue": [Z, (0, 1), Z],
+             "collar": [[Z, (0, 1), Z], [Z, (1, 1), Z], [Z, (0, 1), Z]]},
+    "graze": {"red": [Z, (1, -1), (2, -1), (1, 0), Z], "blue": [Z, (1, 0), (2, -1), (2, -1), (1, 0)],
+              "collar": [[Z, (1, 0), (1, -1), Z, (-1, 0)], [Z, Z, (1, 0), (1, -1), Z], [Z, Z, Z, (1, 0), (1, -1)]],
+              "hem": [[Z, Z, (1, 0), Z, Z], [Z, Z, Z, (1, 0), Z], [Z, Z, Z, Z, (1, 0)]]},
+    "turn": {"red": [Z, (1, 0), (2, -1), (1, 0), Z, (-1, 0)], "blue": [Z, Z, (1, 0), (2, -1), (1, 0), Z],
+             "collar": [[Z, Z, (1, 0), (1, 0), Z, Z], [Z, Z, Z, (1, 0), (1, 0), Z], [Z, Z, Z, Z, (1, 0), (1, 0)]]},
+    "lips": {"red": [pendulum(i, 0, 1, 13) for i in range(13)], "blue": [pendulum(i, -3, 1, 13) for i in range(13)],
+             "collar": [[pendulum(i, -2 - 2 * n, 1, 13) for i in range(13)] for n in range(3)],
+             "hem": [[pendulum(i, -3 - 2 * n, 1, 13) for i in range(13)] for n in range(3)]},
+}
+FRONT_VIEW = ("bdy_turn_left_04", "bdy_turn_left_05", "bdy_turn_left_06")
+DOWN_VIEW = ("bdy_graze_left_03", "bdy_graze_left_04", "bdy_graze_left_05")
+
+
+def clips():
+    """The clips' own drawings for every frame in CLIP_MOTION, each piece where stamp would place it there (the cap
+    by its view, moved with the ear bases; the collar with the strap, posed where it bends, the U in the front view;
+    the cloth with the body) with its parts moved by the table. A piece whose parts all stay is left to stamp."""
+    import stamp
+    shift = lambda px, d: {(x + d[0], y + d[1]): c for (x, y), c in px.items()}
+    cols = list(range(CLOTH["x0"], CLOTH["x1"] + 1))
+    out = []
+    for clip, m in CLIP_MOTION.items():
+        keys = [k for k in stamp.ORDER if k.startswith(f"bdy_{clip}_left_")]
+        for i, k in enumerate(keys):
+            tips = {name: m[name][i] for name in ("red", "blue")}
+            if any(tips.values()) or k in TILTED or k == "bdy_turn_left_04":
+                if k in TILTED:
+                    h = posed(k, TILTED[k], tips_moved(SIDE, tips))
+                elif k == "bdy_turn_left_03":
+                    h = cap(tips_moved(TURN, tips))
+                elif k in FRONT_VIEW:
+                    d = (0, 0) if k == "bdy_turn_left_04" else stamp.head_move(k, "bdy_turn_left_05")
+                    h = shift(cap(tips_moved(FRONT, tips)), d)
+                elif k in DOWN_VIEW:
+                    h = shift(down_cap(tips), stamp.head_move(k, "bdy_graze_left_04"))
+                else:
+                    h = shift(cap(tips_moved(SIDE, tips)), stamp.head_move(k, STANDING))
+                out.append((f"head@{k}.png", k, h))
+            swings = [p[i] for p in m["collar"]] if "collar" in m else None
+            if swings and any(swings):
+                if k in FRONT_VIEW:
+                    n = collar(FRONT_COLLAR, k, swings=swings)
+                elif k in stamp.STRAP_BENDS:
+                    n = collar_posed(k, swings)
+                else:
+                    n = shift(collar(COLLAR, STANDING, swings=swings), stamp.neck_move(k))
+                out.append((f"neck@{k}.png", k, n))
+            ripple = [p[i] for p in m["hem"]] if "hem" in m else None
+            if ripple and any(ripple):
+                out.append((f"body@{k}.png", k, shift(caparison(0, ripple), stamp.body_move(k, cols))))
     return out
 
 
@@ -384,10 +479,11 @@ def main(argv):
     heads += [(f"head@{k}.png", k, posed(k, d)) for k, d in TILTED.items()]
     heads.append(("head@bdy_turn_left_04.png", "bdy_turn_left_04", cap(FRONT)))
     # the ear's flick under the cap lifts its navy point (five frames the same read as frozen)
-    heads += [(f"head@bdy_ear_left_0{i}.png", f"bdy_ear_left_0{i}", cap(tips_moved(SIDE, (0, -lift), ("blue",))))
+    heads += [(f"head@bdy_ear_left_0{i}.png", f"bdy_ear_left_0{i}", cap(tips_moved(SIDE, {"blue": (0, -lift)})))
               for i, lift in ((2, 2), (3, 2), (4, 1))]
-    moving = walk()
-    heads += [(n, k, px) for n, k, px in moving if n.startswith("head@")]
+    moving = walk() + clips()
+    own = {n for n, k, px in moving if n.startswith("head@")}
+    heads = [h for h in heads if h[0] not in own] + [(n, k, px) for n, k, px in moving if n.startswith("head@")]
     # how far each clearing reaches: (left, right, outer, above) of the poll
     reach = {"head_down.png": (7, 4, None, 2), "head@bdy_graze_left_02.png": (9, 0, None, 4),
              "head_front.png": (9, 9, 7, 2), "head@bdy_turn_left_04.png": (9, 9, 7, 2),
@@ -396,7 +492,8 @@ def main(argv):
     necks += [(f"neck@{k}.png", collar_posed(k)) for k in stamp.ORDER if k.startswith("bdy_graze_left_")
               and k in stamp.STRAP_BENDS]
     necks += [(f"neck@bdy_turn_left_0{i}.png", collar(FRONT_COLLAR, f"bdy_turn_left_0{i}")) for i in (4, 5, 6)]
-    necks += [(n, px) for n, k, px in moving if n.startswith("neck@")]
+    own = {n for n, k, px in moving if n.startswith("neck@")}
+    necks = [n for n in necks if n[0] not in own] + [(n, px) for n, k, px in moving if n.startswith("neck@")]
     pieces = [("body.png", caparison())] + [(n, px) for n, k, px in moving if n.startswith("body@")] + necks
     pieces += [(n, ears_off(px, k, *reach.get(n, (9, 9, None, 2)))) for n, k, px in heads]
     for name, px in pieces:

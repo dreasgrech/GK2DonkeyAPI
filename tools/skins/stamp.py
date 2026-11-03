@@ -316,7 +316,11 @@ def build(src, out, stage=None):
         print(f"{tool}: " + (lines[0] if tool == "check_skin.py" else lines[-1] if lines else "no output"))
         for l in (lines[1:] if tool == "check_skin.py" else lines[:-1]):
             if tool != "check_skin.py" or l.lstrip().startswith("!"):
-                print("   " + l.strip())
+                # a frame with a body drawing of its own (a hem swaying where the body stands still: the Jester's
+                # clips) changes there on purpose: said, so the line is read as the skin's motion, not taken for a slip
+                key = l.split(":", 1)[0].strip()
+                own = tool == "consistency.py" and any((n, key) in per_frame for n in ("body", "body_drape"))
+                print("   " + l.strip() + ("   [its own body drawing: the skin's motion]" if own else ""))
     if stage:
         slug = "".join(ch if ch.isalnum() else "-" for ch in stage.lower()).strip("-")
         # beside the pack folder, in an out\study\ folder: tools/skins/<skin>/out/study/ is where page.py finds studies
