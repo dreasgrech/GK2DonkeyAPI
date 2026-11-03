@@ -76,7 +76,7 @@ namespace GK2DonkeyAPI
                 Dictionary<string, Colors.RegionTweak> values = SkinTones.ValuesOf(look, SkinId);
                 SelfTest.Check(values != null && values.Count == 1 && values.ContainsKey("cloth") && values["cloth"].Colorize == "D8A838",
                     $"the look's values: the cloth's Gold, nothing for the trim ({(values == null ? "none" : string.Join(", ", new List<string>(values.Keys)))})");
-                SkinTones.Apply(a.I, values, owner);
+                SkinTones.Apply(a.I, values, owner, SkinId);
                 yield return SelfTest.Frames(3);
                 d = a.I.ColorsRig.TestMountGroup();
                 SelfTest.Check(Changed(d.ChangedSources, Cloth) && !Changed(d.ChangedSources, Trim) && !Changed(d.ChangedSources, Strap),
@@ -103,13 +103,25 @@ namespace GK2DonkeyAPI
                 d = a.I.ColorsRig.TestMountGroup();
                 SelfTest.Check(Changed(d.ChangedSources, Strap) && !Changed(d.ChangedSources, Trim), "a harness colour changes the strap named Harness and leaves the trim's tone alone");
                 look.Tone("cloth").Color = ToneColor.Game;
-                SkinTones.Apply(a.I, SkinTones.ValuesOf(look, SkinId), owner);
+                SkinTones.Apply(a.I, SkinTones.ValuesOf(look, SkinId), owner, SkinId);
                 yield return SelfTest.Frames(3);
                 d = a.I.ColorsRig.TestMountGroup();
                 SelfTest.Check(!Changed(d.ChangedSources, Cloth), "Game default puts the cloth back as drawn");
                 // the tones go with their owner's overrides: another owner's clearing leaves them, the owner's own takes them
                 look.Tone("cloth").Color = ToneColor.Gold;
-                SkinTones.Apply(a.I, SkinTones.ValuesOf(look, SkinId), owner);
+                SkinTones.Apply(a.I, SkinTones.ValuesOf(look, SkinId), owner, SkinId);
+                // another owner neither replaces nor wipes them (as an override: the owner that set a value keeps it)
+                SkinTones.Apply(a.I, null, owner + ".someone-else", SkinId);
+                bool notWiped = a.I.Tones != null && a.I.TonesOwner == owner;
+                // made for another skin they colour nothing on this one (a skin changing under them, a sheet building)
+                SkinTones.Apply(a.I, SkinTones.ValuesOf(look, SkinId), owner, "donkey/selftest.another-skin");
+                yield return SelfTest.Frames(3);
+                d = a.I.ColorsRig.TestMountGroup();
+                bool otherSkinLeft = !Changed(d.ChangedSources, Cloth);
+                SkinTones.Apply(a.I, SkinTones.ValuesOf(look, SkinId), owner, SkinId);
+                yield return SelfTest.Frames(3);
+                d = a.I.ColorsRig.TestMountGroup();
+                SelfTest.Check(notWiped && otherSkinLeft && Changed(d.ChangedSources, Cloth), $"another owner's tones (none) leave the owner's, and tones made for another skin colour nothing on this one; for this skin they do (wiped: {!notWiped}, the other skin's coloured the cloth: {!otherSkinLeft})");
                 Mounts.ClearTuning(owner + ".someone-else");
                 bool kept = a.I.Tones != null;
                 Mounts.ClearTuning(owner);
@@ -200,6 +212,12 @@ namespace GK2DonkeyAPI
             List<SkinTones.ToneDef> shade = SkinTones.Merge(fromDefault, addsShade), renamed = SkinTones.Merge(fromDefault, renames);
             SelfTest.Check(shade.Count == 3 && shade[0] == fromDefault[0] && shade[2].Id == "plume" && renamed.Count == 2 && renamed[1] == renames[0] && renamed[0] == fromDefault[0],
                 $"a variant's tones: the default's in their order, one re-declared without a name stays the default's (its name and translation), one with a name renames it, its own new ones after ({string.Join(", ", shade.ConvertAll(t => t.Name))} | {string.Join(", ", renamed.ConvertAll(t => t.Name))})");
+            // a palette skin's tones aren't read, so a colour they share with its (ignored) [Colors] doesn't refuse it
+            string paletteShared = Refused("colours = palette\n[Colors]\nHarness = C41E38\n[Tone.cloth]\ncolours = C41E38\n");
+            // a code skin's tone without a name has none of its own (a code variant keeps its default's), one with a name has it
+            Looks.SkinDef code = new MountSkinDef { Id = "selftest.code-tones", Tones = new List<MountSkinTone> { new MountSkinTone("cloth", null, "C41E38"), new MountSkinTone("trim", "Trim", "2850B4") } }.ToDef(SelfTest.Owner);
+            SelfTest.Check(paletteShared == null && code.Tones != null && code.Tones.Count == 2 && !code.Tones[0].NameGiven && code.Tones[1].NameGiven,
+                $"a palette skin isn't refused over its ignored sections ({paletteShared ?? "read"}), and a code skin's tone without a name is unnamed, as a pack's is");
         }
 
         private static bool Changed(List<Color32> sources, Color32 c) => sources.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b);

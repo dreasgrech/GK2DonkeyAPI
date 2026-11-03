@@ -1176,12 +1176,20 @@ namespace GK2DonkeyAPI.Api
                 Term name = SkinTones.NameTerm(def, t);
                 string who = $"{t.Name} ({def.Name ?? def.Id})";
                 ConfigEntry<ToneColor> choice = Choice(section, "Tone." + t.Id + sfx, ToneColor.Game, t.Name, $"A colour of the skin's own: {who}. Game default is the skin as drawn.", v => tone.Color = v, english, look: true);
-                Rows[Rows.Count - 1].LabelOf = () => name.Text;
-                Rows[Rows.Count - 1].ChoiceWords = UiWords.ToneChoices;
-                Color(section, "CustomTone." + t.Id + sfx, t.Name + ": custom colour", $"Used when {who} is Custom.", PaletteColor.Gold, v => tone.Custom = v, () => choice.Value == ToneColor.Custom);
-                // Color adds the colour row and its lightness row: their labels the API's templates around the tone's name
-                Rows[Rows.Count - 2].LabelOf = () => UiWords.ToneCustom.Format(name);
-                Rows[Rows.Count - 1].LabelOf = () => UiWords.ToneLightness.Format(name);
+                string customKey = "CustomTone." + t.Id + sfx;
+                Color(section, customKey, t.Name + ": custom colour", $"Used when {who} is Custom.", PaletteColor.Gold, v => tone.Custom = v, () => choice.Value == ToneColor.Custom);
+                // the three rows by their keys (Color's colour and lightness rows wherever it put them): their words the
+                // tone's name, in the API's templates for the custom rows, and the API's presets
+                string cfgSection = choice.Definition.Section;
+                Row RowOf(string key) => Rows.FindLast(r => r.Entry != null && r.Entry.Definition.Section == cfgSection && r.Entry.Definition.Key == key);
+                Row choiceRow = RowOf(choice.Definition.Key), customRow = RowOf(customKey), lightRow = RowOf(LightnessKey(customKey));
+                if (choiceRow != null)
+                {
+                    choiceRow.LabelOf = () => name.Text;
+                    choiceRow.ChoiceWords = UiWords.ToneChoices;
+                }
+                if (customRow != null) customRow.LabelOf = () => UiWords.ToneCustom.Format(name);
+                if (lightRow != null) lightRow.LabelOf = () => UiWords.ToneLightness.Format(name);
             }
         }
 

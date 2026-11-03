@@ -256,7 +256,10 @@ colours = 3A0A14 641A28 862534 A23444 C2485A
 
 - The id is the section's name after `Tone.`: lower case letters, digits and `-` (it is part of the cfg keys); a
   bad id is a format error, as a bad `[Colors]` line is.
-- `name` is the row's label (default: the id); `colours` (or `colors`) the hex list, spaces or commas.
+- `name` is the row's label (default: the id); `colours` (or `colors`) the hex list, spaces or commas, on as many
+  lines as wanted (every line's colours count, here and in `[Colors]`; the checkers read them so too).
+- A palette skin's tones are not read at all (reported), so a colour they share with its ignored `[Colors]` doesn't
+  refuse it.
 - A colour named twice (in two tones, or in a tone and under `[Colors]`) is a format error; a colour the pictures
   don't have is said once, as for `[Colors]`. A tone without colours of its own is said in the report and colours
   nothing (no row), unless it is a variant's renaming its default's tone (below).
@@ -278,13 +281,19 @@ colours = 3A0A14 641A28 862534 A23444 C2485A
   kept as drawn before and is now a tone's (the Jester's ten were named already: 52, the cube, as today).
 - A tone's value is the instance's (`Mount.Instance.Tones`: id to a colorize colour and a brightness), set by the
   companion at every apply (and on every load, `OnGameReady`), as drawn when unset. Not tuning keys and not in the
-  side file: the companion holds the look, and a tone id is a skin's, not a key every instance knows. They go with
-  their owner's overrides (`TonesOwner`; `InstanceTuning.ClearOwner`, `Reset`, so `Mounts.ClearTuning` too). A baby
-  in its parent's skin takes the parent's; one not in it is a plain donkey and takes none.
+  side file: the companion holds the look, and a tone id is a skin's, not a key every instance knows. They belong
+  to the owner that set them, as an override does (`TonesOwner`): another owner neither replaces nor clears them
+  (said once), and they go with their owner's overrides (`InstanceTuning.ClearOwner`, `Reset`, so
+  `Mounts.ClearTuning` too). They are kept with the skin they were made for (`TonesSkin`) and colour only that skin
+  (`Colors.Rig.NamedMaps`): a skin changing under them (a sheet still building, another look) takes none of another
+  skin's colours. A baby in its parent's skin takes the parent's; one not in it is a plain donkey and takes none.
 - **Presets** (`ToneColor`): Game default (as drawn), Red, Gold, Green, Blue, Purple, Pink, Brown, Black, White,
   Custom. Each is a colour: the tone takes its hue and saturation and keeps each pixel's shading, and its
-  brightness is the colour's own against the tone's average (`SkinTones.Lightness`, the custom colours' rule), so
-  Gold reads gold on a navy tone as on a pale one. Custom is the palette with its lightness, as the other rows.
+  brightness is the colour's own against the tone's average (`SkinTones.Lightness`, the custom colours' rule:
+  `MountCompanion.LightnessAgainst`), so Gold reads gold on a navy tone as on a pale one. The average is of the
+  colours the loaded skin draws (a listed colour no picture has, or a default's a variant doesn't draw, doesn't
+  count), of its list while it loads; the companion applies the look again when the sheet is whole. Custom is the
+  palette with its lightness, as the other rows.
 - **The colour cube.** Over 48 pairs (the donkey's 42 plus an over skin's named colours) the mount takes the cube,
   where two colours in one cell change together, and on the cube a colour that isn't paired takes its cell's
   colour too. Measured 2026-11-03 on the four over skins: the only shared cells are two pairs of the game's own
@@ -298,10 +307,11 @@ colours = 3A0A14 641A28 862534 A23444 C2485A
   `Tone.<id><suffix>`, `CustomTone.<id><suffix>` and `CustomTone.<id>Lightness<suffix>`. A skin registered later gets
   them at `CatchUp`, as every `PerSkin` row. Saddle Up calls it after its Second tone rows and names no tone (the
   layering rule).
-- The rows are made from the skin's tones as they are when its rows are built. A variant whose default registers
-  after that (a mod registering a mount's default once the page is shown) gets its inherited tones' rows at the next
-  start, the limit every row of something registered late has (a List row's choices, docs/per-skin-looks.md);
-  registered in plugins' Awake, before the page shows, everything has them.
+- The rows are made from the skin's tones as they are when its rows are built (a page's rows are bound once). A
+  variant whose default registers after that (a mod registering a mount's default once the page is shown), or a
+  pack edited while the game runs (the dev tools' reload), shows the change in its rows at the next start, the
+  limit every row of something registered late has (a List row's choices, docs/per-skin-looks.md); registered in
+  plugins' Awake, before the page shows, everything has them.
 - The words: the row's label is the tone's name, the skin's owner's text (`skin.<skin id>.tone.<id>.name`, step 3
   of docs/localization.md); the presets and the two custom labels ("{0}: custom colour", "{0}: lightness") are the
   API's.

@@ -196,6 +196,7 @@ static Dictionary<string, Dictionary<string, string>> ReadCfg(string path)
 {
     var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
     Dictionary<string, string>? section = null;
+    bool colours = false; // [Colors] or [Tone.*]: a key given twice is read as the loader reads it, both lines' colours
     foreach (var raw in File.ReadLines(path))
     {
         var line = raw.Trim();
@@ -205,12 +206,15 @@ static Dictionary<string, Dictionary<string, string>> ReadCfg(string path)
         if (line.StartsWith("[") && line.EndsWith("]"))
         {
             var name = line[1..^1].Trim();
+            colours = name.Equals("Colors", StringComparison.OrdinalIgnoreCase) || name.StartsWith("Tone.", StringComparison.OrdinalIgnoreCase);
             if (!result.TryGetValue(name, out section)) result[name] = section = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             continue;
         }
         int eq = line.IndexOf('=');
         if (section == null || eq <= 0) continue;
-        section[line[..eq].Trim()] = line[(eq + 1)..].Trim();
+        string key = line[..eq].Trim(), value = line[(eq + 1)..].Trim();
+        if (colours && key.Equals("colors", StringComparison.OrdinalIgnoreCase)) key = "colours"; // a tone's two spellings are one list
+        section[key] = colours && !key.Equals("name", StringComparison.OrdinalIgnoreCase) && section.TryGetValue(key, out var before) ? before + " " + value : value;
     }
     return result;
 }
@@ -739,9 +743,11 @@ foreach (var dir in skinDirs)
     // and none in a colour-cube cell with another colour of the look (Colors.Rig.LutIndex: on the cube, over 48
     // colours or with the player's Lut setting, colours of one cell change together). A palette skin has none.
     var toneSecs = order.Where(s => s.StartsWith("Tone.", StringComparison.OrdinalIgnoreCase)).ToList();
-    if (toneSecs.Count > 0)
+    // a variant has its default's tones too: its own colours are checked against them even with no [Tone.*] of its own
+    bool defaultTones = defaultCfg != null && defaultCfg.Keys.Any(k => k.StartsWith("Tone.", StringComparison.OrdinalIgnoreCase));
+    if (toneSecs.Count > 0 || defaultTones)
     {
-        if (skin.TryGetValue("colours", out var colourMode) && colourMode.Equals("palette", StringComparison.OrdinalIgnoreCase)) Bad("[Tone.*] on a skin in the donkey's palette colours (colours = palette): the loader ignores it");
+        if (toneSecs.Count > 0 && skin.TryGetValue("colours", out var colourMode) && colourMode.Equals("palette", StringComparison.OrdinalIgnoreCase)) Bad("[Tone.*] on a skin in the donkey's palette colours (colours = palette): the loader ignores it");
         var toneOf = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // hex -> tone id
         // the donkey is under a skin over the donkey only (over another mount's default, layer = over draws over that)
         bool overDonkey = over && mount.Equals("donkey", StringComparison.OrdinalIgnoreCase);
@@ -800,7 +806,7 @@ foreach (var dir in skinDirs)
                     Bad($"a tone's colour shares a colour-cube cell with another colour of the look: {string.Join(", ", cell.OrderBy(p => p.Key).Select(p => p.Key + " (" + p.Value + ")"))} (draw one of them a step apart)");
             }
         }
-        if (ok) Pass($"{id}: {toneSecs.Count} tone(s) of its own with {toneOf.Count} colour(s), each in one place and its own colour-cube cell");
+        if (ok) Pass($"{id}: {toneSecs.Count} tone(s) of its own with {toneOf.Count} colour(s){(defaultTones ? " and its default's" : "")}, each in one place and its own colour-cube cell");
     }
     if (!mount.Equals("donkey", StringComparison.OrdinalIgnoreCase))
     {

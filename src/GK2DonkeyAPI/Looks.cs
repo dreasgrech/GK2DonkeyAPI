@@ -945,17 +945,10 @@ namespace GK2DonkeyAPI
                 d.Report += "[Base.*] is for layer = over only (a recolour of the donkey under the skin), ignored; ";
                 d.BaseRegions = null;
             }
-            foreach (string toneId in toneOrder) SkinTones.Add(d, toneId, toneLines[toneId][0], toneLines[toneId][1], where);
-            if (!d.OwnColours && d.Tones != null)
-            {
-                d.Report += "[Tone.*] is for a skin in its own colours (colours = own); a palette skin takes the donkey's regions, ignored; ";
-                if (d.ColorRegions != null)
-                {
-                    foreach (SkinTones.ToneDef t in d.Tones) d.ColorRegions.Remove(SkinTones.KeyOf(t.Id)); // a tone without colours has none here
-                    if (d.ColorRegions.Count == 0) d.ColorRegions = null;
-                }
-                d.Tones = null;
-            }
+            // the tones of a skin in its own colours; a palette skin's are not read at all (their colours can't refuse it
+            // over a [Colors] line it ignores too)
+            if (d.OwnColours) foreach (string toneId in toneOrder) SkinTones.Add(d, toneId, toneLines[toneId][0], toneLines[toneId][1], where);
+            else if (toneOrder.Count > 0) d.Report += "[Tone.*] is for a skin in its own colours (colours = own); a palette skin takes the donkey's regions, ignored; ";
             if (!d.OwnColours && d.ColorRegions != null) d.Report += "[Colors] is for a skin in its own colours (colours = own); a palette skin takes the donkey's regions, ignored; ";
             if (unknown.Count > 0) d.Report += "unknown keys ignored: " + string.Join(", ", unknown) + "; ";
             if (unknownSections.Count > 0) d.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + "; ";

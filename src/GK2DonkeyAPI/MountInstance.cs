@@ -60,7 +60,7 @@ namespace GK2DonkeyAPI
             // as drawn) and the companion that set them. Not tuning keys and not in the side file: the companion sets
             // them at every apply (and on every load, OnGameReady); they go with its overrides (InstanceTuning).
             internal Dictionary<string, Colors.RegionTweak> Tones;
-            internal string TonesOwner;
+            internal string TonesOwner, TonesSkin; // TonesSkin: the skin they were made for, the only one they colour
             // Overrides read from the side file whose owner isn't loaded (a removed mod's, an ability's of a gone mount):
             // not applied, written back as they were, so they return with the mod (key, owner, value as text).
             internal readonly List<string[]> AsideSets = new List<string[]>();

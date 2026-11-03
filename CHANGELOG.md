@@ -87,6 +87,18 @@ Development:
   colour is said once, as a region's is); the tone lightness reads the skin's set without sorting a copy per apply.
   Not changed: a variant whose default registers after the page is shown gets its inherited tones' rows at the next
   start, as every late registration (docs/mount-colours.md 7.4).
+- **Tones, after a second review** (2026-11-04, over the commit 3b1dcde; 9 findings, each checked): a code skin's tone
+  without a name is unnamed as a pack's is (`MountSkinTone` named every tone by its id, so a code variant lost its
+  default's name); another owner's tones are neither replaced nor cleared by a companion (said once), as an override
+  is; tones are kept with the skin they were made for and colour only that skin, so a skin changing under them
+  takes none of another's; the tone lightness averages the colours the loaded skin draws (a listed colour no
+  picture has no longer counts); a palette skin's tones aren't read, so a colour they share with its ignored
+  `[Colors]` no longer refuses the skin; SkinsScan and `check_skin.py` read a colour list given on several lines as
+  the loader does (they kept the last line, so a colour on an earlier one passed both and the game refused the
+  skin; `[Colors]` had the same gap); SkinsScan checks a variant's colours against its default's tones with no tones
+  of its own; `ToneRows` finds its three rows by their keys instead of their place in the list. Not changed: the rows
+  follow a skin re-resolved after the page (a late default, the dev reload) at the next start (docs/mount-colours.md
+  7.4). Each change has its self-test check, and both checkers were proven on a split colour list.
 
 - **`tools/skins/donkey_frames.py`** (2026-11-03): `make` writes `src/GK2DonkeyAPI/donkey-frames.txt` (fingerprints,
   no art) from the asset probe's PNGs; `check` compares it with them, or with a dev build's own read of the game

@@ -1003,7 +1003,7 @@ namespace GK2DonkeyAPI.Api
                 OnPaper(HarnessKeys, sameOnPaper ? harnessKeys : Look(HarnessPreset(pl.Harness, pl.CustomHarness, "harness", ps)));
                 OnPaper(MuzzleKeys, sameOnPaper ? muzzleKeys : Look(MuzzlePreset(pl.Muzzle, pl.CustomMuzzle, "second tone", ps)));
                 OnPaper(LookKeys, sameOnPaper ? skinKeys : SkinKeys(ps));
-                SkinTones.Apply(paper, sameOnPaper ? tones : SkinTones.ValuesOf(pl, ps), OwnerId);
+                SkinTones.Apply(paper, sameOnPaper ? tones : SkinTones.ValuesOf(pl, ps), OwnerId, ps);
                 paper.LooksRig.MarkDirty();
             }
             var paperPaint = Look(PaintPreset(pl.Paint, pl.CustomPaint, "cart paint"));
@@ -1026,7 +1026,7 @@ namespace GK2DonkeyAPI.Api
                 Instance(Donkey, HarnessKeys, harnessKeys);
                 Instance(Donkey, MuzzleKeys, muzzleKeys);
                 Instance(Donkey, LookKeys, skinKeys);
-                SkinTones.Apply(Donkey.I, tones, OwnerId);
+                SkinTones.Apply(Donkey.I, tones, OwnerId, skin);
             }
             for (int i = 0; i < foalHandles.Length; i++)
             {
@@ -1042,7 +1042,7 @@ namespace GK2DonkeyAPI.Api
                     Instance(h, FoalDarkKeys, Shade(NoKeys, "Dark", own.Hue * 0.7f, own.Brightness, own.Saturation, 0f));
                     Instance(h, LookKeys, CurrentOwn.FoalsWearSkin ? skinKeys : noSkin);
                     // the parent's tones on a baby in its skin; one not in it is a plain donkey (no tones of its own)
-                    SkinTones.Apply(h.I, CurrentOwn.FoalsWearSkin ? tones : null, OwnerId);
+                    SkinTones.Apply(h.I, CurrentOwn.FoalsWearSkin ? tones : null, OwnerId, skin);
                 }
             }
             // The cart's colours sit on whichever holds this companion's cart (they move with it at hitch and unhitch);

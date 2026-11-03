@@ -926,10 +926,12 @@ namespace GK2DonkeyAPI
                 }
                 if (look.Def.Tones != null)
                 {
+                    // the instance's tone values, only for the skin they were made for (SkinTones.Apply)
+                    bool forThis = owner?.Tones != null && string.Equals(owner.TonesSkin, look.Def.Id, StringComparison.OrdinalIgnoreCase);
                     foreach (SkinTones.ToneDef t in look.Def.Tones)
                     {
                         RegionTweak v = null;
-                        bool set = owner?.Tones != null && owner.Tones.TryGetValue(t.Id, out v) && v != null && !v.IsIdentity;
+                        bool set = forThis && owner.Tones.TryGetValue(t.Id, out v) && v != null && !v.IsIdentity;
                         list.Add((SkinTones.KeyOf(t.Id), set ? new RegionMap(v) : null));
                     }
                 }

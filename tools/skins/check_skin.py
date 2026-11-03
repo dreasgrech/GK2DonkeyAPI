@@ -30,7 +30,12 @@ def cfg(path):
             sec = ".".join(p.capitalize() for p in line.strip("[]").strip().split("."))  # the loader reads [skin] as [Skin]
         elif "=" in line:
             k, v = (x.strip() for x in line.split("=", 1))
-            out[(sec, k.lower())] = v
+            k = k.lower()
+            colours = sec == "Colors" or sec.startswith("Tone.")
+            if colours and k == "colors":
+                k = "colours"  # a tone's two spellings are one list
+            # a colour list given twice is read as the loader reads it: both lines' colours
+            out[(sec, k)] = out[(sec, k)] + " " + v if colours and k != "name" and (sec, k) in out else v
     return out
 
 

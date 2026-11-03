@@ -10,16 +10,20 @@ namespace GK2DonkeyAPI.Api
 
     // A part of a skin's drawing the player colours on its own, apart from the five mount regions (docs/mount-colours.md
     // section 7): a pack's skin.cfg [Tone.<id>], a code skin's MountSkinDef.Tones. Id: lower case letters, digits and
-    // '-' (it is part of the settings' keys). Name: its row's label. Colours: the exact colours of the skin's pictures
-    // that belong to it, hex RRGGBB; a colour is in one tone or one region only.
+    // '-' (it is part of the settings' keys). Name: its row's label (null: the id, and on a variant of a mount's default
+    // the default's tone of that id keeps its own name). Colours: the exact colours of the skin's pictures that
+    // belong to it, hex RRGGBB; a colour is in one tone or one region only.
     public sealed class MountSkinTone
     {
         public MountSkinTone(string id, string name, params string[] colours)
         {
             Id = id ?? "";
-            Name = string.IsNullOrWhiteSpace(name) ? Id : name.Trim();
+            NameGiven = !string.IsNullOrWhiteSpace(name);
+            Name = NameGiven ? name.Trim() : Id;
             Colours = Array.AsReadOnly(colours ?? Array.Empty<string>());
         }
+
+        internal bool NameGiven { get; } // a name of its own (MountSkinDef.ToDef: a variant's tone without one keeps its default's)
 
         public string Id { get; }
         public string Name { get; }

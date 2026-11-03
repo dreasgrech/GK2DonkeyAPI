@@ -316,7 +316,7 @@ namespace GK2DonkeyAPI.Api
                 foreach (MountSkinTone t in Tones)
                 {
                     if (t == null) continue;
-                    SkinTones.Add(d, (t.Id ?? "").Trim().ToLowerInvariant(), t.Name, string.Join(" ", t.Colours), "skin '" + Id + "' (code)");
+                    SkinTones.Add(d, (t.Id ?? "").Trim().ToLowerInvariant(), t.NameGiven ? t.Name : null, string.Join(" ", t.Colours), "skin '" + Id + "' (code)");
                 }
             }
             if (BaseRegions != null && Over)

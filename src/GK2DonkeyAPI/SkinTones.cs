@@ -139,12 +139,24 @@ namespace GK2DonkeyAPI
 
         // How light the colour is against the tone's own art (the average value of its colours), by the custom colours'
         // rule (MountCompanion.LightnessAgainst): colorize keeps each pixel's brightness, so White would stay the art's
-        // mid tone without it. Read off the skin's set as it is, every apply (a handful of colours, nothing kept).
+        // mid tone without it. The colours its pictures draw once the skin is loaded (Loaded.ColoursByRegion: a listed
+        // colour no picture has, or a default's a variant doesn't draw, doesn't count), its list until then; the
+        // companion applies the look again when the sheet is whole (Looks.LoadedReady). A handful of colours, nothing kept.
         internal static float Lightness(string hex, Looks.SkinDef d, string id)
         {
             float sum = 0f;
             int n = 0;
-            if (d?.ColorRegions != null && d.ColorRegions.TryGetValue(KeyOf(id), out HashSet<string> set))
+            Looks.Loaded look = d != null ? Looks.LoadedOwnColours(d.Id) : null;
+            if (look != null && look.ColoursByRegion.TryGetValue(KeyOf(id), out List<Color32> drawn) && drawn.Count > 0)
+            {
+                foreach (Color32 a in drawn)
+                {
+                    Color.RGBToHSV(a, out _, out _, out float av);
+                    sum += av;
+                    n++;
+                }
+            }
+            else if (d?.ColorRegions != null && d.ColorRegions.TryGetValue(KeyOf(id), out HashSet<string> set))
             {
                 foreach (string h in set)
                 {
@@ -177,15 +189,27 @@ namespace GK2DonkeyAPI
             return values;
         }
 
-        // The tones onto an instance, as the owner's (the companion's id): its colours rebuilt when they changed. They go
-        // with the owner's overrides (InstanceTuning.ClearOwner, Reset: Mounts.ClearTuning), so a skin put on that
-        // instance later by anyone else doesn't find them.
-        internal static void Apply(Mount.Instance i, Dictionary<string, Colors.RegionTweak> tones, string owner)
+        private static readonly HashSet<string> refusedSaid = new HashSet<string>(StringComparer.Ordinal); // "<instance>|<owner>"
+
+        // A skin's tones (ValuesOf) onto an instance, as the owner's (the companion's id), for the skin they were made
+        // for: the engine maps them only while that skin is worn (Colors.Rig.NamedMaps), so a skin changing under them
+        // (another sheet still building, another look) never takes another skin's colours. Its colours rebuilt when
+        // they changed. A value belongs to the owner that set it, as an override does (InstanceTuning.MayReplace):
+        // another owner's tones are left to it (said once), and they go with their owner's overrides
+        // (InstanceTuning.ClearOwner, Reset: Mounts.ClearTuning).
+        internal static void Apply(Mount.Instance i, Dictionary<string, Colors.RegionTweak> tones, string owner, string skinId)
         {
             if (i == null) return;
+            if (i.TonesOwner != null && i.TonesOwner != owner)
+            {
+                if (refusedSaid.Add(i.Id + "|" + owner)) Plugin.Log.LogInfo($"Looks: {owner} wants to set a skin's tones on {i.Describe()}, which {i.TonesOwner} has set; left to it (a value belongs to the owner that set it).");
+                return;
+            }
+            string skin = tones == null ? null : Looks.Find(skinId)?.Id ?? skinId;
             i.TonesOwner = tones == null ? null : owner;
-            if (Same(i.Tones, tones)) return;
+            if (Same(i.Tones, tones) && string.Equals(i.TonesSkin, skin, StringComparison.OrdinalIgnoreCase)) return;
             i.Tones = tones;
+            i.TonesSkin = skin;
             i.ColorsRig.MarkDirty();
         }
 
@@ -195,6 +219,7 @@ namespace GK2DonkeyAPI
             if (i?.Tones == null || (ownerId != null && i.TonesOwner != ownerId)) return;
             i.Tones = null;
             i.TonesOwner = null;
+            i.TonesSkin = null;
             i.ColorsRig.MarkDirty();
         }
 
