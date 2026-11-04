@@ -244,8 +244,9 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    - **An unanchored read**: a fresh reviewer (a subagent) gets the page's frames and the user's complaints, not the
      fix's explanation, and says which frames look wrong; its findings are fixed before the hand-off.
 6. **Build and deploy** with the game closed (`dotnet build src/SaddleUp/SaddleUp.csproj` for Saddle Up's packs); the self-tests
-   (F11, Tests tab, "Skins and effects") cover the drawing with readbacks; wear it, walk, turn, graze; then "Export the
-   loaded skins as built" (F11, Mounts tab: every skin loaded at that moment) and rebuild the page: it shows the game's
+   (F11, Tests tab, "Skins and effects") cover the drawing with readbacks; wear it, walk, turn, graze; then run F11
+   (its Measurements group writes every skin as built since 2026-11-05) or press "Export every skin as built" (F11,
+   Mounts tab) and rebuild the page: it shows the game's
    own export and counts where its composite would differ (0 = the page shows what the game shows).
 
 Another game character as a mount (Gerry) is the by-hand path: `tools/skins/gerry/gerry_probe.py <game folder> <out>
@@ -337,9 +338,16 @@ overlap and the "inner edges" crossed. Checked on a zoom of all 44 heads rendere
 (the same composite the game makes); `compare_hellfire.py` reports exactly those 326 added pixels as the only
 difference from the code's frames.
 
-**The page shows the game's own pictures (2026-10-19 evening):** F11, Mounts tab, "Export the loaded skins as built" writes
-every skin loaded at that moment (worn by someone; a skin taken off is unloaded) as the game draws it (the sheet after the erase compose) and the donkey's frames as the game
-reads them to `BepInEx\GK2-asset-probe\game-skins\`; the page prefers that, says "as the game built it" on the card and
+**The page shows the game's own pictures (2026-10-19 evening):** F11, Mounts tab, "Export every skin as built" (since
+2026-11-05; the user: "that button only appears per mount so i cant batch and we need something that will export all
+of them") builds every skin of every mount, worn or not (`Looks.ExportEverySkin`: each held while it builds, let go
+after), and writes each as the game draws it (the sheet after the erase compose) with the donkey's frames as the game
+reads them to `BepInEx\GK2-asset-probe\game-skins\`; every F11 run does the same in its Measurements group ("measure:
+every skin of every mount exported as built"). Until then the button wrote the skins worn at that moment only. The page
+takes the frames the game built whole from the export's `manifest.txt` (its own guess, for an older export, took
+Armored's overlays for whole frames), and shows a skin with no pictures of its own (Gerry: the game's frames) from the
+export with nothing to compare. The first export of all nine (2026-11-05 00:22): every skin 0 px differ, the donkey's
+frames the same as the probe's. the page prefers that, says "as the game built it" on the card and
 counts the pixels where its own composite would differ (0 expected). The "all 44 frames" view lists every picture, named.
 
 **What the previews cannot show:** they composite the pack's pixels in Python; the game draws the overlay through

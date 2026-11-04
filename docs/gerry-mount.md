@@ -108,7 +108,7 @@ green). Not recorded as settled from that first run: a clipping at the top of th
 the ridden skull (the Instances tab's "Log drawing" probe was added for them); whether the 3x pixels read next to the
 world is the user's judgement (B, own art, stays open and is not planned). His `[Colors]` (Dark =
 the sockets) is written by `tools/skins/skin_colors.py` from the game's export (`BepInEx\GK2-asset-probe\game-skins\
-gerry\`, the Mounts tab's "Export the loaded skins as built") when one exists; until then every colour is Coat.
+gerry\`, the Mounts tab's "Export every skin as built", or any F11 run) when one exists; until then every colour is Coat.
 
 **Another game character, by hand** (docs/sprite-tools.md "Making a skin"): `python -I tools/skins/gerry/gerry_probe.py
 <game folder> <out> <prefix>` finds the addressables bundle holding `<prefix>bdy_walk_left_01` and exports the

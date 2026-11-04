@@ -153,4 +153,5 @@ The probe's F11 passed (section 6), the user decided section 5's two questions, 
   44 frames put back as drawn are donkey-frames.txt's, both at the start and after the run (the frames never
   unloaded); the pairs right on the plain donkey and Hellfire. Left to look at by hand: Legs and mane Pink, then
   Muzzle green, on a donkey in the world; and the Mounts tab's export with the review page rebuilt (Hellfire's whole
-  frames "0 px differ").
+  frames "0 px differ"). The export (every F11 run since 2026-11-05) and the page: Hellfire's whole
+  frames 0 px differ, the donkey's exported frames the same as the probe's (2026-11-05 00:22).

@@ -129,6 +129,19 @@ namespace GK2DonkeyAPI
             SelfTest.Info($"lamp framing: {lines.Count - 1} measurement(s) in BepInEx\\GK2-lamp-framing.tsv; the skin, the mount and every lantern setting back as they were");
         }
 
+        // Every skin of every mount written as the game builds it, for the review page (tools/skins/skin_preview_html.py
+        // reads BepInEx\GK2-asset-probe\game-skins\ first; the user, 2026-11-05: the Mounts tab's button wrote only the
+        // skins worn at that moment, "we need something that will export all of them"): Looks.ExportEverySkin in every run,
+        // so the folder is the last run's build.
+        internal static IEnumerator ExportSkins()
+        {
+            string result = null;
+            yield return Looks.ExportEverySkin(Path.Combine(Paths.BepInExRootPath, "GK2-asset-probe", Looks.ExportDirName), r => result = r);
+            if (result == null || result.StartsWith("failed", StringComparison.Ordinal)) SelfTest.Fail("every skin exported as built: " + (result ?? "no result"));
+            else if (result.Contains("not built in two minutes")) SelfTest.Warn("every skin exported as built: " + result);
+            else SelfTest.Info("every skin exported as built: " + result);
+        }
+
         // The colours window of every skin of every mount as the player sees it (the user's look at the skins whose parts
         // became tones and the looks whose regions got names, 2026-11-04): a picture each,
         // BepInEx\GK2-panel-shots\colours-skin-<mount>-<skin>.png (and -end where its rows scroll), taken once the window's

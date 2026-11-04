@@ -139,7 +139,7 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 | `tools/skins/gamedir.py` | the game folder from `Directory.Build.props`, the frames and packs folders in it (`packs_dir()` = `BepInEx\plugins\gk2mounts`) |
 | `tools/skins/pngcolors.py` | a plain PNG reader and colour counter |
 | `tests/SkinsScan` | every built-in mount and skin: each `mount.cfg` (its keys, no `default_skin`, a `skins\default\skin.cfg` beside it, the folder named `<mod>.<name>`, its tuning keys, its sounds in the mount's `sounds\`, the section order; the donkey's folder without one and without a `default`) and each `skin.cfg` key by key and value by value (no `id =` line, no `[Mount*]` section), the layout, pictures, `[Colors]` against its pixels (in the release scans) |
-| Dev panel, Mounts tab (`src/GK2DonkeyAPI/Dev/TuningWindow.Mounts.cs`) | the worn skin's rows, "Reload from the file", "Reload by itself when the pack's files change", "Export the loaded skins as built" (`LooksExport.cs`) |
+| Dev panel, Mounts tab (`src/GK2DonkeyAPI/Dev/TuningWindow.Mounts.cs`) | the worn skin's rows, "Reload from the file", "Reload by itself when the pack's files change", "Export every skin as built" (`LooksExport.cs`: every skin of every mount built and written; F11's Measurements group does it too) |
 | Self-tests (`src/GK2DonkeyAPI/Dev/SelfTest.cs`, "Skins and effects") | packs, recipes, over skins with the world readback, auto-reload, mounts |
 
 Outside the repo and never committed, because it is the game's art: the asset probe's `donkey-frames\`, the

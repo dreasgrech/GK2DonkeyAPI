@@ -136,6 +136,22 @@ For mod authors:
 
 Development:
 
+- **The review page against the export of every skin** (2026-11-05; the first export of all nine: every skin 0 px
+  differ, docs/sprite-tools.md). `skin_preview_html.py` takes the frames the game built whole from the export's
+  manifest (its guess took Armored's overlays, covering most of the donkey, for whole frames: 10525 px "differ", the
+  donkey's legs, ears and tail under them), and counts nothing for a skin with no pictures of its own (Gerry's game
+  frames: 76824 px were the whole export against nothing). A study card installed in the game takes the installed
+  copy's id, so it is compared with the game's export of it (the Jester's card had none; compared, it showed its study
+  folder a day older than the installed copy: re-staged).
+- **The dev panel's footer under the settings tabs only** (2026-11-05; the user: "why is that on the tests tab"): the
+  differing settings, the session values, "Make these the mod defaults", "Reset this style to the mod defaults" and the
+  right-click hint are left off Tests, Performance, Instances and Mounts (`TuningWindow.HasSettingsRows`).
+- **Every skin exported at once** (2026-11-05; the user: "that button only appears per mount so i cant batch and we
+  need something that will export all of them"; docs/sprite-tools.md). `Looks.ExportEverySkin`: every registered skin
+  held and built (as for a wearer), written with `ExportBuilt`, let go; a skin set aside, one whose base frames aren't
+  in memory and a game-source one before the game is loaded left out and said. The Mounts tab's button is "Export
+  every skin as built"; every F11 run writes the export too (Measurements: "measure: every skin of every mount exported
+  as built").
 - **The Outline region** (2026-11-04; the user: "set its color by itself as part of an individual option", "lets keep
   for donkey for now and game default being game's border"; docs/mount-colours.md 7.15). `Colors.cs` `Outline`
   (1e190e 301f0f 42422c; the donkey's pairs 43), `MountRegionKeys` six, `UiWords.RegionOutline` in 11 languages (the

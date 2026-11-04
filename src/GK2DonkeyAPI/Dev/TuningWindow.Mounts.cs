@@ -16,6 +16,7 @@ namespace GK2DonkeyAPI
         private static string mountsSkinId;           // the mount being tuned (a skin id, "" = the donkey)
         private static bool mountsFollowRide = true;  // follow what is ridden until the user picks one
         private static string mountsNote = "";
+        private static bool exportingSkins; // ExportEverySkin running (the button's)
         private static float mountsNoteUntil;
 
         // The seat, leg and cart keys a SKIN sets for its drawing (reference.md [Ride] / [Cart]; the skin owns its
@@ -794,11 +795,18 @@ namespace GK2DonkeyAPI
                         "Debug.SkinPackAutoReload: a pack in use is read again a second or two after its skin.cfg or a picture is saved (an editor's export, say). Pictures added after the game started need a restart, as for the button.");
                 }
             }
-            // the skins as the game built them, for the review page (tools/skins/skin_preview_html.py reads game-skins\ first)
+            // the skins as the game built them, for the review page (tools/skins/skin_preview_html.py reads game-skins\ first):
+            // every skin of every mount, built for it (the user, 2026-11-05: one button for all of them)
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(Tip("Export the loaded skins as built", "Writes every skin loaded now (worn by someone at this moment; a skin taken off is unloaded) (its pictures as the game draws them, after the erase compose) and the donkey's own frames to BepInEx/GK2-asset-probe/game-skins/, one PNG per frame. The review page shows those and counts where its own composite would differ. Wear a skin once to have it loaded."), Wd(LabelW)))
+            if (GUILayout.Button(Tip(exportingSkins ? "Exporting every skin..." : "Export every skin as built", "Builds every skin of every mount (worn or not) and writes it as the game draws it (after the erase compose), with the donkey's own frames, to BepInEx/GK2-asset-probe/game-skins/, one PNG per frame; the skins nobody wears are let go after. The review page shows those and counts where its own composite would differ. Also done by every F11 run (Measurements)."), Wd(LabelW)) && !exportingSkins)
             {
-                Note(Looks.ExportBuilt(System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "GK2-asset-probe", Looks.ExportDirName)));
+                exportingSkins = true;
+                Note("Building every skin to export it...");
+                Plugin.Instance.StartCoroutine(Looks.ExportEverySkin(System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "GK2-asset-probe", Looks.ExportDirName), r =>
+                {
+                    exportingSkins = false;
+                    Note(r);
+                }));
             }
             GUILayout.EndHorizontal();
             if (Time.unscaledTime < mountsNoteUntil) GUILayout.Label(mountsNote, small);

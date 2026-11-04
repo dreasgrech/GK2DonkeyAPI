@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -10,7 +11,7 @@ namespace GK2DonkeyAPI
     // pictures read back from the texture the game draws from (the sheet after the erase compose, a mod's own sprites),
     // one PNG per frame key, and the donkey's own frames as the game places them on the canvas. The review page
     // (tools/skins/skin_preview_html.py) shows these in place of its own composite and counts where the two differ, so the
-    // page and the game can't drift apart unnoticed. The player's colours are the shader's and are not in these files,
+    // page and the game can't drift apart unnoticed. ExportEverySkin builds every skin first, for the whole page at once. The player's colours are the shader's and are not in these files,
     // nor the donkey's repainted eye and nostril pixels (FacePixels): the donkey's frames and a skin's whole frames are
     // written as the game draws the donkey, the page composing over the asset probe's frames.
     internal static partial class Looks
@@ -75,6 +76,47 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogWarning("Looks: the export failed: " + e.Message);
                 return "failed: " + e.Message;
             }
+        }
+
+        // Every skin registered, built and written (the user, 2026-11-05: the button wrote only the skins worn at that
+        // moment, one mount at a time, "we need something that will export all of them"): each skin that can be built now
+        // is held (Acquire: loaded and built a few frames a tick, as for a wearer), waited for until ready (two minutes
+        // at most), written with ExportBuilt with everything else loaded, and let go (unloaded unless someone wears it).
+        // Left out, and said: a skin set aside (its game frames gone), one built from the base's frames while they aren't
+        // in memory (the main menu), a game-source one before the game is loaded. done gets ExportBuilt's line and those.
+        internal static IEnumerator ExportEverySkin(string folder, Action<string> done)
+        {
+            var held = new List<Loaded>();
+            var left = new List<string>();
+            foreach (SkinDef d in new List<SkinDef>(All))
+            {
+                string why = d.Unavailable != null ? "set aside: " + d.Unavailable
+                    : NeedsBaseFrames(d) && !BaseFramesInMemory(d.Base, d.Base.GamePrefix) ? "its base's frames are not in memory"
+                    : d.Game != null && !Mount.IsGameReady ? "a game-source skin before the game is loaded" : null;
+                if (why != null)
+                {
+                    left.Add($"{d.Id} ({why})");
+                    continue;
+                }
+                try
+                {
+                    held.Add(Acquire(d, d.Base.GamePrefix));
+                }
+                catch (Exception e)
+                {
+                    left.Add($"{d.Id} ({e.Message})");
+                }
+            }
+            float until = Time.realtimeSinceStartup + 120f;
+            while (Time.realtimeSinceStartup < until && held.Exists(l => !l.Ready)) yield return null;
+            var notReady = new List<string>();
+            foreach (Loaded l in held) if (!l.Ready) notReady.Add(l.Def.Id);
+            string result = ExportBuilt(folder);
+            foreach (Loaded l in held) Release(l);
+            if (left.Count > 0) result += "; left out: " + string.Join(", ", left.ToArray());
+            if (notReady.Count > 0) result += "; not built in two minutes, not written: " + string.Join(", ", notReady.ToArray());
+            Plugin.Log.LogInfo($"Looks: export of every skin: {held.Count} held and built, {result}.");
+            done?.Invoke(result);
         }
 
         // A sprite's pixels (bottom row first) read back from its texture through a blit, since a sheet is not readable.

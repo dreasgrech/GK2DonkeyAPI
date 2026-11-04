@@ -45,6 +45,10 @@ namespace GK2DonkeyAPI
         private static readonly string[] TabNames = { "General", "Riding", "Cargo", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Tests", "Performance", "Sources", "Mounts", "Flying" };
         private const int TabCargo = 2, TabInstances = 6, TabDebug = 7, TabTests = 8, TabPerformance = 9, TabMounts = 11, TabFlying = 12;
         private const int TabsPerRow = 6; // rows of six: eleven names in one row of 470 would be cut short
+        // The tabs of the mod's settings rows (General, Riding, Cargo, Lantern, Sounds, Colors, Debug, Sources, Flying),
+        // which get the footer; the tools' tabs don't: Tests, Performance, Instances (one donkey's own values) and Mounts
+        // (a pack's files, its own buttons).
+        private static bool HasSettingsRows(int t) => t != TabTests && t != TabPerformance && t != TabInstances && t != TabMounts;
 
         // Whether the panel draws this frame: in a game, switched on, not hidden by its key, and not while the cargo sheet
         // photographs the cart. Plugin.LateUpdate switches Unity's layout pass off when it doesn't (useGUILayout).
@@ -573,19 +577,25 @@ namespace GK2DonkeyAPI
             GUILayout.EndScrollView();
 
             using var footer = Perf.Measure(Perf.S.WinFooter);
-            GUILayout.Space(8f);
-            int differing = diffSnapshot.Count;
-            GUILayout.Label(footerDiffText, small);
-            if (overrideSnapshot > 0)
+            // the footer is the settings rows' (what differs from the mod defaults, the session values, the style's reset,
+            // the right-click hint): under the tabs that have such rows, not the tools' (the user, 2026-11-05, on the
+            // Tests tab: "why is that on the tests tab")
+            if (HasSettingsRows(tab))
             {
-                GUILayout.Label(footerOverrideText, small);
+                GUILayout.Space(8f);
+                int differing = diffSnapshot.Count;
+                GUILayout.Label(footerDiffText, small);
+                if (overrideSnapshot > 0)
+                {
+                    GUILayout.Label(footerOverrideText, small);
+                }
+                if (footerDonkeyText.Length > 0)
+                {
+                    GUILayout.Label(footerDonkeyText, small);
+                }
+                DrawDefaultsButtons(differing);
+                GUILayout.Label("Right-click a row to put it back to its mod default.", small);
             }
-            if (footerDonkeyText.Length > 0)
-            {
-                GUILayout.Label(footerDonkeyText, small);
-            }
-            DrawDefaultsButtons(differing);
-            GUILayout.Label("Right-click a row to put it back to its mod default.", small);
             DrawTooltip(); // last: over everything, no layout control
             GUI.DragWindow(new Rect(0f, 0f, 10000f, 20f));
         }

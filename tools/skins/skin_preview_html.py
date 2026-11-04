@@ -265,12 +265,27 @@ def main(argv):
             i += 1
     # (Hellfire was a recipe until 2026-10-19 and had its drawn frames listed here; it is a built-in pack now, found with the others.)
 
-    # the game's own export (the Mounts tab, "Export the loaded skins as built"): the frames as the game draws them;
+    # the game's own export (any F11 run, or the Mounts tab's "Export every skin as built"): the frames as the game draws them;
     # when a skin has one, the page shows it and counts where its own composite would differ (no silent divergence)
     export_dir = os.path.join(probe, "game-skins")
     export_note = ""
+    # the frames the game built whole over the donkey, by skin, as its manifest says ("<id>: N pictures, ..., built whole
+    # over the donkey: N (keys)"): a skin listed without that is all overlays. A skin the manifest doesn't list (an
+    # export older than the list) falls back to the guess (is_whole), which takes an overlay covering most of the donkey
+    # (Armored's) for a whole frame
+    built_whole = {}
     if os.path.isfile(os.path.join(export_dir, "manifest.txt")):
-        export_note = open(os.path.join(export_dir, "manifest.txt"), encoding="utf-8").readline().strip()
+        lines = open(os.path.join(export_dir, "manifest.txt"), encoding="utf-8").read().splitlines()
+        export_note = lines[0].strip() if lines else ""
+        for line in lines[1:]:
+            m = re.match(r"^(\S+/\S+): \d+ pictures", line)
+            if not m:
+                continue
+            keys = set()
+            w = re.search(r"built whole over the donkey: \d+ \(([^)]*)\)", line)
+            if w:
+                keys = set(w.group(1).split())
+            built_whole[m.group(1)] = keys
     donkey_dir = os.path.join(probe, "donkey-frames")
     donkey = frames_from_folder(donkey_dir)
     game_donkey = frames_from_folder(os.path.join(export_dir, "donkey")) if os.path.isdir(os.path.join(export_dir, "donkey")) else {}
@@ -309,9 +324,14 @@ def main(argv):
         # the game's export of this skin, when it has one: shown instead, and the page's composite checked against it
         game_dir = os.path.join(export_dir, *sid.split("/"))  # Looks.ExportBuilt: <mount id>/<skin>/
         diverge = None
+        # a skin with no pictures of its own (source = game: the game's frames, read and scaled at run time) has no
+        # composite here to check: the export is shown, nothing counted
+        own_pictures = bool(frames)
         if os.path.isdir(game_dir):
             exported = frames_from_folder(game_dir)
-            if exported:
+            if exported and not own_pictures:
+                shown = exported
+            elif exported:
                 game_shown = exported
                 if layer == "over":
                     # the export holds a plain overlay as the overlay alone and a whole frame as the whole: the page
@@ -320,7 +340,8 @@ def main(argv):
                     for k, v in exported.items():
                         if k.startswith("front/") or k not in ORDER:
                             game_shown[k] = v; continue
-                        game_shown[k] = v if is_whole(v, donkey.get(k)) else composite_over({k: donkey[k]}, {k: v}, None)[k]
+                        whole = k in built_whole[sid] if sid in built_whole else is_whole(v, donkey.get(k))
+                        game_shown[k] = v if whole else composite_over({k: donkey[k]}, {k: v}, None)[k]
                 diverge = sum(pixel_diff(shown.get(k), game_shown.get(k)) for k in ORDER if k in game_shown or k in shown)
                 shown = game_shown
                 note = (note + "; " if note else "") + ("as the game built it: the page's own composite matches, 0 px differ" if diverge == 0 else f"as the game built it: the page's own composite DIFFERS in {diverge} px, look")
@@ -383,8 +404,9 @@ def main(argv):
         frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
         add(skinroots.full_name(p), cfg.get(("Skin", "name"), d), cfg, frames, source, p, skinroots.mount_of(p), mount_cfg_of(p))
     # a study installed in the game to be seen there (a loose copy in plugins\gk2mounts) is one card, the study's: by
-    # its mount and its name (two Jester cards, 2026-11-03)
-    study_names, installed = {}, set()
+    # its mount and its name (two Jester cards, 2026-11-03), under the installed copy's id, so the game's export of it
+    # is the card's (2026-11-05: the Jester's card was donkey/jester, its export donkey/saddleup-donkey-skins.jester)
+    study_names, installed = {}, {}
     for p in studies:
         if os.path.isfile(os.path.join(p, "skin.cfg")):
             c = read_cfg(os.path.join(p, "skin.cfg"))
@@ -407,14 +429,14 @@ def main(argv):
                     cfg = read_cfg(os.path.join(p, "skin.cfg"))
                     frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
                     if (m, cfg.get(("Skin", "name"), d)) in study_names:
-                        installed.add(study_names[(m, cfg.get(("Skin", "name"), d))])
+                        installed[study_names[(m, cfg.get(("Skin", "name"), d))]] = m + "/" + d
                         continue
                     add(m + "/" + d, cfg.get(("Skin", "name"), d), cfg, frames, "pack in the game", p, m, mount_cfg_of(p))
     # 3b. studies: skin folders being drawn (a generator's output in a temp folder), shown with their mount
     for p in studies:
         if os.path.isfile(os.path.join(p, "skin.cfg")):
             cfg = read_cfg(os.path.join(p, "skin.cfg"))
-            add(cfg.get(("Skin", "mount"), "donkey") + "/" + os.path.basename(os.path.normpath(p)), cfg.get(("Skin", "name"), os.path.basename(p)), cfg, frames_from_folder(p), "a study (also in the game, a loose copy)" if p in installed else "a study (not in the game)", p)
+            add(installed.get(p) or cfg.get(("Skin", "mount"), "donkey") + "/" + os.path.basename(os.path.normpath(p)), cfg.get(("Skin", "name"), os.path.basename(p)), cfg, frames_from_folder(p), "a study (also in the game, a loose copy)" if p in installed else "a study (not in the game)", p)
     # 4. recipes drawn to pictures
     for rid, folder in sorted(recipes.items()):
         if os.path.isdir(folder):
@@ -506,7 +528,7 @@ def main(argv):
                .replace("__CAPS__", json.dumps(captures)).replace("__RIDER__", json.dumps(rider)).replace("__ORDER__", json.dumps(ORDER + (FLIGHT if "fly" in clips else []))) \
                .replace("__EXPORT__", json.dumps(export_note)).replace("__RIDER_HIP__", json.dumps(rider_hip))
     open(out_path, "w", encoding="utf-8").write(page)
-    print("ok", out_path, f"{len(page) // 1024} KB" + (f" | game export: {export_note}" if export_note else " | no game export yet (Mounts tab: Export the loaded skins as built)"))
+    print("ok", out_path, f"{len(page) // 1024} KB" + (f" | game export: {export_note}" if export_note else " | no game export yet (run F11, or the Mounts tab: Export every skin as built)"))
     for g in groups:
         print(f"  {g['name']}: " + ", ".join(f"{s['name']} [{s['id']}, {s['source']}, {s['layer']}, {s['canvas']}px" + (f", {s['missing']} frames missing" if s['missing'] else "") + "]" for s in g["skins"]))
     print("  captures:", len(captures), "| clips:", ", ".join(f"{c} {len(v)}" for c, v in clips.items()))
@@ -590,7 +612,7 @@ body.all .strip .cell { margin-bottom:4px; }
 <div id="mounts"></div>
 <script>
 const GROUPS = __GROUPS__, CLIPS = __CLIPS__, SPEED = __SPEED__, RIDER = __RIDER__, ORDER = __ORDER__, CAPS = __CAPS__, EXPORT = __EXPORT__, RIDER_HIP = __RIDER_HIP__;
-document.getElementById('export').textContent = EXPORT ? 'The game\'s own export is in use where a skin has one (' + EXPORT + '). A card says whether the page\'s composite matched it.' : 'No export from the game yet: the pictures are the page\'s own composite. In game: F11, Mounts tab, "Export the loaded skins as built", then rebuild this page.';
+document.getElementById('export').textContent = EXPORT ? 'The game\'s own export is in use where a skin has one (' + EXPORT + '). A card says whether the page\'s composite matched it.' : 'No export from the game yet: the pictures are the page\'s own composite. In game: a full F11 run (or F11, Mounts tab, "Export every skin as built"), then rebuild this page.';
 const DONKEY = GROUPS[0].skins.find(s => s.id === 'donkey');
 const $ = id => document.getElementById(id);
 let frame = 0, paused = false, last = 0, scale = 3;

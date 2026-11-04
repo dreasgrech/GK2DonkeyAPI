@@ -709,4 +709,5 @@ skin over the donkey showed it (about 1000 border pixels on Royal Parade and Hel
   the engine: Hellfire's coat is its ash at Game default (`[Base.Coat]`, 736C57 to 2F1A16, the same run's "a colour
   picked for a part a skin pre-colours" scenario), and the test compared with the drawn colour. Fixed: "kept" and
   "changed" are against the look with every row at Game default. The fonts of all eleven languages have every
-  character of the new words; `l10n-sync --check` the same on all five templates.
+  character of the new words; `l10n-sync --check` the same on all five templates. The run of 2026-11-05 00:10 with the
+  test fixed: 1875 passed, 0 failed, 0 warnings.
