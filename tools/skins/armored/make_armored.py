@@ -68,6 +68,13 @@ PAL = {"k": K, ".": None}
 PAL.update({str(i): STEEL[i] for i in range(1, 9)})
 PAL.update({c: BRASS[i] for i, c in enumerate("vwxyz")})
 PAL.update({c: CLOTH[i] for i, c in enumerate("qrstu")})
+# The helmet and the plume, parts of their own (the user, 2026-11-04: "every part is named and is able to be
+# coloured"): the helmet's steel and the plume's cloth the same to the eye as the body armour's and the skirt's, a
+# step or so off in colour-cube cells of their own (tools/skins/part_palette.py), a colour being one tone's only.
+HELM_STEEL = [K, (57, 49, 49), (71, 61, 63), (95, 83, 87), (111, 102, 111), (131, 119, 136), (157, 146, 165), (176, 172, 176), (204, 201, 206)]
+PLUME_CLOTH = [(56, 18, 24), (95, 28, 35), (137, 40, 41), (177, 58, 49), (210, 92, 70)]
+HELM_PAL = dict(PAL, **{str(i): HELM_STEEL[i] for i in range(1, 9)})
+PLUME_PAL = dict(PAL, **{c: PLUME_CLOTH[i] for i, c in enumerate("qrstu")})
 
 LIGHT = (-0.55, -0.72, 0.42)   # from the front (the donkey faces left), above, and towards us
 RIVET_EVERY = 3                # rivets along a rim, repeated from the piece's anchor
@@ -124,11 +131,12 @@ def shade(mask, normal, R=2.5, tilt=1.1, gain=1.0, lift=0.0):
     return out
 
 
-def stamp(out, art, x0, y0):
-    """An ASCII drawing (PAL keys, '.' empty) with its top-left at (x0, y0)."""
+def stamp(out, art, x0, y0, pal=PAL):
+    """An ASCII drawing (PAL keys, '.' empty) with its top-left at (x0, y0); pal: HELM_PAL for a helmet, PLUME_PAL
+    for a plume."""
     for j, row in enumerate(art):
         for i, ch in enumerate(row):
-            c = PAL.get(ch)
+            c = pal.get(ch)
             if c is not None:
                 out[(x0 + i, y0 + j)] = c
     return out
@@ -645,11 +653,11 @@ PLUME_TURN = 0.5            # a lowered head turns the plume only this much of i
 
 
 def face_layer():
-    return stamp({}, HELMET, *HELMET_AT)
+    return stamp({}, HELMET, *HELMET_AT, HELM_PAL)
 
 
 def plume_layer():
-    return stamp({}, PLUME, *PLUME_AT)
+    return stamp({}, PLUME, *PLUME_AT, PLUME_PAL)
 
 
 # The plume sways lightly in the walk (the user, 2026-11-02: "make that red thing sway a little bit while the donkey is
@@ -694,7 +702,7 @@ def plume_tilted(t):
     for x, y in [p for p, ch in art.items() if ch == "q"]:
         if not any(art.get((x + a, y + b)) in cloth for a in (-1, 0, 1) for b in (-1, 0, 1)):
             del art[(x, y)]
-    return {(PLUME_AT[0] + i, PLUME_AT[1] + j): PAL[ch] for (i, j), ch in art.items()}
+    return {(PLUME_AT[0] + i, PLUME_AT[1] + j): PLUME_PAL[ch] for (i, j), ch in art.items()}
 
 
 def plume_swayed(t):
@@ -907,11 +915,11 @@ def drawn_head(key):
     dy = 0 if key in ("bdy_turn_left_03", "bdy_turn_left_04") else -1
     px = {}
     if key == "bdy_turn_left_03":
-        stamp(px, TURN3_HELMET, 29, 35)
-        stamp(px, TURN3_PLUME, 34, 26)
+        stamp(px, TURN3_HELMET, 29, 35, HELM_PAL)
+        stamp(px, TURN3_PLUME, 34, 26, PLUME_PAL)
     else:
-        stamp(px, FRONT_HELMET, 30, 33 + dy)
-        stamp(px, FRONT_PLUME, 34, 25 + dy)
+        stamp(px, FRONT_HELMET, 30, 33 + dy, HELM_PAL)
+        stamp(px, FRONT_PLUME, 34, 25 + dy, PLUME_PAL)
     return px
 
 
@@ -939,7 +947,7 @@ def head_place(key, donkey):
         a, A, t = rotation(s_ear, s_tip, ear, tip)
         region = set(warp({p: K for p in cached("head_region", head_region)}, A, t)) | neck_front(key, donkey)
         art, ax, ay, (sx, sy) = GRAZE_HELMET[key]
-        px = stamp({}, art, ax, ay)   # drawn on the frame's own head: nothing to seal (it would shut the eye)
+        px = stamp({}, art, ax, ay, HELM_PAL)   # drawn on the frame's own head: nothing to seal (it would shut the eye)
         foot = apply(A, t, PLUME_ROOT)
         PA, Pt = turn(a * PLUME_TURN, PLUME_ROOT, (foot[0] + sx, foot[1] + sy))
         px.update(warp(cached("plume", plume_layer), PA, Pt, {BRASS[3]}))
@@ -952,7 +960,7 @@ def head_place(key, donkey):
     # graze 02 and turn 02 bring the head down or round over the chest plate; every other moved frame keeps it clear
     # (graze 01 and turn 01 are the standing picture: their armour must be the standing one, pixel for pixel)
     region = {(x + hd[0], y + hd[1]) for x, y in cached("head_region", head_region)} if key in HEAD_OVER_CHEST else None
-    art = stamp({}, TURN2_HELMET, *HELMET_AT) if key in MOVE_BY_EYE else face
+    art = stamp({}, TURN2_HELMET, *HELMET_AT, HELM_PAL) if key in MOVE_BY_EYE else face
     px = {(x + hd[0], y + hd[1]): c for (x, y), c in art.items()}
     px = sealed(px, donkey, {(x + hd[0], y + hd[1]) for x, y in mouth_box() | set(EXTRA_SEAL.get(key, ()))})
     for p in POKE_ERASE.get(key, ()):   # the donkey's own pixels poking past the helm's outline: taken off the donkey
@@ -995,7 +1003,7 @@ def sealed(px, donkey, zone):
     out = dict(px)
     for (x, y) in add:
         edge = any(not op(x + i, y + j) and (x + i, y + j) not in px for i, j in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-        out[(x, y)] = K if edge else STEEL[2]
+        out[(x, y)] = K if edge else HELM_STEEL[2]
     return out
 
 
@@ -1120,12 +1128,17 @@ def skin_cfg():
         "author = dreas\nversion = 1.0\nbase = donkey\ncolours = own\nlayer = over\ncanvas = 96 96\n\n"
         "# The skirt and the plume follow the Second tone (the Muzzle row), so the harness colour reaches only the donkey's own\n"
         "# harness (the user, 2026-11-02: under Harness the cloth took the harness colour and the Second tone did nothing on this\n"
-        "# skin). Under Muzzle here for an API without tones; this one moves them to the skirt's tone below (docs/mount-colours.md 7.9).\n"
-        f"[Colors]\nMuzzle = {hexes(CLOTH)}\n\n"
-        "# The skirt and the plume: the first choice follows the Second tone, as before; any other colour gives them their own.\n"
-        f"[Tone.skirt]\nname = Skirt and plume\nfollows = Muzzle\ncolours = {hexes(CLOTH)}\n\n"
-        "# The steel (its outline 281B26 stays as drawn) and the brass: as drawn until given a colour.\n"
-        f"[Tone.steel]\nname = Steel\ncolours = {hexes(STEEL[1:])}\n\n"  # STEEL[0] is the outline K
+        "# skin). Under Muzzle here for an API without tones; this one moves them to the skirt's and the plume's tones below\n"
+        "# (docs/mount-colours.md 7.9).\n"
+        f"[Colors]\nMuzzle = {hexes(CLOTH[:4])} {hexes(PLUME_CLOTH)}\n\n"
+        "# Every part its own (the user, 2026-11-04: \"every part is named and is able to be coloured\"). The helmet and the\n"
+        "# body armour, the plume and the skirt: one steel and one cloth to the eye, each part's shades its own (a colour\n"
+        "# is one tone's only). The steel's outline 281B26 is the drawing's line and stays as drawn.\n"
+        f"[Tone.helmet]\nname = Helmet\ncolours = {hexes(HELM_STEEL[1:])}\n\n"  # HELM_STEEL[0] is the outline K
+        "# The plume and the skirt: the first choice follows the Second tone, as before; any other colour gives them their own.\n"
+        f"[Tone.plume]\nname = Plume\nfollows = Muzzle\ncolours = {hexes(PLUME_CLOTH)}\n\n"
+        f"[Tone.armour]\nname = Body armour\ncolours = {hexes(STEEL[1:8])}\n\n"  # STEEL[0] is the outline K; STEEL[8] only the helmet drew
+        f"[Tone.skirt]\nname = Skirt\nfollows = Muzzle\ncolours = {hexes(CLOTH[:4])}\n\n"  # CLOTH[4] only the plume drew
         f"[Tone.brass]\nname = Brass\ncolours = {hexes(BRASS[1:])}\n"  # BRASS[0] (4E300A) is drawn nowhere
     )
 

@@ -37,8 +37,13 @@ SAG = 1           # the hem hangs this much lower in the middle than at the ends
 # colours (none of them is a donkey atlas colour; the checker says so)
 OUTLINE = (58, 10, 18)
 RED_LIGHT, RED, RED_DARK = (226, 58, 80), (196, 30, 56), (150, 18, 44)
-GOLD_LIGHT, GOLD, GOLD_DARK = (255, 214, 82), (226, 168, 48), (150, 100, 20)
-JEWEL_RED, JEWEL_BLUE = (220, 20, 60), (60, 110, 230)
+GOLD_LIGHT, GOLD, GOLD_DARK = (255, 214, 82), (226, 168, 48), (150, 100, 20)   # the crown's (the tone crown)
+# the cloth's trim (its border, the hem's band, the fringe) and the emblem, each a part of its own (the user, 2026-11-04:
+# "every part is named and is able to be coloured"): the same gold to the eye, a step or so off the crown's in cube
+# cells of their own (tools/skins/part_palette.py)
+TRIM_LIGHT, TRIM, TRIM_DARK = (254, 214, 83), (227, 168, 47), (153, 100, 20)       # the tone trim
+EMBLEM_LIGHT, EMBLEM = (255, 218, 82), (226, 169, 47)                              # the tone emblem
+JEWEL_RED, JEWEL_BLUE = (220, 20, 60), (60, 110, 230)                              # the tone jewels
 
 CROWN = ["L..L..L",
          "G.GLG.G",
@@ -51,13 +56,14 @@ FLEUR = ["..L..",
          "..G..",
          ".GGG."]
 PAL = {"L": GOLD_LIGHT, "G": GOLD, "M": GOLD, "D": GOLD_DARK, "R": JEWEL_RED, "B": JEWEL_BLUE}
+EMBLEM_PAL = {"L": EMBLEM_LIGHT, "G": EMBLEM}
 
 
-def stamp(px, pattern, x0, y0):
+def stamp(px, pattern, x0, y0, pal=PAL):
     for j, row in enumerate(pattern):
         for i, ch in enumerate(row):
-            if ch in PAL and 0 <= x0 + i < 96 and 0 <= y0 + j < 96:
-                px[x0 + i, y0 + j] = PAL[ch] + (255,)
+            if ch in pal and 0 <= x0 + i < 96 and 0 <= y0 + j < 96:
+                px[x0 + i, y0 + j] = pal[ch] + (255,)
 
 
 CROWN_FORWARD = 3  # columns towards the muzzle from the point between the ears (the user: "a bit more forward")
@@ -196,9 +202,9 @@ def caparison(key, donkey):
         if (x, y) in outline and y < b:
             c = OUTLINE
         elif y == b:
-            c = GOLD_LIGHT if (x + y) % 2 == 0 else GOLD  # the gold band along the hem (the cloth's last row)
+            c = TRIM_LIGHT if (x + y) % 2 == 0 else TRIM  # the gold band along the hem (the cloth's last row)
         elif (x, y) in border:
-            c = GOLD  # the gold border inside the outline
+            c = TRIM  # the gold border inside the outline
         elif y <= t + 2:
             c = RED_LIGHT  # the light under the back
         elif y >= b - 2:
@@ -212,15 +218,15 @@ def caparison(key, donkey):
     for x in cols:
         b = bottom[x]
         if (x - x_first) % 2 == 0 and x_first < x < x_last and b + 1 < 96:
-            px[x, b + 1] = GOLD + (255,)
+            px[x, b + 1] = TRIM + (255,)
             if (x - x_first) % 4 == 0 and b + 2 < 96:
-                px[x, b + 2] = GOLD_DARK + (255,)
+                px[x, b + 2] = TRIM_DARK + (255,)
     # the fleur on the flank: centred in the red
     reds = [p for p in mask if px[p][:3] == RED]
     if len(reds) >= 40:
         cx = round(sum(p[0] for p in reds) / len(reds))
         cy = round(sum(p[1] for p in reds) / len(reds))
-        stamp(px, FLEUR, cx - 2, cy - 2)
+        stamp(px, FLEUR, cx - 2, cy - 2, EMBLEM_PAL)
     return im
 
 

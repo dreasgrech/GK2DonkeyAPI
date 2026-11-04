@@ -1,12 +1,19 @@
 ﻿key,value,english,note
 skin.donkey/saddleup-donkey-skins.armored.name,Acorazado,Armored,"a skin's name (the Skin list, the colours window's title)"
-skin.donkey/saddleup-donkey-skins.armored.tone.skirt.name,Faldón y penacho,Skirt and plume,a part of the skin the player colours on its own: its row's label in the colours window
-skin.donkey/saddleup-donkey-skins.armored.tone.steel.name,Acero,Steel,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.helmet.name,Yelmo,Helmet,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.plume.name,Penacho,Plume,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.armour.name,Armadura,Body armour,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.skirt.name,Faldón,Skirt,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.armored.tone.brass.name,Latón,Brass,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.hellfire.name,Fuego infernal,Hellfire,"a skin's name (the Skin list, the colours window's title)"
-skin.donkey/saddleup-donkey-skins.hellfire.tone.lava.name,Grietas de lava,Lava cracks,a part of the skin the player colours on its own: its row's label in the colours window
-skin.donkey/saddleup-donkey-skins.hellfire.tone.horns.name,Cuernos y cola,Horns and tail,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.horns.name,Cuernos,Horns,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.hellfire.tone.glow.name,Ojos ardientes,Glowing eyes,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.lava.name,Grietas de lava,Lava cracks,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.tail.name,Cola,Tail,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.tail-tip.name,Punta de la cola,Tail tip,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.royal-parade.name,Desfile real,Royal Parade,"a skin's name (the Skin list, the colours window's title)"
 skin.donkey/saddleup-donkey-skins.royal-parade.tone.cloth.name,Gualdrapa,Saddle cloth,a part of the skin the player colours on its own: its row's label in the colours window
-skin.donkey/saddleup-donkey-skins.royal-parade.tone.crown.name,Corona y ribete,Crown and trim,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.crown.name,Corona,Crown,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.trim.name,Ribete y flecos,Trim and fringe,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.emblem.name,Emblema,Emblem,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.jewels.name,Joyas,Jewels,a part of the skin the player colours on its own: its row's label in the colours window

@@ -303,12 +303,12 @@ def main(pack):
         warn.append(f"{len(strays)} lone pixel(s) (nothing around them): {', '.join(strays[:8])}{' ...' if len(strays) > 8 else ''}")
     # over the donkey the swap pairs the donkey's colours, the named regions' and the tones that follow one; a tone that
     # follows none is paired only once the player gives it a colour (Colors.Rig.NamedMaps), so it may move the skin to the
-    # cube then (Colors.PaletteMaxColoursOver, 72). Any other skin, a variant over its default too, counts every colour of
+    # cube then (Colors.PaletteMaxColoursOver, 96). Any other skin, a variant over its default too, counts every colour of
     # its look, its default's frames' with them (PaletteMaxColours, 48).
     if over and not parent:
         paired = [h for h in named if h in hexes and (not named[h].startswith("Tone.") or named[h] in follows)]
         later = len([h for h in named if h in hexes and named[h].startswith("Tone.") and named[h] not in follows])
-        total, limit = len(donkey_cols) + len(paired), 72
+        total, limit = len(donkey_cols) + len(paired), 96
     else:
         later, total, limit = 0, len(set(hexes.values()) | donkey_cols | inherited_cols), 48
     if total > limit:

@@ -100,9 +100,10 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
 
 ### 2.3 Which shader path
 
-**Amended 2026-11-04:** for a skin over the donkey the threshold is 72 pairs, the donkey's 42 and the skin's named
-colours (`PaletteMaxColoursOver`; 64 that morning, 72 the same day for the Jester's six parts, 7.6, until the
-measured cost says otherwise, `MeasureTests.PaletteCost`; section 7.9: on the cube, two pairs of the donkey's own
+**Amended 2026-11-04:** for a skin over the donkey the threshold is 96 pairs, the donkey's 42 and the skin's named
+colours (`PaletteMaxColoursOver`; 64 that morning, 72 for the Jester's six parts, 7.6, then 96 for every donkey
+skin's parts their own, 7.10: the colour swap's cost measured in game showed none up to 96, `MeasureTests.PaletteCost`,
+docs/performance.md; section 7.9: on the cube, two pairs of the donkey's own
 colours share a cell, so a skin over the donkey that crossed 48 turned some of its outline and coat pixels the
 harness colour). A skin in its own colours keeps 48 (`PaletteMaxColours`; the sixth review: one of 49 to 64 colours
 keeps the path and the look it had). The text below is the 2026-10-18 decision.
@@ -291,7 +292,7 @@ colours = C14859 A03444 862633 641A2A 3E0A14
   `tone.<id>`), and the mount sprite group's pairs take them after the five regions (`Colors.Rig.Rebuild`, both the
   own-colour and the over branch). The shader path doesn't change: the pairs count only grows by a colour that was
   kept as drawn before and is now a tone's (the Jester's ten were named already: 52 pairs with both its tones set;
-  its six parts since make 71 with every one set, 7.6, on the exact swap, which holds 72 over the donkey, 7.9).
+  its eight parts since make 78 with every one set, 7.6, on the exact swap, which holds 96 over the donkey, 7.9).
 - A tone's value is the instance's (`Mount.Instance.Tones`: id to a colorize colour and a brightness), set by the
   companion at every apply (and on every load, `OnGameReady`), as drawn when unset. Not tuning keys and not in the
   side file: the companion holds the look, and a tone id is a skin's, not a key every instance knows. They belong
@@ -321,12 +322,13 @@ colours = C14859 A03444 862633 641A2A 3E0A14
   for the worn skin and the Mounts panel picture's), and the drawn colours are read from that frame on
   (`Looks.LoadedOwnColours` asks for the colours sorted, not for the sheet worn, which is a frame later). Custom is
   the palette with its lightness, as the other rows.
-- **The colour cube.** Over 72 pairs (48, then 64 until 2026-11-04; the donkey's 42 plus an over skin's named colours) the
+- **The colour cube.** Over 96 pairs (48, then 64 until 2026-11-04; the donkey's 42 plus an over skin's named colours) the
   mount takes the cube, where two colours in one cell change together, and on the cube a colour that isn't paired
   takes its cell's colour too. Measured 2026-11-03 on the four over skins: the only shared cells are two pairs of the
   game's own donkey colours (Dark 292316 with Harness 2D2114, Coat 362815 with Harness 3C2A14), which on the cube take
-  the harness colour (the last pair written; the fifth review); no skin colour shares one. With 72 every skin over the
-  donkey stays on the exact swap, all its tones set (Royal Parade 49, Hellfire 55, Armored 59, the Jester 71).
+  the harness colour (the last pair written; the fifth review); no skin colour shares one. With 96 every skin over the
+  donkey stays on the exact swap, all its tones set (since every part is its own, 7.10: Royal Parade 56, Hellfire
+  55, Armored 70, the Jester 78).
   SkinsScan fails a tone colour that shares a cell with any other colour of the look.
 - **The exact swap's reach.** The palette shader gives a texel the replacement of every source colour within 0.004
   of it, and one step in one channel is 1/255 (0.0039): two colours of the look one step apart in one channel are one
@@ -365,19 +367,28 @@ own perspective, it would look like nothing or almost nothing changed but now th
 available"), as much as possible without holding the new system back. So their parts are tones now, each part that
 was under a region following that region (section 7.9), and the new parts as drawn:
 
+Every part its own since the same day (7.10):
+
 | Skin | Tone | Its colours | First choice |
 |---|---|---|---|
 | Royal Parade | Saddle cloth | the cloth's 4 reds (were Harness) | As the harness |
-| Royal Parade | Crown and trim | the 3 golds (kept as drawn) | as drawn |
-| Armored | Skirt and plume | the 5 reds (were Muzzle) | As the second tone |
-| Armored | Steel | 8 greys (its outline 281B26 stays as drawn) | as drawn |
+| Royal Parade | Crown | the crown's 3 golds (kept as drawn) | as drawn |
+| Royal Parade | Trim and fringe | the cloth's border, hem band and fringe: 3 golds of their own (kept as drawn) | as drawn |
+| Royal Parade | Emblem | the cloth's fleur: 2 golds of its own (kept as drawn) | as drawn |
+| Royal Parade | Jewels | the crown's red and blue (kept as drawn) | as drawn |
+| Armored | Helmet | 8 greys of its own (its outline 281B26 stays as drawn) | as drawn |
+| Armored | Plume | 5 reds of its own (were Muzzle) | As the second tone |
+| Armored | Body armour | 7 greys (were kept as drawn) | as drawn |
+| Armored | Skirt | 4 reds (were Muzzle) | As the second tone |
 | Armored | Brass | 4 golds | as drawn |
+| Hellfire | Horns | the 3 bone shades (were Dark) | As the dark parts |
+| Hellfire | Glowing eyes | the glow and its rim (were Eye) | As the eyes |
 | Hellfire | Lava cracks | 3 (were Muzzle) | As the second tone |
-| Hellfire | Horns and tail | 6 (were Dark) | As the dark parts |
-| Hellfire | Glowing eyes | 4 (were Eye) | As the eyes |
+| Hellfire | Tail | the tail and its underside (were Dark) | As the dark parts |
+| Hellfire | Tail tip | the spade and its dark (were Eye) | As the eyes |
 
-Royal Parade's jewels (a blue and a red) stay as drawn: one tone would turn them one colour. Armored's skirt and plume
-share their reds, so they are one part. No key moves and no saved value changes; every look is the same until the
+Hellfire's outline (1E0E0C, its horns' and the rump's where the tail was) stays under `[Colors] Dark` alone, the Dark
+row's as the donkey's own outline is. No key moves and no saved value changes; every look is the same until the
 player picks a colour in a new row. Dark and Eye still have no player rows (Hellfire's horns and glow follow them, so
 they are as drawn, and a baby's shade of its dark parts reaches its horns as before); the dev panel's Colors tab still
 shows the donkey's colours.
@@ -387,15 +398,17 @@ shows the donkey's colours.
 Six tones since 2026-11-04 (the user: "yes so that we start making use of our new multi colour tone system"), every
 part of the motley its own row: `cap-front` "Cap, front half" and `cap-back` "Cap, back half" (each point with its
 half of the hood), `collar` "Collar" (the band and the middle point) and `collar-points` "Collar points" (the two
-outer ones), `caparison` "Caparison" and `caparison-second` "Caparison, second colour" (its two pairs of quarters).
+outer ones), `caparison` "Caparison" and `caparison-second` "Caparison, second colour" (its two pairs of quarters);
+since the same day also `cap-band` "Cap band" and `bells` "Bells" (every bell: the cap's, the collar's, the hem's),
+the gold that was drawn as it is (7.10).
 To the eye the motley is still one burgundy and one navy: the parts shared those two ramps, and a colour is one tone's
 only, so `tools/skins/part_palette.py` gave the cap and the collar shades of their own, one to four steps off the
 caparison's, each in cube cells no other place of the look has (`draw_jester.py` draws them; `check_skin.py` passes).
 Before, two tones, `motley1` (the burgundy) and `motley2` (the navy), each reaching every part. Harness reaches the
 donkey's own strap only (still tinted the burgundy under the skin, `[Base.Harness]`), Second tone the donkey's muzzle
 only. 42 pairs with no part set, 71 with all six: over the 64 the limit was that morning, where on the cube the
-always-tinted strap would turn the donkey's two shared cells (7.3) the harness colour, so the limit is 72 until the
-measured cost says otherwise (2.3).
+always-tinted strap would turn the donkey's two shared cells (7.3) the harness colour, so the limit went to 72 (2.3),
+then to 96 when its cap band and bells became parts too (78 pairs; 7.10).
 
 ### 7.7 Checks
 
@@ -453,8 +466,8 @@ palette swatch with a 10% lightness step. Following gives it exactly:
   isn't paired on a skin over the donkey (its colours drawn as they are, as before they were a tone), so Royal
   Parade stays at 46 colours and Armored at 47 until a player gives its crown or its steel a colour (then 49 and
   59). With 48 that would have been the cube, where the donkey's own shared cells (above) turned some of its
-  outline and coat pixels the harness colour (the fifth review): the exact swap holds 64 now (72 since the Jester's six
-  parts, 7.6), so every skin over the
+  outline and coat pixels the harness colour (the fifth review): the exact swap holds 64 now (96 since every donkey
+  skin's parts are their own, 7.10), so every skin over the
   donkey stays on it, and Hellfire (55) and the Jester (52) left the cube for it (their colours exactly as drawn).
   A skin over the limit is still checked for shared cells by SkinsScan and `check_skin.py`.
 - **A variant listing its shades of a default's following tone under the region too** (for an older API) says
@@ -473,3 +486,34 @@ palette swatch with a 10% lightness step. Following gives it exactly:
   their rule: changing it would change players' saved looks.
 - The skin generators write the same tone sections (`make_hellfire.py --cfg`, `make_armored.py --cfg`; checked equal
   to the pack files); Royal Parade's cfg is by hand.
+
+### 7.10 Every part its own (2026-11-04)
+
+The user: "now lets make sure that all the donkey skins are using the new multi tone system where every part is named
+and is able to be coloured". Found by `tools/skins/part_map.py` (each part's pixels painted one colour, the colours no
+row reaches white): Royal Parade's crown jewels had no row, and one row each covered its crown with the cloth's trim
+and emblem, Armored's helmet with the body armour and its plume with the skirt, Hellfire's horns with the tail and the
+eyes with the tail's spade; the Jester's gold (the cap's band, every bell) was drawn as it is. Now every part has a
+row of its own (the table in 7.5; the Jester in 7.6). Not parts: the line art (Armored's 281B26, Hellfire's outline,
+under Dark) and the donkey's own colours a skin draws (they follow the donkey's rows).
+
+- **Parts sharing a ramp got shades of their own** (a colour is one tone's only): `tools/skins/part_palette.py` finds
+  each part the nearest shades the checks take (a cube cell of their own, not one step from another place's colour),
+  one to four steps off, the same colour to the eye. The part the eye knows best keeps its colours: the crown, the
+  body armour, the skirt, the bells. Hellfire's parts had colours of their own already: its pictures are unchanged,
+  only its cfg's tones split.
+- **In the generators, not by hand:** `make_royal.py` (the trim's and the emblem's golds), `make_armored.py` (the
+  helmet's and the plume's palettes, `HELM_PAL` and `PLUME_PAL`; the helmet's mouth fill its steel), `draw_jester.py`
+  (the band's gold), `make_hellfire.py` (the tones). Each was proven to reproduce the pack before the change (Royal
+  Parade but one pinhole pixel the stamp tool fills since, the donkey's own colour), and each change to recolour
+  only: every new picture, its colours mapped back, is the old one pixel for pixel.
+- **Saved looks:** a part split from one that followed a region follows it too (Armored's plume and skirt the Second
+  tone, Hellfire's horns and tail the dark parts, its eyes and tail tip the eyes), and its colours stay listed under
+  that region for an older API; a part that was drawn as it is starts as drawn. The tones weren't released, so their
+  ids are free (Armored's `steel` is `armour` and `helmet` now).
+- **The pairs with every part set:** Royal Parade 56, Hellfire 55, Armored 70, the Jester 78: the exact swap's limit
+  for a skin over the donkey is 96 since (`PaletteMaxColoursOver`; 2.3, docs/performance.md "The colour swap's
+  cost": none measured up to 96).
+- **The words:** the pack's new part names in all 11 languages (a split part takes its half of the old name's reviewed
+  translation; Helmet, Body armour, Tail tip, Trim and fringe, Emblem and Jewels are new), checked with
+  `tools/l10n-glyphs.py`: no character the game's own text never draws but those the Fonts check found already.

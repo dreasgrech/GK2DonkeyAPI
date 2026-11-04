@@ -1,12 +1,19 @@
 ﻿key,value,english,note
 skin.donkey/saddleup-donkey-skins.armored.name,铁甲,Armored,"a skin's name (the Skin list, the colours window's title)"
-skin.donkey/saddleup-donkey-skins.armored.tone.skirt.name,裙甲与羽饰,Skirt and plume,a part of the skin the player colours on its own: its row's label in the colours window
-skin.donkey/saddleup-donkey-skins.armored.tone.steel.name,钢,Steel,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.helmet.name,头盔,Helmet,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.plume.name,羽饰,Plume,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.armour.name,铠甲,Body armour,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.skirt.name,裙甲,Skirt,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.armored.tone.brass.name,黄铜,Brass,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.hellfire.name,地狱火,Hellfire,"a skin's name (the Skin list, the colours window's title)"
-skin.donkey/saddleup-donkey-skins.hellfire.tone.lava.name,熔岩裂纹,Lava cracks,a part of the skin the player colours on its own: its row's label in the colours window
-skin.donkey/saddleup-donkey-skins.hellfire.tone.horns.name,角与尾巴,Horns and tail,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.horns.name,角,Horns,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.hellfire.tone.glow.name,发光的眼睛,Glowing eyes,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.lava.name,熔岩裂纹,Lava cracks,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.tail.name,尾巴,Tail,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.tail-tip.name,尾尖,Tail tip,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.royal-parade.name,皇家巡游,Royal Parade,"a skin's name (the Skin list, the colours window's title)"
 skin.donkey/saddleup-donkey-skins.royal-parade.tone.cloth.name,饰布,Saddle cloth,a part of the skin the player colours on its own: its row's label in the colours window
-skin.donkey/saddleup-donkey-skins.royal-parade.tone.crown.name,王冠与饰边,Crown and trim,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.crown.name,王冠,Crown,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.trim.name,饰边与流苏,Trim and fringe,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.emblem.name,纹章,Emblem,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.jewels.name,宝石,Jewels,a part of the skin the player colours on its own: its row's label in the colours window

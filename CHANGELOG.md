@@ -22,15 +22,17 @@ For players:
 - **Hellfire, Royal Parade and Armored have their parts as dropdowns of their own, and every saved look stays as it
   was** (2026-11-04; the user: "his old customization will automatically be converted to our new system as much as
   possible so that from his own perspective, it would look like nothing or almost nothing changed but now there's
-  more customization available"). Royal Parade: Saddle cloth, Crown and trim. Armored: Skirt and plume, Steel,
-  Brass. Hellfire: Lava cracks, Horns and tail, Glowing eyes. A part that was coloured by Harness or Second tone
+  more customization available"), every part its own ("every part is named and is able to be coloured"). Royal
+  Parade: Saddle cloth, Crown, Trim and fringe, Emblem, Jewels. Armored: Helmet, Plume, Body armour, Skirt, Brass.
+  Hellfire: Horns, Glowing eyes, Lava cracks, Tail, Tail tip. A part that was coloured by Harness or Second tone
   (or, on Hellfire, the dark parts and the eyes) keeps following it: its first choice reads "As the harness" (and so
   on), and with it the part is coloured exactly as before, so a player's saved colours keep reaching it; any other
-  choice gives the part its own. The new parts (the crown, the steel, the brass) start as drawn. Nothing saved is
+  choice gives the part its own. The parts that were drawn as they are (Royal Parade's crown, trim, emblem and
+  jewels, Armored's helmet, body armour and brass) start as drawn. Nothing saved is
   rewritten; the skins also read as before on an older GK2 Donkey API. docs/mount-colours.md 7.5 and 7.9.
 - **Hellfire's colours come out exactly as drawn** (2026-11-04): a skin over the donkey with more than 48 colours
   went through the game's colour cube, which rounds every colour to 32 steps and, with a harness colour set, turned
-  a few of the donkey's outline and coat pixels under the skin that colour. The exact colour swap takes up to 72
+  a few of the donkey's outline and coat pixels under the skin that colour. The exact colour swap takes up to 96
   colours now, enough for every skin over the donkey with all its parts coloured (Royal Parade, Armored and Hellfire).
 - **A part you give a colour takes each baby's own shade** (2026-11-04; the user: "ideally yes unless it's a
   performance cost we can't afford"). A baby already wore its own shade of its parent's coat, second tone and dark
@@ -80,8 +82,8 @@ For mod authors:
   too keeps colouring as that region there, any other is drawn as drawn over the donkey (Coat in a skin's own
   colours); say `needs =` the API with tones only where that isn't good enough. Saddle Up gives every skin's tones
   their rows (one line after its Second tone rows; it names no tone).
-- **A skin over the donkey keeps the exact colour swap up to 72 pairs** (2026-11-04; 64 that morning, 48 before):
-  the donkey's 42 and the skin's named colours, so up to 30 colours of a skin's own parts with every part set; past
+- **A skin over the donkey keeps the exact colour swap up to 96 pairs** (2026-11-04; 64 that morning, 48 before):
+  the donkey's 42 and the skin's named colours, so up to 54 colours of a skin's own parts with every part set; past
   it the colour cube. Parts drawn in one ramp need shades of their own (a colour is one tone's only):
   `tools/skins/part_palette.py` finds each part the nearest ones the checks take (docs/skins.md).
 
@@ -295,6 +297,23 @@ Development:
   (GK2-colours-rows.tsv); no cost measurable from 42 to 96 pairs, nor on the cube, the frame not the GPU's on that
   machine (docs/performance.md "The colour swap's cost"). The colours window's pictures wait for the picture drawn
   since (Royal Parade's first was empty: settled came a few frames before it).
+- **Every donkey skin's parts their own** (2026-11-04; the user: "now lets make sure that all the donkey skins are
+  using the new multi tone system where every part is named and is able to be coloured"; docs/mount-colours.md
+  7.10). `tools/skins/part_map.py` (new) paints each part's pixels one colour and the ones no row reaches white: it
+  found Royal Parade's jewels without a row and five rows covering two parts each. Royal Parade: Crown, Trim and
+  fringe, Emblem, Jewels beside the Saddle cloth; Armored: Helmet, Plume, Body armour, Skirt, Brass (`steel` is
+  `armour` and `helmet`); Hellfire: Horns, Glowing eyes, Lava cracks, Tail, Tail tip (its outline under Dark alone);
+  the Jester: Cap band and Bells. Parts that shared a ramp got shades of their own from `part_palette.py` in the
+  generators (`make_royal.py`, `make_armored.py`'s `HELM_PAL` and `PLUME_PAL` and the helmet's mouth fill,
+  `draw_jester.py`; Hellfire's parts had colours of their own, its pictures unchanged). Each generator was first
+  proven to reproduce the pack (Royal Parade but one pinhole pixel `stamp.py` fills since) and each change proven a
+  recolour only: every new picture, its colours mapped back, the old one pixel for pixel. A split part of one that
+  followed a region follows it too, listed under it for an older API. With every part set: Royal Parade 56,
+  Hellfire 55, Armored 70, the Jester 78 pairs, so `Colors.PaletteMaxColoursOver` 72 -> 96 (and `check_skin.py`).
+  The pack's new names in all 11 languages (a split part keeps its half of the reviewed translation), checked with
+  `l10n-glyphs.py`. The user's run: 1833 passed, 0 failed, 0 warnings; the 23 part rows as intended in
+  GK2-colours-rows.tsv (each split part of a following one "As the ..." too); every font has every character; the
+  dump's `en.csv` is the hand-written one, line for line.
 
 - **`tools/skins/donkey_frames.py`** (2026-11-03): `make` writes `src/GK2DonkeyAPI/donkey-frames.txt` (fingerprints,
   no art) from the asset probe's PNGs; `check` compares it with them, or with a dev build's own read of the game

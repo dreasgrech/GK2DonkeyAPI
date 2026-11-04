@@ -180,7 +180,7 @@ namespace GK2DonkeyAPI
                     MountsPanel.TestOpenColours();
                     yield return SelfTest.Frames(3);
                     yield return SelfTest.Until(() => !PreviewStage.TestShownSettling, 10f);
-                    // and until its picture is drawn (settled came first: the first run's Royal Parade picture was empty, a
+                    // and until its picture is drawn (settled came first: in the first run one skin's picture was still empty, a
                     // few frames before it showed)
                     yield return SelfTest.Until(() => PreviewStage.TestDrawnRect(PreviewStage.TestHide.Nothing, out _, out _, out _, out _, out _, out _), 10f);
                     yield return SelfTest.Frames(6);
@@ -230,8 +230,8 @@ namespace GK2DonkeyAPI
         // Colors.PaletteMaxColoursOver). The exact swap loops over every pair for every pixel of the mount's sprites
         // (docs/colors.md); the cube is one lookup. Frame times, uncapped (no vsync, no frame-rate target; both put back),
         // with 21 test donkeys in view drawn: as the game draws them; on the exact swap at the donkey's own pairs (a coat
-        // colour set), at 64 (a skin over it with 22 colours of its own, all set: the limit until 2026-11-04), 72 (30:
-        // the limit now) and 96 (54, the limit raised for the test); and on the cube with the 30 (the limit lowered for
+        // colour set), at 64 (a skin over it with 22 colours of its own, all set: the limit until 2026-11-04), 72 (30)
+        // and 96 (54: the limit since the same day); and on the cube with the 30 (the limit lowered for
         // the test; each configuration's limit its own, whatever PaletteMaxColoursOver is). Two loads: the
         // donkeys at their size, and twice as big (four times the pixels each: the shader's part of the frame apart from
         // the rest). Each configuration twice, the second round in the reverse order (drift), 2 s of frames each.

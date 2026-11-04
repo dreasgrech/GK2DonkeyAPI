@@ -259,7 +259,7 @@ colours = 38121A 5E1C24 8A282A
 - A part is found by its exact colours. Give each part shades of its own: two parts in the same colours are one tone
   (draw one of them a step apart to colour them separately). Parts drawn in one ramp (the Jester's cap, collar and
   caparison in one burgundy): `tools/skins/part_palette.py` finds each part the nearest shades the checks take, the
-  same colour to the eye. Over the donkey the exact swap holds 72 pairs, the donkey's 42 among them: up to 30 colours
+  same colour to the eye. Over the donkey the exact swap holds 96 pairs, the donkey's 42 among them: up to 54 colours
   of a skin's own parts with every part set. A colour is in one place only: one tone, or one
   `[Colors]` region (a following tone's colours may stay under its region too, below). A tone naming a colour another
   place names is left out, the loader's report says why, and the skin loads without it; a colour under two
@@ -289,7 +289,7 @@ colours = 38121A 5E1C24 8A282A
   colours = E23A50 C41E38 96122C 3A0A12
   ```
 - Colours named too close together may change together on the game's colour cube (a skin in its own colours over 48,
-  one over the donkey over 72 with the donkey's own 42, or with the player's `SpriteMethod = Lut`):
+  one over the donkey over 96 with the donkey's own 42, or with the player's `SpriteMethod = Lut`):
   `tools/skins/check_skin.py` and `tests/SkinsScan` fail a tone's colour that shares a cube cell with any other colour
   of the look. On the exact swap two colours one step apart in one channel are one colour (the swap's reach is 0.004,
   a step 0.0039): both fail a tone's colour one step from a colour of another place too.

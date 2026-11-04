@@ -129,15 +129,16 @@ namespace GK2DonkeyAPI
         // is 32 wide; the donkey 41, smaller mounts 17 to 21); over it the colour cube, one lookup for any number
         // (hand-painted mounts 300 or 720: a 720-wide swap is 720 texture samples per pixel).
         internal const int PaletteMaxColours = 48;
-        // A skin over the donkey's: 64 since 2026-11-04 (the fifth code review), 72 the same day for a skin whose parts
-        // each have shades of their own (the Jester's six: 71 pairs with every one set), until the colour swap's cost
-        // in game (MeasureTests.PaletteCost) says otherwise. It pairs the donkey's 42 and its own named colours, and on
+        // A skin over the donkey's: 64 since 2026-11-04 (the fifth code review), 96 the same day for skins whose parts
+        // each have shades of their own (every donkey skin's parts its own; the Jester's eight: 78 pairs with every one
+        // set): the colour swap's cost, measured in game, showed none up to 96 (MeasureTests.PaletteCost,
+        // docs/performance.md "The colour swap's cost"), and a look pays only for the pairs it has. It pairs the donkey's 42 and its own named colours, and on
         // the cube two pairs of the donkey's own colours share a cell (Dark 292316 with Harness 2D2114, Coat 362815 with
         // Harness 3C2A14: those outline and coat pixels took the harness colour). Every skin over the donkey stays on
         // the exact swap with all its tones set (the released ones 49 to 59); the shader's loop has no fixed cap
-        // (docs/colors.md), each pixel reads up to 72 palette texels. A skin in its own colours keeps 48 (the sixth
+        // (docs/colors.md), each pixel reads up to 96 palette texels. A skin in its own colours keeps 48 (the sixth
         // review: one of 49 to 64 colours keeps the path, and the look, it had).
-        internal const int PaletteMaxColoursOver = 72;
+        internal const int PaletteMaxColoursOver = 96;
         // The self-tests' limit for a skin over the donkey's in place of PaletteMaxColoursOver (MeasureTests.PaletteCost:
         // the exact swap's cost past it, and the cube at a count under it); 0: the limit.
         internal static int TestPaletteMaxOver;

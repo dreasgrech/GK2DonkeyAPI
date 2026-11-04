@@ -48,7 +48,9 @@ CAP_BURG = [hexc(h) for h in ("3E0A14", "641A2A", "862633", "A03444", "C14859")]
 CAP_NAVY = [hexc(h) for h in ("131A39", "263266", "36488A", "4F66A7", "7086C8")]      # the tone cap-back
 COLLAR_BURG = [hexc(h) for h in ("3A0D14", "671A28", "882534", "A23644", "C1485B")]   # the tone collar: its band and middle point
 COLLAR_NAVY = [hexc(h) for h in ("151A39", "243262", "34488C", "4D67A8", "6E88C8")]   # the tone collar-points: the two outer ones
-GOLD = [hexc(h) for h in ("5A3A0A", "966414", "E2A830", "FFD652")]             # edge, shade, base, light: as drawn
+GOLD = [hexc(h) for h in ("5A3A0A", "966414", "E2A830", "FFD652")]             # edge, shade, base, light: the tone bells
+BAND = [hexc(h) for h in ("5A3A08", "996414", "E3A82F", "FED653")]             # the tone cap-band (its edge unused): a step off the bells'
+#   (tools/skins/part_palette.py), the cap's band and the bells two parts of their own
 STANDING = "bdy_static_left"
 ERASE = (255, 0, 255, 255)   # skin.cfg's erase colour: clears the donkey under it
 
@@ -152,10 +154,10 @@ def cap(c, tf=None):
     tube(red | front, CAP_BURG, px)
     tube(blue | back, CAP_NAVY, px)
     for x, y in band:
-        px[(x, y)] = GOLD[3] if (x - 1, y) not in band and (x - 1, y - 1) not in band else GOLD[2]
+        px[(x, y)] = BAND[3] if (x - 1, y) not in band and (x - 1, y - 1) not in band else BAND[2]
     for x, y in band:   # the band's underside a step darker where it turns down: it rounds with the head
         if (x + 1, y + 1) in band or (x - 1, y + 1) in band:
-            px[(x, y)] = GOLD[1] if px[(x, y)] == GOLD[2] else px[(x, y)]
+            px[(x, y)] = BAND[1] if px[(x, y)] == BAND[2] else px[(x, y)]
     edge([(red | front, CAP_BURG), (blue | back, CAP_NAVY)], px)
     for name in ("red", "blue"):
         x, y = path(c[name])[-1]

@@ -1,12 +1,19 @@
 ﻿key,value,english,note
 skin.donkey/saddleup-donkey-skins.armored.name,В доспехах,Armored,"a skin's name (the Skin list, the colours window's title)"
-skin.donkey/saddleup-donkey-skins.armored.tone.skirt.name,Юбка и плюмаж,Skirt and plume,a part of the skin the player colours on its own: its row's label in the colours window
-skin.donkey/saddleup-donkey-skins.armored.tone.steel.name,Сталь,Steel,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.helmet.name,Шлем,Helmet,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.plume.name,Плюмаж,Plume,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.armour.name,Доспехи,Body armour,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.skirt.name,Юбка,Skirt,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.armored.tone.brass.name,Латунь,Brass,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.hellfire.name,Адское пламя,Hellfire,"a skin's name (the Skin list, the colours window's title)"
-skin.donkey/saddleup-donkey-skins.hellfire.tone.lava.name,Лавовые трещины,Lava cracks,a part of the skin the player colours on its own: its row's label in the colours window
-skin.donkey/saddleup-donkey-skins.hellfire.tone.horns.name,Рога и хвост,Horns and tail,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.horns.name,Рога,Horns,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.hellfire.tone.glow.name,Горящие глаза,Glowing eyes,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.lava.name,Лавовые трещины,Lava cracks,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.tail.name,Хвост,Tail,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.tail-tip.name,Кончик хвоста,Tail tip,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.royal-parade.name,Королевский парад,Royal Parade,"a skin's name (the Skin list, the colours window's title)"
 skin.donkey/saddleup-donkey-skins.royal-parade.tone.cloth.name,Чепрак,Saddle cloth,a part of the skin the player colours on its own: its row's label in the colours window
-skin.donkey/saddleup-donkey-skins.royal-parade.tone.crown.name,Корона и кайма,Crown and trim,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.crown.name,Корона,Crown,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.trim.name,Кайма и бахрома,Trim and fringe,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.emblem.name,Эмблема,Emblem,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.jewels.name,Самоцветы,Jewels,a part of the skin the player colours on its own: its row's label in the colours window
