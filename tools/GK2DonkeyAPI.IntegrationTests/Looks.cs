@@ -851,6 +851,95 @@ namespace GK2DonkeyAPI.IntegrationTests
             yield return Frames(2);
         }
 
+        // The donkey's Muzzle row reaches its nose only (the user, 2026-11-04: "remove those individual pixels on the face
+        // from the muzzle colours and leave it as just the nose, and also remove the belly part"; docs/mount-colours.md
+        // 7.12): on its own look the Muzzle keys set, the nose (abb298, 858f6c) changes and the face's dots (858e6b) and
+        // the belly's line (42422c) don't; the Coat keys set, those two change with the coat and the nose doesn't.
+        internal static IEnumerator MuzzleNoseOnly()
+        {
+            Color32 H(string hex) => new Color32(Convert.ToByte(hex.Substring(0, 2), 16), Convert.ToByte(hex.Substring(2, 2), 16), Convert.ToByte(hex.Substring(4, 2), 16), 255);
+            string[] nose = { "abb298", "858f6c" }, body = { "858e6b", "42422c" };
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null) { Fail("could not spawn"); yield break; }
+            bool Changed(string hx)
+            {
+                Color32 src = H(hx);
+                Color32? d = a.I.ColorsRig.TestDstOf(src);
+                return d != null && (d.Value.r != src.r || d.Value.g != src.g || d.Value.b != src.b);
+            }
+            a.Tuning.Set(Owner, "Skin", "");
+            yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == "" && !a.I.LooksRig.Building, 20f);
+            if (!waited) { Fail("the donkey's own look was never worn"); a.Remove(); yield break; }
+            foreach (string region in new[] { "Muzzle", "Coat" })
+            {
+                a.Tuning.Set(Owner, "MuzzleColorizeAmount", 0f);
+                a.Tuning.Set(Owner, "CoatColorizeAmount", 0f);
+                a.Tuning.Set(Owner, region + "Colorize", "00FF00");
+                a.Tuning.Set(Owner, region + "ColorizeAmount", 1f);
+                yield return Frames(3);
+                var words = new List<string>();
+                bool ok = true;
+                foreach (string hx in nose) { bool c = Changed(hx); ok &= region == "Muzzle" ? c : !c; words.Add($"{hx} (nose) {(c ? "changed" : "kept")}"); }
+                foreach (string hx in body) { bool c = Changed(hx); ok &= region == "Coat" ? c : !c; words.Add($"{hx} {(hx == "858e6b" ? "(face's dots)" : "(belly's line)")} {(c ? "changed" : "kept")}"); }
+                Check(ok, $"the donkey's {region} row green: {(region == "Muzzle" ? "the nose only" : "the coat with the face's dots and the belly's line, not the nose")} ({string.Join(", ", words)})");
+            }
+            a.Tuning.Set(Owner, "MuzzleColorizeAmount", 0f);
+            a.Tuning.Set(Owner, "CoatColorizeAmount", 0f);
+            a.Remove();
+            yield return Frames(2);
+        }
+
+        // A colour picked for a part a skin pre-colours replaces the pre-colour (docs/mount-colours.md 7.12): Hellfire
+        // darkens the donkey's coat under it to ash ([Base.Coat]), and Cream on it stayed dark (the user's screenshot,
+        // 2026-11-04). A coat colour of the donkey (736c57): at Game default Hellfire's ash; with Cream's keys (a colorize)
+        // the same as on the plain donkey; with Dark's (a shade: brightness only) darker than the plain donkey's, the ash
+        // under it.
+        internal static IEnumerator PickedColourOverBase()
+        {
+            string noPack = MissingPack("hellfire"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
+            Color32 coat = new Color32(0x73, 0x6c, 0x57, 255);
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null) { Fail("could not spawn"); yield break; }
+            void Keys(string colorize, float amount, float brightness)
+            {
+                a.Tuning.Set(Owner, "CoatColorize", colorize);
+                a.Tuning.Set(Owner, "CoatColorizeAmount", amount);
+                a.Tuning.Set(Owner, "CoatBrightness", brightness);
+            }
+            string Hex(Color32? c) => c == null ? "no pair" : $"{c.Value.r:X2}{c.Value.g:X2}{c.Value.b:X2}";
+            int Sum(Color32? c) => c == null ? -1 : c.Value.r + c.Value.g + c.Value.b;
+            a.Tuning.Set(Owner, "Skin", "");
+            yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == "" && !a.I.LooksRig.Building, 20f);
+            Keys("E0CFA8", 0.8f, 1.15f);
+            yield return Frames(3);
+            Color32? plainCream = a.I.ColorsRig.TestDstOf(coat);
+            Keys("", 0f, 0.6f);
+            yield return Frames(3);
+            Color32? plainDark = a.I.ColorsRig.TestDstOf(coat);
+            Keys("", 0f, 1f);
+            a.Tuning.Set(Owner, "Skin", Sk("hellfire"));
+            yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == Sk("hellfire") && !a.I.LooksRig.Building, 20f);
+            if (!waited) { Fail("Hellfire was never worn"); a.Remove(); yield break; }
+            yield return Frames(3);
+            Color32? ash = a.I.ColorsRig.TestDstOf(coat);
+            Keys("E0CFA8", 0.8f, 1.15f);
+            yield return Frames(3);
+            Color32? fireCream = a.I.ColorsRig.TestDstOf(coat);
+            Keys("", 0f, 0.6f);
+            yield return Frames(3);
+            Color32? fireDark = a.I.ColorsRig.TestDstOf(coat);
+            Check(ash != null && Hex(ash) != "736C57" && Sum(ash) < coat.r + coat.g + coat.b, $"Hellfire at Game default: the coat its ash (736C57 -> {Hex(ash)})");
+            Check(fireCream != null && Hex(fireCream) == Hex(plainCream), $"Cream on Hellfire is Cream on the plain donkey, the ash replaced ({Hex(fireCream)}; the plain donkey {Hex(plainCream)})");
+            Check(fireDark != null && plainDark != null && Sum(fireDark) < Sum(plainDark), $"Dark on Hellfire darkens its ash, a shade on the skin's look ({Hex(fireDark)}; the plain donkey's Dark {Hex(plainDark)})");
+            Keys("", 0f, 1f);
+            a.Tuning.Set(Owner, "Skin", "");
+            a.Remove();
+            yield return Frames(2);
+        }
+
         // The two over skins we ship, on the built-ins themselves (6.4: the over-skin scenarios run on temp packs):
         // Hellfire built whole with its erase marks and the ash coat under it, kept while walking; Royal Parade's
         // reds under the harness colour and its cloth drawn in the walk; the snail's own rider offset on its wearer.

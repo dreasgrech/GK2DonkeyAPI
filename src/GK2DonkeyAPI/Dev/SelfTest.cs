@@ -208,6 +208,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupMeasurements, Name = "measure: the colours window of every skin of every mount (GK2-panel-shots: colours-skin-*.png; GK2-colours-rows.tsv)", Body = MeasureTests.ColoursWindows },
             new Scenario { Group = GroupMeasurements, Name = "measure: the colour swap's cost, 21 donkeys at the donkey's own pairs, 64, 72, 96 and on the cube (GK2-palette-cost.tsv)", Body = MeasureTests.PaletteCost },
             new Scenario { Group = GroupMeasurements, Name = "measure: the game's Halloween head swap on the zombie pictures (carried, on the cart, on the ground; the swap forced off and on)", Body = HalloweenProbe.Heads },
+            new Scenario { Group = GroupMeasurements, Name = "measure: the donkey's frames in the game's atlas: pages, packing, a one-pixel copy into the page and back (the eye pixels' patch, a probe)", Body = AtlasPatchProbe.Probe },
             new Scenario { Group = GroupLooks, Name = "skins and mounts: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "skin: a game-source skin with no frames is set aside, the donkey comes, offered again when they are there", Body = AsideSkin },
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
@@ -239,6 +240,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupSounds, Name = "an embedded pack's sounds (the built-in skins' route): the API's own test pack, its .ogg decoded through the cache file, its .wav parsed in place, a looping event stopped", Body = SoundsEmbedded },
             new Scenario { Group = GroupSounds, Name = "the flying events: takeoff, the launch's flaps and the beats airborne, the fly loop, land, touchdown, landed, a jump's jump and jumpland; nothing of the flight on a jump", Body = SoundsFlying },
             new Scenario { Group = GroupSounds, Name = "herds and babies: a standing grown one calls on its own (rarer, one voice at a time in the scene), its babies answer one after another with [Sounds.Baby]'s sound, no call with the standing switch off", Body = SoundsHerd },
+            new Scenario { Group = GroupAfter, Name = "measure: the donkey's atlas pages the same objects after the run (scenes and doors crossed; the atlas probe's)", Body = AtlasPatchProbe.PagesAfterRun },
             new Scenario { Group = GroupAfter, Name = AfterRunName, Body = AfterTheRun },
         };
 
@@ -395,9 +397,12 @@ namespace GK2DonkeyAPI
                 if (pick == null || pick(c)) scenarios.Add(c);
             }
             pick = null;
-            // the run's own checks, always last (a group or one scenario too), never twice
+            // the run's own checks, always last (a group or one scenario too), never twice: every scenario of the group
+            // in its order, the world's check the very last (it took the group's first alone until a second joined the
+            // group, 2026-11-04: the atlas probe's page check ran and the world's check was left out, "158 of 159")
             scenarios.RemoveAll(c => c.Group == GroupAfter);
-            Scenario afterRun = Scenarios.Find(c => c.Group == GroupAfter);
+            foreach (Scenario c in Scenarios) if (c.Group == GroupAfter && c.Name != AfterRunName) scenarios.Add(c);
+            Scenario afterRun = Scenarios.Find(c => c.Name == AfterRunName);
             if (afterRun != null) scenarios.Add(afterRun);
             bool full = scenarios.Count == Scenarios.Count;
             foreach (Scenario c in scenarios)

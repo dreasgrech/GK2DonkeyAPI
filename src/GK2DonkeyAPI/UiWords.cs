@@ -156,7 +156,7 @@ namespace GK2DonkeyAPI
         // window's rows on the donkey and on a skin worn over it.
         internal static readonly Word RegionCoat = new Word("colours.region_coat", "Coat", "a part of the mount the player colours: the donkey's coat (its row's label in the colours window)");
         internal static readonly Word RegionDonkeyDark = new Word("colours.region_donkey_dark", "Legs, mane and ears", "a part of the donkey the player colours: its dark lower legs, mane, ears and tail tuft, with its outline (one set of colours in the game's art)");
-        internal static readonly Word RegionDonkeyMuzzle = new Word("colours.region_donkey_muzzle", "Muzzle and belly", "a part of the donkey the player colours: its pale muzzle and belly");
+        internal static readonly Word RegionDonkeyMuzzle = new Word("colours.region_donkey_muzzle", "Muzzle", "a part of the donkey the player colours: its pale muzzle (the nose)");
         internal static readonly Word RegionEyes = new Word("colours.region_eyes", "Eyes", "a part of the mount the player colours: its eyes");
         internal static readonly Word RegionHarness = new Word("colours.region_harness", "Harness", "a part of the mount the player colours: the donkey's harness (its straps and collar)");
 

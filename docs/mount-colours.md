@@ -577,3 +577,40 @@ horns' outline (1E0E0C, under its Dark), and on the dragon, whose "Horns and spi
   scenario on the dragon: Coat 9 (7 and the two), 9 changed, none of another region. The colours window (TSV and
   picture): the dragon's rows Scales and wings, Belly, Eyes and claws, Horns and spikes, no Dark row. `l10n-sync --check`
   the same on all five templates (the hand-moved key matched the export).
+
+### 7.12 The donkey's muzzle its nose; a picked colour over a skin's pre-colour (2026-11-04)
+
+The user, on Hellfire with Coat Cream, Muzzle and belly Green (a screenshot): "1) why is the coat appearing dark like
+that when its colour is selected as Cream? 2) The muzzle and belly part, remove those individual pixels on the face
+from the muzzle colours and leave it as just the nose, and also remove the belly part and leave it as just the muzzle
+so that its nose is coloured".
+
+**The muzzle.** The donkey's Muzzle region, measured on its 44 frames (the probe's export):
+
+| Colour | Where | Now |
+|---|---|---|
+| abb298, 858f6c | the nose's fill | Muzzle |
+| 75755a, a9a7a2 | a few pixels of the mouth, chewing (14) and grazing (3) | Muzzle |
+| 858e6b | dots on the face round the eye and the cheek (369) | Coat |
+| 42422c | a light line along the nose's edge, the chin, the throat and the belly's bottom (1282, 89 % on the silhouette's edge) | Coat |
+
+- The row is "Muzzle" (`UiWords.RegionDonkeyMuzzle`; each language's word the first half of its "Muzzle and belly")
+  on the donkey and every skin over it. The nose's own rim is the belly's line, one colour: it follows the coat with it.
+- 858e6b (Coat) and the nose's 858f6c are a step apart in two channels: 0.0055 in RGB, outside the exact swap's reach
+  (0.004, docs/colors.md), so they are coloured apart; on the colour cube (the Lut fallback) they share a cell.
+- **A released change:** a 0.15.0 player's Second tone on the donkey reached the belly's line and the face's dots too;
+  those follow the coat now.
+
+**A picked colour over a skin's pre-colour.** A skin over the donkey may recolour the donkey's region under it
+(`[Base.<Region>]`: Hellfire's ash coat, brightness 0.41 with a red colorize at 0.6; the Jester's wine harness), and the
+player's map went on top of it (`Colors.cs`: `map.Apply(under.Apply(src))`). Every coat colour but Dark and Black is a
+colorize, which keeps a pixel's value: Cream (E0CFA8 at 0.8, brightness 1.15) on the ash stayed dark. Now the skin's
+recolour is the region's look while the player gives it no colour: Game default, a shade (Dark: brightness 0.6; Black:
+brightness 0.35, saturation 0.2) and a baby's own step go on top of it; a colour the player picks (a colorize: Cream,
+Brown, Custom ...) replaces it and is applied to the donkey's own colours (`!(on && map.HasColorize)`). No new key: a
+colour is told from a shade by its colorize. A baby of a parent with a colour picked shades that colour, one at Game
+default the skin's ash.
+
+- **Tests:** the integration scenarios "colours: the donkey's Muzzle row reaches its nose only; the face's dots and the
+  belly's line are its Coat" and "colours: a colour picked for a part a skin pre-colours replaces the pre-colour"
+  (docs/self-tests.md).

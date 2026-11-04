@@ -233,7 +233,7 @@ foreach (MountColorRegion r in Mounts.ColorRegions)
 ```
 
 **Regions** (`Mounts.ColorRegions`, `Key` / `Name` / `Area` / `SourceColors`, the art's exact colours as hex):
-- Donkey: `Coat`, `Dark` (mane, ears, legs, hooves; the outline is in no region), `Muzzle` (muzzle and belly), `Eye`, `Harness`.
+- Donkey: `Coat`, `Dark` (mane, ears, legs, hooves; the outline is in no region), `Muzzle` (the muzzle, its nose), `Eye`, `Harness`.
 - Cart: `CartBody`, `Shafts`, `Straps`, `Hooks`, `Wheels` (3D rims and the wheel sprites), `Hubs`.
 - Lantern: `Pole`, `Lamp`, `Glass` (the lamp's painted glass).
 
@@ -303,7 +303,7 @@ foreach (MountSkinTone tone in Mounts.Looks.Find("donkey/me.fancy").Tones) Logge
 **A look's names for its parts** (0.44.0; docs/second-tone.md 8): every row of the colours window is a part of the
 look by its name. A skin names a mount region's part with skin.cfg `[Region.<region>]` `name =` (translated by its
 owner as `skin.<skin id>.region.<region>.name`); a variant takes its default's names, a skin over the donkey the
-donkey's (Coat, "Legs, mane and ears", "Muzzle and belly", Eyes, Harness, the API's words) where it names none.
+donkey's (Coat, "Legs, mane and ears", Muzzle, Eyes, Harness, the API's words) where it names none.
 
 ```csharp
 // after a skin's region rows (your keys), inside PerSkin's body: labelled by the look's names, left out where the

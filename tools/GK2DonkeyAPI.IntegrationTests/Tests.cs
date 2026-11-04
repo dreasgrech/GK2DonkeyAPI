@@ -27,6 +27,8 @@ namespace GK2DonkeyAPI.IntegrationTests
             new Scenario { Group = GroupLooks, Name = "colours: the Coat row reaches every body colour of every shipped mount, and no other", Body = CoatEveryBuiltIn },
             new Scenario { Group = GroupLooks, Name = "colours: the Second tone row reaches the rat's pink parts, the snail's shell and the dragon's belly, and is left out elsewhere", Body = SecondTone },
             new Scenario { Group = GroupLooks, Name = "colours: the outline is the drawing's line: no colour row reaches it (the donkey, Hellfire, the dragon)", Body = OutlineAsDrawn },
+            new Scenario { Group = GroupLooks, Name = "colours: the donkey's Muzzle row reaches its nose only; the face's dots and the belly's line are its Coat", Body = MuzzleNoseOnly },
+            new Scenario { Group = GroupLooks, Name = "colours: a colour picked for a part a skin pre-colours replaces the pre-colour (Hellfire's ash coat), a shade stays on it", Body = PickedColourOverBase },
             new Scenario { Group = GroupLooks, Name = "over skins: Hellfire and Royal Parade worn, recoloured and walking; the snail's own rider offset (a readback)", Body = OverBuiltIns },
             new Scenario { Group = GroupLooks, Name = "colours: the player's regions on a mount in its own colours", Body = SkinColours },
             new Scenario { Group = GroupFlying, Name = "keys: Saddle Up's Jump and Fly rows (Space, shown only while flying is on, the Behaviour keys follow)", Body = FlightKeyRows },

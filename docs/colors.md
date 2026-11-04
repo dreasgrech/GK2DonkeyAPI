@@ -77,9 +77,9 @@ frames; the head's 16 are a subset. Rendering where each colour sits (magenta ma
 
 | Region (key) | Colours | What it is |
 |---|---|---|
-| `Coat` | 14 | the grey-brown coat |
+| `Coat` | 16 | the grey-brown coat (with the face's dots and the belly's line since 2026-11-04: docs/mount-colours.md 7.12) |
 | `Dark` | 4 | mane, ears, legs, hooves (the outline, 1e190e and 301f0f, is in no region since 2026-11-04: docs/mount-colours.md 7.11) |
-| `Muzzle` | 6 | muzzle, belly shading |
+| `Muzzle` | 4 | the muzzle: its nose (and the mouth chewing) |
 | `Eye` | 1 | the eye's white (`FFFFFF`) |
 | `Harness` | 15 | the orange collar and strap |
 

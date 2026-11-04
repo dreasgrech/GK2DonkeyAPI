@@ -39,7 +39,7 @@ namespace GK2DonkeyAPI
                 // the donkey's own words on its look
                 SelfTest.Check(SkinRegions.NameTerm(MountLooks.DonkeyId, "Coat") == UiWords.RegionCoat && SkinRegions.NameTerm(MountLooks.DonkeyId, "Muzzle") == UiWords.RegionDonkeyMuzzle
                     && SkinRegions.NameTerm(MountLooks.DonkeyId, "Dark") == UiWords.RegionDonkeyDark && SkinRegions.NameTerm(MountLooks.DonkeyId, "Eye") == UiWords.RegionEyes && SkinRegions.NameTerm(MountLooks.DonkeyId, "Harness") == UiWords.RegionHarness,
-                    "the donkey's own look names its five parts in the API's words (Coat, Legs mane and ears, Muzzle and belly, Eyes, Harness)");
+                    "the donkey's own look names its five parts in the API's words (Coat, Legs mane and ears, Muzzle, Eyes, Harness)");
 
                 // two temp skins: one over the donkey naming its Muzzle, with two parts that were the regions' (follows =);
                 // one in its own colours naming its Muzzle and Dark, with no harness

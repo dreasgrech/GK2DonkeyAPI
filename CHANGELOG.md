@@ -12,6 +12,11 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **A coat colour you pick shows as itself on Hellfire** (2026-11-04): Hellfire darkens the donkey's coat to ash, and
+  a colour on top of the ash stayed dark (Cream came out dark brown). A colour you pick now replaces the ash; Game
+  default keeps it, and Dark and Black darken it. The same for the Jester's harness.
+- **The donkey's Muzzle row colours its nose** (2026-11-04): it was "Muzzle and belly" and also reached a few dots on
+  the face and a line along the belly; those follow the coat now. On every donkey skin.
 - **Zombies on the cart during Halloween** (2026-11-04): from 24 October to 7 November the game gives some
   zombies a Halloween head. Such a zombie on the cart showed as an icon (and a warning in the log); it now lies there
   with its Halloween head, as on the ground.
@@ -112,6 +117,21 @@ For mod authors:
 
 Development:
 
+- **The eye's and the nostril's pixels: an investigation and a probe** (2026-11-04; the user: "it looks sloppy
+  otherwise"; docs/face-pixels.md). The eye's dark pixels are 292316 and the nostril 352e1e, the dark fill's own
+  colours, so "Legs and mane" reaches them; only a repaint by position separates them. The proposal: repaint them
+  once in the game's character atlas on the GPU (RGBA32, uncompressed, not readable), from a list made from
+  `rig.json`'s eye and muzzle points. The probe (`Dev/AtlasPatchProbe.cs`, the Measurements group and one scenario
+  after the run): the pages, the packing, a one-pixel copy into the page and back, the pages after the run. Nothing
+  repainted yet.
+- **The donkey's Muzzle its nose; a picked colour over a skin's pre-colour** (2026-11-04; the user on Hellfire's
+  Cream coat and its green dots; docs/mount-colours.md 7.12). `Colors.cs`: Muzzle "abb298 858f6c 75755a a9a7a2" (the
+  nose, the mouth chewing and grazing), the face's dots 858e6b and the belly's line 42422c under Coat (858e6b and the
+  nose's 858f6c two channels a step apart, outside the exact swap's 0.004); `UiWords.RegionDonkeyMuzzle` "Muzzle" in
+  11 languages. A skin's `[Base.<Region>]` is skipped where the player's map colorizes (`!(on && map.HasColorize)`):
+  a shade (brightness, saturation) and a baby's step stay on the skin's look, a colour replaces it. Integration
+  scenarios "colours: the donkey's Muzzle row reaches its nose only ..." and "colours: a colour picked for a part a
+  skin pre-colours replaces the pre-colour ..."; docs/skins.md "Recolouring the donkey under the skin".
 - **The outline is the drawing's line** (2026-11-04; the user: "I dont like that the mane is that partial outline";
   docs/mount-colours.md 7.11): measured on the game's donkey frames, its Dark's 1e190e and 301f0f are the outline (on
   the silhouette's edge, never in the fill) and are in no region now (`Colors.cs`: Dark "Donkey mane, legs, ears and

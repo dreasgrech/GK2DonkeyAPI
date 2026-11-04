@@ -274,7 +274,7 @@ colours = 38121A 5E1C24 8A282A
   tone": a dragon's `[Region.Coat]` `name = Scales and wings`, its `[Region.Muzzle]` `name = Belly`. A region you
   name gets a row by that name (Dark and Eye get rows only when named); a region you don't keeps the page's words
   (Coat, Harness, Second tone) or, for Dark and Eye, no row. A variant takes its default's names; a skin over the
-  donkey the donkey's (Coat, Legs mane and ears, Muzzle and belly, Eyes, Harness) unless it names its own (Hellfire's
+  donkey the donkey's (Coat, Legs mane and ears, Muzzle, Eyes, Harness) unless it names its own (Hellfire's
   `[Region.Dark]` `name = Legs and mane`: its ears are horns). Translated as `skin.<skin id>.region.<region>.name`.
   Keep the line art out of every row (docs/mount-colours.md 7.11): on a skin over the donkey list its colours
   nowhere (they are drawn as they are, as the donkey's own outline is since 2026-11-04); in a skin's own colours, where a
@@ -329,8 +329,9 @@ erased; `tools/skins/check_skin.py` lists them too.
 by region, with the same knobs the player has: a section `[Base.Coat]` (or `[Base.Dark]`, `[Base.Muzzle]`,
 `[Base.Eye]`, `[Base.Harness]`) with `Hue` (degrees), `Saturation`, `Brightness`, `Contrast` (multipliers),
 `Colorize` (hex) with `ColorizeAmount`, `Tint` (hex), `Overlay` (hex) with `OverlayAmount`. The skin's recolour is
-applied first and the player's settings on top of it, so an ash coat under horns is the skin's, and the player's
-custom coat still changes it. It holds even with the player's colour settings switched off, since it is the skin's
+the region's look while the player gives it no colour: Game default, or a shade (Dark, Black: brightness and
+saturation only) on top of it; a colour the player picks (Cream, Brown, Custom: a colorize) replaces it and is applied
+to the donkey's own colours, so Cream on an ash coat is cream (docs/mount-colours.md 7.12). It holds even with the player's colour settings switched off, since it is the skin's
 own look. Nothing of the game's art is in the pack for it.
 
 ```ini

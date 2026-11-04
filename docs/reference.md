@@ -223,7 +223,7 @@ One set for both styles, since it's the same donkey. The investigation and how i
 | `CharacterLightColor` | empty | The character light's colour, hex. Empty = the same as `Cart.LanternLightColor`. |
 
 **Regions:**
-- **Donkey:** `Coat`, `Dark` (mane, ears, legs, hooves; the outline is in no region), `Muzzle` (muzzle and belly), `Eye`, `Harness`.
+- **Donkey:** `Coat`, `Dark` (mane, ears, legs, hooves; the outline is in no region), `Muzzle` (the muzzle, its nose), `Eye`, `Harness`.
 - **Cart:** `CartBody`, `Shafts`, `Straps`, `Hooks`, `Wheels`, `Hubs`.
 - **Lantern:** `Pole`, `Lamp`, `Glass`.
 
