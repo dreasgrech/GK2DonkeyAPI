@@ -30,8 +30,13 @@ For players:
   rewritten; the skins also read as before on an older GK2 Donkey API. docs/mount-colours.md 7.5 and 7.9.
 - **Hellfire's colours come out exactly as drawn** (2026-11-04): a skin over the donkey with more than 48 colours
   went through the game's colour cube, which rounds every colour to 32 steps and, with a harness colour set, turned
-  a few of the donkey's outline and coat pixels under the skin that colour. The exact colour swap takes up to 64
+  a few of the donkey's outline and coat pixels under the skin that colour. The exact colour swap takes up to 72
   colours now, enough for every skin over the donkey with all its parts coloured (Royal Parade, Armored and Hellfire).
+- **A part you give a colour takes each baby's own shade** (2026-11-04; the user: "ideally yes unless it's a
+  performance cost we can't afford"). A baby already wore its own shade of its parent's coat, second tone and dark
+  parts; a skin's part given a colour of its own (a saddle cloth set to Gold) now takes that same shade on each baby,
+  so a baby reads as one animal, its trappings with its coat. A part on Game default stays as drawn, as the harness
+  does. Nothing more to draw: a baby has colours of its own already.
 - **The start-up check of the game's code covers the pathfinding too** (2026-11-03; the user's go after the 1.011.1
   audit). The API queries the game's A* pathfinding directly (the safe ground, the mount): 29 members, which the
   check could not see, and 1.011.1 recompiled that assembly. Its members are now in the dependency manifest like
@@ -75,6 +80,10 @@ For mod authors:
   too keeps colouring as that region there, any other is drawn as drawn over the donkey (Coat in a skin's own
   colours); say `needs =` the API with tones only where that isn't good enough. Saddle Up gives every skin's tones
   their rows (one line after its Second tone rows; it names no tone).
+- **A skin over the donkey keeps the exact colour swap up to 72 pairs** (2026-11-04; 64 that morning, 48 before):
+  the donkey's 42 and the skin's named colours, so up to 30 colours of a skin's own parts with every part set; past
+  it the colour cube. Parts drawn in one ramp need shades of their own (a colour is one tone's only):
+  `tools/skins/part_palette.py` finds each part the nearest ones the checks take (docs/skins.md).
 
 Development:
 
@@ -265,6 +274,27 @@ Development:
   by its test. `tools/l10n-glyphs.py` (new) lists the characters of our translations the game's own text never draws,
   to look at before the in-game Fonts check. The run again: 1831 passed, 0 failed, 0 warnings; every font has every
   character of our translations.
+- **Babies' shades of the parts, the Jester's six parts, the colour swap's cost** (2026-11-04; the user's answers:
+  the babies "ideally yes unless it's a performance cost we can't afford", the Jester "yes so that we start making
+  use of our new multi colour tone system"). `SkinTones.ValuesOf` takes a baby's look and shades each set tone as
+  `MountCompanion.Shade` shades a coat's colorize colour: its hue turned and saturation scaled (`FoalLooks.ShiftHex`),
+  its brightness stepped (`FoalLooks.StepBrightness` and `IsAlike`, shared with it; `FoalLooks.For` draws nothing new,
+  so every baby keeps its colours and temper); a tone is colorized whole, so its colour carries the hue and the
+  saturation. A preset stays under its cap (`SkinTones.BrightnessCap`), Custom takes the whole step; `SkinTones.Same`
+  compares the saturation and hue too.
+  The Jester (still loose, in no pack): six tones, `cap-front`, `cap-back`, `collar`, `collar-points`, `caparison`,
+  `caparison-second`, in place of `motley1` and `motley2`; the cap's and the collar's shades one to four steps off the
+  caparison's, each in cube cells of their own (`tools/skins/part_palette.py`, new); `check_skin.py` passes. With
+  every part set it is 71 pairs, so `Colors.PaletteMaxColoursOver` 64 -> 72 (and `check_skin.py`'s copy; SkinsScan
+  reads it) until the measured cost says otherwise; `Colors.TestPaletteMaxOver` is the measurement's own. Two
+  measurements (the Measurements group): every donkey skin's colours window as a picture, the dev panel hidden, with
+  its part rows in words (GK2-panel-shots, GK2-colours-rows.tsv); and the colour swap's cost, 21 donkeys at their
+  size and twice as big, frame times uncapped, as the game draws them, at the donkey's own pairs, 64, 72, 96 and on
+  the cube (GK2-palette-cost.tsv). The tones scenario checks a baby's shade. The user's run: 1833 passed, 0 failed,
+  0 warnings; every converted part's first choice reads "As the ..." and the Jester's six rows are live
+  (GK2-colours-rows.tsv); no cost measurable from 42 to 96 pairs, nor on the cube, the frame not the GPU's on that
+  machine (docs/performance.md "The colour swap's cost"). The colours window's pictures wait for the picture drawn
+  since (Royal Parade's first was empty: settled came a few frames before it).
 
 - **`tools/skins/donkey_frames.py`** (2026-11-03): `make` writes `src/GK2DonkeyAPI/donkey-frames.txt` (fingerprints,
   no art) from the asset probe's PNGs; `check` compares it with them, or with a dev build's own read of the game

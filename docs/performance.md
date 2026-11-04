@@ -393,3 +393,33 @@ saves and the profiler versions differ.
 donkeys, foals and a cart every frame, and it's still about 4% of a frame. Its worst frames are better than half of
 theirs. The two open items (docs above) are the ones that show here too: allocations a frame, and the routine log
 lines.
+
+## The colour swap's cost (2026-11-04, the user's F11)
+
+The question: a skin over the donkey keeps the game's exact colour swap up to `Colors.PaletteMaxColoursOver` pairs,
+and the swap's shader loops over every pair for every pixel of the mount's sprites (docs/colors.md); the Jester's six
+parts need 71 (docs/mount-colours.md 7.6), and a baby's own shade of a part was wanted "unless it's a performance cost
+we can't afford". The self-test measurement "the colour swap's cost" (`MeasureTests.PaletteCost`, the Measurements
+group; BepInEx\GK2-palette-cost.tsv): 21 test donkeys in view, at their size and then twice as big (four times the
+pixels each), frame times uncapped (no vsync, no frame-rate target), every configuration twice with the second round
+reversed, 2 s each. Medians over both rounds, in ms:
+
+| Configuration | Pairs | 21 donkeys | Twice as big |
+|---|---|---|---|
+| As the game draws them (the swap was on: see below) | 42 | 5.93 | 6.07 |
+| The exact swap, a coat colour | 42 | 5.72 | 5.88 |
+| The exact swap, 22 colours of a skin's own | 64 | 5.90 | 5.94 |
+| The exact swap, 30 | 72 | 6.02 | 6.05 |
+| The exact swap, 54 | 96 | 5.95 | 6.25 |
+| The colour cube, the 30 | 72 | 5.87 | 5.88 |
+
+- **No cost this measures, up to 96 pairs.** A frame is about 6 ms (about 170 a second) in every configuration; the
+  spread between configurations (0.37 ms at the most) is smaller than the spread between one configuration's two
+  rounds (up to 0.63 ms, the 96 twice as big). The cube costs the same as the swap.
+- **The frame isn't the GPU's here.** Four times the pixels changed nothing either, so on this machine the shader's
+  work hides behind the rest of the frame; the measurement gives no GPU margin. The game's build keeps no frame
+  timing (`FrameTimingManager` off), so the GPU's own time isn't read. A weaker graphics card is not measured.
+- **The limit is a ceiling, not a cost for everyone:** a look pays for the pairs it has (the palette is as wide as
+  them), so raising it costs nothing to a skin under it.
+- "As the game draws them" (nothing set by the test) still ran on the exact swap at 42 pairs: there is no swap-off
+  baseline in this table.

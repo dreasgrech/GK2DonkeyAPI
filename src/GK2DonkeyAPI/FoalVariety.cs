@@ -94,6 +94,17 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // A baby's step on one value of its parent's look, a region's (MountCompanion.Shade) or a tone's
+        // (SkinTones.ValuesOf): a visible one on any colour, not a share of it, so at least 0.7 of a full step however
+        // dark; and a near-grey one gets some of the art's own colour back by the baby's tinge. All 1 and 0: alike.
+        internal static bool IsAlike(float hue, float bri, float sat, float tinge) =>
+            Math.Abs(hue) < 0.01f && Math.Abs(bri - 1f) < 0.001f && Math.Abs(sat - 1f) < 0.001f && tinge < 0.001f;
+
+        internal static float StepBrightness(float b, float bri) => Mathf.Clamp(b + (bri - 1f) * Mathf.Max(b, 0.7f), 0.05f, 3f);
+
+        internal static float StepSaturation(float s, float sat, float tinge) =>
+            Mathf.Clamp(s + (sat - 1f) * Mathf.Max(s, 0.7f) + Mathf.Max(0f, 0.5f - s) * 0.6f * tinge, 0f, 3f);
+
         // A colour "RRGGBB" with its hue turned and its saturation scaled (a colorize colour: its hue key would be
         // painted over by it).
         internal static string ShiftHex(string hex, float hueDeg, float sat)

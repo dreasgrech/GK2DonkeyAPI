@@ -38,8 +38,16 @@ from anatomy import body, load, rig
 from shapes import curve, pendulum, polygon, pose, save, side, stroke
 
 hexc = lambda h: (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), 255)
-BURG = [hexc(h) for h in ("3A0A14", "641A28", "862534", "A23444", "C2485A")]   # edge, shade, base, lit, light: the tone motley1
-NAVY = [hexc(h) for h in ("141A3A", "243266", "34488A", "4E66A8", "6E86C8")]   # the tone motley2
+# The motley's burgundy and navy (edge, shade, base, lit, light), each part its own shades of them: every part is a
+# tone of its own (skin.cfg; the user, 2026-11-04: "yes so that we start making use of our new multi colour tone
+# system"), and a colour is one tone's only. Found by tools/skins/part_palette.py: the caparison's as before, the cap's
+# and the collar's one to four steps off, each in colour-cube cells of their own (the same burgundy and navy to the eye).
+CLOTH_BURG = [hexc(h) for h in ("3A0A14", "641A28", "862534", "A23444", "C2485A")]    # the tone caparison
+CLOTH_NAVY = [hexc(h) for h in ("141A3A", "243266", "34488A", "4E66A8", "6E86C8")]    # the tone caparison-second
+CAP_BURG = [hexc(h) for h in ("3E0A14", "641A2A", "862633", "A03444", "C14859")]      # the tone cap-front: its front point and half
+CAP_NAVY = [hexc(h) for h in ("131A39", "263266", "36488A", "4F66A7", "7086C8")]      # the tone cap-back
+COLLAR_BURG = [hexc(h) for h in ("3A0D14", "671A28", "882534", "A23644", "C1485B")]   # the tone collar: its band and middle point
+COLLAR_NAVY = [hexc(h) for h in ("151A39", "243262", "34488C", "4D67A8", "6E88C8")]   # the tone collar-points: the two outer ones
 GOLD = [hexc(h) for h in ("5A3A0A", "966414", "E2A830", "FFD652")]             # edge, shade, base, light: as drawn
 STANDING = "bdy_static_left"
 ERASE = (255, 0, 255, 255)   # skin.cfg's erase colour: clears the donkey under it
@@ -141,14 +149,14 @@ def cap(c, tf=None):
     red = stroke(curve(path(c["red"])), c["w"], 1.5) - body_
     blue = stroke(curve(path(c["blue"])), c["w"], 1.5) - body_
     px = {}
-    tube(red | front, BURG, px)
-    tube(blue | back, NAVY, px)
+    tube(red | front, CAP_BURG, px)
+    tube(blue | back, CAP_NAVY, px)
     for x, y in band:
         px[(x, y)] = GOLD[3] if (x - 1, y) not in band and (x - 1, y - 1) not in band else GOLD[2]
     for x, y in band:   # the band's underside a step darker where it turns down: it rounds with the head
         if (x + 1, y + 1) in band or (x - 1, y + 1) in band:
             px[(x, y)] = GOLD[1] if px[(x, y)] == GOLD[2] else px[(x, y)]
-    edge([(red | front, BURG), (blue | back, NAVY)], px)
+    edge([(red | front, CAP_BURG), (blue | back, CAP_NAVY)], px)
     for name in ("red", "blue"):
         x, y = path(c[name])[-1]
         small_bell(int(round(x - 0.5)), int(round(y)) + 1, px)
@@ -425,17 +433,17 @@ def collar(c, key, tf=None, swings=None, report=None):
         reach = c["len"]   # the swing's lift not used: it shortened the point and its bell hopped (walk 04)
         tip = (hx + ux * reach + uy * sw[0], hy + uy * reach - ux * sw[0])   # across: (1, 0) for a point straight down
         part = polygon([(hx - uy * w, hy + ux * w), tip, (hx + uy * w, hy - ux * w)]) - band
-        parts.append((part, (NAVY, BURG)[n % 2]))
+        parts.append((part, (COLLAR_NAVY, COLLAR_BURG)[n % 2]))
         end = max(part, key=lambda q: (q[0] * ux + q[1] * uy, q[1])) if part else None
         tips.append(end)
         if report is not None:
             report.append((n, len(part), end))
     px = {}
-    tube(band, BURG, px, band.union(*[part for part, _ in parts]))
+    tube(band, COLLAR_BURG, px, band.union(*[part for part, _ in parts]))
     for part, ramp in parts:
         for (x, y) in part:   # a point lit on its left, shaded on its right
             px[(x, y)] = ramp[3] if (x - 1, y) not in part else ramp[1] if (x + 1, y) not in part else ramp[2]
-    edge([(band, BURG)] + parts, px)
+    edge([(band, COLLAR_BURG)] + parts, px)
     for end in tips:
         if end:
             small_bell(end[0], end[1] + 1, px)
@@ -490,7 +498,7 @@ def caparison(sway=0, ripple=None):
             front = not front
         if y > c["hem"]:
             front = not front
-        return BURG if front else NAVY
+        return CLOTH_BURG if front else CLOTH_NAVY
     cloth = {(x, y) for x in range(c["x0"], c["x1"] + 1) for y in range(top.get(x, 44), c["hem"] + 1)}
     points = []
     for p0, sw in zip(c["points"], ripple):
@@ -599,7 +607,7 @@ def tucked(px, key, d, sw=(0, 0), over=frozenset()):
         shades = {q: v for q, v in hem_point(p0, hem, sw).items() if q not in px and q not in fill}
         point = set(shades)
         shape = fill | set(px) | point
-        ramp = lambda col: BURG if col in BURG else NAVY
+        ramp = lambda col: CLOTH_BURG if col in CLOTH_BURG else CLOTH_NAVY
         fold = {}
         for (x, y) in fill | old_edge:
             r = ramp(inner[y])
@@ -623,7 +631,7 @@ def tucked(px, key, d, sw=(0, 0), over=frozenset()):
             if run >= 2:   # 3 left the folds out where only 2 rows show between the collar and the hem's band
                 out[q] = col
         for q, v in shades.items():   # coloured as the cloth's other points (the front ones navy, under the navy
-            out[q] = NAVY[v]           # quarter), shaded as at rest
+            out[q] = CLOTH_NAVY[v]           # quarter), shaded as at rest
         low = max(y for x, y in point)
         small_bell(min(x for x, y in point if y == low), low + 1, out)
     # the top over the back's bumps: on each column, the donkey's pixels just above the cloth's top (1 or 2, the coat

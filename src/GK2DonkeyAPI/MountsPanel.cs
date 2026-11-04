@@ -1086,6 +1086,10 @@ namespace GK2DonkeyAPI
         }
         internal static void TestOpenColours() => OpenColours();
         internal static void TestCloseColours(bool keep) => CloseColours(keep);
+        // the colours window's rows taller than its view (they scroll), and a scroll to the top (1) or the end (0)
+        internal static bool TestColoursScroll => coloursScroll != null && coloursScroll.content != null && coloursScroll.viewport != null
+            && coloursScroll.content.rect.height > coloursScroll.viewport.rect.height + 1f;
+        internal static void TestScrollColours(float to) { if (coloursScroll != null) coloursScroll.verticalNormalizedPosition = to; }
         internal static (float W, float H, float Scale, float RoomW, float RoomH) TestMeasure()
         {
             if (panel == null) return default;

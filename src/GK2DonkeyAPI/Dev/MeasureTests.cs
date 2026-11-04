@@ -128,5 +128,291 @@ namespace GK2DonkeyAPI
             }
             SelfTest.Info($"lamp framing: {lines.Count - 1} measurement(s) in BepInEx\\GK2-lamp-framing.tsv; the skin, the mount and every lantern setting back as they were");
         }
+
+        // The colours window of every skin of the donkey as the player sees it (the user's look at the skins whose parts
+        // became tones, 2026-11-04): a picture each, BepInEx\GK2-panel-shots\colours-skin-<skin>.png, taken once the
+        // window's picture has settled with the dev panel hidden; and each skin's part rows in words (its label, the
+        // first choice, the value, whether it is live), BepInEx\GK2-colours-rows.tsv.
+        internal static IEnumerator ColoursWindows()
+        {
+            MountSettingsPage page = PageWithMounts();
+            if (page == null)
+            {
+                SelfTest.Skip("no mod's settings page with a Mount row is shown");
+                yield break;
+            }
+            if (LazyWindowsStackController.ActiveWindow != null || MountsPanel.IsOpen || OptionsWindow.IsOpen)
+            {
+                SelfTest.Warn("a window is open: close it and run again; skipped");
+                yield break;
+            }
+            ConfigEntryBase skinRow = null;
+            foreach (MountSettingsPage.Row r in page.Rows)
+            {
+                if (r.Entry != null && r.Entry.Definition.Key == "Skin_" + MountCatalog.DonkeyId) { skinRow = r.Entry; break; }
+            }
+            if (skinRow == null)
+            {
+                SelfTest.Skip("the page has no Skin row for the donkey");
+                yield break;
+            }
+            object skinWas = skinRow.BoxedValue;
+            string mountWas = page.MountChosen;
+            bool panelWasHidden = Plugin.TuningWindowHidden;
+            var lines = new List<string> { "skin\trow key\tlabel\tfirst choice\tvalue\tlive" };
+            int shots = 0;
+            MountsPanel.Open(page, toggle: false);
+            yield return SelfTest.Frames(3);
+            try
+            {
+                if (!MountsPanel.IsOpen)
+                {
+                    SelfTest.Warn("the Mount Journal didn't open; nothing taken");
+                    yield break;
+                }
+                MountsPanel.TestSelect(MountCatalog.DonkeyId);
+                yield return SelfTest.Frames(3);
+                foreach ((string id, string label) in Looks.SkinChoicesOf(MountCatalog.DonkeyId))
+                {
+                    if (MountsPanel.IsColoursOpen) MountsPanel.TestCloseColours(true);
+                    skinRow.BoxedValue = id;
+                    yield return SelfTest.Frames(3);
+                    MountsPanel.TestOpenColours();
+                    yield return SelfTest.Frames(3);
+                    yield return SelfTest.Until(() => !PreviewStage.TestShownSettling, 10f);
+                    // and until its picture is drawn (settled came first: the first run's Royal Parade picture was empty, a
+                    // few frames before it showed)
+                    yield return SelfTest.Until(() => PreviewStage.TestDrawnRect(PreviewStage.TestHide.Nothing, out _, out _, out _, out _, out _, out _), 10f);
+                    yield return SelfTest.Frames(6);
+                    int parts = 0;
+                    foreach (MountSettingsPage.Row r in page.Rows)
+                    {
+                        if (r.Entry == null || !string.Equals(r.SkinId, id, StringComparison.OrdinalIgnoreCase) || !r.Entry.Definition.Key.StartsWith("Tone.", StringComparison.Ordinal)) continue;
+                        bool live = r.Enabled == null || r.Enabled();
+                        string first = r.ChoiceLabels != null && r.ChoiceLabels.Length > 0 ? r.ChoiceLabels[0] : "-";
+                        lines.Add(string.Join("\t", label, r.Entry.Definition.Key, r.Label, first, r.Entry.BoxedValue?.ToString() ?? "-", live ? "live" : "greyed"));
+                        parts++;
+                    }
+                    Plugin.TuningWindowHidden = true;
+                    yield return SelfTest.Frames(2);
+                    string tail = id.Substring(id.LastIndexOf('/') + 1);
+                    yield return SelfTest.PanelShot("colours-skin-" + tail);
+                    shots++;
+                    bool scrolls = MountsPanel.TestColoursScroll;
+                    if (scrolls)
+                    {
+                        // rows past the window's view: a second picture at the end of them
+                        MountsPanel.TestScrollColours(0f);
+                        yield return SelfTest.Frames(3);
+                        yield return SelfTest.PanelShot("colours-skin-" + tail + "-end");
+                        MountsPanel.TestScrollColours(1f);
+                        shots++;
+                    }
+                    Plugin.TuningWindowHidden = panelWasHidden;
+                    SelfTest.Info($"colours window: {label}: {MountsPanel.TestColourRows} rows, {parts} of them its parts' choices{(scrolls ? "; they scroll (a second picture at their end)" : "")}{(PreviewStage.TestShownSettling ? "; its picture still settling" : "")}");
+                }
+            }
+            finally
+            {
+                Plugin.TuningWindowHidden = panelWasHidden;
+                skinRow.BoxedValue = skinWas;
+                if (MountsPanel.IsColoursOpen) MountsPanel.TestStepBack();
+                if (MountsPanel.IsOpen && !string.IsNullOrEmpty(mountWas)) MountsPanel.TestSelect(mountWas);
+                if (MountsPanel.IsOpen) MountsPanel.TestStepBack();
+                try { File.WriteAllText(Path.Combine(Paths.BepInExRootPath, "GK2-colours-rows.tsv"), string.Join("\n", lines) + "\n", new UTF8Encoding(false)); }
+                catch (Exception e) { SelfTest.Info("GK2-colours-rows.tsv couldn't be written: " + e.Message); }
+            }
+            SelfTest.Info($"colours windows: {shots} picture(s) in BepInEx\\GK2-panel-shots (colours-skin-*), {lines.Count - 1} part row(s) in BepInEx\\GK2-colours-rows.tsv; the skin and the mount back as they were");
+        }
+
+        // The colour swap's cost (the user, 2026-11-04: a baby's own shade of a part "unless it's a performance cost we
+        // can't afford"; a skin over the donkey with many parts wants more than the 64 pairs it keeps the exact swap to,
+        // Colors.PaletteMaxColoursOver). The exact swap loops over every pair for every pixel of the mount's sprites
+        // (docs/colors.md); the cube is one lookup. Frame times, uncapped (no vsync, no frame-rate target; both put back),
+        // with 21 test donkeys in view drawn: as the game draws them; on the exact swap at the donkey's own pairs (a coat
+        // colour set), at 64 (a skin over it with 22 colours of its own, all set: the limit until 2026-11-04), 72 (30:
+        // the limit now) and 96 (54, the limit raised for the test); and on the cube with the 30 (the limit lowered for
+        // the test; each configuration's limit its own, whatever PaletteMaxColoursOver is). Two loads: the
+        // donkeys at their size, and twice as big (four times the pixels each: the shader's part of the frame apart from
+        // the rest). Each configuration twice, the second round in the reverse order (drift), 2 s of frames each.
+        // BepInEx\GK2-palette-cost.tsv.
+        private sealed class CostConfig
+        {
+            internal string Name, Skin, Coat;
+            internal int Limit;
+        }
+
+        private static string CostSkinId(int n) => "selftest.cost-" + n;
+
+        internal static IEnumerator PaletteCost()
+        {
+            if (LazyWindowsStackController.ActiveWindow != null || MountsPanel.IsOpen || OptionsWindow.IsOpen)
+            {
+                SelfTest.Warn("a window is open: close it and run again; skipped");
+                yield break;
+            }
+            if (Colors.SpriteMethod.Value != SpriteColorMethod.Palette)
+            {
+                SelfTest.Skip($"the donkeys' sprites are set to the {Colors.SpriteMethod.Value} path (Colors SpriteMethod), not the exact swap: nothing to compare");
+                yield break;
+            }
+            const string owner = SelfTest.Owner + ".cost";
+            string root = Path.Combine(Path.GetTempPath(), "gk2donkeyapi-selftest-cost");
+            int[] sizes = { 22, 30, 54 };
+            var configs = new List<CostConfig>
+            {
+                new CostConfig { Name = "as the game draws them" },
+                new CostConfig { Name = "the exact swap, the donkey's own colours", Coat = "6A4A8A" },
+                new CostConfig { Name = "the exact swap, 22 colours of a skin's own", Skin = "donkey/" + CostSkinId(22), Limit = 64 },
+                new CostConfig { Name = "the exact swap, 30 of a skin's own", Skin = "donkey/" + CostSkinId(30), Limit = 72 },
+                new CostConfig { Name = "the exact swap, 54 of a skin's own", Skin = "donkey/" + CostSkinId(54), Limit = 96 },
+                new CostConfig { Name = "the colour cube, the 30", Skin = "donkey/" + CostSkinId(30), Limit = 48 },
+            };
+            var lines = new List<string> { "load\tconfiguration\tpath\tpairs\tround\tframes\tmean ms\tmedian ms\tp90 ms\tgpu mean ms" };
+            var medians = new Dictionary<string, List<float>>(StringComparer.Ordinal);
+            var herd = new List<MountHandle>();
+            int vsyncWas = QualitySettings.vSyncCount, rateWas = Application.targetFrameRate;
+            bool gpu = FrameTimingManager.IsFeatureEnabled();
+            var timings = new FrameTiming[1];
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+                foreach (int n in sizes) WriteCostSkin(root, n);
+                int registered = Looks.RegisterFolder(root, owner);
+                if (registered != sizes.Length)
+                {
+                    SelfTest.Warn($"{registered} of the {sizes.Length} test skins registered; nothing measured");
+                    yield break;
+                }
+                QualitySettings.vSyncCount = 0;
+                Application.targetFrameRate = -1;
+                foreach (float scale in new[] { 1f, 2f })
+                {
+                    foreach (MountHandle h in herd) if (h.Exists) h.Remove();
+                    herd.Clear();
+                    for (int row = 0; row < 3; row++)
+                    {
+                        for (int col = 0; col < 7; col++)
+                        {
+                            Vector3 want = SelfTest.home + new Vector3(-6f + 2f * col, 0f, -1.5f + 1.5f * row);
+                            MountHandle h = SelfTest.Spawn(SelfTest.Spot(want, 1.5f) ?? want, col % 2 == 0, scale: scale);
+                            if (h != null) herd.Add(h);
+                        }
+                    }
+                    yield return SelfTest.Until(() => herd.TrueForAll(h => h.IsReady), 20f);
+                    string load = herd.Count + " donkeys" + (scale > 1f ? " twice as big" : ""); // of the 21 asked for, the ones spawned
+                    var order = new List<CostConfig>(configs);
+                    for (int round = 1; round <= 2; round++)
+                    {
+                        if (round == 2) order.Reverse();
+                        foreach (CostConfig c in order)
+                        {
+                            Mounts.ClearTuning(owner);
+                            Colors.TestPaletteMaxOver = c.Limit;
+                            Colors.MarkDirty();
+                            foreach (MountHandle h in herd)
+                            {
+                                if (!h.Exists) continue;
+                                h.I.OwnLook = true;
+                                h.Tuning.Set(owner, "IdleShuffle", false);
+                                if (c.Coat != null)
+                                {
+                                    h.Tuning.Set(owner, "CoatColorize", c.Coat);
+                                    h.Tuning.Set(owner, "CoatColorizeAmount", 1f);
+                                }
+                                if (c.Skin != null)
+                                {
+                                    h.Tuning.Set(owner, "Skin", c.Skin);
+                                    var gold = new Dictionary<string, Colors.RegionTweak>(StringComparer.Ordinal) { ["parts"] = new Colors.RegionTweak { Colorize = "D8A838", ColorizeAmount = 1f } };
+                                    SkinTones.Apply(h.I, gold, owner, c.Skin);
+                                }
+                            }
+                            yield return SelfTest.Until(() => herd.TrueForAll(h => !h.Exists || ((c.Skin == null || string.Equals(h.I.LooksRig.Wearing, c.Skin, StringComparison.OrdinalIgnoreCase)) && !h.I.LooksRig.Building)), 15f);
+                            yield return SelfTest.Frames(10);
+                            var group = herd.Count > 0 ? herd[0].I.ColorsRig.TestMountGroup() : (0, SpriteColorMethod.Palette, 0, 0, null);
+                            string path = group.Pairs == 0 ? "none" : group.Method == SpriteColorMethod.Lut ? "cube" : "exact swap";
+                            float settle = Time.unscaledTime + 0.5f;
+                            while (Time.unscaledTime < settle) yield return null;
+                            var ms = new List<float>();
+                            float gpuSum = 0f;
+                            int gpuN = 0;
+                            float until = Time.unscaledTime + 2f;
+                            while (Time.unscaledTime < until)
+                            {
+                                yield return null;
+                                ms.Add(Time.unscaledDeltaTime * 1000f);
+                                if (gpu)
+                                {
+                                    FrameTimingManager.CaptureFrameTimings();
+                                    if (FrameTimingManager.GetLatestTimings(1, timings) > 0 && timings[0].gpuFrameTime > 0) { gpuSum += (float)timings[0].gpuFrameTime; gpuN++; }
+                                }
+                            }
+                            ms.Sort();
+                            float mean = 0f;
+                            foreach (float v in ms) mean += v;
+                            mean /= Mathf.Max(1, ms.Count);
+                            float median = ms.Count > 0 ? ms[ms.Count / 2] : 0f, p90 = ms.Count > 0 ? ms[Mathf.Min(ms.Count - 1, ms.Count * 9 / 10)] : 0f;
+                            string gpuText = gpuN > 0 ? (gpuSum / gpuN).ToString("0.00") : "-";
+                            lines.Add(string.Join("\t", load, c.Name, path, group.Pairs.ToString(), round.ToString(), ms.Count.ToString(), mean.ToString("0.00"), median.ToString("0.00"), p90.ToString("0.00"), gpuText));
+                            string key = load + "|" + c.Name;
+                            if (!medians.TryGetValue(key, out List<float> m)) medians[key] = m = new List<float>();
+                            m.Add(median);
+                            SelfTest.Info($"colour swap's cost: {load}, {c.Name}: {path}, {group.Pairs} pairs, round {round}: {ms.Count} frames, median {median:0.00} ms, mean {mean:0.00}, p90 {p90:0.00}, gpu {gpuText}");
+                        }
+                    }
+                    float baseMs = medians.TryGetValue(load + "|" + configs[0].Name, out List<float> b0) ? (b0[0] + b0[b0.Count - 1]) / 2f : 0f;
+                    foreach (CostConfig c in configs)
+                    {
+                        if (!medians.TryGetValue(load + "|" + c.Name, out List<float> m)) continue;
+                        float both = (m[0] + m[m.Count - 1]) / 2f;
+                        SelfTest.Info($"colour swap's cost: {load}, {c.Name}: median {both:0.00} ms over both rounds, {both - baseMs:+0.00;-0.00;0.00} ms against the game's own drawing");
+                    }
+                }
+            }
+            finally
+            {
+                QualitySettings.vSyncCount = vsyncWas;
+                Application.targetFrameRate = rateWas;
+                Colors.TestPaletteMaxOver = 0;
+                Mounts.ClearTuning(owner);
+                foreach (MountHandle h in herd) if (h.Exists) h.Remove();
+                foreach (int n in sizes) Looks.Unregister("donkey/" + CostSkinId(n), owner);
+                Colors.MarkDirty();
+                try { if (Directory.Exists(root)) Directory.Delete(root, true); } catch (Exception e) { SelfTest.Info("the test skins' folder couldn't be removed: " + e.Message); }
+                try { File.WriteAllText(Path.Combine(Paths.BepInExRootPath, "GK2-palette-cost.tsv"), string.Join("\n", lines) + "\n", new UTF8Encoding(false)); }
+                catch (Exception e) { SelfTest.Info("GK2-palette-cost.tsv couldn't be written: " + e.Message); }
+            }
+            SelfTest.Info($"colour swap's cost: {lines.Count - 1} measurement(s) in BepInEx\\GK2-palette-cost.tsv (gpu times {(gpu ? "read" : "not available: the game's build keeps no frame timing")}); the frame rate, the limit and every test donkey and skin back as they were");
+        }
+
+        // A skin over the donkey with n colours of its own in one tone ("parts"), each drawn: bright, far from the donkey's.
+        private static void WriteCostSkin(string root, int n)
+        {
+            string dir = SelfTest.TempSkinDir(root, MountCatalog.DonkeyId, CostSkinId(n));
+            Directory.CreateDirectory(dir);
+            var cols = new List<Color32>();
+            var hexes = new List<string>();
+            for (int i = 0; i < n; i++)
+            {
+                Color c = Color.HSVToRGB(i / (float)n, 0.85f, 0.95f);
+                var c32 = new Color32((byte)Mathf.RoundToInt(c.r * 255f), (byte)Mathf.RoundToInt(c.g * 255f), (byte)Mathf.RoundToInt(c.b * 255f), 255);
+                string hex = c32.r.ToString("X2") + c32.g.ToString("X2") + c32.b.ToString("X2");
+                if (hexes.Contains(hex)) continue;
+                cols.Add(c32);
+                hexes.Add(hex);
+            }
+            File.WriteAllText(Path.Combine(dir, "skin.cfg"), "[Skin]\nformat = 1\nname = Cost " + n + "\nlayer = over\n[Tone.parts]\nname = Parts\ncolours = " + string.Join(" ", hexes) + "\n");
+            var px = new Color32[96 * 96];
+            int k = 0;
+            for (int y = 36; y < 56; y++)
+            {
+                for (int x = 20; x < 76; x++) px[y * 96 + x] = cols[k++ % cols.Count];
+            }
+            var tex = new Texture2D(96, 96, TextureFormat.RGBA32, false);
+            tex.SetPixels32(px);
+            tex.Apply();
+            File.WriteAllBytes(Path.Combine(dir, "bdy.png"), tex.EncodeToPNG());
+            UnityEngine.Object.Destroy(tex);
+        }
     }
 }

@@ -821,7 +821,8 @@ design, which replaced it, is part 12 below):
       face in turn 04-06, behind the hat in graze 03-05), "the only thing that reads as a mistake" (the last review).
       `[Base.Harness]` (Colorize C42838 at 0.85) turns it the motley's red under the skin, with nothing drawn, and the
       player's harness colour still reaches it on top.
-    - **Colours:** the red is Harness, the blue the Second tone, so the player's two colours drive the motley's two.
+    - **Colours:** the red is Harness, the blue the Second tone, so the player's two colours drive the motley's two
+      (since 2026-11-04 six parts of its own instead, each with its row: docs/mount-colours.md 7.6).
       The hat's yellow band, the outline and the bells' gold are drawn as they are.
     - **The tools it took:**
       - `shapes.curve` and `shapes.polygon`, for the arching points and the hood's outline;

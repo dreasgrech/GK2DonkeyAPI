@@ -100,11 +100,12 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
 
 ### 2.3 Which shader path
 
-**Amended 2026-11-04:** for a skin over the donkey the threshold is 64 pairs, the donkey's 42 and the skin's named
-colours (`PaletteMaxColoursOver`; section 7.9: on the cube, two pairs of the donkey's own colours share a cell, so a
-skin over the donkey that crossed 48 turned some of its outline and coat pixels the harness colour). A skin in its
-own colours keeps 48 (`PaletteMaxColours`; the sixth review: one of 49 to 64 colours keeps the path and the look it
-had). The text below is the 2026-10-18 decision.
+**Amended 2026-11-04:** for a skin over the donkey the threshold is 72 pairs, the donkey's 42 and the skin's named
+colours (`PaletteMaxColoursOver`; 64 that morning, 72 the same day for the Jester's six parts, 7.6, until the
+measured cost says otherwise, `MeasureTests.PaletteCost`; section 7.9: on the cube, two pairs of the donkey's own
+colours share a cell, so a skin over the donkey that crossed 48 turned some of its outline and coat pixels the
+harness colour). A skin in its own colours keeps 48 (`PaletteMaxColours`; the sixth review: one of 49 to 64 colours
+keeps the path and the look it had). The text below is the 2026-10-18 decision.
 
 Per look, by its colour count: **up to 48 colours, the exact swap palette; more, the cube.** The threshold is the
 keeper's own palette (32) with room; the donkey, the dragons, the rat and Gerry stay on the exact swap, the snail and
@@ -255,9 +256,9 @@ released skins keep their mappings, the Jester is the first skin with tones.
 ### 7.2 skin.cfg
 
 ```
-[Tone.motley1]
-name = First motley colour
-colours = 3A0A14 641A28 862534 A23444 C2485A
+[Tone.cap-front]
+name = Cap, front half
+colours = C14859 A03444 862633 641A2A 3E0A14
 ```
 
 - The id is the section's name after `Tone.`: lower case letters, digits and `-` (it is part of the cfg keys).
@@ -289,8 +290,8 @@ colours = 3A0A14 641A28 862534 A23444 C2485A
 - A tone is a region of the skin's own: its colours are collected with the rest (`Loaded.SortColours`, under
   `tone.<id>`), and the mount sprite group's pairs take them after the five regions (`Colors.Rig.Rebuild`, both the
   own-colour and the over branch). The shader path doesn't change: the pairs count only grows by a colour that was
-  kept as drawn before and is now a tone's (the Jester's ten were named already: 52 pairs with both its tones set,
-  on the exact swap, which holds 64 over the donkey, 7.9).
+  kept as drawn before and is now a tone's (the Jester's ten were named already: 52 pairs with both its tones set;
+  its six parts since make 71 with every one set, 7.6, on the exact swap, which holds 72 over the donkey, 7.9).
 - A tone's value is the instance's (`Mount.Instance.Tones`: id to a colorize colour and a brightness), set by the
   companion at every apply (and on every load, `OnGameReady`), as drawn when unset. Not tuning keys and not in the
   side file: the companion holds the look, and a tone id is a skin's, not a key every instance knows. They belong
@@ -300,9 +301,17 @@ colours = 3A0A14 641A28 862534 A23444 C2485A
   (`Colors.Rig.NamedMaps`): a skin changing under them (a sheet still building, another look) takes none of another
   skin's colours. A baby in its parent's skin takes the parent's; one not in it is a plain donkey and takes none. On
   a baby a following tone left on its first choice takes the baby's own shade of its region, as the region's pixels
-  do (the coat, the second tone and the dark parts are shaded per baby); a tone given a colour is that colour on the
-  parent and every baby, as the harness is. Whether a set tone should take the baby's shade too is open (the eighth
-  review; a look question, no saved look depends on it).
+  do (the coat, the second tone and the dark parts are shaded per baby). A tone given a colour takes the baby's shade
+  too, its coat's (2026-11-04, the user: "ideally yes unless it's a performance cost we can't afford"): as
+  `MountCompanion.Shade` shades a coat's colorize colour, its hue turned and its saturation scaled (`FoalLooks.ShiftHex`)
+  and its brightness stepped (`FoalLooks.StepBrightness`, shared; `SkinTones.ValuesOf` with the baby's look), so a baby
+  reads as one animal, its trappings with its coat. A tone is colorized whole, so its colour carries the hue and the
+  saturation (a saturation value of its own would be painted over: `Colors.RegionMap.Apply` colorizes last).
+  A preset stays under the cap its lightness keeps to (`SkinTones.BrightnessCap`: a lighter baby would clip the
+  tone's lit shades to one flat colour, so it comes out darker, never lighter than the cap); a Custom colour takes the
+  whole step. Nothing new is drawn for it: a baby has colours of its own already (its coat), so palette textures of
+  its own, and a tone's shade changes a pair's colour, not the number of pairs. A tone on Game default stays as drawn
+  on every baby, as the harness does.
 - **Presets** (`ToneColor`): Game default (as drawn), Red, Gold, Green, Blue, Purple, Pink, Brown, Black, White,
   Custom. Each is a colour: the tone takes its hue and saturation and keeps each pixel's shading, and its
   brightness is the colour's own against the tone's average (`SkinTones.Lightness`, the custom colours' rule:
@@ -312,12 +321,12 @@ colours = 3A0A14 641A28 862534 A23444 C2485A
   for the worn skin and the Mounts panel picture's), and the drawn colours are read from that frame on
   (`Looks.LoadedOwnColours` asks for the colours sorted, not for the sheet worn, which is a frame later). Custom is
   the palette with its lightness, as the other rows.
-- **The colour cube.** Over 64 pairs (48 until 2026-11-04; the donkey's 42 plus an over skin's named colours) the
+- **The colour cube.** Over 72 pairs (48, then 64 until 2026-11-04; the donkey's 42 plus an over skin's named colours) the
   mount takes the cube, where two colours in one cell change together, and on the cube a colour that isn't paired
   takes its cell's colour too. Measured 2026-11-03 on the four over skins: the only shared cells are two pairs of the
   game's own donkey colours (Dark 292316 with Harness 2D2114, Coat 362815 with Harness 3C2A14), which on the cube take
-  the harness colour (the last pair written; the fifth review); no skin colour shares one. With 64 every skin over the
-  donkey stays on the exact swap, all its tones set (Royal Parade 49, Hellfire 55, Armored 59, the Jester 52).
+  the harness colour (the last pair written; the fifth review); no skin colour shares one. With 72 every skin over the
+  donkey stays on the exact swap, all its tones set (Royal Parade 49, Hellfire 55, Armored 59, the Jester 71).
   SkinsScan fails a tone colour that shares a cell with any other colour of the look.
 - **The exact swap's reach.** The palette shader gives a texel the replacement of every source colour within 0.004
   of it, and one step in one channel is 1/255 (0.0039): two colours of the look one step apart in one channel are one
@@ -375,9 +384,18 @@ shows the donkey's colours.
 
 ### 7.6 The Jester
 
-Two tones, the motley's two colours: `motley1` (the burgundy) and `motley2` (the navy). Harness then reaches the
+Six tones since 2026-11-04 (the user: "yes so that we start making use of our new multi colour tone system"), every
+part of the motley its own row: `cap-front` "Cap, front half" and `cap-back` "Cap, back half" (each point with its
+half of the hood), `collar` "Collar" (the band and the middle point) and `collar-points` "Collar points" (the two
+outer ones), `caparison` "Caparison" and `caparison-second` "Caparison, second colour" (its two pairs of quarters).
+To the eye the motley is still one burgundy and one navy: the parts shared those two ramps, and a colour is one tone's
+only, so `tools/skins/part_palette.py` gave the cap and the collar shades of their own, one to four steps off the
+caparison's, each in cube cells no other place of the look has (`draw_jester.py` draws them; `check_skin.py` passes).
+Before, two tones, `motley1` (the burgundy) and `motley2` (the navy), each reaching every part. Harness reaches the
 donkey's own strap only (still tinted the burgundy under the skin, `[Base.Harness]`), Second tone the donkey's muzzle
-only.
+only. 42 pairs with no part set, 71 with all six: over the 64 the limit was that morning, where on the cube the
+always-tinted strap would turn the donkey's two shared cells (7.3) the harness colour, so the limit is 72 until the
+measured cost says otherwise (2.3).
 
 ### 7.7 Checks
 
@@ -404,6 +422,7 @@ only.
 - Saddle Up: one line, `p.ToneRows("Colours", skinId, sfx, me)` after its Second tone rows.
 - The Jester (`tools/skins/jester/skin.cfg`): `[Tone.motley1]` "First motley colour" and `[Tone.motley2]` "Second
   motley colour" in place of `[Colors]` Harness and Muzzle; still loose in `BepInEx\plugins\gk2mounts\`, in no pack.
+  Six parts since 2026-11-04 (7.6).
 - Checks: `tools/skins/check_skin.py` and `tests/SkinsScan` (both proven failing on a probe pixel 736C58 named as a
   tone beside the donkey's coat 736C57, and passing on the Jester); `canonical_cfg.py` keeps `[Tone.*]` among the
   colour sections; self-test "colours: a skin's own tones, each its own colour and its own rows" (the Skins group).
@@ -434,9 +453,10 @@ palette swatch with a 10% lightness step. Following gives it exactly:
   isn't paired on a skin over the donkey (its colours drawn as they are, as before they were a tone), so Royal
   Parade stays at 46 colours and Armored at 47 until a player gives its crown or its steel a colour (then 49 and
   59). With 48 that would have been the cube, where the donkey's own shared cells (above) turned some of its
-  outline and coat pixels the harness colour (the fifth review): the exact swap holds 64 now, so every skin over the
+  outline and coat pixels the harness colour (the fifth review): the exact swap holds 64 now (72 since the Jester's six
+  parts, 7.6), so every skin over the
   donkey stays on it, and Hellfire (55) and the Jester (52) left the cube for it (their colours exactly as drawn).
-  A skin over 64 is still checked for shared cells by SkinsScan and `check_skin.py`.
+  A skin over the limit is still checked for shared cells by SkinsScan and `check_skin.py`.
 - **A variant listing its shades of a default's following tone under the region too** (for an older API) says
   `follows =` itself: the loader moves the listed colours when the tone's own section says what it follows (the
   default's isn't known yet when the variant's file is read), else the variant's tone is left out (said in the

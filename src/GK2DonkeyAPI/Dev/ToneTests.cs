@@ -98,6 +98,33 @@ namespace GK2DonkeyAPI
                 Dictionary<string, Colors.RegionTweak> values = SkinTones.ValuesOf(look, SkinId);
                 SelfTest.Check(values != null && values.Count == 1 && values.ContainsKey("cloth") && values["cloth"].Colorize == "D8A838",
                     $"the look's values: the cloth's Gold, nothing for the trim ({(values == null ? "none" : string.Join(", ", new List<string>(values.Keys)))})");
+                // a baby's own shade of it (FoalVariety.cs), its coat's steps: one alike takes the parent's; a darker, turned one
+                // its own colour; a lighter one never past the cap a preset keeps to; a Custom colour isn't capped
+                FoalLooks babyDark = FoalLooks.Alike, babyLight = FoalLooks.Alike;
+                babyDark.Hue = 10f; babyDark.Brightness = 0.85f; babyDark.Saturation = 1.1f;
+                babyLight.Brightness = 1.4f;
+                Colors.RegionTweak toneGold = values?["cloth"], babyAlike = null, babyDarker = null, babyLighter = null;
+                if (toneGold != null)
+                {
+                    babyAlike = SkinTones.ValuesOf(look, SkinId, FoalLooks.Alike)?["cloth"];
+                    babyDarker = SkinTones.ValuesOf(look, SkinId, babyDark)?["cloth"];
+                    babyLighter = SkinTones.ValuesOf(look, SkinId, babyLight)?["cloth"];
+                }
+                float toneCap = SkinTones.BrightnessCap(Looks.Find(SkinId), "cloth");
+                string turned = toneGold != null ? FoalLooks.ShiftHex(toneGold.Colorize, babyDark.Hue, babyDark.Saturation) : null;
+                SelfTest.Check(toneGold != null && babyAlike != null && babyAlike.Colorize == toneGold.Colorize && Mathf.Abs(babyAlike.Brightness - toneGold.Brightness) < 0.0001f
+                    && babyDarker != null && babyDarker.Colorize == turned && turned != toneGold.Colorize && babyDarker.Brightness < toneGold.Brightness - 0.1f
+                    && babyLighter != null && babyLighter.Brightness <= toneCap + 0.0001f && babyLighter.Brightness >= toneGold.Brightness - 0.0001f,
+                    $"a baby's own shade of the cloth's Gold, as its coat's: alike {babyAlike?.Colorize} {babyAlike?.Brightness:0.00}; darker, turned and more saturated {babyDarker?.Colorize} (as its coat's colour would be: {turned}) {babyDarker?.Brightness:0.00}; lighter {babyLighter?.Brightness:0.00} under the preset's cap {toneCap:0.00} (the parent's {toneGold?.Colorize} {toneGold?.Brightness:0.00})");
+                string customWas = look.Tone("cloth").Custom;
+                look.Tone("cloth").Custom = "E8E8E8";
+                look.Tone("cloth").Color = ToneColor.Custom;
+                Colors.RegionTweak toneCustom = SkinTones.ValuesOf(look, SkinId)?["cloth"], customBaby = SkinTones.ValuesOf(look, SkinId, babyLight)?["cloth"];
+                float customStep = toneCustom != null ? FoalLooks.StepBrightness(toneCustom.Brightness, babyLight.Brightness) : -1f;
+                SelfTest.Check(customBaby != null && Mathf.Abs(customBaby.Brightness - customStep) < 0.0001f,
+                    $"a Custom colour's lighter baby takes the whole step, uncapped ({toneCustom?.Brightness:0.00} -> {customBaby?.Brightness:0.00}; the preset's cap {toneCap:0.00})");
+                look.Tone("cloth").Color = ToneColor.Gold;
+                look.Tone("cloth").Custom = customWas;
                 SkinTones.Apply(a.I, values, owner, SkinId);
                 yield return SelfTest.Frames(3);
                 d = a.I.ColorsRig.TestMountGroup();

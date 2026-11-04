@@ -278,18 +278,34 @@ namespace GK2DonkeyAPI
         // review: capped, its lightness row did nothing past the tone's lightest shade on a light tone).
         internal static float Lightness(string hex, Looks.SkinDef d, string id, bool cap = true)
         {
+            ArtRange(d, id, out float art, out float top);
+            float b = MountCompanion.LightnessAgainst(hex, art);
+            return cap ? Mathf.Min(b, CapOf(top)) : b;
+        }
+
+        // The most a preset's brightness is on a tone (Lightness): where the tone's lightest shade reaches white.
+        internal static float BrightnessCap(Looks.SkinDef d, string id)
+        {
+            ArtRange(d, id, out _, out float top);
+            return CapOf(top);
+        }
+
+        private static float CapOf(float top) => top > 0.001f ? Mathf.Max(1f, 1f / top) : float.MaxValue;
+
+        // The values of a tone's colours (Colors.ValueRange: their mean and the lightest), as its pictures draw them once
+        // the skin is loaded, its list until then.
+        private static void ArtRange(Looks.SkinDef d, string id, out float art, out float top)
+        {
             Looks.Loaded look = d != null ? Looks.LoadedOwnColours(d.Id) : null;
-            float art, top;
             if (look != null && look.ColoursByRegion.TryGetValue(KeyOf(id), out List<Color32> drawn) && drawn.Count > 0) Colors.ValueRange(drawn, out art, out top);
             else if (d?.ColorRegions != null && d.ColorRegions.TryGetValue(KeyOf(id), out HashSet<string> set)) Colors.ValueRange(Colors.ColoursOfHexes(set), out art, out top);
             else { art = 0.5f; top = 1f; }
-            float b = MountCompanion.LightnessAgainst(hex, art);
-            return cap && top > 0.001f ? Mathf.Min(b, Mathf.Max(1f, 1f / top)) : b;
         }
 
         // A skin's look's tones as the engine takes them: id to a colorize colour and its brightness; null when every tone
-        // is as drawn (or the skin has none).
-        internal static Dictionary<string, Colors.RegionTweak> ValuesOf(MountLook look, string skinId)
+        // is as drawn (or the skin has none). baby: a baby's own look (FoalVariety.cs), each tone given a colour in the
+        // baby's shade (Shade); null: the parent's.
+        internal static Dictionary<string, Colors.RegionTweak> ValuesOf(MountLook look, string skinId, FoalLooks? baby = null)
         {
             Looks.SkinDef d = Looks.Find(skinId);
             if (look == null || d?.Tones == null || !d.OwnColours) return null; // a palette skin's tones are ignored (LooksInherit.Resolve)
@@ -300,11 +316,34 @@ namespace GK2DonkeyAPI
                 if (v == null || v.Color == ToneColor.Game) continue;
                 // a custom colour as the regions' are read (a bad one said once in the log); Custom without a usable colour
                 // is the tone as drawn, an identity value (not nothing: a tone that follows a region would follow it again)
-                string hex = v.Color == ToneColor.Custom ? MountCompanion.Hex(v.Custom, "'" + t.Name + "' tone") : PresetHex(v.Color);
+                bool preset = v.Color != ToneColor.Custom;
+                string hex = preset ? PresetHex(v.Color) : MountCompanion.Hex(v.Custom, "'" + t.Name + "' tone");
                 if (values == null) values = new Dictionary<string, Colors.RegionTweak>(StringComparer.Ordinal);
-                values[t.Id] = hex == null ? new Colors.RegionTweak() : new Colors.RegionTweak { Colorize = hex, ColorizeAmount = 1f, Brightness = Lightness(hex, d, t.Id, cap: v.Color != ToneColor.Custom) };
+                if (hex == null)
+                {
+                    values[t.Id] = new Colors.RegionTweak();
+                    continue;
+                }
+                var tweak = new Colors.RegionTweak { Colorize = hex, ColorizeAmount = 1f, Brightness = Lightness(hex, d, t.Id, cap: preset) };
+                if (baby.HasValue) Shade(tweak, baby.Value, preset ? BrightnessCap(d, t.Id) : float.MaxValue);
+                values[t.Id] = tweak;
             }
             return values;
+        }
+
+        // A baby's own shade of a tone given a colour: its coat's, as MountCompanion.Shade shades a coat's colorize colour
+        // (its hue turned and its saturation scaled, FoalLooks.ShiftHex, and its brightness stepped), so a baby reads as
+        // one animal, its trappings with its coat (the user, 2026-11-04: a part's own colour "ideally" shaded per baby as
+        // the coat is). A tone is colorized whole, so its colour carries the hue and the saturation: a saturation value of
+        // its own would be painted over (Colors.RegionMap.Apply colorizes last, keeping each pixel's value). A preset
+        // stays under the cap Lightness keeps it to: a baby lighter than that would clip the tone's lit shades to one flat
+        // colour, so it comes out darker, never lighter, than the cap. A Custom colour is the player's own lightness and
+        // isn't capped. Nothing new to draw: a baby has colours of its own already (its coat), so its own palette.
+        private static void Shade(Colors.RegionTweak v, FoalLooks own, float cap)
+        {
+            if (FoalLooks.IsAlike(own.Hue, own.Brightness, own.Saturation, own.Tinge)) return;
+            v.Colorize = FoalLooks.ShiftHex(v.Colorize, own.Hue, own.Saturation);
+            v.Brightness = Mathf.Min(FoalLooks.StepBrightness(v.Brightness, own.Brightness), cap);
         }
 
         private static readonly HashSet<string> refusedSaid = new HashSet<string>(StringComparer.Ordinal); // "<instance>|<owner>"
@@ -349,7 +388,9 @@ namespace GK2DonkeyAPI
             foreach (KeyValuePair<string, Colors.RegionTweak> kv in a)
             {
                 if (!b.TryGetValue(kv.Key, out Colors.RegionTweak o)) return false;
-                if (!string.Equals(o.Colorize, kv.Value.Colorize, StringComparison.OrdinalIgnoreCase) || Mathf.Abs(o.Brightness - kv.Value.Brightness) > 0.0001f || Mathf.Abs(o.ColorizeAmount - kv.Value.ColorizeAmount) > 0.0001f) return false;
+                if (!string.Equals(o.Colorize, kv.Value.Colorize, StringComparison.OrdinalIgnoreCase) || Mathf.Abs(o.Brightness - kv.Value.Brightness) > 0.0001f
+                    || Mathf.Abs(o.ColorizeAmount - kv.Value.ColorizeAmount) > 0.0001f || Mathf.Abs(o.Saturation - kv.Value.Saturation) > 0.0001f
+                    || Mathf.Abs(o.Hue - kv.Value.Hue) > 0.001f) return false; // a baby's shade moves the saturation too
             }
             return true;
         }

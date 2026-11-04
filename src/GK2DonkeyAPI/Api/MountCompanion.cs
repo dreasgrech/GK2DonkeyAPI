@@ -1044,8 +1044,9 @@ namespace GK2DonkeyAPI.Api
                     // the dark parts (a mount's wings, the donkey's mane and legs) with the coat: the whole baby its shade
                     Instance(h, FoalDarkKeys, Shade(NoKeys, "Dark", own.Hue * 0.7f, own.Brightness, own.Saturation, 0f));
                     Instance(h, LookKeys, CurrentOwn.FoalsWearSkin ? skinKeys : noSkin);
-                    // the parent's tones on a baby in its skin; one not in it is a plain donkey (no tones of its own)
-                    SkinTones.Apply(h.I, CurrentOwn.FoalsWearSkin ? tones : null, OwnerId, skin);
+                    // the parent's tones on a baby in its skin, each given a colour in the baby's own shade (as its coat); one
+                    // not in the skin is a plain donkey (no tones of its own)
+                    SkinTones.Apply(h.I, CurrentOwn.FoalsWearSkin && tones != null ? SkinTones.ValuesOf(l, skin, own) : null, OwnerId, skin);
                 }
             }
             // The cart's colours sit on whichever holds this companion's cart (they move with it at hitch and unhitch);
@@ -1077,7 +1078,7 @@ namespace GK2DonkeyAPI.Api
         private static Dictionary<string, object> Shade(Dictionary<string, object> parent, string region, float hue, float bri, float sat, float tinge)
         {
             var d = new Dictionary<string, object>(parent);
-            if (Math.Abs(hue) < 0.01f && Math.Abs(bri - 1f) < 0.001f && Math.Abs(sat - 1f) < 0.001f && tinge < 0.001f)
+            if (FoalLooks.IsAlike(hue, bri, sat, tinge))
             {
                 return d;
             }
@@ -1090,10 +1091,9 @@ namespace GK2DonkeyAPI.Api
                 d[region + "Hue"] = hue;
             }
             float b = d.TryGetValue(region + "Brightness", out object bv) && bv is float bf ? bf : 1f;
-            d[region + "Brightness"] = Mathf.Clamp(b + (bri - 1f) * Mathf.Max(b, 0.7f), 0.05f, 3f);
+            d[region + "Brightness"] = FoalLooks.StepBrightness(b, bri);
             float s = d.TryGetValue(region + "Saturation", out object sv) && sv is float sf ? sf : 1f;
-            float s2 = s + (sat - 1f) * Mathf.Max(s, 0.7f) + Mathf.Max(0f, 0.5f - s) * 0.6f * tinge;
-            d[region + "Saturation"] = Mathf.Clamp(s2, 0f, 3f);
+            d[region + "Saturation"] = FoalLooks.StepSaturation(s, sat, tinge);
             return d;
         }
 
