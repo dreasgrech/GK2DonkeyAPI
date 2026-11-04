@@ -303,7 +303,9 @@ foreach (MountSkinTone tone in Mounts.Looks.Find("donkey/me.fancy").Tones) Logge
 **A look's names for its parts** (0.44.0; docs/second-tone.md 8): every row of the colours window is a part of the
 look by its name. A skin names a mount region's part with skin.cfg `[Region.<region>]` `name =` (translated by its
 owner as `skin.<skin id>.region.<region>.name`); a variant takes its default's names, a skin over the donkey the
-donkey's (Coat, "Legs, mane and ears", Muzzle, Eyes, Harness, the API's words) where it names none.
+donkey's (Coat, "Legs, mane and ears", Muzzle, Eyes, Harness, the API's words) where it names none. A skin may take
+a region's row away (`[Region.<region>]` `row = none`, docs/skins.md): `RegionRows` leaves its rows out and `ToneRows`
+makes no Dark or Eye row for it, and the region is drawn as the look has it, a player's value for it not applied.
 
 ```csharp
 // after a skin's region rows (your keys), inside PerSkin's body: labelled by the look's names, left out where the
@@ -956,7 +958,8 @@ Where skins come from, in order of how little they need:
   or `Register` throws an `ArgumentException`; on a mount your own GUID registered, any name (`default`, `fire`).
   A code skin says what a pack says (0.33.0): `Over` with `Erase` (the colour that clears the donkey, `null` = none),
   `BaseRegions` (the `[Base.<Region>]` recolour of the donkey under it), `Regions` (which of its colours are Dark,
-  Muzzle, Eye or Harness; the rest Coat), `SeatRow` / `SeatFromPicture`, `Tuning` / `TuningRide` / `TuningCart`,
+  Muzzle, Eye or Harness; the rest Coat), `RegionNames` and `RegionsWithoutRow` (0.44.0: a pack's
+  `[Region.<region>]` `name =` and `row = none`), `SeatRow` / `SeatFromPicture`, `Tuning` / `TuningRide` / `TuningCart`,
   `FrontSource`; a readable sprite's colours join the look (an unreadable texture is said
   once in the log, and the player's colours leave it alone).
 - **A recipe:** `Mounts.Looks.RegisterRecipe(owner, id, name, frame => pixels)`: a skin of the donkey, so its id is

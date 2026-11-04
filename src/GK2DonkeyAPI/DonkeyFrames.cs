@@ -17,7 +17,8 @@ namespace GK2DonkeyAPI
     // compared with donkey-frames.txt (the asset probe's export the skins were drawn on; tools/skins/donkey_frames.py
     // makes it): one info line when every frame is the same, one warning naming the changed, missing and new frames
     // otherwise. It changes nothing: no skin is set aside, no feature stops. Dev builds also write what they read to
-    // BepInEx\GK2-donkey-frames\ (its PNGs and its list), for `donkey_frames.py check <that folder>`.
+    // BepInEx\GK2-donkey-frames\ (its PNGs and its list), for `donkey_frames.py check <that folder>`. It reads the art as
+    // the game draws it (FacePixels' eye and nostril colours back to the game's), and the repaint waits for its answer.
     internal static class DonkeyFrames
     {
         internal enum State { Waiting, Reading, Same, Differs, NoList, NotFound }
@@ -109,7 +110,7 @@ namespace GK2DonkeyAPI
             Now = State.Reading;
         }
 
-        private static bool AnyView()
+        internal static bool AnyView()
         {
             foreach (Mount.Instance i in Mount.All)
             {
@@ -128,10 +129,11 @@ namespace GK2DonkeyAPI
                 {
                     Now = State.Waiting; // its scene unloaded while it was read: from the start when the frames are back
                     searchingSince = -1f;
+                    Looks.ForgetGameFrames(); // the frames found are gone: looked for again, not taken from the last search
                     return;
                 }
                 work.Start();
-                Looks.SkinFrame f = Looks.ReadFrame(key, s, Looks.Donkey);
+                Looks.SkinFrame f = Looks.ReadFrame(key, s, Looks.Donkey, FacePixels.Read.AsDrawn); // the game's art, repainted or not
                 read[key] = f == null ? new Print { W = -1 } : Of(f.W, f.H, f.P);
                 if (dumpDir != null && f != null) Dump(key, f);
                 work.Stop();
@@ -209,6 +211,14 @@ namespace GK2DonkeyAPI
         {
             if (keys.Count <= NamesShown) return string.Join(", ", keys.ToArray());
             return string.Join(", ", keys.GetRange(0, NamesShown).ToArray()) + $" (+{keys.Count - NamesShown} more)";
+        }
+
+        // A frame's fingerprint in the list (the self-test of the eye and nostril repaint: the art as drawn read back).
+        internal static bool Listed(string key, out Print p)
+        {
+            if (listed == null) listed = ReadList();
+            p = default;
+            return listed != null && listed.TryGetValue(key, out p);
         }
 
         private static Dictionary<string, Print> ReadList()

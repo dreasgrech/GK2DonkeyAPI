@@ -496,7 +496,9 @@ sealed class GK2DonkeyAPI.Api.MountSkinDef
   field float PivotX
   field float PivotY
   field UnityEngine.Texture2D Portrait
+  field System.Collections.Generic.Dictionary<string, string> RegionNames
   field System.Collections.Generic.Dictionary<string, System.String[]> Regions
+  field System.String[] RegionsWithoutRow
   field bool SeatFromPicture
   field int SeatRow
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> Sounds

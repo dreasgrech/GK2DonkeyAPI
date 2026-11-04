@@ -189,7 +189,7 @@ namespace GK2DonkeyAPI
                         yield return SelfTest.Until(() => !PreviewStage.TestShownSettling, 10f);
                         // and until the window shows its picture and that picture is drawn (settled came first: in the first
                         // run one skin's picture was still empty, a few frames before it showed; the cart view alone was
-                        // waited for until 2026-11-04, the dragon's picture is the alone view)
+                        // waited for until 2026-11-04, a mount drawn without a cart has the alone view)
                         yield return SelfTest.Until(() => MountsPanel.TestColoursTexture != null && PreviewStage.TestDrawnRect(PreviewStage.TestHide.Nothing, out _, out _, out _, out _, out _, out _, alone: PreviewStage.TestIsAloneView(MountsPanel.TestColoursTexture)), 10f);
                         yield return SelfTest.Frames(6);
                         int rows = 0, shown = 0;

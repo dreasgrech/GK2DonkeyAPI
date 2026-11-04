@@ -17,7 +17,7 @@ namespace GK2DonkeyAPI
     // none of its rows (three pages on one file: the released player's, the update's first load, the next load).
     internal static class RegionTests
     {
-        private const string OverId = "donkey/selftest.regions-over", OwnId = "donkey/selftest.regions-own";
+        private const string OverId = "donkey/selftest.regions-over", OwnId = "donkey/selftest.regions-own", RowlessId = "donkey/selftest.regions-rowless";
         private static readonly Color32 Cloth = new Color32(0xC4, 0x1E, 0x38, 255), Plume = new Color32(0x28, 0x50, 0xB4, 255);
         private static readonly Color32 Shell = new Color32(0x50, 0x8C, 0x3C, 255), Spots = new Color32(0x20, 0x18, 0x40, 255), Body = new Color32(0xB4, 0x96, 0x64, 255);
 
@@ -47,12 +47,30 @@ namespace GK2DonkeyAPI
                 if (System.IO.File.Exists(cfgPath)) System.IO.File.Delete(cfgPath);
                 WriteSkin(root, "selftest.regions-over", "[Skin]\nformat = 1\nname = Regions Over\nlayer = over\n[Region.Muzzle]\nname = Belly\n[Tone.cloth]\nname = Cloth\nfollows = Harness\ncolours = C41E38\n[Tone.plume]\nname = Plume\nfollows = Muzzle\ncolours = 2850B4\n", Cloth, Plume);
                 WriteSkin(root, "selftest.regions-own", "[Skin]\nformat = 1\nname = Regions Own\ncolours = own\n[Colors]\nMuzzle = 508C3C\nDark = 201840\n[Region.Muzzle]\nname = Shell\n[Region.Dark]\nname = Spots\n", Shell, Spots, Body);
+                // and one over the donkey that takes its Harness and Eye rows away (row = none; docs/mount-colours.md 7.13)
+                WriteSkin(root, "selftest.regions-rowless", "[Skin]\nformat = 1\nname = Regions Rowless\nlayer = over\n[Region.Harness]\nrow = none\n[Region.Eye]\nrow = none\n", Plume);
                 registered = Looks.RegisterFolder(root, owner);
-                if (registered != 2)
+                if (registered != 3)
                 {
-                    SelfTest.Fail($"{registered} of the 2 temp skins registered");
+                    SelfTest.Fail($"{registered} of the 3 temp skins registered");
                     yield break;
                 }
+                // row = none read: a value other than none said, a name with it never declared (no translation for it), a
+                // variant without a name of its own takes its default's away, one naming the region brings its row back
+                Looks.SkinDef rowParse = Looks.FromCfg("[Skin]\nformat = 1\nname = Rowless\nlayer = over\n[Region.Eye]\nrow = maybe\n[Region.Dark]\nrow = none\nname = Spots\n", "selftest.regions-rowparse", SelfTest.Owner, "test", f => null, new[] { "bdy.png" }, Catalog.DonkeyId);
+                bool badSaid = rowParse.Report != null && rowParse.Report.Contains("none is its one value");
+                bool declaredDark = false;
+                foreach (KeyValuePair<string, string> kv in SkinRegions.Declared(rowParse)) if (kv.Key == "Dark") declaredDark = true;
+                Looks.SkinDef plainVariant = Looks.FromCfg("[Skin]\nformat = 1\nname = V\n", "selftest.regions-rowvariant", SelfTest.Owner, "test", f => null, new[] { "bdy.png" }, Catalog.DonkeyId);
+                Looks.SkinDef namingVariant = Looks.FromCfg("[Skin]\nformat = 1\nname = W\n[Region.Dark]\nname = Mane\n", "selftest.regions-rowback", SelfTest.Owner, "test", f => null, new[] { "bdy.png" }, Catalog.DonkeyId);
+                plainVariant.Parent = rowParse;
+                namingVariant.Parent = rowParse;
+                bool inherited = !SkinRegions.HasRow(plainVariant, "Dark") && SkinRegions.HasRow(namingVariant, "Dark");
+                SelfTest.Check(badSaid && !SkinRegions.HasRow(rowParse, "Dark") && SkinRegions.HasRow(rowParse, "Eye") && !declaredDark && inherited,
+                    $"[Region.<region>] row = none read: row = maybe said ({badSaid}), the Dark row gone and its name not declared ({!SkinRegions.HasRow(rowParse, "Dark")}, declared {declaredDark}), a variant takes its default's away and one naming it brings it back ({inherited})");
+                Term rowlessEye = SkinRegions.NameTerm(RowlessId, "Eye"), rowlessCoat = SkinRegions.NameTerm(RowlessId, "Coat");
+                SelfTest.Check(!SkinRegions.HasRow(RowlessId, "Harness") && !SkinRegions.HasRow(RowlessId, "Eye") && SkinRegions.HasRow(RowlessId, "Coat") && rowlessEye == null && rowlessCoat == UiWords.RegionCoat,
+                    $"the skin with row = none for Harness and Eye: no row for them, the others the donkey's ({(rowlessEye == null ? "no Eye name" : rowlessEye.English)}, Coat {rowlessCoat?.English})");
                 Term overMuzzle = SkinRegions.NameTerm(OverId, "Muzzle"), overCoat = SkinRegions.NameTerm(OverId, "Coat"), ownMuzzle = SkinRegions.NameTerm(OwnId, "Muzzle"), ownCoat = SkinRegions.NameTerm(OwnId, "Coat");
                 SelfTest.Check(overMuzzle != null && overMuzzle.English == "Belly" && overMuzzle.Key == SkinRegions.KeyOf(OverId, "Muzzle") && overCoat == UiWords.RegionCoat
                     && ownMuzzle != null && ownMuzzle.English == "Shell" && ownCoat == null,
@@ -84,7 +102,16 @@ namespace GK2DonkeyAPI
                 bool chosen = string.Equals(pageB.SkinChosen(Catalog.DonkeyId), OwnId, StringComparison.OrdinalIgnoreCase);
                 bool harnessOut = ownHarnessRow != null && ownHarnessRow.Visible != null && !ownHarnessRow.Visible();
                 bool muzzleIn = ownMuzzleRow != null && (ownMuzzleRow.Visible == null || ownMuzzleRow.Visible());
+                // the skin without a Harness and an Eye row: chosen, its Harness rows left out and no Eye row made, its
+                // Coat and Dark rows there
+                if (skinRow != null) skinRow.Value = RowlessId;
+                MountSettingsPage.Row rlHarness = Row(pageB, "Harness_" + RowlessId), rlCoat = Row(pageB, "Coat_" + RowlessId);
+                bool rlHarnessOut = rlHarness != null && rlHarness.Visible != null && !rlHarness.Visible();
+                bool rlCoatIn = rlCoat != null && (rlCoat.Visible == null || rlCoat.Visible());
+                bool rlNoEye = Row(pageB, "Eye_" + RowlessId) == null, rlDark = Row(pageB, "Dark_" + RowlessId) != null;
                 if (skinRow != null) skinRow.Value = wasSkin;
+                SelfTest.Check(rlHarnessOut && rlCoatIn && rlNoEye && rlDark,
+                    $"row = none on the page: with that skin chosen its Harness left out ({rlHarnessOut}), its Coat shown ({rlCoatIn}), no Eye row made ({rlNoEye}), its Dark row there ({rlDark})");
                 SelfTest.Check(chosen && harnessOut && muzzleIn, $"a region the look has no colour of has no row: with the own-colour skin chosen ({chosen}) its Harness left out ({harnessOut}), its Muzzle shown ({muzzleIn}; SkinHasRegion Harness {MountSettingsPage.SkinHasRegion(OwnId, "Harness")}, Muzzle {MountSettingsPage.SkinHasRegion(OwnId, "Muzzle")})");
                 SelfTest.Check(ownDarkRow != null && Texts.Label(ownDarkRow) == "Spots" && ownEyeRow == null && Row(pageB, "Dark_" + OverId) != null,
                     $"a Dark or Eye row where the look names its part ({(ownDarkRow != null ? Texts.Label(ownDarkRow) : "none")}; none for an Eye it doesn't name; the skin over the donkey its own from the donkey's words)");
@@ -104,6 +131,28 @@ namespace GK2DonkeyAPI
                 Entry<HarnessColor>(pageB, "Harness_" + OverId).Value = HarnessColor.Black;
                 cfgB.Save();
 
+                // the engine: a test donkey wearing it, the Harness keys set: the donkey's harness under the skin drawn as
+                // it is (no value applied for a region without a row), the Coat keys set: its coat coloured
+                MountHandle rl = SelfTest.Spawn(SelfTest.Spot(SelfTest.home, 4f) ?? SelfTest.home, true);
+                if (rl != null)
+                {
+                    rl.Tuning.Set(SelfTest.Owner, "Skin", RowlessId);
+                    yield return SelfTest.Until(() => rl.IsReady && rl.I.LooksRig.Wearing == RowlessId && !rl.I.LooksRig.Building, 20f);
+                    rl.Tuning.Set(SelfTest.Owner, "HarnessColorize", "00FF00");
+                    rl.Tuning.Set(SelfTest.Owner, "HarnessColorizeAmount", 1f);
+                    rl.Tuning.Set(SelfTest.Owner, "CoatColorize", "00FF00");
+                    rl.Tuning.Set(SelfTest.Owner, "CoatColorizeAmount", 1f);
+                    yield return SelfTest.Frames(3);
+                    Color32 harness = new Color32(0x62, 0x41, 0x1b, 255), coat = new Color32(0x73, 0x6c, 0x57, 255);
+                    Color32? hd = rl.I.ColorsRig.TestDstOf(harness), cd = rl.I.ColorsRig.TestDstOf(coat);
+                    bool harnessKept = hd == null || (hd.Value.r == harness.r && hd.Value.g == harness.g && hd.Value.b == harness.b);
+                    bool coatChanged = cd != null && (cd.Value.r != coat.r || cd.Value.g != coat.g || cd.Value.b != coat.b);
+                    SelfTest.Check(SelfTest.waited && harnessKept && coatChanged,
+                        $"row = none in the engine: the Harness keys green, the donkey's harness 62411B drawn as it is ({(hd == null ? "no pair" : $"{hd.Value.r:X2}{hd.Value.g:X2}{hd.Value.b:X2}")}); the Coat keys green, its coat 736C57 coloured ({(cd == null ? "no pair" : $"{cd.Value.r:X2}{cd.Value.g:X2}{cd.Value.b:X2}")})");
+                    rl.Remove();
+                }
+                else SelfTest.Fail("could not spawn a test donkey for row = none in the engine");
+
                 // page C: the next load: the parts' rows are in the file, nothing is carried over again
                 MountSettingsPage pageC = Page(cfgPath, owner, me, true, out _);
                 var clothC = Entry<ToneColor>(pageC, "Tone.cloth_" + OverId);
@@ -116,6 +165,7 @@ namespace GK2DonkeyAPI
                 {
                     Looks.Unregister(OverId, owner);
                     Looks.Unregister(OwnId, owner);
+                    Looks.Unregister(RowlessId, owner);
                 }
                 try { if (System.IO.Directory.Exists(root)) System.IO.Directory.Delete(root, true); } catch { }
                 try { if (System.IO.File.Exists(cfgPath)) System.IO.File.Delete(cfgPath); } catch { }
@@ -131,7 +181,7 @@ namespace GK2DonkeyAPI
             page.MountRows("Mount", me);
             page.PerSkin((skinId, mountId, sfx, shown) =>
             {
-                if (!skinId.Equals(OverId, StringComparison.OrdinalIgnoreCase) && !skinId.Equals(OwnId, StringComparison.OrdinalIgnoreCase)) return;
+                if (!skinId.Equals(OverId, StringComparison.OrdinalIgnoreCase) && !skinId.Equals(OwnId, StringComparison.OrdinalIgnoreCase) && !skinId.Equals(RowlessId, StringComparison.OrdinalIgnoreCase)) return;
                 MountLook look = me.LookOf(skinId);
                 page.Choice("Colours", "Coat" + sfx, look.Coat, "Coat colour", "test", v => look.Coat = v, look: true);
                 page.Color("Colours", "CustomCoat" + sfx, "Custom coat colour", "test", PaletteColor.Chestnut, v => look.CustomCoat = v);

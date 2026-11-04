@@ -10,7 +10,9 @@ namespace GK2DonkeyAPI
     // pictures read back from the texture the game draws from (the sheet after the erase compose, a mod's own sprites),
     // one PNG per frame key, and the donkey's own frames as the game places them on the canvas. The review page
     // (tools/skins/skin_preview_html.py) shows these in place of its own composite and counts where the two differ, so the
-    // page and the game can't drift apart unnoticed. The player's colours are the shader's and are not in these files.
+    // page and the game can't drift apart unnoticed. The player's colours are the shader's and are not in these files,
+    // nor the donkey's repainted eye and nostril pixels (FacePixels): the donkey's frames and a skin's whole frames are
+    // written as the game draws the donkey, the page composing over the asset probe's frames.
     internal static partial class Looks
     {
         internal const string ExportDirName = "game-skins";
@@ -31,7 +33,7 @@ namespace GK2DonkeyAPI
                 int donkeyN = 0;
                 foreach (var kv in gameFrames)
                 {
-                    SkinFrame f = ReadFrame(kv.Key, kv.Value, b);
+                    SkinFrame f = ReadFrame(kv.Key, kv.Value, b, FacePixels.Read.AsDrawn);
                     if (f == null) continue;
                     WritePng(Path.Combine(donkeyDir, kv.Key + ".png"), f.P, f.W, f.H);
                     donkeyN++;
@@ -53,6 +55,7 @@ namespace GK2DonkeyAPI
                         Color32[] px = ReadSprite(s, out int w, out int h);
                         if (px == null) continue;
                         string key = kv.Key;
+                        if (l.Def.Over && l.Def.Base == Donkey && l.Whole.Contains(s)) FacePixels.Apply(key, px, w, h, FacePixels.Read.AsDrawn); // the donkey in it as drawn
                         string path = key.StartsWith(FrontKey, StringComparison.Ordinal) ? Path.Combine(dir, "front", key.Substring(FrontKey.Length) + ".png") : Path.Combine(dir, key + ".png");
                         WritePng(path, px, w, h);
                         n++;

@@ -177,6 +177,9 @@ namespace GK2DonkeyAPI
             // region key (Coat, Muzzle ...), as its file gives them; a variant's default's and the donkey's are found by
             // SkinRegions.NameTerm, not copied. null: none.
             internal Dictionary<string, string> RegionNames;
+            // [Region.<region>] row = none: the regions the look gives no row (drawn as it has them; SkinRegions.HasRow
+            // walks a variant's defaults). null: none.
+            internal HashSet<string> RegionsWithoutRow;
             internal IReadOnlyList<MountSkinTone> ToneInfos; // the API's view of them (SkinTones.InfosOf), made once per resolved state
             internal bool Over;              // true: drawn over the base, which stays visible
             // A skin over the base may erase from it: every pixel of this colour in a picture makes the base transparent

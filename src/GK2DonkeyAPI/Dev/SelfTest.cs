@@ -169,6 +169,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "skin pack: a folder read, validated, worn, withdrawn", Body = SkinPack },
             new Scenario { Group = GroupLooks, Name = "recipe: built from the donkey's frames, worn whole", Body = SkinRecipe },
             new Scenario { Group = GroupLooks, Name = "the donkey's art: the game's frames against the ones the skins were drawn on (donkey-frames.txt; the comparison on made-up lists, a known picture's fingerprint as donkey_frames.py makes it)", Body = DonkeyFramesTests.Check },
+            new Scenario { Group = GroupLooks, Name = "the donkey's eye and nostril pixels repainted in the game's atlas, nothing else changed (face-pixels.txt; its reading on a made-up frame; every frame put back as drawn is donkey-frames.txt's)", Body = FacePixelsTests.Repainted },
             new Scenario { Group = GroupLooks, Name = "mount from a pack: declared, worn, no cart, its tuning, withdrawn", Body = MountFromPack },
             new Scenario { Group = GroupLooks, Name = "mount from code: the ability's hooks on spawn, ride, dismount, removal", Body = MountFromCode },
             new Scenario { Group = GroupLooks, Name = "tuning: a value belongs to the owner that set it; what a mount and an ability may pin", Body = TuningOwnership },
@@ -208,7 +209,6 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupMeasurements, Name = "measure: the colours window of every skin of every mount (GK2-panel-shots: colours-skin-*.png; GK2-colours-rows.tsv)", Body = MeasureTests.ColoursWindows },
             new Scenario { Group = GroupMeasurements, Name = "measure: the colour swap's cost, 21 donkeys at the donkey's own pairs, 64, 72, 96 and on the cube (GK2-palette-cost.tsv)", Body = MeasureTests.PaletteCost },
             new Scenario { Group = GroupMeasurements, Name = "measure: the game's Halloween head swap on the zombie pictures (carried, on the cart, on the ground; the swap forced off and on)", Body = HalloweenProbe.Heads },
-            new Scenario { Group = GroupMeasurements, Name = "measure: the donkey's frames in the game's atlas: pages, packing, a one-pixel copy into the page and back (the eye pixels' patch, a probe)", Body = AtlasPatchProbe.Probe },
             new Scenario { Group = GroupLooks, Name = "skins and mounts: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "skin: a game-source skin with no frames is set aside, the donkey comes, offered again when they are there", Body = AsideSkin },
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
@@ -240,7 +240,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupSounds, Name = "an embedded pack's sounds (the built-in skins' route): the API's own test pack, its .ogg decoded through the cache file, its .wav parsed in place, a looping event stopped", Body = SoundsEmbedded },
             new Scenario { Group = GroupSounds, Name = "the flying events: takeoff, the launch's flaps and the beats airborne, the fly loop, land, touchdown, landed, a jump's jump and jumpland; nothing of the flight on a jump", Body = SoundsFlying },
             new Scenario { Group = GroupSounds, Name = "herds and babies: a standing grown one calls on its own (rarer, one voice at a time in the scene), its babies answer one after another with [Sounds.Baby]'s sound, no call with the standing switch off", Body = SoundsHerd },
-            new Scenario { Group = GroupAfter, Name = "measure: the donkey's atlas pages the same objects after the run (scenes and doors crossed; the atlas probe's)", Body = AtlasPatchProbe.PagesAfterRun },
+            new Scenario { Group = GroupAfter, Name = "the donkey's eye and nostril pixels still repainted in the atlas after the run (scenes and doors crossed)", Body = FacePixelsTests.AfterRun },
             new Scenario { Group = GroupAfter, Name = AfterRunName, Body = AfterTheRun },
         };
 

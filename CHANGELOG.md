@@ -12,6 +12,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Legs and mane no longer colours the donkey's eye and nostril** (2026-11-04): the eye stays as drawn and the
+  nostril takes the Muzzle colour, on the plain donkey and every donkey skin.
+- **Hellfire has one row for its eyes** (2026-11-04): its glowing eyes cover the donkey's, so the Eyes row coloured
+  nothing; it is gone, and Glowing eyes colours them.
 - **A coat colour you pick shows as itself on Hellfire** (2026-11-04): Hellfire darkens the donkey's coat to ash, and
   a colour on top of the ash stayed dark (Cream came out dark brown). A colour you pick now replaces the ash; Game
   default keeps it, and Dark and Black darken it. The same for the Jester's harness.
@@ -90,6 +94,11 @@ For players:
 
 For mod authors:
 
+- **A skin can take a colour row away** (2026-11-04; docs/skins.md, docs/mount-colours.md 7.13): skin.cfg
+  `[Region.<region>]` `row = none` gives a region no row (a part the skin covers or doesn't want coloured); it is drawn
+  as the look has it, and a colour a player saved for it is kept but not applied. A variant takes its default's away
+  unless it names the region. Code skins: `MountSkinDef.RegionsWithoutRow`, and `MountSkinDef.RegionNames` for the
+  names a pack gives with `name =` (both additions).
 - **A skin's own tones** (2026-11-03; docs/api.md "A skin's own tones"): skin.cfg `[Tone.<id>]` (`name`, `colours`,
   `follows`) and `MountSkinDef.Tones` (`MountSkinTone`: id, name, a list of colours; `MountSkinTone.Following` for one
   whose Game default follows a mount region); `MountSkinInfo.Tones`; `MountLook.Tone(id)`, a `MountTone` (`Color`:
@@ -117,13 +126,28 @@ For mod authors:
 
 Development:
 
-- **The eye's and the nostril's pixels: an investigation and a probe** (2026-11-04; the user: "it looks sloppy
-  otherwise"; docs/face-pixels.md). The eye's dark pixels are 292316 and the nostril 352e1e, the dark fill's own
-  colours, so "Legs and mane" reaches them; only a repaint by position separates them. The proposal: repaint them
-  once in the game's character atlas on the GPU (RGBA32, uncompressed, not readable), from a list made from
-  `rig.json`'s eye and muzzle points. The probe (`Dev/AtlasPatchProbe.cs`, the Measurements group and one scenario
-  after the run): the pages, the packing, a one-pixel copy into the page and back, the pages after the run. Nothing
-  repainted yet.
+- **row = none** (2026-11-04; docs/mount-colours.md 7.13): `SkinRegions.Read` (`row`), `SkinDef.RegionsWithoutRow`,
+  `SkinRegions.HasRow` (the nearest of the look and its defaults decides; a name brings a row back), no `NameTerm` and
+  no `Declared` name for such a region; `RegionRows` hides its rows; `Colors.Rig`: no map in `NamedMaps`, only the
+  skin's `[Base.<Region>]` on the donkey's regions under it. `MountSkinDef.RegionNames` / `RegionsWithoutRow`
+  (`tests/ApiSurface` updated). SkinsScan and `check_skin.py` take `row = none` (refused with a name); `check_skin.py`
+  warns when a skin over the donkey covers a region of the donkey's in every frame. Hellfire `[Region.Eye]`
+  `row = none` (`make_hellfire.py`). Tests: the regions scenario (a third temp skin) and the integration check
+  "Hellfire gives the donkey's eye no row".
+- **The eye's line and the nostril repainted** (2026-11-04; the user: "it looks sloppy otherwise", "yes nostril
+  should be the same as muzzle"; docs/face-pixels.md, docs/mount-colours.md 7.14). They were the dark fill's own
+  colours (292316, 352e1e), so "Legs and mane" reached them. `FacePixels.cs`: the pixels of `face-pixels.txt`
+  (embedded; made by `tools/skins/donkey/face_pixels.py` from `rig.json` and the asset probe's export, 178 on 44
+  frames) copied into the game's character atlas on the GPU after the donkey-art check, a frame a tick, read back;
+  repainted again when the frames come back on new pages. `Looks.ReadFrame(..., FacePixels.Read)`: the builds read
+  them repainted, `DonkeyFrames` and the export as drawn. `Looks.ForgetGameFrames`: the found frames looked for again
+  when their sprites are gone (`DonkeyFrames` uses it too: it retried on the unloaded sprites until then). `Colors.cs`
+  Muzzle + 362d1e (the donkey's pairs 41), 292319 in no region. The asset probe's export puts the two colours back.
+  `face_pixels.py --check` in the release scans. The probe (`Dev/AtlasPatchProbe.cs`; its findings in
+  docs/face-pixels.md section 6) replaced by `Dev/FacePixelsTests.cs` (the Looks group and after the run) and the
+  integration check "colours: the donkey's eye and nostril repainted".
+- **Every after-the-run scenario runs** (2026-11-04): `SelfTest.Run` took the group's first scenario alone (a run with
+  a second one in the group showed "158 of 159"); now every one in order, the world's check last.
 - **The donkey's Muzzle its nose; a picked colour over a skin's pre-colour** (2026-11-04; the user on Hellfire's
   Cream coat and its green dots; docs/mount-colours.md 7.12). `Colors.cs`: Muzzle "abb298 858f6c 75755a a9a7a2" (the
   nose, the mouth chewing and grazing), the face's dots 858e6b and the belly's line 42422c under Coat (858e6b and the

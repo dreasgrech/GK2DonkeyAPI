@@ -103,16 +103,21 @@ namespace GK2DonkeyAPI
         // never inside its fill), is in none, so no colour row reaches it and it stays as drawn on every skin over the
         // donkey (the user, 2026-11-04: the Dark row painted that partial outline with the legs; docs/mount-colours.md
         // 7.11). Both have a colour-cube cell of their own, so they stay as drawn on the cube too. The Muzzle is the nose
-        // only (abb298 858f6c; 75755a and a9a7a2 its mouth, chewing and grazing): the light line along the nose's edge,
+        // only (abb298 858f6c; 75755a and a9a7a2 its mouth, chewing and grazing; 362d1e its nostril, below): the light line along the nose's edge,
         // the chin, the throat and the belly's bottom (42422c) and the dots on the face (858e6b) are the Coat (the user,
         // 2026-11-04: "remove those individual pixels on the face ... and also remove the belly part"; docs/mount-colours.md
         // 7.12). 858e6b and the nose's 858f6c are a step apart in two channels, outside the exact swap's reach (0.0055 >
-        // 0.004), one cube cell: with the Lut fallback the face's dots take the nose's colour.
+        // 0.004), one cube cell: with the Lut fallback the face's dots take the nose's colour. Two colours are the API's
+        // own, not the art's: the game draws the eye's line and the nostril in the legs' and the mane's dark (292316,
+        // 352e1e), which a colour swap can only give to "Legs and mane" with them; FacePixels repaints those pixels in the
+        // game's atlas by place (face-pixels.txt), the nostril 362d1e here under Muzzle (the user, 2026-11-04: "nostril
+        // should be the same as muzzle"), the eye's line 292319 in no region: it stays as drawn, as the outline does
+        // (docs/face-pixels.md).
         private static readonly RegionDef[] Regions =
         {
             R("Coat", "Donkey coat", "Donkey", (Group.DonkeySprites, "736c57 4a3d20 665b44 584c33 3e3019 54503b 655c49 4d4539 362815 453b2e 3c3223 3a3428 534f3a 443b31 42422c 858e6b")),
             R("Dark", "Donkey mane, legs, ears and hooves", "Donkey", (Group.DonkeySprites, "292316 352e1e 130a0c 2f2c1f")),
-            R("Muzzle", "Donkey muzzle", "Donkey", (Group.DonkeySprites, "abb298 858f6c 75755a a9a7a2")),
+            R("Muzzle", "Donkey muzzle", "Donkey", (Group.DonkeySprites, "abb298 858f6c 75755a a9a7a2 362d1e")),
             R("Eye", "Donkey eye", "Donkey", (Group.DonkeySprites, "ffffff")),
             R("Harness", "Donkey harness", "Donkey", (Group.DonkeySprites, "62411b 3c2a14 2d210f 443017 885923 d68e38 2f1d08 3a2003 a06a29 5f3d14 765024 342918 2d2114 463017 472d0e")),
             R("CartBody", "Cart body", "Cart", (Group.CartBody, "885923 784c1d 443017 4f361a 634623 2d210f 593b21 392516 b97b30 a06a29 402a13")),
@@ -959,7 +964,15 @@ namespace GK2DonkeyAPI
                 foreach (string region in MountRegionKeys)
                 {
                     RegionDef d = RegionOf(region);
-                    if (d != null) list.Add((region, maps[d]));
+                    if (d == null) continue;
+                    // a region the look gives no row (row = none): drawn as the look has it, the player's value not applied
+                    // (in its own colours a pair to itself, over the donkey no pair: docs/mount-colours.md 7.13)
+                    if (!SkinRegions.HasRow(look.Def, region))
+                    {
+                        if (pairDrawn) list.Add((region, null));
+                        continue;
+                    }
+                    list.Add((region, maps[d]));
                 }
                 if (look.Def.Tones != null)
                 {
@@ -1028,9 +1041,12 @@ namespace GK2DonkeyAPI
                             // its look for the region while the player gives it no colour (Game default, a shade such as
                             // Dark or Black, a baby's own step), the player's map on top of it; a colour the player picked
                             // (a colorize: Cream, Brown, Custom ...) replaces it, on the donkey's own colours, so Cream is
-                            // cream on Hellfire's ash coat too (the user, 2026-11-04; docs/mount-colours.md 7.12). The
-                            // skin's holds with the player's colours switched off, since it is the skin's own look
-                            RegionMap under = over && !(on && map.HasColorize) && look.Def.BaseRegions != null && look.Def.BaseRegions.TryGetValue(d.Key, out RegionTweak tweak) && !tweak.IsIdentity ? new RegionMap(tweak) : null;
+                            // cream on a skin's darkened coat too (the user, 2026-11-04; docs/mount-colours.md 7.12). The
+                            // skin's holds with the player's colours switched off, since it is the skin's own look. A
+                            // region the skin gives no row (row = none) gets its base recolour alone, the player's map not
+                            // applied (docs/mount-colours.md 7.13).
+                            bool own = on && (look == null || SkinRegions.HasRow(look.Def, d.Key));
+                            RegionMap under = over && !(own && map.HasColorize) && look.Def.BaseRegions != null && look.Def.BaseRegions.TryGetValue(d.Key, out RegionTweak tweak) && !tweak.IsIdentity ? new RegionMap(tweak) : null;
                             foreach (var part in d.Parts)
                             {
                                 if (part.G != g) continue;
@@ -1038,7 +1054,7 @@ namespace GK2DonkeyAPI
                                 {
                                     TryHex(hex, out Color32 src);
                                     Color32 pre = under != null ? under.Apply(src) : src;
-                                    Color32 dst = on ? map.Apply(pre) : pre;
+                                    Color32 dst = own ? map.Apply(pre) : pre;
                                     pairs.Add((src, dst));
                                     any |= !Same(src, dst);
                                 }

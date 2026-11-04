@@ -440,6 +440,7 @@ namespace GK2DonkeyAPI
                 Looks.TickWarm();      // the companion's skin acquired ahead (built by the next line, held), so a first spawn wears it at once
                 Looks.AdvanceBuilds(); // a sheet builds whether or not a rig with a view ticks this frame (one pass per frame)
                 DonkeyFrames.Tick();   // the game's donkey art against the art the skins were drawn on: once a session, a frame a tick
+                FacePixels.Tick();     // then the donkey's eye and nostril pixels repainted in the game's atlas, a frame a tick
                 SoundBank.Advance();   // a pack's sound file started, one a frame
                 Looks.TickPackWatch(); // dev only: Debug.SkinPackAutoReload
                 Looks.RecheckAsideSkins(); // a set-aside game-source skin nobody wears: offered again when its frames arrive (once a minute)

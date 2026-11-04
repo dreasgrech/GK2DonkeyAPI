@@ -591,6 +591,7 @@ so that its nose is coloured".
 |---|---|---|
 | abb298, 858f6c | the nose's fill | Muzzle |
 | 75755a, a9a7a2 | a few pixels of the mouth, chewing (14) and grazing (3) | Muzzle |
+| 362d1e | the nostril (the game's 352e1e, repainted by place since 2026-11-04: 7.14) | Muzzle |
 | 858e6b | dots on the face round the eye and the cheek (369) | Coat |
 | 42422c | a light line along the nose's edge, the chin, the throat and the belly's bottom (1282, 89 % on the silhouette's edge) | Coat |
 
@@ -614,3 +615,37 @@ default the skin's ash.
 - **Tests:** the integration scenarios "colours: the donkey's Muzzle row reaches its nose only; the face's dots and the
   belly's line are its Coat" and "colours: a colour picked for a part a skin pre-colours replaces the pre-colour"
   (docs/self-tests.md).
+
+### 7.13 A row taken away (2026-11-04)
+
+The user, on Hellfire's two eye rows: "whats the difference between eyes and glowing eyes? the fact that theyre not
+underneath each other is weird", then "skins should have the ability to override the default skin's color fields in
+that if they don't want any fields, they must have the ability to remove them". Measured: the donkey's eye white is
+under Hellfire's glow (FFAA28, DC3C14) in every frame it is drawn (113 of the eye's pixels covered, the white in all
+of them), so its Eyes row coloured nothing you could see; on Armored (an eye hole in the helmet), Royal Parade and the
+Jester the white shows in every frame.
+
+- **`[Region.<region>]` `row = none`** (`SkinRegions.Read`, `SkinDef.RegionsWithoutRow`; code skins
+  `MountSkinDef.RegionsWithoutRow`, with `MountSkinDef.RegionNames` for the names a pack gives): the look gives the
+  region no row. `SkinRegions.HasRow` walks a variant's defaults, the nearest that says deciding (a name brings a row
+  back); `NameTerm` gives no name for it, `Declared` no translation.
+- **The page:** `RegionRows` hides the region's rows (`SkinHasRegion && HasRow`); `ToneRows` makes no Dark or Eye row
+  for it (no name).
+- **The engine:** in `Colors.Rig.NamedMaps` the region gets no map (a look in its own colours: a pair to itself; over
+  the donkey: no pair, as drawn), and the donkey's regions under a skin over it get only the skin's `[Base.<Region>]`.
+  So a saved value stays in the player's file and isn't applied, and nothing is coloured that has no row.
+- **Hellfire:** `[Region.Eye]` `row = none` (`make_hellfire.py`, the pack reproduced byte for byte). Its rows: Coat,
+  Harness, Muzzle, Legs and mane, Horns, Glowing eyes, Lava cracks, Tail, Tail tip.
+- **The checks:** SkinsScan and `check_skin.py` take `row = none` and refuse it with a name; `check_skin.py` warns when
+  a skin over the donkey covers one of the donkey's regions in every frame and gives it a row.
+- **Tests:** the scenario "colours: a look's names for its parts" (a temp skin without Harness and Eye rows: read, a
+  variant's, the page, the engine) and the integration check "Hellfire gives the donkey's eye no row".
+
+### 7.14 The eye's line and the nostril (2026-11-04)
+
+The user, on the Jester with "Legs and mane" Pink: "there are some pixels around the eye which are affected by the legs
+and mange group", then "yes nostril should be the same as muzzle". The game draws the eye's line and the nostril in the
+dark fill's own colours (292316, 352e1e), and a colour swap can't tell them from the legs and the mane. The API
+repaints them in the game's atlas by place (`FacePixels.cs`, docs/face-pixels.md): the eye's line 292319, in no
+region (as drawn, as the outline is: 7.11), the nostril 362d1e, under Muzzle. The donkey's pairs are 41. A skin
+drawing over the donkey draws on the asset probe's frames, which keep the game's colours.

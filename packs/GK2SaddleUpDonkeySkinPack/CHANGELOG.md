@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Hellfire has one row for its eyes** (2026-11-04): Glowing eyes; the donkey's Eyes row is gone, its eyes being
+  under the glow in every frame (GK2 Donkey API with it).
 - **Each skin's parts have colours of their own** (2026-11-04; the new rows need GK2 Donkey API with tones, and the
   skins read as before on an older one), every part its own. Royal Parade: Saddle cloth, Crown, Trim and fringe,
   Emblem, Jewels. Armored: Helmet, Plume, Body armour, Skirt, Brass. Hellfire: Horns, Glowing eyes, Lava cracks,

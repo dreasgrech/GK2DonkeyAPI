@@ -105,6 +105,10 @@ namespace GK2DonkeyAPI
             if (!quiet || gameFrames.Count > 0) Plugin.Log.LogInfo($"Looks: the {b.Id}'s frames found for the recipes: {gameFrames.Count} of {b.Keys.Length} ('{prefix}*' in the {b.AtlasName} atlases).");
         }
 
+        // The frames found are looked for again at the next ask (FacePixels: the donkey's found unloaded, the atlas's
+        // sprites gone; the entries stay until then, as they would have).
+        internal static void ForgetGameFrames() => gameBase = null;
+
         // Whether a skin is built from the base's own frames: a recipe, or an over skin that erases (WrapErase); a skin
         // built on its default when the default is (LooksInherit.cs).
         internal static bool NeedsBaseFrames(SkinDef d) => d.Recipe != null || (d.Over && d.Erase != null) || (InheritsPictures(d) && NeedsBaseFrames(d.Parent));
@@ -131,8 +135,10 @@ namespace GK2DonkeyAPI
         }
 
         // The sprite's pixels on its canvas, at its trim offset (ReadPixels from a blit of its atlas). Also DonkeyFrames'
-        // read of the game's art, so the check sees the pixels the skins are built on.
-        internal static SkinFrame ReadFrame(string key, Sprite s, SkinBase b)
+        // read of the game's art, so the check sees the pixels the skins are built on. The donkey's own frames come with
+        // their eye and nostril pixels repainted (FacePixels: a skin's whole frames as the atlas shows them, built before
+        // the atlas was repainted or after), or as the game draws them (the check, the exports), or as the atlas holds them.
+        internal static SkinFrame ReadFrame(string key, Sprite s, SkinBase b, FacePixels.Read face = FacePixels.Read.Repainted)
         {
             Texture2D tex = s.texture;
             Rect r = s.textureRect;
@@ -174,6 +180,7 @@ namespace GK2DonkeyAPI
                     }
                 }
                 f.Bob = backFromTop < 0 ? 0 : backFromTop - b.BackRow;
+                if (b == Donkey && s.name.StartsWith(b.GamePrefix, StringComparison.Ordinal)) FacePixels.Apply(key, canvas, cw, ch, face);
                 return f;
             }
             finally

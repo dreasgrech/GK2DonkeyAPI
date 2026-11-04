@@ -257,6 +257,14 @@ namespace GK2DonkeyAPI.Api
         // player colours apart from the regions, each with its own row on a page's ToneRows. A colour is in one tone or
         // one region only. Null: none. Skins in the donkey's palette colours have none.
         public List<MountSkinTone> Tones;
+        // The look's names for the mount regions' parts, by region (Coat, Dark, Muzzle, Eye, Harness), as a pack's
+        // [Region.<region>] name =: the colours window labels their rows by them (docs/api.md "A look's names for its
+        // parts"); a region named nowhere keeps the page's words, and Dark and Eye get a row only when named. Null: none.
+        public Dictionary<string, string> RegionNames;
+        // The mount regions the look gives no row, as a pack's [Region.<region>] row = none: drawn as the look has
+        // them, a player's colour for them not applied on this look (a skin that draws its own eyes over the donkey's,
+        // say). Null: none.
+        public string[] RegionsWithoutRow;
         // Over skins only: the colour whose pixels make the donkey transparent there (a pack's erase =); null: none.
         public Color32? Erase;
         // Over skins only: the donkey's regions recoloured under the skin (a pack's [Base.<Region>]: knob -> value text,
@@ -312,6 +320,8 @@ namespace GK2DonkeyAPI.Api
                     Looks.ColorRegionLine(d, kv.Key, string.Join(" ", kv.Value), "skin '" + Id + "' (code)");
                 }
             }
+            if (RegionNames != null) foreach (var kv in RegionNames) SkinRegions.Read(d, kv.Key ?? "", "name", kv.Value);
+            if (RegionsWithoutRow != null) foreach (string r in RegionsWithoutRow) SkinRegions.Read(d, r ?? "", "row", "none");
             if (Tones != null && PaletteColours) d.Report += "Tones on a skin in the donkey's palette colours, ignored (the donkey's regions apply); ";
             else if (Tones != null)
             {

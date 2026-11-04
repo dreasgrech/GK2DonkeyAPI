@@ -890,6 +890,49 @@ namespace GK2DonkeyAPI.IntegrationTests
             yield return Frames(2);
         }
 
+        // The donkey's eye and nostril pixels (docs/face-pixels.md): repainted in the game's atlas (FacePixels), the eye's
+        // line 292319 has no pair (as drawn: "Legs and mane" no longer reaches it) and the nostril 362d1e follows the Muzzle
+        // row, on the plain donkey and on a skin over it (Hellfire, when its pack is in); the dark fill they were (292316,
+        // 352e1e) still follows "Legs and mane".
+        internal static IEnumerator FacePixelsPairs()
+        {
+            Color32 H(string hex) => new Color32(Convert.ToByte(hex.Substring(0, 2), 16), Convert.ToByte(hex.Substring(2, 2), 16), Convert.ToByte(hex.Substring(4, 2), 16), 255);
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null) { Fail("could not spawn"); yield break; }
+            string Of(string hx)
+            {
+                Color32 src = H(hx);
+                Color32? d = a.I.ColorsRig.TestDstOf(src);
+                return d == null ? "no pair" : d.Value.r == src.r && d.Value.g == src.g && d.Value.b == src.b ? "kept" : "changed";
+            }
+            var looks = new List<string> { "" };
+            if (MissingPack("hellfire") == null) looks.Add(Sk("hellfire"));
+            else Info("Hellfire's pack is not in: the plain donkey only");
+            foreach (string look in looks)
+            {
+                a.Tuning.Set(Owner, "Skin", look);
+                yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == look && !a.I.LooksRig.Building, 20f);
+                if (!waited) { Fail($"{(look == "" ? "the donkey's own look" : look)} was never worn"); continue; }
+                string name = look == "" ? "the plain donkey" : look;
+                foreach (string region in new[] { "Dark", "Muzzle" })
+                {
+                    a.Tuning.Set(Owner, "DarkColorizeAmount", 0f);
+                    a.Tuning.Set(Owner, "MuzzleColorizeAmount", 0f);
+                    a.Tuning.Set(Owner, region + "Colorize", "00FF00");
+                    a.Tuning.Set(Owner, region + "ColorizeAmount", 1f);
+                    yield return Frames(3);
+                    string eye = Of("292319"), nostril = Of("362d1e"), fill = Of("292316"), mane = Of("352e1e");
+                    bool ok = eye == "no pair" && (region == "Muzzle" ? nostril == "changed" && fill != "changed" && mane != "changed" : nostril != "changed" && fill == "changed" && mane == "changed");
+                    Check(ok, $"{name}, its {region} row green: the eye's line 292319 {eye}, the nostril 362d1e {nostril}; the dark fill 292316 {fill}, 352e1e {mane}");
+                }
+            }
+            a.Tuning.Set(Owner, "DarkColorizeAmount", 0f);
+            a.Tuning.Set(Owner, "MuzzleColorizeAmount", 0f);
+            a.Remove();
+            yield return Frames(2);
+        }
+
         // A colour picked for a part a skin pre-colours replaces the pre-colour (docs/mount-colours.md 7.12): Hellfire
         // darkens the donkey's coat under it to ash ([Base.Coat]), and Cream on it stayed dark (the user's screenshot,
         // 2026-11-04). A coat colour of the donkey (736c57): at Game default Hellfire's ash; with Cream's keys (a colorize)
@@ -938,6 +981,20 @@ namespace GK2DonkeyAPI.IntegrationTests
             a.Tuning.Set(Owner, "Skin", "");
             a.Remove();
             yield return Frames(2);
+        }
+
+        // Hellfire gives the donkey's eye no row (the user, 2026-11-04: "the hellfire skin doesnt need both of them";
+        // docs/mount-colours.md 7.13): its glowing eyes cover the donkey's in every frame ([Region.Eye] row = none), so the
+        // colours window has its Glowing eyes and no Eyes; its other rows the donkey's and its own (Legs and mane).
+        internal static IEnumerator HellfireNoEyesRow()
+        {
+            string noPack = MissingPack("hellfire"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
+            string id = Sk("hellfire");
+            Term eye = SkinRegions.NameTerm(id, "Eye"), dark = SkinRegions.NameTerm(id, "Dark"), coat = SkinRegions.NameTerm(id, "Coat");
+            Check(!SkinRegions.HasRow(id, "Eye") && eye == null && dark != null && dark.English == "Legs and mane" && coat == UiWords.RegionCoat,
+                $"Hellfire: no Eyes row ({(eye == null ? "none" : eye.English)}), Legs and mane ({dark?.English}), Coat ({coat?.English})");
+            yield return null;
         }
 
         // The two over skins we ship, on the built-ins themselves (6.4: the over-skin scenarios run on temp packs):

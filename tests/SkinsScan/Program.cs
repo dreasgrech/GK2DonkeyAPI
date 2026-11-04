@@ -623,11 +623,16 @@ foreach (var dir in skinDirs)
         }
         if (sec.StartsWith("Region.", StringComparison.OrdinalIgnoreCase))
         {
-            // a look's name for a mount region's part (SkinRegions; docs/second-tone.md 8): a region of the five, name = only
+            // a look's name for a mount region's part (SkinRegions; docs/second-tone.md 8), or row = none, no row for the
+            // region (docs/mount-colours.md 7.13): a region of the five; a name with row = none is never shown
             string region = sec.Substring(7);
             if (!mountRegions.Contains(region)) Bad($"[{sec}]: not a mount region ({string.Join(", ", mountRegions)})");
-            foreach (var kv in cfg[sec]) if (!kv.Key.Equals("name", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}] {kv.Key}: not a region's key (name)");
-            if (!cfg[sec].TryGetValue("name", out string rname) || string.IsNullOrWhiteSpace(rname)) Bad($"[{sec}]: no name");
+            foreach (var kv in cfg[sec]) if (!kv.Key.Equals("name", StringComparison.OrdinalIgnoreCase) && !kv.Key.Equals("row", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}] {kv.Key}: not a region's key (name, row)");
+            bool rowless = cfg[sec].TryGetValue("row", out string rowValue);
+            if (rowless && !rowValue.Trim().Equals("none", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}] row = {rowValue}: none is its one value");
+            bool named = cfg[sec].TryGetValue("name", out string rname) && !string.IsNullOrWhiteSpace(rname);
+            if (rowless && named) Bad($"[{sec}]: a name and row = none: the region has no row, so the name is never shown");
+            if (!rowless && !named) Bad($"[{sec}]: no name (or row = none)");
         }
     }
     if (order.Count == 0 || !order[0].Equals("Skin", StringComparison.OrdinalIgnoreCase)) Bad("[Skin] must be the first section");

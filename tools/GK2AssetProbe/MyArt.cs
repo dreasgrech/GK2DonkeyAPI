@@ -424,7 +424,8 @@ namespace GK2AssetProbe
 
         // ---------------------------------------------------------------- templates (from step 3)
 
-        // The game frame, whole (its canvas, the trimmed picture put back where the game draws it), as a PNG to paint over.
+        // The game frame, whole (its canvas, the trimmed picture put back where the game draws it), as a PNG to paint over:
+        // the art as the game draws it, with GK2 Donkey API's repainted eye and nostril pixels put back (AsDrawn).
         internal static void ExportFrame(Sprite sp)
         {
             if (sp == null) return;
@@ -451,7 +452,9 @@ namespace GK2AssetProbe
                 int ox = Mathf.FloorToInt(sp.textureRectOffset.x), oy = Mathf.FloorToInt(sp.textureRectOffset.y);
                 if (ox >= 0 && oy >= 0 && ox + w <= cw && oy + h <= ch)
                 {
-                    canvas.SetPixels(ox, oy, w, h, crop.GetPixels());
+                    Color32[] px = crop.GetPixels32();
+                    if (key.StartsWith("bdy_", StringComparison.Ordinal) || key.StartsWith("hed_", StringComparison.Ordinal)) AsDrawn(px);
+                    canvas.SetPixels32(ox, oy, w, h, px);
                 }
                 canvas.Apply();
                 File.WriteAllBytes(file, canvas.EncodeToPNG());
@@ -462,6 +465,20 @@ namespace GK2AssetProbe
                 RenderTexture.ReleaseTemporary(rt);
                 if (crop != null) Object.Destroy(crop);
                 if (canvas != null) Object.Destroy(canvas);
+            }
+        }
+
+        // The donkey's eye and nostril pixels as the game draws them. GK2 Donkey API repaints them in the game's atlas (its
+        // FacePixels.cs, docs/face-pixels.md: the eye's line 292316 as 292319, the nostril 352e1e as 362d1e), and this
+        // export is the art the skins are drawn on and the tools read. Those two colours are drawn nowhere else in the
+        // donkey's frames (tools/skins/donkey/face_pixels.py checks it), so they are put back by colour.
+        private static void AsDrawn(Color32[] px)
+        {
+            for (int i = 0; i < px.Length; i++)
+            {
+                Color32 c = px[i];
+                if (c.r == 0x29 && c.g == 0x23 && c.b == 0x19) px[i] = new Color32(0x29, 0x23, 0x16, c.a);
+                else if (c.r == 0x36 && c.g == 0x2d && c.b == 0x1e) px[i] = new Color32(0x35, 0x2e, 0x1e, c.a);
             }
         }
 

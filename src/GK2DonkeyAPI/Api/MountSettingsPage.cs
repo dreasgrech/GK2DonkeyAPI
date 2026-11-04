@@ -1134,7 +1134,7 @@ namespace GK2DonkeyAPI.Api
             regionKeys[(skinId ?? "") + "\n" + r] = (cfgSection, choiceKey, customKey); // a part that followed the region carries its value over (CarryOver)
             Term name = SkinRegions.NameTerm(skinId, r);
             string skin = skinId;
-            Func<bool> has = () => SkinHasRegion(skin, r);
+            Func<bool> has = () => SkinHasRegion(skin, r) && SkinRegions.HasRow(skin, r); // a look may give a region no row (row = none)
             foreach (Row row in Rows)
             {
                 if (row.Entry == null || row.Entry.Definition.Section != cfgSection) continue;

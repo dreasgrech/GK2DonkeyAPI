@@ -156,9 +156,13 @@ def main(pack):
     # for an API without tones (the loader moves them to the tone)
     regions = ("Coat", "Dark", "Muzzle", "Eye", "Harness")
     for (sec, k), v in c.items():
-        # a look's name for a mount region's part (SkinRegions; docs/second-tone.md 8): one of the five, name = only
-        if sec.startswith("Region.") and (sec[7:].capitalize() not in regions or k != "name" or not v.strip()):
-            warn.append(f"[{sec}] {k} = {v}: a region's section is one of {', '.join(regions)} with name = its part's name; the game ignores it")
+        # a look's name for a mount region's part (SkinRegions; docs/second-tone.md 8), or row = none (no row for the
+        # region: docs/mount-colours.md 7.13): one of the five
+        if sec.startswith("Region.") and (sec[7:].capitalize() not in regions or k not in ("name", "row") or not v.strip() or (k == "row" and v.strip().lower() != "none")):
+            warn.append(f"[{sec}] {k} = {v}: a region's section is one of {', '.join(regions)} with name = its part's name or row = none; the game ignores it")
+            RESULT["errors"] += 1
+        if sec.startswith("Region.") and k == "name" and c.get((sec, "row"), "").strip().lower() == "none":
+            warn.append(f"[{sec}]: a name and row = none: the region has no row, so the name is never shown")
             RESULT["errors"] += 1
         if sec.startswith("Tone.") and k == "follows" and v.strip().capitalize() not in regions:
             warn.append(f"[Tone.{sec[5:].lower()}] follows = {v}: not a mount region ({', '.join(regions)}); the game leaves the tone out")
@@ -361,6 +365,35 @@ def main(pack):
                     warn.append(f"two colours of the look one step apart in one channel, in two places: {'%02X%02X%02X' % rgb} ({place}), {'%02X%02X%02X' % n} ({look[n]}); the exact swap takes them as one colour, so one is recoloured as the other (draw one of them a step further apart)")
                     if place.startswith("Tone.") or look[n].startswith("Tone."):
                         RESULT["errors"] += 1
+
+    # over the donkey: a region of the donkey's the skin covers (or erases) in every frame has a row that colours nothing
+    # you can see (Hellfire's glowing eyes over the donkey's, 2026-11-04): row = none takes it away, or a name says what
+    # the skin draws there (docs/mount-colours.md 7.13)
+    if over and not parent:
+        cs = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src", "GK2DonkeyAPI", "Colors.cs"), encoding="utf-8").read()
+        donkey_regions = {m.group(1): {tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) for h in m.group(2).split()}
+                          for m in re.finditer(r'R\("(\w+)", "[^"]*", "Donkey", \(Group\.DonkeySprites, "([0-9a-fA-F ]+)"\)', cs)}
+        rowless = {s[7:].capitalize() for (s, k), v in c.items() if s.startswith("Region.") and k == "row" and v.strip().lower() == "none"}
+        for region, cols in donkey_regions.items():
+            drawn = visible = 0
+            for k in ORDER:
+                if k not in dk or k not in body_cells:
+                    continue
+                dpx, spx = dk[k].load(), body_cells[k].load()
+                w, h = dk[k].size
+                for y in range(h):
+                    for x in range(w):
+                        p = dpx[x, y]
+                        if p[3] == 0 or p[:3] not in cols:
+                            continue
+                        drawn += 1
+                        q = spx[x, y] if x < body_cells[k].size[0] and y < body_cells[k].size[1] else (0, 0, 0, 0)
+                        if q[3] == 0:
+                            visible += 1
+            if drawn and not visible and region not in rowless:
+                warn.append(f"the donkey's {region} is under the skin in every frame ({drawn} pixel(s), none shown): its row colours nothing you can see; [Region.{region}] row = none takes it away, or a name says what the skin draws there")
+            elif region in rowless:
+                info.append(f"[Region.{region}] row = none: the donkey's {region} {'is under the skin in every frame' if drawn and not visible else f'shows in {visible} of its {drawn} pixel(s)'}, drawn as it is")
 
     # frames where the donkey is drawn the same but the skin differs: likely one of them was missed (over skins only)
     groups = {}

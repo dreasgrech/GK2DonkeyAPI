@@ -276,6 +276,14 @@ colours = 38121A 5E1C24 8A282A
   (Coat, Harness, Second tone) or, for Dark and Eye, no row. A variant takes its default's names; a skin over the
   donkey the donkey's (Coat, Legs mane and ears, Muzzle, Eyes, Harness) unless it names its own (Hellfire's
   `[Region.Dark]` `name = Legs and mane`: its ears are horns). Translated as `skin.<skin id>.region.<region>.name`.
+- **A row taken away** (2026-11-04; docs/mount-colours.md 7.13): `[Region.<region>]` `row = none` gives a region no row
+  at all, for a part the skin covers or doesn't want coloured: Hellfire's `[Region.Eye]` `row = none`, its glowing eyes
+  over the donkey's in every frame. The region is then drawn as the look has it (the donkey's own pixels under a skin
+  over it, with the skin's `[Base.<Region>]` if it has one), and a colour a player saved for it on this look is kept in
+  their file but not applied. A variant takes its default's away unless it names the region itself (that brings the
+  row back). A name and `row = none` together are refused by the checks (the name would never show).
+  `tools/skins/check_skin.py` says when a skin over the donkey covers one of the donkey's regions in every frame: a row
+  that colours nothing you can see.
   Keep the line art out of every row (docs/mount-colours.md 7.11): on a skin over the donkey list its colours
   nowhere (they are drawn as they are, as the donkey's own outline is since 2026-11-04); in a skin's own colours, where a
   colour named nowhere is Coat, put them in a Dark you don't name (no row), and give a part drawn dark too (horns,
@@ -341,6 +349,11 @@ Saturation = 1.2
 Colorize = CC1800
 ColorizeAmount = 0.6
 ```
+
+**The donkey's eye and nostril.** The API repaints the donkey's eye line (292316 as 292319) and its nostril (352e1e
+as 362d1e) in the game's atlas, so "Legs and mane" doesn't reach them and the nostril follows Muzzle
+(docs/face-pixels.md). The asset probe's frames, the ones you draw on, keep the game's colours. Don't draw 292319 or
+362d1e in a skin over the donkey: `tools/skins/donkey/face_pixels.py` checks the packs for them.
 
 ## Variants: built on the default
 
