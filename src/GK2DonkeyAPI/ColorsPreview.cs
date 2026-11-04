@@ -34,13 +34,25 @@ namespace GK2DonkeyAPI
         // worn over the donkey, whose regions are still mostly the donkey's own colours).
         internal static float ArtLightness(string regionKey, string skinId = null)
         {
+            ArtRange(regionKey, skinId, out float average, out _);
+            return average;
+        }
+
+        // The same colours' average value and their lightest (Colors.ValueRange): a part's preset stops where the lightest
+        // reaches white (SkinTones.RegionValues, as a skin's own part's). 0.5 and 1 for none.
+        internal static void ArtRange(string regionKey, string skinId, out float average, out float top)
+        {
             Looks.Loaded look = Looks.LoadedOwnColours(skinId);
             if (look != null && !look.Def.Over)
             {
                 // the region's own colours, and those of the skin's tones that follow it (the parts that were the region's
                 // before they were tones: they count as they did)
                 List<Color32> all = look.ColoursReachedBy(regionKey);
-                if (all != null && all.Count > 0) return AverageValue(all);
+                if (all != null && all.Count > 0)
+                {
+                    ValueRange(all, out average, out top);
+                    return;
+                }
             }
             foreach (RegionDef d in Regions)
             {
@@ -50,9 +62,11 @@ namespace GK2DonkeyAPI
                 }
                 var hexes = new List<string>();
                 foreach (var part in d.Parts) hexes.AddRange(part.Colors);
-                return AverageValue(hexes);
+                ValueRange(ColoursOfHexes(hexes), out average, out top);
+                return;
             }
-            return 0.5f;
+            average = 0.5f;
+            top = 1f;
         }
 
         // The average HSV value (0..1) of colours: how light an art is, a region's above or a skin's tone's

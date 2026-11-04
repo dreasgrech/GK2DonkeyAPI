@@ -68,11 +68,11 @@ colours.tone_white,白,White,a colour for a part of a skin
 colours.tone_custom,カスタム,Custom,"a colour for a part of a skin: the player's own, picked in the row under it"
 colours.tone_custom_colour,{0}（カスタム）,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
 colours.tone_lightness,{0}：明るさ,{0}: lightness,"the row under it that makes that colour lighter or darker; {0}: the part's name"
-colours.tone_follow_coat,体の色と同じ,As the coat,a part of a skin coloured as the mount's coat colour (the first choice of a part that follows it)
-colours.tone_follow_dark,暗い部分と同じ,As the dark parts,"a part of a skin coloured as the mount's dark parts (its outline, mane and hooves)"
-colours.tone_follow_muzzle,差し色と同じ,As the second tone,a part of a skin coloured as the mount's second tone (the Second tone row)
-colours.tone_follow_eye,目と同じ,As the eyes,a part of a skin coloured as the mount's eyes
-colours.tone_follow_harness,馬具の色と同じ,As the harness,a part of a skin coloured as the mount's harness colour (the Harness colour row)
+colours.region_coat,体,Coat,a part of the mount the player colours: the donkey's coat (its row's label in the colours window)
+colours.region_donkey_dark,足とたてがみと耳,"Legs, mane and ears","a part of the donkey the player colours: its dark lower legs, mane, ears and tail tuft, with its outline (one set of colours in the game's art)"
+colours.region_donkey_muzzle,鼻先とお腹,Muzzle and belly,a part of the donkey the player colours: its pale muzzle and belly
+colours.region_eyes,目,Eyes,a part of the mount the player colours: its eyes
+colours.region_harness,馬具,Harness,a part of the mount the player colours: the donkey's harness (its straps and collar)
 speed.very_slow,とても遅い,Very slow,a mount's speed in the journal's stats
 speed.slow,遅い,Slow,
 speed.normal,ふつう,Normal,

@@ -269,15 +269,23 @@ colours = 38121A 5E1C24 8A282A
 - Over the donkey, the Coat, Harness and Second tone rows still reach the donkey's own parts under the skin; a part
   of the skin under `[Colors] Harness` follows the player's harness colour instead of having a row of its own. On a
   skin in its own colours, its tones are taken out of Coat.
-- **A part that should keep following one of those rows** (a part that was under `[Colors] Harness` in a skin players
-  already wear) says `follows = Harness` (or `Dark`, `Muzzle`, `Eye`; `Coat` on a skin in its own colours, where a
-  colour named nowhere was Coat): the dropdown's first choice is then "As the harness" instead of Game default, and
-  with it the part is coloured exactly as the Harness row colours it (a player's saved harness colour keeps reaching
-  it); any other choice gives it its own. On a skin over the donkey a colour named nowhere was drawn as it is, so
-  `follows = Coat` there keeps nothing: it gives the part the player's coat colour, also on the update of a skin
-  players already wear (the checkers say so; use it for a part meant to follow the coat). Its colours may stay listed
-  under that region in `[Colors]` as well: this API moves them to the tone, and an older one, which doesn't know
-  tones, keeps colouring them as before. That is how the released skins got their parts (docs/mount-colours.md 7.9):
+- **A part's name for the mount's own regions** (2026-11-04; docs/second-tone.md 8): `[Region.<region>]` with
+  `name =` names a region's part the way the colours window shows it, so no row says "Coat colour" or "Second
+  tone": a dragon's `[Region.Coat]` `name = Scales and wings`, its `[Region.Muzzle]` `name = Belly`. A region you
+  name gets a row by that name (Dark and Eye get rows only when named); a region you don't keeps the page's words
+  (Coat, Harness, Second tone) or, for Dark and Eye, no row. A variant takes its default's names; a skin over the
+  donkey the donkey's (Coat, Legs mane and ears, Muzzle and belly, Eyes, Harness) unless it names its own (Hellfire's
+  `[Region.Dark]` `name = Legs and mane`: its ears are horns). Translated as `skin.<skin id>.region.<region>.name`.
+  A region whose colours are only the outline (the line art) is best left unnamed: no row.
+- **A part that was under one of those rows in a skin players already wear** (under `[Colors] Harness`, say) says
+  `follows = Harness` (or `Dark`, `Muzzle`, `Eye`; `Coat` on a skin in its own colours, where a colour named nowhere
+  was Coat). It is a part like any other, its first choice Game default (since 2026-11-04, docs/second-tone.md 8): on
+  the first load after the update it takes the player's saved value of that row once, so their look carries over,
+  and from then on the row doesn't reach it. On a skin over the donkey a colour named nowhere was drawn as it is, so
+  `follows = Coat` there gives the part the player's coat colour where it was drawn as it is before (the checkers say
+  so). Its colours may stay listed under that region in `[Colors]` as well: this API moves them to the tone, and an
+  older one, which doesn't know tones, keeps colouring them as before. That is how the released skins got their parts
+  (docs/mount-colours.md 7.9):
 
   ```ini
   [Colors]
@@ -291,7 +299,9 @@ colours = 38121A 5E1C24 8A282A
 - Colours named too close together may change together on the game's colour cube (a skin in its own colours over 48,
   one over the donkey over 96 with the donkey's own 42, or with the player's `SpriteMethod = Lut`):
   `tools/skins/check_skin.py` and `tests/SkinsScan` fail a tone's colour that shares a cube cell with any other colour
-  of the look. On the exact swap two colours one step apart in one channel are one colour (the swap's reach is 0.004,
+  of the look. A skin on the cube whatever the player sets (over its limit) keeps one part's colours per cell, a
+  region's too: two regions' colours in one cell fail (a Mouth colour would repaint the outline beside it; shades of one
+  region in a cell are fine). On the exact swap two colours one step apart in one channel are one colour (the swap's reach is 0.004,
   a step 0.0039): both fail a tone's colour one step from a colour of another place too.
 - A variant (see below) has its default's tones. A `[Tone.<id>]` of its own with a default's id adds its colours to
   that tone (the default's name stays, and what it follows unless it says `follows =` itself), or with a `name` of

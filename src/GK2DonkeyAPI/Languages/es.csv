@@ -68,11 +68,11 @@ colours.tone_white,Blanco,White,a colour for a part of a skin
 colours.tone_custom,Personalizado,Custom,"a colour for a part of a skin: the player's own, picked in the row under it"
 colours.tone_custom_colour,{0}: color personalizado,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
 colours.tone_lightness,{0}: luminosidad,{0}: lightness,"the row under it that makes that colour lighter or darker; {0}: the part's name"
-colours.tone_follow_coat,Como el pelaje,As the coat,a part of a skin coloured as the mount's coat colour (the first choice of a part that follows it)
-colours.tone_follow_dark,Como las partes oscuras,As the dark parts,"a part of a skin coloured as the mount's dark parts (its outline, mane and hooves)"
-colours.tone_follow_muzzle,Como el segundo tono,As the second tone,a part of a skin coloured as the mount's second tone (the Second tone row)
-colours.tone_follow_eye,Como los ojos,As the eyes,a part of a skin coloured as the mount's eyes
-colours.tone_follow_harness,Como el arnés,As the harness,a part of a skin coloured as the mount's harness colour (the Harness colour row)
+colours.region_coat,Pelaje,Coat,a part of the mount the player colours: the donkey's coat (its row's label in the colours window)
+colours.region_donkey_dark,"Patas, crin y orejas","Legs, mane and ears","a part of the donkey the player colours: its dark lower legs, mane, ears and tail tuft, with its outline (one set of colours in the game's art)"
+colours.region_donkey_muzzle,Hocico y vientre,Muzzle and belly,a part of the donkey the player colours: its pale muzzle and belly
+colours.region_eyes,Ojos,Eyes,a part of the mount the player colours: its eyes
+colours.region_harness,Arnés,Harness,a part of the mount the player colours: the donkey's harness (its straps and collar)
 speed.very_slow,Muy lenta,Very slow,a mount's speed in the journal's stats
 speed.slow,Lenta,Slow,
 speed.normal,Normal,Normal,

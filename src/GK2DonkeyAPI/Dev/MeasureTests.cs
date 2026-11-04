@@ -129,10 +129,11 @@ namespace GK2DonkeyAPI
             SelfTest.Info($"lamp framing: {lines.Count - 1} measurement(s) in BepInEx\\GK2-lamp-framing.tsv; the skin, the mount and every lantern setting back as they were");
         }
 
-        // The colours window of every skin of the donkey as the player sees it (the user's look at the skins whose parts
-        // became tones, 2026-11-04): a picture each, BepInEx\GK2-panel-shots\colours-skin-<skin>.png, taken once the
-        // window's picture has settled with the dev panel hidden; and each skin's part rows in words (its label, the
-        // first choice, the value, whether it is live), BepInEx\GK2-colours-rows.tsv.
+        // The colours window of every skin of every mount as the player sees it (the user's look at the skins whose parts
+        // became tones and the looks whose regions got names, 2026-11-04): a picture each,
+        // BepInEx\GK2-panel-shots\colours-skin-<mount>-<skin>.png (and -end where its rows scroll), taken once the window's
+        // picture is drawn with the dev panel hidden; and each skin's colour rows in words, as the window draws them (the
+        // label, the first choice, the value, shown or left out, live or greyed), BepInEx\GK2-colours-rows.tsv.
         internal static IEnumerator ColoursWindows()
         {
             MountSettingsPage page = PageWithMounts();
@@ -146,21 +147,24 @@ namespace GK2DonkeyAPI
                 SelfTest.Warn("a window is open: close it and run again; skipped");
                 yield break;
             }
-            ConfigEntryBase skinRow = null;
-            foreach (MountSettingsPage.Row r in page.Rows)
+            // each mount's Skin row, and its value to put back
+            var skinRows = new List<(string Mount, ConfigEntryBase Row, object Was)>();
+            foreach (MountInfo m in Mounts.Catalog.All)
             {
-                if (r.Entry != null && r.Entry.Definition.Key == "Skin_" + MountCatalog.DonkeyId) { skinRow = r.Entry; break; }
+                foreach (MountSettingsPage.Row r in page.Rows)
+                {
+                    if (r.Entry != null && r.Entry.Definition.Key == "Skin_" + m.Id) { skinRows.Add((m.Id, r.Entry, r.Entry.BoxedValue)); break; }
+                }
             }
-            if (skinRow == null)
+            if (skinRows.Count == 0)
             {
-                SelfTest.Skip("the page has no Skin row for the donkey");
+                SelfTest.Skip("the page has no Skin rows");
                 yield break;
             }
-            object skinWas = skinRow.BoxedValue;
             string mountWas = page.MountChosen;
             bool panelWasHidden = Plugin.TuningWindowHidden;
-            var lines = new List<string> { "skin\trow key\tlabel\tfirst choice\tvalue\tlive" };
-            int shots = 0;
+            var lines = new List<string> { "mount\tskin\trow key\tlabel as drawn\tfirst choice\tvalue\tshown\tlive" };
+            int shots = 0, looks = 0;
             MountsPanel.Open(page, toggle: false);
             yield return SelfTest.Frames(3);
             try
@@ -170,59 +174,70 @@ namespace GK2DonkeyAPI
                     SelfTest.Warn("the Mount Journal didn't open; nothing taken");
                     yield break;
                 }
-                MountsPanel.TestSelect(MountCatalog.DonkeyId);
-                yield return SelfTest.Frames(3);
-                foreach ((string id, string label) in Looks.SkinChoicesOf(MountCatalog.DonkeyId))
+                foreach ((string mount, ConfigEntryBase skinRow, object _) in skinRows)
                 {
                     if (MountsPanel.IsColoursOpen) MountsPanel.TestCloseColours(true);
-                    skinRow.BoxedValue = id;
+                    MountsPanel.TestSelect(mount);
                     yield return SelfTest.Frames(3);
-                    MountsPanel.TestOpenColours();
-                    yield return SelfTest.Frames(3);
-                    yield return SelfTest.Until(() => !PreviewStage.TestShownSettling, 10f);
-                    // and until its picture is drawn (settled came first: in the first run one skin's picture was still empty, a
-                    // few frames before it showed)
-                    yield return SelfTest.Until(() => PreviewStage.TestDrawnRect(PreviewStage.TestHide.Nothing, out _, out _, out _, out _, out _, out _), 10f);
-                    yield return SelfTest.Frames(6);
-                    int parts = 0;
-                    foreach (MountSettingsPage.Row r in page.Rows)
+                    foreach ((string id, string label) in Looks.SkinChoicesOf(mount))
                     {
-                        if (r.Entry == null || !string.Equals(r.SkinId, id, StringComparison.OrdinalIgnoreCase) || !r.Entry.Definition.Key.StartsWith("Tone.", StringComparison.Ordinal)) continue;
-                        bool live = r.Enabled == null || r.Enabled();
-                        string first = r.ChoiceLabels != null && r.ChoiceLabels.Length > 0 ? r.ChoiceLabels[0] : "-";
-                        lines.Add(string.Join("\t", label, r.Entry.Definition.Key, r.Label, first, r.Entry.BoxedValue?.ToString() ?? "-", live ? "live" : "greyed"));
-                        parts++;
-                    }
-                    Plugin.TuningWindowHidden = true;
-                    yield return SelfTest.Frames(2);
-                    string tail = id.Substring(id.LastIndexOf('/') + 1);
-                    yield return SelfTest.PanelShot("colours-skin-" + tail);
-                    shots++;
-                    bool scrolls = MountsPanel.TestColoursScroll;
-                    if (scrolls)
-                    {
-                        // rows past the window's view: a second picture at the end of them
-                        MountsPanel.TestScrollColours(0f);
+                        if (MountsPanel.IsColoursOpen) MountsPanel.TestCloseColours(true);
+                        skinRow.BoxedValue = id;
                         yield return SelfTest.Frames(3);
-                        yield return SelfTest.PanelShot("colours-skin-" + tail + "-end");
-                        MountsPanel.TestScrollColours(1f);
+                        MountsPanel.TestOpenColours();
+                        yield return SelfTest.Frames(3);
+                        yield return SelfTest.Until(() => !PreviewStage.TestShownSettling, 10f);
+                        // and until the window shows its picture and that picture is drawn (settled came first: in the first
+                        // run one skin's picture was still empty, a few frames before it showed; the cart view alone was
+                        // waited for until 2026-11-04, the dragon's picture is the alone view)
+                        yield return SelfTest.Until(() => MountsPanel.TestColoursTexture != null && PreviewStage.TestDrawnRect(PreviewStage.TestHide.Nothing, out _, out _, out _, out _, out _, out _, alone: PreviewStage.TestIsAloneView(MountsPanel.TestColoursTexture)), 10f);
+                        yield return SelfTest.Frames(6);
+                        int rows = 0, shown = 0;
+                        foreach (MountSettingsPage.Row r in page.Rows)
+                        {
+                            if (r.Entry == null || !r.IsLook || r.RowKind != MountSettingsPage.RowKind.Choice || !string.Equals(r.SkinId, id, StringComparison.OrdinalIgnoreCase)) continue;
+                            bool visible = (r.Visible == null || r.Visible()) && (r.Shown == null || r.Shown());
+                            bool live = r.Enabled == null || r.Enabled();
+                            lines.Add(string.Join("\t", mount, label, r.Entry.Definition.Key, Texts.Label(r), Texts.Choice(r, 0), r.Entry.BoxedValue?.ToString() ?? "-", visible ? "shown" : "left out", live ? "live" : "greyed"));
+                            rows++;
+                            if (visible) shown++;
+                        }
+                        Plugin.TuningWindowHidden = true;
+                        yield return SelfTest.Frames(2);
+                        // the picture as drawn at the shot (probe: the box was empty for every mount but the donkey, 2026-11-04)
+                        bool cartDrawn = PreviewStage.TestDrawnRect(PreviewStage.TestHide.Nothing, out int pcx, out int pcy, out int pcw, out int pch, out int ppw, out int pph);
+                        bool aloneDrawn = PreviewStage.TestDrawnRect(PreviewStage.TestHide.Nothing, out int pax, out int pay, out int paw, out int pah, out int papw, out int paph, alone: true);
+                        SelfTest.Info($"colours picture: {mount}, {label}: {MountsPanel.TestColoursPicture()}; pixels drawn: the cart view {(cartDrawn ? $"{pcw}x{pch} at {pcx},{pcy} of {ppw}x{pph}" : "none")}, the alone view {(aloneDrawn ? $"{paw}x{pah} at {pax},{pay} of {papw}x{paph}" : "none")}");
+                        string name = mount + "-" + id.Substring(id.LastIndexOf('/') + 1);
+                        yield return SelfTest.PanelShot("colours-skin-" + name);
                         shots++;
+                        bool scrolls = MountsPanel.TestColoursScroll;
+                        if (scrolls)
+                        {
+                            // rows past the window's view: a second picture at the end of them
+                            MountsPanel.TestScrollColours(0f);
+                            yield return SelfTest.Frames(3);
+                            yield return SelfTest.PanelShot("colours-skin-" + name + "-end");
+                            MountsPanel.TestScrollColours(1f);
+                            shots++;
+                        }
+                        Plugin.TuningWindowHidden = panelWasHidden;
+                        looks++;
+                        SelfTest.Info($"colours window: {mount}, {label}: {MountsPanel.TestColourRows} rows; of its {rows} colour choices {shown} shown{(scrolls ? "; they scroll (a second picture at their end)" : "")}{(PreviewStage.TestShownSettling ? "; its picture still settling" : "")}");
                     }
-                    Plugin.TuningWindowHidden = panelWasHidden;
-                    SelfTest.Info($"colours window: {label}: {MountsPanel.TestColourRows} rows, {parts} of them its parts' choices{(scrolls ? "; they scroll (a second picture at their end)" : "")}{(PreviewStage.TestShownSettling ? "; its picture still settling" : "")}");
                 }
             }
             finally
             {
                 Plugin.TuningWindowHidden = panelWasHidden;
-                skinRow.BoxedValue = skinWas;
+                foreach ((string _, ConfigEntryBase row, object was) in skinRows) row.BoxedValue = was;
                 if (MountsPanel.IsColoursOpen) MountsPanel.TestStepBack();
                 if (MountsPanel.IsOpen && !string.IsNullOrEmpty(mountWas)) MountsPanel.TestSelect(mountWas);
                 if (MountsPanel.IsOpen) MountsPanel.TestStepBack();
                 try { File.WriteAllText(Path.Combine(Paths.BepInExRootPath, "GK2-colours-rows.tsv"), string.Join("\n", lines) + "\n", new UTF8Encoding(false)); }
                 catch (Exception e) { SelfTest.Info("GK2-colours-rows.tsv couldn't be written: " + e.Message); }
             }
-            SelfTest.Info($"colours windows: {shots} picture(s) in BepInEx\\GK2-panel-shots (colours-skin-*), {lines.Count - 1} part row(s) in BepInEx\\GK2-colours-rows.tsv; the skin and the mount back as they were");
+            SelfTest.Info($"colours windows: {looks} look(s), {shots} picture(s) in BepInEx\\GK2-panel-shots (colours-skin-*), {lines.Count - 1} colour row(s) in BepInEx\\GK2-colours-rows.tsv; every skin and the mount back as they were");
         }
 
         // The colour swap's cost (the user, 2026-11-04: a baby's own shade of a part "unless it's a performance cost we

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **The critters' colour rows name their parts** (2026-11-04): the rat's Fur, Ears nose paws and tail, Eyes; the
+  snail's Body, Shell, Eyes; the worm's Skin, Mouth, Eyes, in all 11 languages. The snail's eyes and the worm's eyes
+  and mouth are parts of their own (they were the outline's colours); the worm's mouth is drawn a shade redder, so its
+  colour reaches the mouth only.
 - **The plugin is named "GK2 Saddle Up: Critters Mount Pack"** (2026-10-30; it was "GK2 Saddle Up: Critters"): the name BepInEx logs and the framework's Mods
   menu shows is the pack's public name, the one of its Nexus page, its Workshop item and the game's own Mods window
   (which reads it from the zip's `modinfo.json`). The id and the mounts are unchanged.

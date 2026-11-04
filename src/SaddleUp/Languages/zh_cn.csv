@@ -143,3 +143,4 @@ Speed.choice.3,快速,Fast,"Freeplay, a choice: a choice"
 Speed.choice.4,极快,Very fast,"Freeplay, a choice: a choice"
 mount.saddleup.gerry.name,格里,Gerry,a mount's name (the Mount Journal; the keeper's bubbles)
 mount.saddleup.gerry.description,会说话的骷髅头终于派上了用场。他全凭一股子主见蹦跳着前进，而且一路上还有一大堆高见要跟你分享。,"The talking skull finally makes himself useful. He hops along on pure opinion, and he has plenty of it to share on the way.",a mount's description in the Mount Journal
+skin.saddleup.gerry/default.region.coat.name,骨头,Bone,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)

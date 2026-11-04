@@ -173,6 +173,10 @@ namespace GK2DonkeyAPI
             // too, under "tone.<id>" (SkinTones; [Tone.<id>]).
             internal Dictionary<string, HashSet<string>> ColorRegions;
             internal List<SkinTones.ToneDef> Tones; // its own tones in their order (docs/mount-colours.md section 7); null: none
+            // [Region.<region>] name = (SkinRegions; docs/second-tone.md 8): its own names of the mount regions' parts, by
+            // region key (Coat, Muzzle ...), as its file gives them; a variant's default's and the donkey's are found by
+            // SkinRegions.NameTerm, not copied. null: none.
+            internal Dictionary<string, string> RegionNames;
             internal IReadOnlyList<MountSkinTone> ToneInfos; // the API's view of them (SkinTones.InfosOf), made once per resolved state
             internal bool Over;              // true: drawn over the base, which stays visible
             // A skin over the base may erase from it: every pixel of this colour in a picture makes the base transparent
@@ -842,6 +846,7 @@ namespace GK2DonkeyAPI
                             toneOrder.Add(toneId);
                         }
                     }
+                    else if (section.StartsWith(SkinRegions.Prefix, StringComparison.Ordinal)) { } // [Region.<region>]: its part's name, read below
                     else if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "sounds" && section != "sounds.ride" && section != "sounds.cart" && section != "sounds.baby" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
                     continue;
                 }
@@ -872,6 +877,11 @@ namespace GK2DonkeyAPI
                         case "colors": tone[1] = tone[1] == null ? value : tone[1] + " " + value; break;
                         default: d.Report += $"[{section}] {key}: not a tone's key (name, colours, follows), ignored; "; break;
                     }
+                    continue;
+                }
+                if (section.StartsWith(SkinRegions.Prefix, StringComparison.Ordinal))
+                {
+                    SkinRegions.Read(d, section.Substring(SkinRegions.Prefix.Length), key, value);
                     continue;
                 }
                 switch (section)
@@ -1901,22 +1911,13 @@ namespace GK2DonkeyAPI
             // own key, not the region's: for the colours a region's setting reaches, ask ColoursReachedBy.
             internal readonly Dictionary<string, List<Color32>> ColoursByRegion = new Dictionary<string, List<Color32>>(StringComparer.Ordinal);
 
-            // The colours of a region on this look as they were before its parts became tones: its own, and those of the
-            // skin's tones that follow it (a released skin's parts that were the region's; the region's setting colours them
-            // while they have no colour of their own, Colors.Rig.NamedMaps). The region's anchors read it, so they stay as
-            // they were (ColorsPreview.ArtLightness). A shared list when no tone follows it (not to be changed); a new one otherwise.
+            // The colours a region's setting reaches on this look: its own (a tone that follows it is a part of its own since
+            // 2026-11-04, docs/second-tone.md 8). The region's anchors read it (ColorsPreview.ArtRange). A shared list (not
+            // to be changed); null: none.
             internal List<Color32> ColoursReachedBy(string region)
             {
                 ColoursByRegion.TryGetValue(region, out List<Color32> own);
-                List<Color32> all = own;
-                if (Def.Tones == null) return own;
-                foreach (SkinTones.ToneDef t in Def.Tones)
-                {
-                    if (t.Follows != region || !ColoursByRegion.TryGetValue(SkinTones.KeyOf(t.Id), out List<Color32> tc) || tc.Count == 0) continue;
-                    if (all == own) all = own != null ? new List<Color32>(own) : new List<Color32>();
-                    all.AddRange(tc);
-                }
-                return all;
+                return own;
             }
 
             // the sheet: one texture, a cell per key with a one-pixel gutter

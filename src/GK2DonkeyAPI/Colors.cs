@@ -960,12 +960,11 @@ namespace GK2DonkeyAPI
                     foreach (SkinTones.ToneDef t in look.Def.Tones)
                     {
                         RegionTweak v = null;
-                        // a value given: its colour, or as drawn (an identity one: Custom without a colour yet); none: the
-                        // region it follows, else as drawn
+                        // a value given: its colour, or as drawn (an identity one: Custom without a colour yet); none: as
+                        // drawn. A tone that follows a region (follows =) is a part of its own too: the player's value of the
+                        // region was its first one, once (MountSettingsPage.CarryOver; docs/second-tone.md 8)
                         bool given = forThis && owner.Tones.TryGetValue(t.Id, out v) && v != null;
-                        RegionDef followed = !given && t.Follows != null ? RegionOf(t.Follows) : null;
                         if (given && !v.IsIdentity) list.Add((SkinTones.KeyOf(t.Id), new RegionMap(v)));
-                        else if (followed != null) list.Add((SkinTones.KeyOf(t.Id), maps[followed]));
                         else if (pairDrawn) list.Add((SkinTones.KeyOf(t.Id), null));
                     }
                 }

@@ -5,9 +5,9 @@
 - **Each skin's parts have colours of their own** (2026-11-04; the new rows need GK2 Donkey API with tones, and the
   skins read as before on an older one), every part its own. Royal Parade: Saddle cloth, Crown, Trim and fringe,
   Emblem, Jewels. Armored: Helmet, Plume, Body armour, Skirt, Brass. Hellfire: Horns, Glowing eyes, Lava cracks,
-  Tail, Tail tip. The parts the Harness or Second tone row coloured (and Hellfire's dark parts and eyes) still follow
-  it by default ("As the harness"), so every saved look stays as it was; the parts drawn as they were start as
-  drawn. Parts that shared one colour have shades of their own now, the same to the eye. The part names are in all
+  Tail, Tail tip. A part the Harness or Second tone row coloured takes the colour saved for that row once, on the first
+  start after the update, so every saved look stays as it was, and is a part of its own from then on; the parts drawn
+  as they were start as drawn. Hellfire's dark parts row reads "Legs and mane" (its ears are horns). Parts that shared one colour have shades of their own now, the same to the eye. The part names are in all
   11 languages.
 
 ## 1.1.0, 2026-11-01

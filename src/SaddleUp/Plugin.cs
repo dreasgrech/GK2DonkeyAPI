@@ -44,6 +44,15 @@ namespace SaddleUp
         // with that bump (past it a later change to ToneRows would hide behind the catch: the eighth code review).
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         private static void ToneRows(MountSettingsPage p, string skinId, string sfx, MountCompanion me) => p.ToneRows("Colours", skinId, sfx, me);
+        // The three rows by the look's own names of its parts ("Coat", another mount's "Belly"), left out where the look has
+        // no such part (the API's RegionRows; it names them, this mod names nothing of any pack).
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static void RegionRows(MountSettingsPage p, string skinId, string sfx)
+        {
+            p.RegionRows("Colours", skinId, "Coat", "Coat" + sfx, "CustomCoat" + sfx);
+            p.RegionRows("Colours", skinId, "Harness", "Harness" + sfx, "CustomHarness" + sfx);
+            p.RegionRows("Colours", skinId, "Muzzle", "Muzzle" + sfx, "CustomMuzzle" + sfx);
+        }
         private static bool toneRowsMissingSaid;
 
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
@@ -186,11 +195,12 @@ namespace SaddleUp
                 // without them (one this mod still takes until NeedsApi asks for it) the page builds without these rows.
                 try
                 {
+                    RegionRows(p, skinId, sfx);
                     ToneRows(p, skinId, sfx, me);
                 }
                 catch (MissingMethodException)
                 {
-                    if (!toneRowsMissingSaid) Logger.LogWarning($"GK2 Donkey API {Mounts.ApiVersion} has no colours of a skin's own parts (tones): their rows are left out of the colours window. Update GK2 Donkey API for them.");
+                    if (!toneRowsMissingSaid) Logger.LogWarning($"GK2 Donkey API {Mounts.ApiVersion} has no named colour parts (a skin's own parts and the names of a mount's): the colours window keeps its plain rows. Update GK2 Donkey API for them.");
                     toneRowsMissingSaid = true;
                 }
             });

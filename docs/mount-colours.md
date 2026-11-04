@@ -178,8 +178,9 @@ saturation and value thresholds; the first match wins; everything else is Coat).
   colorize keeps a pixel's value and takes the preset's hue and saturation, so a preset of a part's own hue does
   nothing to it: the first Pink moved the rat's pink by 7 to 10 of 255 and the first Brown the snail's shell by
   5 to 18). Pale, Rose, Brown, Green, Blue and Dark each move the donkey's muzzle, the rat's pink, the snail's
-  shell and Hellfire's lava by at least 22, most by 40 and more. The worm has no second tone: its rows are
-  left out of the menu and greyed in the Mounts panel.
+  shell and Hellfire's lava by at least 22, most by 40 and more. The worm had no second tone: its rows were
+  left out of the menu and greyed in the Mounts panel (since 2026-11-04 its mouth is its Muzzle, the "Mouth" row:
+  docs/second-tone.md 8).
 - **Gerry:** Dark = the sockets and cracks, the bone is Coat, read from the game's export of his frames
   (`BepInEx\GK2-asset-probe\game-skins\saddleup.gerry\default\`) when one exists; without the export the cfg carries no `[Colors]`
   and everything is Coat.
@@ -388,7 +389,9 @@ Every part its own since the same day (7.10):
 | Hellfire | Tail tip | the spade and its dark (were Eye) | As the eyes |
 
 Hellfire's outline (1E0E0C, its horns' and the rump's where the tail was) stays under `[Colors] Dark` alone, the Dark
-row's as the donkey's own outline is. No key moves and no saved value changes; every look is the same until the
+row's as the donkey's own outline is. **Amended the same evening** (docs/second-tone.md 8): no part's first choice is
+"As the ..." any more; a part the table says follows a region took the player's saved value of that region once (the
+update's first load) and is a part of its own since; Royal Parade's Harness row reaches the donkey's harness only. No key moves and no saved value changes; every look is the same until the
 player picks a colour in a new row. Dark and Eye still have no player rows (Hellfire's horns and glow follow them, so
 they are as drawn, and a baby's shade of its dark parts reaches its horns as before); the dev panel's Colors tab still
 shows the donkey's colours.
@@ -444,6 +447,13 @@ then to 96 when its cap band and bells became parts too (78 pairs; 7.10).
   lines printed under an ALL PASS since 2026-11-01).
 
 ### 7.9 A tone that follows a region: the players' looks kept (2026-11-04)
+
+**Amended the same evening** (docs/second-tone.md 8, the regions named per look): a tone with `follows =` is a part of
+its own, its first choice Game default (as drawn); the engine no longer pairs it with its region's map. Its first
+value is the player's saved value of that region, taken once by `MountSettingsPage.ToneRows` while the file holds none
+of its rows (the first load after the update), the region's Custom colour as it was, a preset as the part's nearest.
+So a player's look carries over as before, without a row that colours two things (the Harness row the donkey's strap
+and Royal Parade's cloth). The text below is the earlier design.
 
 A part of a released skin that was under a region (Royal Parade's cloth under Harness) becomes a tone with
 `follows = Harness`. Copying the player's saved Harness choice into the new tone's row would not give the same look:

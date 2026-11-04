@@ -284,19 +284,42 @@ foreach (MountSkinTone tone in Mounts.Looks.Find("donkey/me.fancy").Tones) Logge
 - `ToneColor`: `Game` (as drawn), `Red`, `Gold`, `Green`, `Blue`, `Purple`, `Pink`, `Brown`, `Black`, `White`,
   `Custom`. A preset gives the tone its hue and saturation over each pixel's own shading, as light against the
   tone's art as the colour itself is, as far as its lightest shade can go before it is white.
-- `MountSkinTone.Follows` (a pack's `follows =`): the mount region a tone's `Game` follows, for a part that was under
-  that region before it was a tone: with `Game` it is coloured exactly as that region (`Mounts.Colors`, the
-  companion's look) colours it, and its row's first choice reads "As the harness" (and so on). Given with the
-  factory `MountSkinTone.Following(region, id, name, colours)` and read only after (the tones `MountSkinInfo` lists are
-  shared); a region that is none of the five (the region and the id swapped) throws `ArgumentException` there. The ids
-  are kept in lower case. The colours are a list of hex strings (any `IEnumerable<string>`), kept as a copy; a list,
-  not loose strings, so a call that leaves out the name doesn't compile.
+- `MountSkinTone.Follows` (a pack's `follows =`): the mount region a part was under before it was a part of its own.
+  Since 2026-11-04 (docs/second-tone.md 8) it is a part like any other (its first choice Game default, as drawn); a
+  page's `ToneRows` gives it the player's saved value of that region once, on the first load after the update (while
+  the file holds none of its rows: the region's Custom colour as it was, a preset as the part's nearest), so a
+  player's look carries over. The region's rows must be the page's, named with `RegionRows`, before `ToneRows` runs.
+  Given with the factory `MountSkinTone.Following(region, id, name, colours)` and read only after (the tones
+  `MountSkinInfo` lists are shared); a region that is none of the five (the region and the id swapped) throws
+  `ArgumentException` there. The ids are kept in lower case. The colours are a list of hex strings (any
+  `IEnumerable<string>`), kept as a copy; a list, not loose strings, so a call that leaves out the name doesn't compile.
 - `ToneRows` keys: `Tone.<id><suffix>`, `CustomTone.<id><suffix>`, `CustomTone.<id>Lightness<suffix>`. A choice's
   default is the look's value when `ToneRows` is called (set `MountLook.Tone` first for one of your own), as the other
   rows'; a tone's rows are greyed once the skin, loaded, draws none of its colours. The row's label is
   the tone's name, translated by the skin's owner (`skin.<skin id>.tone.<id>.name`); the other words are the API's.
 - A tone the worn skin doesn't have changes nothing; the companion applies the worn skin's tones to its mount, its
   babies and the Mounts panel's picture.
+
+**A look's names for its parts** (0.44.0; docs/second-tone.md 8): every row of the colours window is a part of the
+look by its name. A skin names a mount region's part with skin.cfg `[Region.<region>]` `name =` (translated by its
+owner as `skin.<skin id>.region.<region>.name`); a variant takes its default's names, a skin over the donkey the
+donkey's (Coat, "Legs, mane and ears", "Muzzle and belly", Eyes, Harness, the API's words) where it names none.
+
+```csharp
+// after a skin's region rows (your keys), inside PerSkin's body: labelled by the look's names, left out where the
+// look has no colour of the region; then the tone rows (and the Dark and Eye rows where the look names them)
+page.RegionRows("Colours", skinId, "Muzzle", "Muzzle" + sfx, "CustomMuzzle" + sfx);
+page.ToneRows("Colours", skinId, sfx, companion);
+```
+
+- `RegionRows(section, skinId, region, choiceKey, customKey)`: the choice's label is the look's name for the region's
+  part, its custom colour and lightness rows the API's templates with it ("Belly: custom colour"); all three left out
+  of the windows while the look has no colour of the region (the value is kept). A look that names none of the region
+  keeps the rows' own words, so those stay the page's texts to translate (in its English file whatever looks are
+  installed: a pack from before the names, another mod's mount, draws them). Call it after the rows; a region that is none of the five throws `ArgumentException`.
+- `ToneRows` also makes a row for the mount's dark parts and one for its eyes (`Dark<suffix>`, `CustomDark<suffix>`,
+  `Eye<suffix>`, `CustomEye<suffix>`) where the look names them and has their colours: the tone presets, held by
+  `MountLook.Dark` and `MountLook.Eye` (`MountTone`s), coloured over the whole region as a part is.
 
 ## Donkeys and carts in the world (0.6.0)
 

@@ -33,7 +33,14 @@ namespace GK2DonkeyAPI.Api
         {
             this.owner = owner;
             SkinId = skinId;
+            Dark = new MountTone(this, "dark");
+            Eye = new MountTone(this, "eye");
         }
+
+        // The mount's dark parts and its eyes (its Dark and Eye regions), where its look names them (their rows:
+        // MountSettingsPage.ToneRows; docs/second-tone.md 8): coloured as a skin's own part is (ToneColor), the whole region.
+        public MountTone Dark { get; }
+        public MountTone Eye { get; }
 
         private CoatColor coat;
         private HarnessColor harness;
@@ -987,6 +994,9 @@ namespace GK2DonkeyAPI.Api
             var coatKeys = Look(CoatPreset(l.Coat, l.CustomCoat, "coat", skin));
             var harnessKeys = Look(HarnessPreset(l.Harness, l.CustomHarness, "harness", skin));
             var muzzleKeys = Look(MuzzlePreset(l.Muzzle, l.CustomMuzzle, "second tone", skin));
+            // the dark parts and the eyes, where the look names them (their rows: ToneRows), as a skin's own part is coloured
+            var darkKeys = Look(SkinTones.RegionValues(l.Dark, "Dark", skin));
+            var eyeKeys = Look(SkinTones.RegionValues(l.Eye, "Eye", skin));
             var skinKeys = SkinKeys(skin);
             var tones = SkinTones.ValuesOf(l, skin); // the skin's own tones (docs/mount-colours.md section 7)
             // the paper: the Mounts panel's choice while it is open (PaperSkin), with that mount's look; else the same
@@ -1005,6 +1015,8 @@ namespace GK2DonkeyAPI.Api
                 OnPaper(CoatKeys, sameOnPaper ? coatKeys : Look(CoatPreset(pl.Coat, pl.CustomCoat, "coat", ps)));
                 OnPaper(HarnessKeys, sameOnPaper ? harnessKeys : Look(HarnessPreset(pl.Harness, pl.CustomHarness, "harness", ps)));
                 OnPaper(MuzzleKeys, sameOnPaper ? muzzleKeys : Look(MuzzlePreset(pl.Muzzle, pl.CustomMuzzle, "second tone", ps)));
+                OnPaper(DarkKeys, sameOnPaper ? darkKeys : Look(SkinTones.RegionValues(pl.Dark, "Dark", ps)));
+                OnPaper(EyeKeys, sameOnPaper ? eyeKeys : Look(SkinTones.RegionValues(pl.Eye, "Eye", ps)));
                 OnPaper(LookKeys, sameOnPaper ? skinKeys : SkinKeys(ps));
                 SkinTones.Apply(paper, sameOnPaper ? tones : SkinTones.ValuesOf(pl, ps), OwnerId, ps);
                 paper.LooksRig.MarkDirty();
@@ -1028,6 +1040,8 @@ namespace GK2DonkeyAPI.Api
                 Instance(Donkey, CoatKeys, coatKeys);
                 Instance(Donkey, HarnessKeys, harnessKeys);
                 Instance(Donkey, MuzzleKeys, muzzleKeys);
+                Instance(Donkey, DarkKeys, darkKeys);
+                Instance(Donkey, EyeKeys, eyeKeys);
                 Instance(Donkey, LookKeys, skinKeys);
                 SkinTones.Apply(Donkey.I, tones, OwnerId, skin);
             }
@@ -1041,8 +1055,10 @@ namespace GK2DonkeyAPI.Api
                     Instance(h, FoalCoatKeys, Shade(coatKeys, "Coat", own.Hue, own.Brightness, own.Saturation, own.Tinge));
                     Instance(h, HarnessKeys, harnessKeys);
                     Instance(h, FoalMuzzleKeys, Shade(muzzleKeys, "Muzzle", own.MuzzleHue, own.MuzzleBrightness, 1f, 0f));
-                    // the dark parts (a mount's wings, the donkey's mane and legs) with the coat: the whole baby its shade
-                    Instance(h, FoalDarkKeys, Shade(NoKeys, "Dark", own.Hue * 0.7f, own.Brightness, own.Saturation, 0f));
+                    // the dark parts (a mount's wings, the donkey's mane and legs) with the coat: the whole baby its shade, of the
+                    // parent's dark colour when the look gives one (the eyes are the parent's)
+                    Instance(h, FoalDarkKeys, Shade(darkKeys, "Dark", own.Hue * 0.7f, own.Brightness, own.Saturation, 0f));
+                    Instance(h, EyeKeys, eyeKeys);
                     Instance(h, LookKeys, CurrentOwn.FoalsWearSkin ? skinKeys : noSkin);
                     // the parent's tones on a baby in its skin, each given a colour in the baby's own shade (as its coat); one
                     // not in the skin is a plain donkey (no tones of its own)
@@ -1066,8 +1082,9 @@ namespace GK2DonkeyAPI.Api
         private static readonly string[] FoalCoatKeys = { "CoatColorize", "CoatColorizeAmount", "CoatBrightness", "CoatSaturation", "CoatHue" };
         private static readonly string[] FoalMuzzleKeys = { "MuzzleColorize", "MuzzleColorizeAmount", "MuzzleBrightness", "MuzzleSaturation", "MuzzleHue" };
 
-        private static readonly string[] FoalDarkKeys = { "DarkHue", "DarkBrightness", "DarkSaturation" };
-        private static readonly Dictionary<string, object> NoKeys = new Dictionary<string, object>();
+        private static readonly string[] DarkKeys = { "DarkColorize", "DarkColorizeAmount", "DarkBrightness", "DarkSaturation" };
+        private static readonly string[] EyeKeys = { "EyeColorize", "EyeColorizeAmount", "EyeBrightness", "EyeSaturation" };
+        private static readonly string[] FoalDarkKeys = { "DarkColorize", "DarkColorizeAmount", "DarkHue", "DarkBrightness", "DarkSaturation" };
 
         // A baby's shade of the parent's colours of a region: a colorize colour turned in hue (its hue key would be
         // painted over), else the art's own hue turned; brightness and saturation moved by a step of their own.

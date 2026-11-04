@@ -614,18 +614,26 @@ foreach (var dir in skinDirs)
     var order = SectionOrder(cfgPath);
     foreach (var sec in order)
     {
-        if (!knownSections.Contains(sec) && !sec.StartsWith("Base.", StringComparison.OrdinalIgnoreCase) && !sec.StartsWith("Tone.", StringComparison.OrdinalIgnoreCase) && !sec.StartsWith("Mount", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}]: not a section the loader knows");
+        if (!knownSections.Contains(sec) && !sec.StartsWith("Base.", StringComparison.OrdinalIgnoreCase) && !sec.StartsWith("Tone.", StringComparison.OrdinalIgnoreCase) && !sec.StartsWith("Region.", StringComparison.OrdinalIgnoreCase) && !sec.StartsWith("Mount", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}]: not a section the loader knows");
         if (sec.StartsWith("Base.", StringComparison.OrdinalIgnoreCase))
         {
             string region = sec.Substring(5);
             if (!mountRegions.Contains(region)) Bad($"[{sec}]: not a mount region ({string.Join(", ", mountRegions)})");
             foreach (var kv in cfg[sec]) if (!baseKnobs.Contains(kv.Key)) Bad($"[{sec}] {kv.Key}: not a colour knob ({string.Join(", ", baseKnobs)})");
         }
+        if (sec.StartsWith("Region.", StringComparison.OrdinalIgnoreCase))
+        {
+            // a look's name for a mount region's part (SkinRegions; docs/second-tone.md 8): a region of the five, name = only
+            string region = sec.Substring(7);
+            if (!mountRegions.Contains(region)) Bad($"[{sec}]: not a mount region ({string.Join(", ", mountRegions)})");
+            foreach (var kv in cfg[sec]) if (!kv.Key.Equals("name", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}] {kv.Key}: not a region's key (name)");
+            if (!cfg[sec].TryGetValue("name", out string rname) || string.IsNullOrWhiteSpace(rname)) Bad($"[{sec}]: no name");
+        }
     }
     if (order.Count == 0 || !order[0].Equals("Skin", StringComparison.OrdinalIgnoreCase)) Bad("[Skin] must be the first section");
     int gameAt = order.FindIndex(s => s.Equals("Game", StringComparison.OrdinalIgnoreCase));
     if (gameAt > 1) Bad("[Game] stands right after [Skin]");
-    int firstColour = order.FindIndex(s => s.Equals("Colors", StringComparison.OrdinalIgnoreCase) || s.StartsWith("Tone.", StringComparison.OrdinalIgnoreCase) || s.StartsWith("Base.", StringComparison.OrdinalIgnoreCase));
+    int firstColour = order.FindIndex(s => s.Equals("Colors", StringComparison.OrdinalIgnoreCase) || s.StartsWith("Tone.", StringComparison.OrdinalIgnoreCase) || s.StartsWith("Region.", StringComparison.OrdinalIgnoreCase) || s.StartsWith("Base.", StringComparison.OrdinalIgnoreCase));
     foreach (var sec in skinOwnSections)
     {
         int at = order.FindIndex(s => s.Equals(sec, StringComparison.OrdinalIgnoreCase));
@@ -796,9 +804,9 @@ foreach (var dir in skinDirs)
     // the donkey is under a skin over the donkey only (over another mount's default, layer = over draws over that)
     bool overDonkey = over && mount.Equals("donkey", StringComparison.OrdinalIgnoreCase);
     // the exact swap's colours with no tone set (Colors.Rig.Rebuild), whenSet the more with every tone set: over the
-    // donkey its pairs, the donkey's colours, its [Colors] ones and its following tones' (a tone that follows nothing is
-    // paired only once the player sets it: Colors.Rig.NamedMaps); else every colour of its pictures. Called after the
-    // tone block has filled followingTones: by its exact-swap check and by the colour-path line.
+    // donkey its pairs, the donkey's colours and its [Colors] ones (a tone, one that follows a region too since
+    // 2026-11-04, is paired only once the player sets it: Colors.Rig.NamedMaps; docs/second-tone.md 8); else every colour
+    // of its pictures. By the tone block's exact-swap check and by the colour-path line.
     int SwapColours(HashSet<string> pics, out int whenSet)
     {
         whenSet = 0;
@@ -808,7 +816,7 @@ foreach (var dir in skinDirs)
         {
             // the donkey's pair already (the game pairs it once); one no picture has pairs nothing (said above)
             if (donkeyColours.ContainsKey(kv.Key) || !pics.Contains(kv.Key)) continue;
-            if (!kv.Value.StartsWith("[", StringComparison.Ordinal) || followingTones.Contains(kv.Value)) always++;
+            if (!kv.Value.StartsWith("[", StringComparison.Ordinal)) always++;
             else whenSet++;
         }
         return always;
@@ -816,8 +824,8 @@ foreach (var dir in skinDirs)
     // [Tone.<id>] (docs/mount-colours.md section 7): the skin's own tones, each an id (lower case letters, digits, '-': it
     // is part of the settings' keys), a name for its row and its colours: RRGGBB, in the pictures, in one place only (a
     // tone or a [Colors] region), not a colour of the donkey under an over skin (that one follows the donkey's regions);
-    // and none in a colour-cube cell with another colour of the look (Colors.Rig.LutIndex: on the cube, over 64
-    // colours or with the player's Lut setting, colours of one cell change together). A palette skin has none.
+    // and none in a colour-cube cell with another colour of the look (Colors.Rig.LutIndex: on the cube, over the exact
+    // swap's limit or with the player's Lut setting, colours of one cell change together). A palette skin has none.
     // follows = a mount region (the part was that region's before it was a tone): its colours may stay listed under that
     // region in [Colors] too (an API without tones reads them there; the loader moves them to the tone).
     var toneSecs = order.Where(s => s.StartsWith("Tone.", StringComparison.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(); // a section given twice is one (ReadCfg merges it)
@@ -852,7 +860,7 @@ foreach (var dir in skinDirs)
             if (follows != null && !mountRegions.Contains(follows)) Bad($"[{sec}] follows = {follows}: not a mount region ({string.Join(", ", mountRegions)}; the loader leaves the tone out)");
             else if (follows != null) followingTones.Add("[" + sec + "]");
             // over the donkey a colour named nowhere is drawn as it is, never Coat: following Coat keeps no earlier look there
-            if (follows != null && overDonkey && follows.Trim().Equals("Coat", StringComparison.OrdinalIgnoreCase)) Console.WriteLine($"INFO {id}: [{sec}] follows = Coat over the donkey: its first choice gives the part the player's coat colour, where it was drawn as it is before (a colour named nowhere is never Coat on a skin over the donkey); meant for a part that should follow the coat");
+            if (follows != null && overDonkey && follows.Trim().Equals("Coat", StringComparison.OrdinalIgnoreCase)) Console.WriteLine($"INFO {id}: [{sec}] follows = Coat over the donkey: the part takes the player's saved coat colour as its first value, where it was drawn as it is before (a colour named nowhere is never Coat on a skin over the donkey); meant for a part that should follow the coat");
             // a variant's tone of its default's id adds shades to it (keeping its name) or renames it (no colours): both fine
             bool inherited = defaultCfg != null && defaultCfg.ContainsKey(sec);
             if (!tone.ContainsKey("name") && !inherited) Bad($"[{sec}] has no name: its row would be labelled '{tid}'");
@@ -923,14 +931,43 @@ foreach (var dir in skinDirs)
     // which colour path the game takes for it (Colors.cs, the limits read above): the exact swap, or the colour cube, where
     // two colours in one cell change together (anti-aliased edges and the front layer count too). In its own colours
     // (over its default too): the pictures' colours against PaletteMaxColours. Over the donkey: its pairs against
-    // PaletteMaxColoursOver, the donkey's colours, its [Colors] ones and its following tones' always, a tone without
-    // follows only while the player sets it (Colors.Rig.NamedMaps)
+    // PaletteMaxColoursOver, the donkey's colours and its [Colors] ones always, a tone only while the player sets it
+    // (Colors.Rig.NamedMaps; one that follows a region too, since 2026-11-04)
     if (inPictures != null)
     {
         string PathFor(int n, int max) => n > max ? $"over {max}, the colour cube (a few near-identical colours may change together; fewer colours = the exact swap)" : "the exact swap";
         int always = SwapColours(inPictures, out int whenSet);
         if (!overDonkey) Console.WriteLine($"INFO {id}: {always} colour(s) in the pictures: {PathFor(always, paletteMax)}");
         else Console.WriteLine($"INFO {id}: over the donkey, {always} colour pair(s) with no tone set: {PathFor(always, paletteMaxOver)}" + (whenSet > 0 ? $"; {always + whenSet} with every tone set: {PathFor(always + whenSet, paletteMaxOver)}" : ""));
+        // on the colour cube whatever the player sets (over the exact swap's limit) a cell is recoloured as one, so it holds
+        // one part's colours: the worm's mouth one cell with its outline would have taken the outline's 5896 pixels with
+        // a Mouth colour (2026-11-04). Shades of one region in a cell are fine (near-identical, they change together); a
+        // tone's cells are the tone check's above; a palette skin draws the donkey's own colours; the donkey's own colours
+        // sharing a cell are the game's art. With the player's Lut fallback every look is on the cube: that setting's
+        // description says neighbouring regions may change together there.
+        int limit = overDonkey ? paletteMaxOver : paletteMax;
+        string mode = skin.GetValueOrDefault("colours") ?? (variant ? defaultSkin?.GetValueOrDefault("colours") : null) ?? "own";
+        if (always > limit && !mode.Equals("palette", StringComparison.OrdinalIgnoreCase))
+        {
+            // a colour's part: its [Colors] region (a variant's own over its default's), the donkey's region under a skin
+            // over it, else Coat (in its own colours) or kept as drawn (over the donkey)
+            var partOf = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (defaultCfg != null && defaultCfg.TryGetValue("Colors", out var dCols))
+                foreach (var kv in dCols) foreach (var t in kv.Value.Split(new[] { ' ', ',', '\t' }, StringSplitOptions.RemoveEmptyEntries)) partOf[t.TrimStart('#').ToUpperInvariant()] = kv.Key;
+            foreach (var kv in seen) partOf[kv.Key] = kv.Value;
+            string PartOf(string hex) => overDonkey && donkeyColours.TryGetValue(hex, out var dr) ? dr : partOf.TryGetValue(hex, out var p) ? p : overDonkey ? "kept as drawn" : "Coat";
+            var drawn = new HashSet<string>(inPictures, StringComparer.OrdinalIgnoreCase);
+            if (overDonkey) drawn.UnionWith(donkeyColours.Keys);
+            int mixed = 0;
+            foreach (var cell in drawn.Where(h => !PartOf(h).StartsWith("[", StringComparison.Ordinal)).GroupBy(LutCell))
+            {
+                var parts = cell.Select(PartOf).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                if (parts.Count < 2 || cell.All(h => overDonkey && donkeyColours.ContainsKey(h))) continue;
+                mixed++;
+                Bad($"on the colour cube ({always} colours, over the exact swap's {limit}) a cell holds colours of {parts.Count} parts: {string.Join(", ", cell.OrderBy(h => h, StringComparer.Ordinal).Select(h => h + " (" + PartOf(h) + ")"))}; a colour set for one recolours the other (draw one of them a cube step apart: Colors.Rig.LutIndex)");
+            }
+            if (mixed == 0) Pass($"{id}: on the colour cube, every cell holds one part's colours");
+        }
     }
     if (!mount.Equals("donkey", StringComparison.OrdinalIgnoreCase))
     {

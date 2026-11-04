@@ -233,6 +233,8 @@ def skin_cfg():
         f"[Tone.lava]\nname = Lava cracks\nfollows = Muzzle\ncolours = {hexes(lava)}\n\n"
         f"[Tone.tail]\nname = Tail\nfollows = Dark\ncolours = {hexes(tail)}\n\n"
         f"[Tone.tail-tip]\nname = Tail tip\nfollows = Eye\ncolours = {hexes(spade)}\n\n"
+        "# The donkey's dark parts under the skin: its legs and mane, its ears gone under the horns (docs/second-tone.md 8).\n"
+        "[Region.Dark]\nname = Legs and mane\n\n"
         "# The ash coat: the donkey's coat under the skin, darkened and warmed (the prototype's darken_coat), before the\n"
         "# player's own coat colour.\n"
         f"[Base.Coat]\nBrightness = {brightness}\nSaturation = 1\nColorize = {colorize}\nColorizeAmount = {amount}\n"

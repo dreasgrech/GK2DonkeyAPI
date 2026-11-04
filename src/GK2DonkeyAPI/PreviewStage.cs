@@ -672,10 +672,14 @@ namespace GK2DonkeyAPI
         // size. False with no picture to measure.
         internal enum TestHide { Nothing, Lamp, Glow }
 
-        internal static bool TestDrawnRect(TestHide hide, out int x, out int y, out int w, out int h, out int pw, out int ph)
+        // The self-tests: which of the stage's pictures a texture is.
+        internal static bool TestIsAloneView(Texture t) => t != null && t == donkeyView.Rt;
+        internal static string TestViewOf(Texture t) => t == null ? "no texture" : t == cartView.Rt ? "the cart view" : t == donkeyView.Rt ? "the alone view" : "no view of the stage's";
+
+        internal static bool TestDrawnRect(TestHide hide, out int x, out int y, out int w, out int h, out int pw, out int ph, bool alone = false)
         {
             x = y = w = h = pw = ph = 0;
-            View v = cartView;
+            View v = alone ? donkeyView : cartView; // alone: the picture of a mount that pulls no cart (Picture's stand-in)
             if (failed || v.Rt == null || v.Cam == null) return false;
             pw = v.Rt.width;
             ph = v.Rt.height;

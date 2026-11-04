@@ -115,7 +115,7 @@ def worm(phase, head_down=0.0, idle=0.0):
     for dx, dy in ((-3, 1), (-3, 2), (-2, 2)):
         x, y = round(hx + dx), round(hy + dy)
         if 0 <= x < W and 0 <= y < H and px[y * W + x][3]:
-            px[y * W + x] = (60, 18, 26, 255)
+            px[y * W + x] = (66, 18, 26, 255)  # 42121A: a colour-cube cell apart from the outline (36141C), so a Mouth colour reaches only the mouth
     for dx, dy in ((-1, -2), (1, -2)):
         x, y = round(hx + dx), round(hy + dy)
         if 0 <= x < W and 0 <= y < H:

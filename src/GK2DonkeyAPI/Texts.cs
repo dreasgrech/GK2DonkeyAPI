@@ -809,7 +809,8 @@ namespace GK2DonkeyAPI
                 {
                     if (r.RowKind == MountSettingsPage.RowKind.Preview || p.IsMountRow(r)) continue;
                     string where = r.ShownSection + ", " + KindWord(r);
-                    if (r.LabelWord == null && r.LabelOf == null) Put(r.TextKey + ".label", r.Label, where); // a tone row's label is its skin's (below)
+                    // a tone row's label is its skin's (below); a region row's own is drawn where the look names no part
+                    if (r.LabelWord == null && (r.LabelOf == null || r.OwnLabelToo)) Put(r.TextKey + ".label", r.Label, where);
                     if (p.InOptions(r)) Put(r.TextKey + ".desc", r.Description, where + ": its description");
                     // a custom colour's choices are the palette's names, drawn as swatches only (MountsPanel.SwatchRow): no words to translate
                     bool palette = r.Entry != null && r.Entry.SettingType == typeof(PaletteColor);
@@ -862,6 +863,10 @@ namespace GK2DonkeyAPI
                         if (SkinTones.NameShown(s, t)) Put("skin." + s.Id + ".tone." + t.Id + ".name", t.Name, "a part of the skin the player colours on its own: its row's label in the colours window");
                     }
                 }
+                // its names of the mount regions' parts (SkinRegions: [Region.<region>]): their rows' labels, on it and on a
+                // variant that takes them
+                foreach (KeyValuePair<string, string> n in SkinRegions.Declared(s))
+                    Put(SkinRegions.KeyOf(s.Id, n.Key), n.Value, "a part of the mount the player colours: its row's label in the colours window (the skin's name for it)");
             }
             return list;
         }

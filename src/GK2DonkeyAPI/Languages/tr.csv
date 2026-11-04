@@ -68,11 +68,11 @@ colours.tone_white,Beyaz,White,a colour for a part of a skin
 colours.tone_custom,Özel,Custom,"a colour for a part of a skin: the player's own, picked in the row under it"
 colours.tone_custom_colour,{0}: özel renk,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
 colours.tone_lightness,{0}: açıklık,{0}: lightness,"the row under it that makes that colour lighter or darker; {0}: the part's name"
-colours.tone_follow_coat,Tüy rengiyle aynı,As the coat,a part of a skin coloured as the mount's coat colour (the first choice of a part that follows it)
-colours.tone_follow_dark,Koyu kısımlarla aynı,As the dark parts,"a part of a skin coloured as the mount's dark parts (its outline, mane and hooves)"
-colours.tone_follow_muzzle,İkinci tonla aynı,As the second tone,a part of a skin coloured as the mount's second tone (the Second tone row)
-colours.tone_follow_eye,Gözlerle aynı,As the eyes,a part of a skin coloured as the mount's eyes
-colours.tone_follow_harness,Koşum rengiyle aynı,As the harness,a part of a skin coloured as the mount's harness colour (the Harness colour row)
+colours.region_coat,Tüy,Coat,a part of the mount the player colours: the donkey's coat (its row's label in the colours window)
+colours.region_donkey_dark,"Bacaklar, yele ve kulaklar","Legs, mane and ears","a part of the donkey the player colours: its dark lower legs, mane, ears and tail tuft, with its outline (one set of colours in the game's art)"
+colours.region_donkey_muzzle,Burun ve karın,Muzzle and belly,a part of the donkey the player colours: its pale muzzle and belly
+colours.region_eyes,Gözler,Eyes,a part of the mount the player colours: its eyes
+colours.region_harness,Koşum,Harness,a part of the mount the player colours: the donkey's harness (its straps and collar)
 speed.very_slow,Çok yavaş,Very slow,a mount's speed in the journal's stats
 speed.slow,Yavaş,Slow,
 speed.normal,Normal,Normal,

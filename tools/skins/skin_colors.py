@@ -51,22 +51,26 @@ def colours(skin, source=None):
 
 
 # region of a colour by (hue in degrees, saturation, value), from colors.json: {skin: {region: [ {h_min, h_max, s_min, s_max,
-# v_min, v_max}, ... ]}}; the regions in the order written, the first matching rule wins, else Coat
+# v_min, v_max}, ... ]}}; or by the colour itself, {"hex": ["1E1A16", ...]} (a part a few steps from another in value: the
+# snail's eyes beside its outline); the regions in the order written, the first matching rule wins, else Coat
 def load_rules():
     with open(RULES_FILE, encoding="utf-8") as f:
         data = json.load(f)
     return {k: v for k, v in data.items() if not k.startswith("_")}
 
 
-def region_of(rules, h, s, v):
+def region_of(rules, hx, h, s, v):
     for region, conds in rules.items():
         if region.startswith("_") or region == "source":
             continue
         for c in conds:
             ok = True
             for key, val in c.items():
+                if key == "hex":
+                    if hx.upper() not in [x.upper() for x in val]: ok = False
+                    continue
                 if key not in ("h_min", "h_max", "s_min", "s_max", "v_min", "v_max"):
-                    raise SystemExit(f"colors.json: '{key}' is not a rule key (h_min, h_max, s_min, s_max, v_min, v_max)")
+                    raise SystemExit(f"colors.json: '{key}' is not a rule key (h_min, h_max, s_min, s_max, v_min, v_max, hex)")
                 x = {"h": h, "s": s, "v": v}[key[0]]
                 if key.endswith("_min") and x < val: ok = False
                 if key.endswith("_max") and x > val: ok = False
@@ -139,7 +143,7 @@ for skin in sorted(RULES):
     cols = sorted(got, key=lambda c: -c[1])
     regions = {}
     for hx, n, h, s, v in cols:
-        regions.setdefault(region_of(RULES[skin], h, s, v), []).append(hx)
+        regions.setdefault(region_of(RULES[skin], hx, h, s, v), []).append(hx)
     print(skin + ":", ", ".join("%s %d" % (k, len(v)) for k, v in sorted(regions.items())))
     for k in ("Dark", "Muzzle", "Eye", "Harness"):
         if k in regions and len(regions[k]) <= 12:

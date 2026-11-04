@@ -143,3 +143,4 @@ Speed.choice.3,Szybka,Fast,"Freeplay, a choice: a choice"
 Speed.choice.4,Bardzo szybka,Very fast,"Freeplay, a choice: a choice"
 mount.saddleup.gerry.name,Gerry,Gerry,a mount's name (the Mount Journal; the keeper's bubbles)
 mount.saddleup.gerry.description,"Gadająca czaszka wreszcie się na coś przydaje. Podskakuje naprzód, napędzana samymi opiniami, a tych ma pod dostatkiem i chętnie dzieli się nimi po drodze.","The talking skull finally makes himself useful. He hops along on pure opinion, and he has plenty of it to share on the way.",a mount's description in the Mount Journal
+skin.saddleup.gerry/default.region.coat.name,Kość,Bone,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)

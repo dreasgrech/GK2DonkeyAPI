@@ -63,27 +63,31 @@ def main(argv):
         raise SystemExit(__doc__)
     pack, frames = argv[0], argv[1:] or ["bdy_static_left", "bdy_walk_left_03", "bdy_turn_left_05", "bdy_graze_left_04"]
     places = parse(os.path.join(pack, "skin.cfg"))
+    over = any(l.split("#", 1)[0].replace(" ", "").lower() == "layer=over" for l in open(os.path.join(pack, "skin.cfg"), encoding="utf-8"))
     paint, legend = {}, []
     for n, (place, name, cols) in enumerate(places):
-        colour = REGIONS[place[7:]] if place.startswith("region.") else VIVID[n % len(VIVID)]
+        colour = VIVID[n % len(VIVID)]
         legend.append([name, colour, 0])
         for c in cols:
             paint.setdefault(c, len(legend) - 1)
     kept = {}
     tiles = []
     donkey_dir = donkey_frames()
-    own = set()  # the donkey's own colours: a skin drawing one follows the donkey's rows there (Coat and the others)
-    for name in os.listdir(donkey_dir) if os.path.isdir(donkey_dir) else []:
+    own = set()  # over the donkey: its own colours, which a skin drawing one follows the donkey's rows with (Coat and the others)
+    for name in (os.listdir(donkey_dir) if over and os.path.isdir(donkey_dir) else []):
         if name.endswith(".png"):
             b = Image.open(os.path.join(donkey_dir, name)).convert("RGBA").tobytes()
             own |= {tuple(b[i:i + 3]) for i in range(0, len(b), 4) if b[i + 3] > 0}
-    legend.append(["the donkey's own colours (its Coat and other rows)", (200, 170, 130), 0])
+    if over:
+        legend.append(["the donkey's own colours (its Coat and other rows)", (200, 170, 130), 0])
+    else:  # a look in its own colours: every colour it names nowhere is its Coat (docs/mount-colours.md 2.2)
+        legend.append(["Coat (region: every colour not named)", VIVID[len(legend) % len(VIVID)], 0])
     donkey_row = len(legend) - 1
     for f in frames:
         size = Image.open(os.path.join(pack, f + ".png")).size
         im = Image.new("RGBA", size, (30, 30, 34, 255))
         base = os.path.join(donkey_dir, f + ".png")
-        if os.path.exists(base):
+        if over and os.path.exists(base):  # the donkey under a skin worn over it only
             d = Image.open(base).convert("RGBA")
             grey = Image.new("RGBA", d.size, (0, 0, 0, 0))
             dp, gp = d.load(), grey.load()
@@ -106,7 +110,7 @@ def main(argv):
                     c = p[:3]
                     if c == (255, 0, 255):
                         continue  # the erase colour: clears the donkey, draws nothing
-                    if c in paint or c in own:
+                    if c in paint or c in own or not over:
                         n = paint.get(c, donkey_row)
                         legend[n][2] += 1
                         ip[x, y] = legend[n][1] + (255,)

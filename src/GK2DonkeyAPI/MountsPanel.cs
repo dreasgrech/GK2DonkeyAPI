@@ -896,6 +896,9 @@ namespace GK2DonkeyAPI
                 colours.SetActive(true);
                 UiKit.FitToScreen(colours, CW, CH);
                 Refresh();
+                // its picture at the next frame, not at the picture timer's next turn (up to 0.2 s of an empty box: the
+                // colours-window shots of 2026-11-04, the box empty for each mount's first look, its picture already built)
+                nextPicture = 0f;
                 Plugin.Log.LogInfo($"Settings: the colours window is open for {builtFor} ({colourRows.Count} rows).");
             }
             catch (Exception e)
@@ -1090,6 +1093,21 @@ namespace GK2DonkeyAPI
         internal static bool TestColoursScroll => coloursScroll != null && coloursScroll.content != null && coloursScroll.viewport != null
             && coloursScroll.content.rect.height > coloursScroll.viewport.rect.height + 1f;
         internal static void TestScrollColours(float to) { if (coloursScroll != null) coloursScroll.verticalNormalizedPosition = to; }
+        // the colours window's picture as it is drawn (the measurements: its box empty for every mount but the donkey in the
+        // shots since 2026-10-30, the journal's picture drawn): shown, its texture and which view, its size against the box's
+        internal static Texture TestColoursTexture => coloursPicture != null && coloursPicture.gameObject.activeInHierarchy ? coloursPicture.texture : null;
+        internal static string TestColoursPicture()
+        {
+            if (coloursPicture == null) return "no colours picture";
+            var rt = (RectTransform)coloursPicture.transform;
+            Texture t = coloursPicture.texture;
+            Vector2 art = t != null ? PreviewStage.ArtSize(t) : Vector2.zero;
+            string box = coloursStage != null ? coloursStage.rect.width.ToString("0") + "x" + coloursStage.rect.height.ToString("0") : "none";
+            return "shown " + coloursPicture.gameObject.activeInHierarchy + ", " + PreviewStage.TestViewOf(t) + (t != null ? " " + t.width + "x" + t.height : "")
+                + (picture != null && picture.texture == t ? " (the journal's too)" : " (the journal shows another)") + ", art " + art.x.ToString("0") + "x" + art.y.ToString("0")
+                + ", drawn " + rt.sizeDelta.x.ToString("0") + "x" + rt.sizeDelta.y.ToString("0") + " at " + rt.anchoredPosition.x.ToString("0") + "," + rt.anchoredPosition.y.ToString("0")
+                + " in a box " + box + ", alpha " + coloursPicture.color.a.ToString("0.00");
+        }
         internal static (float W, float H, float Scale, float RoomW, float RoomH) TestMeasure()
         {
             if (panel == null) return default;

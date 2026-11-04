@@ -1,6 +1,6 @@
 {
   "_": "The colour regions of each drawn creature, keyed by the skin's full name (<mount id>/<skin folder>: saddleup.dragon/default; tools/skins/skinroots.py), (docs/mount-colours.md 2.6), as rules over a colour's hue (degrees), saturation and value (0..1): the first region whose rule matches wins, in the order written; a colour no rule matches is Coat. tools/skins/skin_colors.py applies them to the pictures (front/ included) and writes each skin's [Colors]. Edit here, never in the script.",
-  "saddleup.dragon/default": {
+  "saddleup-dragon.dragon/default": {
     "_": "Coat = the red scales and the wing; Muzzle = the golden belly (its own row on the page, Second tone: the user wants to tweak it apart from the scales, 2026-10-20); Dark = outlines, horns and back spikes (bone); Eye = the yellow eye. Dark first (the bone's low-saturation golds), then Eye (the yellow and its highlight, which the belly's hue range would also take), then Muzzle.",
     "Dark": [
       {
@@ -26,7 +26,7 @@
       }
     ]
   },
-  "saddleup.rat/default": {
+  "saddleup-critters.rat/default": {
     "_": "Coat = the grey fur; Muzzle = the pink tail, ears and nose; Dark = outlines; Eye = the red eye.",
     "Dark": [
       {
@@ -54,8 +54,13 @@
       }
     ]
   },
-  "saddleup.snail/default": {
-    "_": "Coat = the green body; Muzzle = the brown shell; Dark = the outline.",
+  "saddleup-critters.snail/default": {
+    "_": "Coat = the green body; Muzzle = the brown shell; Eye = the eyes on the stalks' tips (1E1A16, a step under the outline in value; 2026-11-04: a part of their own, docs/second-tone.md 8); Dark = the outline and the stalks' stripes (one colour).",
+    "Eye": [
+      {
+        "hex": ["1E1A16"]
+      }
+    ],
     "Dark": [
       {
         "v_max": 0.16
@@ -69,8 +74,18 @@
       }
     ]
   },
-  "saddleup.worm/default": {
-    "_": "Coat = the pink skin; Dark = the outline.",
+  "saddleup-critters.worm/default": {
+    "_": "Coat = the pink skin; Eye = the eyes (18080C); Muzzle = the mouth (42121A); Dark = the outline. The eyes and the mouth are colours of their own a few steps from the outline in value, each in a colour-cube cell apart from it (the worm has more colours than the exact swap takes) (2026-11-04: parts of their own, docs/second-tone.md 8).",
+    "Eye": [
+      {
+        "hex": ["18080C"]
+      }
+    ],
+    "Muzzle": [
+      {
+        "hex": ["42121A"]
+      }
+    ],
     "Dark": [
       {
         "v_max": 0.25

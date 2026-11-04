@@ -156,12 +156,16 @@ def main(pack):
     # for an API without tones (the loader moves them to the tone)
     regions = ("Coat", "Dark", "Muzzle", "Eye", "Harness")
     for (sec, k), v in c.items():
+        # a look's name for a mount region's part (SkinRegions; docs/second-tone.md 8): one of the five, name = only
+        if sec.startswith("Region.") and (sec[7:].capitalize() not in regions or k != "name" or not v.strip()):
+            warn.append(f"[{sec}] {k} = {v}: a region's section is one of {', '.join(regions)} with name = its part's name; the game ignores it")
+            RESULT["errors"] += 1
         if sec.startswith("Tone.") and k == "follows" and v.strip().capitalize() not in regions:
             warn.append(f"[Tone.{sec[5:].lower()}] follows = {v}: not a mount region ({', '.join(regions)}); the game leaves the tone out")
             RESULT["errors"] += 1
         # over the donkey a colour named nowhere is drawn as it is, never Coat: following Coat keeps no earlier look there
         elif sec.startswith("Tone.") and k == "follows" and v.strip().capitalize() == "Coat" and over and not parent:
-            warn.append(f"[Tone.{sec[5:].lower()}] follows = Coat on a skin over the donkey: its first choice gives the part the player's coat colour, where it was drawn as it is before (on a skin over the donkey a colour named nowhere is never Coat), also on an update of a skin players wear; keep it only for a part meant to follow the coat")
+            warn.append(f"[Tone.{sec[5:].lower()}] follows = Coat on a skin over the donkey: the part takes the player's saved coat colour as its first value, where it was drawn as it is before (on a skin over the donkey a colour named nowhere is never Coat), also on an update of a skin players wear; keep it only for a part meant to follow the coat")
 
     def follows_of(conf):
         """'Tone.<id>' -> the region its follows = names (as written, capitalised)"""
@@ -301,13 +305,13 @@ def main(pack):
         warn.append(f"{partial} half-transparent pixel(s): pixel art should be fully on or off")
     if strays:
         warn.append(f"{len(strays)} lone pixel(s) (nothing around them): {', '.join(strays[:8])}{' ...' if len(strays) > 8 else ''}")
-    # over the donkey the swap pairs the donkey's colours, the named regions' and the tones that follow one; a tone that
-    # follows none is paired only once the player gives it a colour (Colors.Rig.NamedMaps), so it may move the skin to the
-    # cube then (Colors.PaletteMaxColoursOver, 96). Any other skin, a variant over its default too, counts every colour of
+    # over the donkey the swap pairs the donkey's colours and the named regions'; a tone (one that follows a region too,
+    # since 2026-11-04: docs/second-tone.md 8) is paired only once the player gives it a colour (Colors.Rig.NamedMaps), so
+    # it may move the skin to the cube then (Colors.PaletteMaxColoursOver, 96). Any other skin, a variant over its default too, counts every colour of
     # its look, its default's frames' with them (PaletteMaxColours, 48).
     if over and not parent:
-        paired = [h for h in named if h in hexes and (not named[h].startswith("Tone.") or named[h] in follows)]
-        later = len([h for h in named if h in hexes and named[h].startswith("Tone.") and named[h] not in follows])
+        paired = [h for h in named if h in hexes and not named[h].startswith("Tone.")]  # a tone that follows a region too (2026-11-04)
+        later = len([h for h in named if h in hexes and named[h].startswith("Tone.")])
         total, limit = len(donkey_cols) + len(paired), 96
     else:
         later, total, limit = 0, len(set(hexes.values()) | donkey_cols | inherited_cols), 48
@@ -334,6 +338,16 @@ def main(pack):
         if len({p for _, p in v}) > 1 and any(p.startswith("Tone.") for _, p in v):
             warn.append("a tone's colour shares a colour-cube cell with another colour of the look: " + ", ".join(f"{r:02X}{g:02X}{b:02X} ({p})" for (r, g, b), p in sorted(v)) + " (draw one of them a step apart)")
             RESULT["errors"] += 1
+    # on the cube whatever the player sets (over its limit) a cell is recoloured as one, so it holds one part's colours,
+    # a region's too: the worm's mouth one cell with its outline took the outline with a Mouth colour (2026-11-04).
+    # Shades of one region in a cell change together, fine; a cell with a tone's colour is the check above. Over the
+    # donkey tests/SkinsScan says it (it knows the donkey's colours by region; here they are one place). With the
+    # player's Lut fallback every look is on the cube: that setting says neighbouring regions may change together.
+    if total > limit and not (over and not parent):
+        for v in in_cell.values():
+            if len({p for _, p in v}) > 1 and not any(p.startswith("Tone.") for _, p in v):
+                warn.append(f"on the colour cube ({total} colours, over {limit}) a cell holds colours of more than one part: " + ", ".join(f"{r:02X}{g:02X}{b:02X} ({p})" for (r, g, b), p in sorted(v)) + "; a colour set for one recolours the other (draw one of them a cube step apart)")
+                RESULT["errors"] += 1
     # the exact swap (Colors.cs, the palette shader): a texel within 0.004 of a source colour takes that colour's
     # replacement, and one step in one channel is 1/255 (0.0039), so two colours of the look one step apart in one
     # channel are one colour to it: in two places (a tone and a region, a region and a colour kept as drawn) one takes

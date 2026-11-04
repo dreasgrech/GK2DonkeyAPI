@@ -61,6 +61,9 @@ namespace GK2DonkeyAPI.Api
             // for the custom rows), its choices the API's words; the page has nothing of either to translate.
             internal Func<string> LabelOf;
             internal Word[] ChoiceWords;
+            // A region's row (RegionRows): labelled by the look's name for the part where it has one, its own label where
+            // the look names none (a pack from before names, another mod's mount): that label stays the page's to translate.
+            internal bool OwnLabelToo;
             // A List row's choices FillList marked (a stored id nothing installed provides, set aside, the list empty): drawn
             // with the API's words around the name (Texts.Choice); ChoiceLabels keep the English for the comparisons and logs.
             internal ChoiceNote[] ChoiceNotes;
@@ -1116,6 +1119,89 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
+        // Says rows are a mount region's rows of one skin (docs/second-tone.md 8; the user, 2026-11-04: every row a part
+        // of the look by its name): the choice labelled by the look's name for the region's part (SkinRegions: its
+        // [Region.<region>] name, its default's, the donkey's under a skin worn over it), its custom colour and lightness
+        // rows in the API's templates ("Belly: custom colour"), as a tone's; and all three left out of the windows while the
+        // look has no colour of the region (SkinHasRegion; the value is kept). A look naming no part of the region keeps
+        // the rows' own words. Call it after the rows, with the choice's key and its custom colour's (null: none).
+        public void RegionRows(string section, string skinId, string region, string choiceKey, string customKey)
+        {
+            string r = Colors.RegionKeyOf((region ?? "").Trim());
+            if (r == null) throw new ArgumentException($"'{region}' is not a mount region ({string.Join(", ", Colors.MountRegionKeys)}): RegionRows(section, skinId, region, choiceKey, customKey)", nameof(region));
+            if (string.IsNullOrEmpty(choiceKey)) throw new ArgumentNullException(nameof(choiceKey));
+            string cfgSection = Sec(section);
+            regionKeys[(skinId ?? "") + "\n" + r] = (cfgSection, choiceKey, customKey); // a part that followed the region carries its value over (CarryOver)
+            Term name = SkinRegions.NameTerm(skinId, r);
+            string skin = skinId;
+            Func<bool> has = () => SkinHasRegion(skin, r);
+            foreach (Row row in Rows)
+            {
+                if (row.Entry == null || row.Entry.Definition.Section != cfgSection) continue;
+                string k = row.Entry.Definition.Key;
+                bool isChoice = k == choiceKey, isCustom = customKey != null && k == customKey, isLight = customKey != null && k == LightnessKey(customKey);
+                if (!isChoice && !isCustom && !isLight) continue;
+                row.OwnLabelToo = true;
+                if (name != null)
+                {
+                    if (isChoice) row.LabelOf = () => name.Text;
+                    else if (isCustom) row.LabelOf = () => UiWords.ToneCustom.Format(name);
+                    else row.LabelOf = () => UiWords.ToneLightness.Format(name);
+                }
+                Func<bool> shown = row.Shown, visible = row.Visible;
+                row.Shown = shown == null ? has : () => shown() && has();
+                row.Visible = visible == null ? has : () => visible() && has();
+            }
+        }
+
+        // The keys RegionRows was given, by "<skin>\n<region>": the section, the choice's key and its custom colour's.
+        private readonly Dictionary<string, (string Section, string Choice, string Custom)> regionKeys = new Dictionary<string, (string, string, string)>(StringComparer.OrdinalIgnoreCase);
+
+        // Whether the player's cfg file held this key before this session bound anything (the page's snapshot of it, read
+        // at the first bind: MovedValue).
+        private bool InFile(string cfgSection, string key)
+        {
+            if (fileSections == null) fileSections = ReadSections(Config.ConfigFilePath);
+            return fileSections.TryGetValue(cfgSection, out Dictionary<string, string> keys) && keys.ContainsKey(key);
+        }
+
+        private Row RowOfKey(string cfgSection, string key) => Rows.FindLast(r => r.Entry != null && r.Entry.Definition.Section == cfgSection && r.Entry.Definition.Key == key);
+
+        // The region presets' nearest part presets (ToneColor), by the region preset's name: a name both have is itself.
+        private static readonly Dictionary<string, ToneColor> NearestPart = new Dictionary<string, ToneColor>(StringComparer.Ordinal)
+        {
+            ["Pale"] = ToneColor.White, ["Cream"] = ToneColor.White, ["Rose"] = ToneColor.Pink, ["Dark"] = ToneColor.Black,
+        };
+
+        // A skin's part that followed a mount region before it was a part of its own (follows =; docs/second-tone.md 8)
+        // takes the player's saved value of that region as its first one, once: while the file holds none of the part's
+        // rows (the first load after the update; tones were never released), so the look stays as it was; from then on
+        // it is a part like any other. The region's Custom colour stays the same colour and lightness, its preset becomes
+        // the part's of the same name or the nearest (the second tone's Pale White, Rose Pink, Dark Black; the coat's
+        // Cream White, Dark Black): a converted preset may come out a shade off (the user, 2026-11-04: as close as can
+        // be, not critical). The region's rows must be the page's (RegionRows) before ToneRows runs.
+        private void CarryOver(string skinId, string region, ConfigEntry<ToneColor> choice, string customKey, string who)
+        {
+            string cfgSection = choice.Definition.Section;
+            if (InFile(cfgSection, choice.Definition.Key)) return;
+            if (!regionKeys.TryGetValue((skinId ?? "") + "\n" + region, out var rk)) return; // no rows of the region on the page
+            Row regionChoice = RowOfKey(rk.Section, rk.Choice);
+            string was = regionChoice?.Entry?.BoxedValue?.ToString();
+            if (string.IsNullOrEmpty(was) || was == "Game") return; // as drawn there, as drawn here
+            ToneColor to;
+            if (was == "Custom") to = ToneColor.Custom;
+            else if (!NearestPart.TryGetValue(was, out to) && !Enum.TryParse(was, out to)) return;
+            if (to == ToneColor.Custom && rk.Custom != null)
+            {
+                Row fromColour = RowOfKey(rk.Section, rk.Custom), fromLight = RowOfKey(rk.Section, LightnessKey(rk.Custom));
+                Row toColour = RowOfKey(cfgSection, customKey), toLight = RowOfKey(cfgSection, LightnessKey(customKey));
+                if (fromColour?.Entry != null && toColour?.Entry != null) toColour.Entry.BoxedValue = fromColour.Entry.BoxedValue;
+                if (fromLight?.Entry != null && toLight?.Entry != null) toLight.Entry.BoxedValue = fromLight.Entry.BoxedValue;
+            }
+            choice.Value = to;
+            Plugin.Log.LogInfo($"Settings: {Title}: {who} takes your saved {region} colour ({was}) as its own ({to}): it was that row's part before it was a part of its own.");
+        }
+
         // Whether the mount may pull the cart (0.39.0; the donkey, an unknown or a missing mount: yes, the donkey comes for it).
         public static bool MountPullsCart(string mountId)
         {
@@ -1164,28 +1250,31 @@ namespace GK2DonkeyAPI.Api
         public void ToneRows(string section, string skinId, string suffix, MountCompanion companion)
         {
             if (companion == null) throw new ArgumentNullException(nameof(companion));
-            Looks.SkinDef def = Looks.Find(skinId);
-            if (def == null || !def.OwnColours || def.Tones == null) return;
             MountLook look = companion.LookOf(skinId);
             string sfx = suffix ?? "";
+            // the mount's dark parts and eyes first: rows of their own where the look names them (docs/second-tone.md 8),
+            // the donkey's own look too (it has no SkinDef)
+            RegionPartRows(section, skinId, sfx, "Dark", look.Dark);
+            RegionPartRows(section, skinId, sfx, "Eye", look.Eye);
+            Looks.SkinDef def = Looks.Find(skinId);
+            if (def == null || !def.OwnColours || def.Tones == null) return;
             foreach (SkinTones.ToneDef t in def.Tones)
             {
                 if (!SkinTones.HasColours(def, t.Id)) continue; // no colours (all moved elsewhere by a variant, or none given)
                 MountTone tone = look.Tone(t.Id);
                 Term name = SkinTones.NameTerm(def, t);
                 string who = $"{t.Name} ({def.Name ?? def.Id})";
-                // its choices: a tone that follows a region (follows =) has that region first ("As the harness": its Game
-                // default follows the region's colour, as the part did before it was a tone)
-                Word[] words = SkinTones.Choices(t.Follows);
+                Word[] words = SkinTones.Choices();
                 var english = new string[words.Length];
                 for (int i = 0; i < english.Length; i++) english[i] = words[i].English;
                 // the English Label (logs, comparisons; drawn through LabelOf) carries the tone's id: a pack's tone named
                 // like the page's picture row would otherwise make Add refuse the page (a picture is found by its label)
                 string label = $"{t.Name} (tone {t.Id})";
-                string first = t.Follows != null ? $"{english[0]}, the first choice, colours it as the mount's {t.Follows} setting does" : "Game default is the skin as drawn";
-                ConfigEntry<ToneColor> choice = Choice(section, "Tone." + t.Id + sfx, tone.Color, label, $"A colour of the skin's own: {who}. {first}.", v => tone.Color = v, english, look: true);
+                ConfigEntry<ToneColor> choice = Choice(section, "Tone." + t.Id + sfx, tone.Color, label, $"A colour of the skin's own: {who}. Game default is the skin as drawn.", v => tone.Color = v, english, look: true);
                 string customKey = "CustomTone." + t.Id + sfx;
                 Color(section, customKey, label + ": custom colour", $"Used when {who} is Custom.", PaletteColor.Gold, v => tone.Custom = v, () => choice.Value == ToneColor.Custom);
+                // a part that was a region's before (follows =): the player's value of the region, once
+                if (t.Follows != null) CarryOver(skinId, t.Follows, choice, customKey, who);
                 // the three rows by their keys (Color's colour and lightness rows wherever it put them): their words the
                 // tone's name, in the API's templates for the custom rows, and the API's presets
                 string cfgSection = choice.Definition.Section;
@@ -1206,6 +1295,32 @@ namespace GK2DonkeyAPI.Api
                 EnableWhen(section, choice.Definition.Key, draws);
                 EnableWhen(section, customKey, draws); // its lightness row with it
             }
+        }
+
+        // A Dark or Eye region's rows, where the look names its part (SkinRegions) and has its colours: a choice of the tone
+        // presets, its custom colour and lightness, labelled by the name as a tone's are, under the page's keys
+        // <region><suffix> and Custom<region><suffix>.
+        private void RegionPartRows(string section, string skinId, string sfx, string region, MountTone part)
+        {
+            Term name = SkinRegions.NameTerm(skinId, region);
+            if (name == null || !SkinHasRegion(skinId, region)) return;
+            Word[] words = SkinTones.Choices();
+            var english = new string[words.Length];
+            for (int i = 0; i < english.Length; i++) english[i] = words[i].English;
+            string label = $"{name.English} (region {region})"; // the English for the logs; the window draws the name (LabelOf)
+            ConfigEntry<ToneColor> choice = Choice(section, region + sfx, part.Color, label, $"A part of the mount: {name.English}. Game default is as drawn.", v => part.Color = v, english, look: true);
+            string customKey = "Custom" + region + sfx;
+            Color(section, customKey, label + ": custom colour", $"Used when {name.English} is Custom.", PaletteColor.Gold, v => part.Custom = v, () => choice.Value == ToneColor.Custom);
+            string cfgSection = choice.Definition.Section;
+            Row RowOf(string key) => Rows.FindLast(r => r.Entry != null && r.Entry.Definition.Section == cfgSection && r.Entry.Definition.Key == key);
+            Row choiceRow = RowOf(choice.Definition.Key), customRow = RowOf(customKey), lightRow = RowOf(LightnessKey(customKey));
+            if (choiceRow != null)
+            {
+                choiceRow.LabelOf = () => name.Text;
+                choiceRow.ChoiceWords = words;
+            }
+            if (customRow != null) customRow.LabelOf = () => UiWords.ToneCustom.Format(name);
+            if (lightRow != null) lightRow.LabelOf = () => UiWords.ToneLightness.Format(name);
         }
 
         public void PerMount(Action<string, string, Func<bool>> rows)

@@ -330,6 +330,8 @@ sealed class GK2DonkeyAPI.Api.MountLook
   property string CustomMuzzle { get; set; }
   property string CustomPaint { get; set; }
   property string CustomWheels { get; set; }
+  property GK2DonkeyAPI.Api.MountTone Dark { get; }
+  property GK2DonkeyAPI.Api.MountTone Eye { get; }
   property GK2DonkeyAPI.Api.HarnessColor Harness { get; set; }
   property GK2DonkeyAPI.Api.HubColor Hubs { get; set; }
   property bool Lantern { get; set; }
@@ -465,6 +467,7 @@ sealed class GK2DonkeyAPI.Api.MountSettingsPage
   method static string PinnedBy(GK2DonkeyAPI.Api.MountCompanion companion, string tuningKey)
   method void Preview(string section, GK2DonkeyAPI.Api.MountCompanion companion, string label = Your mount, bool cart = True)
   method void Publish()
+  method void RegionRows(string section, string skinId, string region, string choiceKey, string customKey)
   method void RetiredKey(string section, string key)
   method static bool SkinHasRegion(string skinId, string region)
   method void Status(string section, string label = Status, string description = What the mod is doing right now.)

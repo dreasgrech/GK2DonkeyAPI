@@ -425,8 +425,6 @@ namespace GK2DonkeyAPI.Api
             {
                 regions.Add("Coat");
                 if (d.ColorRegions != null) foreach (string r in d.ColorRegions.Keys) if (!SkinTones.IsTone(r) && !regions.Contains(r)) regions.Add(r);
-                // a region a tone follows reaches that tone's part (its Game default), so the skin has it
-                if (d.Tones != null) foreach (SkinTones.ToneDef t in d.Tones) if (t.Follows != null && SkinTones.HasColours(d, t.Id) && !regions.Contains(t.Follows)) regions.Add(t.Follows); // one with no colours reaches nothing
             }
             Regions = regions;
             Tones = SkinTones.InfosOf(d); // made once per resolved state of the skin and shared (a MountSkinInfo is made at every Find)

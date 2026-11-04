@@ -25,15 +25,26 @@ For players:
   more customization available"), every part its own ("every part is named and is able to be coloured"). Royal
   Parade: Saddle cloth, Crown, Trim and fringe, Emblem, Jewels. Armored: Helmet, Plume, Body armour, Skirt, Brass.
   Hellfire: Horns, Glowing eyes, Lava cracks, Tail, Tail tip. A part that was coloured by Harness or Second tone
-  (or, on Hellfire, the dark parts and the eyes) keeps following it: its first choice reads "As the harness" (and so
-  on), and with it the part is coloured exactly as before, so a player's saved colours keep reaching it; any other
-  choice gives the part its own. The parts that were drawn as they are (Royal Parade's crown, trim, emblem and
-  jewels, Armored's helmet, body armour and brass) start as drawn. Nothing saved is
-  rewritten; the skins also read as before on an older GK2 Donkey API. docs/mount-colours.md 7.5 and 7.9.
+  takes the colour saved for that row once, on the first start after the update, so it looks as before, and is a part
+  of its own from then on (below: every row of the Colours window names a part). The parts that were drawn as they are (Royal Parade's crown, trim, emblem
+  and jewels, Armored's helmet, body armour and brass) start as drawn. The skins also read as before on an older GK2
+  Donkey API. docs/mount-colours.md 7.5 and 7.9, docs/second-tone.md 8.
 - **Hellfire's colours come out exactly as drawn** (2026-11-04): a skin over the donkey with more than 48 colours
   went through the game's colour cube, which rounds every colour to 32 steps and, with a harness colour set, turned
   a few of the donkey's outline and coat pixels under the skin that colour. The exact colour swap takes up to 96
   colours now, enough for every skin over the donkey with all its parts coloured (Royal Parade, Armored and Hellfire).
+- **The colours window shows the mount at once** (2026-11-04): its picture could stay empty for a moment after it
+  opened (MountsPanel.OpenColours now asks for the picture at the next frame, not at the 0.2 s picture timer).
+- **Every row of the Colours window names a part of the look** (2026-11-04; the user, on "Second tone": "it's not
+  self explanatory about what it refers to since the skin now defines every part itself"; docs/second-tone.md). No
+  row says "Coat colour" or "Second tone" any more: the donkey's read Coat, Muzzle and belly, Harness, and two new
+  ones, Legs mane and ears and Eyes; the dragon's Scales and wings, Belly, Horns and spikes, Eyes and claws; the rat's
+  Fur, Ears nose paws and tail, Eyes; the snail's Body, Shell, Eyes; the worm's Skin, Mouth, Eyes; Gerry's Bone. A part
+  the look doesn't have has no row (it was greyed). The dark parts and the eyes can be coloured for the first time.
+  A part that used to follow another row (Royal Parade's saddle cloth the harness, Armored's plume and skirt and
+  Hellfire's lava the second tone) is a part of its own: on the first start after the update it takes the colour
+  you had saved for that row, so it looks as before, and from then on that row colours only what it names. Saved
+  colours stay where they were.
 - **A part you give a colour takes each baby's own shade** (2026-11-04; the user: "ideally yes unless it's a
   performance cost we can't afford"). A baby already wore its own shade of its parent's coat, second tone and dark
   parts; a skin's part given a colour of its own (a saddle cloth set to Gold) now takes that same shade on each baby,
@@ -82,6 +93,14 @@ For mod authors:
   too keeps colouring as that region there, any other is drawn as drawn over the donkey (Coat in a skin's own
   colours); say `needs =` the API with tones only where that isn't good enough. Saddle Up gives every skin's tones
   their rows (one line after its Second tone rows; it names no tone).
+- **A look names its parts** (2026-11-04; docs/api.md "A look's names for its parts", docs/skins.md): skin.cfg
+  `[Region.<region>]` `name =` names a mount region's part (translated as `skin.<skin id>.region.<region>.name`); a
+  variant takes its default's, a skin over the donkey the donkey's (the API's words). `MountSettingsPage.RegionRows`
+  labels a page's region rows by those names and leaves them out where the look has none of the region; `ToneRows`
+  also makes Dark and Eye rows where the look names them (`MountLook.Dark`, `MountLook.Eye`, `MountTone`s). A tone with
+  `follows =` is a part of its own now: `ToneRows` gives it the player's saved value of the region once (while the
+  file holds none of its rows), the engine no longer pairs it with the region; the "As the ..." choices are gone.
+  Additions only (`tests/ApiSurface` snapshot updated).
 - **A skin over the donkey keeps the exact colour swap up to 96 pairs** (2026-11-04; 64 that morning, 48 before):
   the donkey's 42 and the skin's named colours, so up to 54 colours of a skin's own parts with every part set; past
   it the colour cube. Parts drawn in one ramp need shades of their own (a colour is one tone's only):
@@ -297,6 +316,29 @@ Development:
   (GK2-colours-rows.tsv); no cost measurable from 42 to 96 pairs, nor on the cube, the frame not the GPU's on that
   machine (docs/performance.md "The colour swap's cost"). The colours window's pictures wait for the picture drawn
   since (Royal Parade's first was empty: settled came a few frames before it).
+- **Named regions** (2026-11-04; the user: "ok lets begin" on docs/second-tone.md 8). `SkinRegions` (new) reads
+  `[Region.<region>]` and finds a look's name for a region's part (its own, its default's, the donkey's under a skin
+  over it: `UiWords.RegionCoat`, `RegionDonkeyDark`, `RegionDonkeyMuzzle`, `RegionEyes`, `RegionHarness`); `Texts`
+  dumps the declared names. `MountSettingsPage.RegionRows` (labels by `Row.LabelOf`, hides by `Shown`/`Visible`, as
+  `CartRow`; `Row.OwnLabelToo` keeps the row's own label in the page's English file, the words a look naming none of
+  the region draws: the first F11, with every shipped look naming its Coat, had dropped Saddle Up's `Coat.label`,
+  `CustomCoat.label` and `CustomCoatLightness.label` and warned on them in its ten translations), `RegionPartRows` in `ToneRows` for Dark and Eye; `SkinTones.RegionValues` colours a region as a part
+  (`Colors.ArtRange`, the art's average and lightest); the companion applies `DarkKeys`/`EyeKeys` to the mount, the
+  paper and the babies (the babies' dark shade starts from the parent's dark colour now). Following tones:
+  `MountSettingsPage.CarryOver` (the file's snapshot `fileSections`, `InFile`, the region's keys RegionRows was
+  given, `NearestPart`); `SkinTones.Choices()` without the follow word, the five `ToneFollow*` words out (and their
+  translations); `Colors.Rig.NamedMaps`, `Loaded.ColoursReachedBy` and `MountSkinInfo.Regions` no longer count a
+  following tone with its region. Saddle Up calls `RegionRows` for its three rows (inside the `ToneRows` guard). Data:
+  the mounts' names in their cfgs; the snail's eyes and the worm's eyes and mouth their own regions
+  (`tools/skins/creatures/colors.json`, keyed by the mounts' current ids now, and a `hex` rule in
+  `skin_colors.py`; the worm's mouth drawn 42121A, a cube cell apart from its outline: `make_creatures.py`); Hellfire's and the Jester's Dark named "Legs and mane". Every name in 11 languages, the CJK ones
+  checked with `l10n-glyphs.py` (11 rewordings to characters the game's own text draws). Checkers: `canonical_cfg.py`,
+  `check_skin.py`, SkinsScan take `[Region.*]` (one of the five, `name =` only) and no longer count a following tone
+  as paired; on a look on the colour cube whatever the player sets (over the exact swap's limit) both fail two
+  regions' colours in one cube cell, not only a tone's (the worm's mouth shared its outline's; proven on that art). Tests: the scenario "colours: a look's names for its parts" (`Dev/RegionTests.cs`: three pages on one
+  file prove the carry-over once), the tones scenario and the Royal Parade integration check for the new rules; the
+  colours-window measurement over every skin of every mount, every colour row as drawn. `tools/skins/part_map.py`:
+  the donkey under an over skin only, a look's unnamed colours as its Coat.
 - **Every donkey skin's parts their own** (2026-11-04; the user: "now lets make sure that all the donkey skins are
   using the new multi tone system where every part is named and is able to be coloured"; docs/mount-colours.md
   7.10). `tools/skins/part_map.py` (new) paints each part's pixels one colour and the ones no row reaches white: it

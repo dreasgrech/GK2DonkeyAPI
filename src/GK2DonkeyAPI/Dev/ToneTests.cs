@@ -87,8 +87,8 @@ namespace GK2DonkeyAPI
                 // the path is the player's setting up to the limit of a skin over the donkey (PaletteMaxColoursOver; SpriteMethod:
                 // Palette, or Lut on a setup that needs it)
                 SelfTest.Check(!Changed(d.ChangedSources, Cloth) && !Changed(d.ChangedSources, Trim) && !Changed(d.ChangedSources, Strap) && d.Colours <= Colors.PaletteMaxColoursOver && d.Method == Colors.SpriteMethod.Value
-                    && !a.I.ColorsRig.TestDstOf(Cloth).HasValue && a.I.ColorsRig.TestDstOf(Trim).HasValue,
-                    $"as drawn until set: the cloth, the trim and the strap unchanged, {d.Colours} colours on the player's path ({d.Method}); the cloth, set by nobody, has no pair, the trim (it follows Harness) has its region's");
+                    && !a.I.ColorsRig.TestDstOf(Cloth).HasValue && !a.I.ColorsRig.TestDstOf(Trim).HasValue,
+                    $"as drawn until set: the cloth, the trim and the strap unchanged, {d.Colours} colours on the player's path ({d.Method}); the cloth and the trim, set by nobody, have no pair (the trim followed Harness: a part of its own since, docs/second-tone.md 8)");
                 int pairsUnset = d.Pairs;
 
                 // the cloth Gold through the look, as the companion applies it
@@ -145,14 +145,17 @@ namespace GK2DonkeyAPI
                         $"and the trim as drawn ({plain.Blue} blue pixels with the swap off, {drawn.Blue} with it)");
                 }
 
-                // the Harness row's colour reaches the strap and the trim that follows it (its first choice), not the cloth's own
+                // the Harness row's colour reaches the strap named Harness only: not the trim, which followed it before it was a
+                // part of its own (docs/second-tone.md 8), nor the cloth's own colour
+                Color32? clothGold = a.I.ColorsRig.TestDstOf(Cloth);
                 a.Tuning.Set(owner, "HarnessColorize", "00FF00");
                 a.Tuning.Set(owner, "HarnessColorizeAmount", 1f);
                 yield return SelfTest.Frames(3);
                 d = a.I.ColorsRig.TestMountGroup();
-                Color32? trimFollowing = a.I.ColorsRig.TestDstOf(Trim), clothGold = a.I.ColorsRig.TestDstOf(Cloth);
-                SelfTest.Check(Changed(d.ChangedSources, Strap) && Changed(d.ChangedSources, Trim), "a harness colour changes the strap named Harness and the trim that follows it");
-                // a colour of its own cuts it loose: another harness colour doesn't reach it any more, nor the cloth
+                Color32? clothWithHarness = a.I.ColorsRig.TestDstOf(Cloth);
+                SelfTest.Check(Changed(d.ChangedSources, Strap) && !Changed(d.ChangedSources, Trim) && SameRgb(clothGold, clothWithHarness),
+                    "a harness colour changes the strap named Harness only: neither the trim (it followed Harness; a part of its own now) nor the cloth");
+                // the trim given a colour keeps it whatever the harness
                 look.Tone("trim").Color = ToneColor.Gold;
                 SkinTones.Apply(a.I, SkinTones.ValuesOf(look, SkinId), owner, SkinId);
                 yield return SelfTest.Frames(3);
@@ -160,15 +163,14 @@ namespace GK2DonkeyAPI
                 a.Tuning.Set(owner, "HarnessColorize", "FF00FF");
                 yield return SelfTest.Frames(3);
                 Color32? trimOwnAfter = a.I.ColorsRig.TestDstOf(Trim), clothAfter = a.I.ColorsRig.TestDstOf(Cloth);
-                SelfTest.Check(SameRgb(trimOwn, trimOwnAfter) && !SameRgb(trimOwn, trimFollowing) && SameRgb(clothGold, clothAfter),
-                    $"given a colour of its own the trim leaves the harness: another harness colour reaches neither it nor the cloth ({Hex(trimFollowing)} following, {Hex(trimOwn)} its own, {Hex(trimOwnAfter)} after the harness changed)");
-                // back on its first choice it follows the harness again (now FF00FF)
+                SelfTest.Check(trimOwn.HasValue && SameRgb(trimOwn, trimOwnAfter) && SameRgb(clothGold, clothAfter),
+                    $"the trim given a colour keeps it whatever the harness, and so does the cloth ({Hex(trimOwn)}, {Hex(trimOwnAfter)} after the harness changed)");
+                // back on Game default it is as drawn: no pair, the harness's colour doesn't reach it
                 look.Tone("trim").Color = ToneColor.Game;
                 SkinTones.Apply(a.I, SkinTones.ValuesOf(look, SkinId), owner, SkinId);
                 yield return SelfTest.Frames(3);
                 Color32? trimBack = a.I.ColorsRig.TestDstOf(Trim);
-                SelfTest.Check(trimBack.HasValue && !SameRgb(trimBack, trimOwn) && !SameRgb(trimBack, trimFollowing) && !SameRgb(trimBack, Trim),
-                    $"back on its first choice (As the harness) it follows the harness's new colour ({Hex(trimBack)})");
+                SelfTest.Check(!trimBack.HasValue, $"back on Game default the trim is as drawn, not the harness's colour ({Hex(trimBack)})");
                 look.Tone("cloth").Color = ToneColor.Game;
                 SkinTones.Apply(a.I, SkinTones.ValuesOf(look, SkinId), owner, SkinId);
                 yield return SelfTest.Frames(3);
@@ -226,10 +228,10 @@ namespace GK2DonkeyAPI
                 string label = Texts.Label(cloth), customLabel = Texts.Label(custom), lightLabel = Texts.Label(light), gold = Texts.Choice(cloth, (int)ToneColor.Gold);
                 SelfTest.Check(label.Contains("Cloth") && !label.Contains("(tone") && customLabel.Contains("Cloth") && customLabel != label && lightLabel.Contains("Cloth") && gold.Contains("Gold") && cloth.Label.Contains("(tone cloth)"),
                     $"labelled by the tone's name, the choices the API's words ({label} | {customLabel} | {lightLabel} | {gold}); the English label for the logs carries its id ({cloth.Label})");
-                // a tone that follows a region: its first choice names it (As the harness), the rest are the same presets
+                // every part's first choice Game default, the trim that followed Harness too (no "As the harness" since)
                 string trimFirst = trim != null ? Texts.Choice(trim, 0) : null, clothFirst = Texts.Choice(cloth, 0);
-                SelfTest.Check(trimFirst == UiWords.ToneFollowHarness.Text && clothFirst == UiWords.ToneGame.Text && trim.ChoiceLabels[0] == UiWords.ToneFollowHarness.English,
-                    $"the trim's first choice is the region it follows ({trimFirst}), the cloth's Game default ({clothFirst})");
+                SelfTest.Check(trimFirst == UiWords.ToneGame.Text && clothFirst == UiWords.ToneGame.Text,
+                    $"every part's first choice is Game default, the trim that followed Harness too ({trimFirst}, {clothFirst})");
                 var entry = (ConfigEntry<ToneColor>)cloth.Entry;
                 bool hidden = custom.Enabled != null && !custom.Enabled();
                 entry.Value = ToneColor.Custom;
@@ -346,10 +348,10 @@ namespace GK2DonkeyAPI
                 $"White on a tone of 202020 and C0C0C0 lifts it only until C0C0C0 is white ({white:0.###}, the uncapped rule would be {MountCompanion.LightnessAgainst("ECE8E0", (0x20 + 0xC0) / 2f / 255f):0.###}); Black darkens it ({black:0.###})");
             // every ToneColor its word in the enum's order (a choice row's words go by position) and, but Game and Custom, its colour
             var all = (ToneColor[])Enum.GetValues(typeof(ToneColor));
-            Word[] words = SkinTones.Choices(null), following = SkinTones.Choices("Harness");
-            bool table = words.Length == all.Length && following.Length == all.Length && words[0] == UiWords.ToneGame && following[0] == UiWords.ToneFollowHarness && following[1] == words[1] && words[all.Length - 1] == UiWords.ToneCustomChoice;
+            Word[] words = SkinTones.Choices();
+            bool table = words.Length == all.Length && words[0] == UiWords.ToneGame && words[all.Length - 1] == UiWords.ToneCustomChoice;
             foreach (ToneColor c in all) table &= (SkinTones.PresetHex(c) == null) == (c == ToneColor.Game || c == ToneColor.Custom);
-            SelfTest.Check(table, "the presets' table (SkinTones.Preset): every ToneColor its word in the enum's order and, but Game and Custom, its colour; a following tone's first word is its region's");
+            SelfTest.Check(table, "the presets' table (SkinTones.Preset): every ToneColor its word in the enum's order and, but Game and Custom, its colour");
         }
 
         private static bool Changed(List<Color32> sources, Color32 c) => sources.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b);

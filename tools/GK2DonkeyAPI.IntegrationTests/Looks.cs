@@ -750,13 +750,14 @@ namespace GK2DonkeyAPI.IntegrationTests
         // The page's Second tone row (the API's Muzzle region; the user, 2026-10-20: every part of every skin reachable
         // from the page): a companion's preset lands as the Muzzle keys on its paper mount and on its donkey wearing the
         // rat, where every Muzzle colour changes and no other; the row is left out on a mount whose skins have no such
-        // region (the worm) and live on the rat, the snail, the dragon (its belly) and the donkey.
+        // region (Gerry) and live on the rat, the snail, the dragon (its belly), the worm (its mouth, since 2026-11-04) and
+        // the donkey.
         internal static IEnumerator SecondTone()
         {
-            string noPack = MissingPack("dragon", "rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            string noPack = MissingPack("dragon", "rat", "snail", "worm", "gerry"); // our mount packs may be left out: Saddle Up alone, or one pack
             if (noPack != null) { Skip(noPack); yield break; }
-            Check(MountSettingsPage.MountHasRegion(M("rat"), "Muzzle") && MountSettingsPage.MountHasRegion(M("snail"), "Muzzle") && MountSettingsPage.MountHasRegion(M("dragon"), "Muzzle") && MountSettingsPage.MountHasRegion(MountCatalog.DonkeyId, "Muzzle"), "the rat, the snail, the dragon and the donkey have a second tone: the row is live for them");
-            Check(!MountSettingsPage.MountHasRegion(M("worm"), "Muzzle"), "the worm has none: the row is left out for it");
+            Check(MountSettingsPage.MountHasRegion(M("rat"), "Muzzle") && MountSettingsPage.MountHasRegion(M("snail"), "Muzzle") && MountSettingsPage.MountHasRegion(M("dragon"), "Muzzle") && MountSettingsPage.MountHasRegion(M("worm"), "Muzzle") && MountSettingsPage.MountHasRegion(MountCatalog.DonkeyId, "Muzzle"), "the rat, the snail, the dragon, the worm and the donkey have a Muzzle region: the row is live for them");
+            Check(!MountSettingsPage.MountHasRegion(M("gerry"), "Muzzle"), "Gerry has none: the row is left out for him");
             const string owner = Owner + ".secondtone";
             MountCompanion me = Mounts.Companion(owner);
             me.Skin = Sk("rat");
@@ -826,7 +827,8 @@ namespace GK2DonkeyAPI.IntegrationTests
             Check(waited, "Royal Parade is worn");
             Looks.SkinDef rp = Looks.Find(Sk("royal-parade"));
             // its four reds are the saddle cloth's tone since 2026-11-04 (docs/mount-colours.md 7.5): listed under [Colors]
-            // Harness too for an older API, moved to the tone by this one, which follows Harness (the players' looks kept)
+            // Harness too for an older API, moved to the tone by this one; it follows Harness only in that a player's saved
+            // harness colour became its own, once (docs/second-tone.md 8): the Harness row reaches the donkey's harness only
             SkinTones.ToneDef cloth = rp?.Tones?.Find(t => t.Id == "cloth");
             List<string> reds = rp != null ? SkinTones.ColoursOf(rp, "cloth") : new List<string>();
             Check(cloth != null && cloth.Follows == "Harness" && reds.Count == 4, $"Royal Parade's saddle cloth is a tone with its four reds that follows Harness ({reds.Count} reds, follows {cloth?.Follows ?? "none"})");
@@ -837,7 +839,7 @@ namespace GK2DonkeyAPI.IntegrationTests
                 var d = a.I.ColorsRig.TestMountGroup();
                 int redsChanged = 0;
                 foreach (string hex in reds) { Colors.TryHex(hex, out Color32 c); if (d.ChangedSources.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b)) redsChanged++; }
-                Check(redsChanged == 4, $"the player's harness colour reaches the cloth's four reds, as before it was a tone ({redsChanged} of 4)");
+                Check(redsChanged == 0 && d.Changed > 0, $"the player's harness colour reaches the donkey's harness, not the cloth's four reds: a part of its own ({redsChanged} of 4 changed, {d.Changed} colours in all)");
             }
             a.Tuning.Clear(Owner, "HarnessColorize");
             a.Tuning.Clear(Owner, "HarnessColorizeAmount");

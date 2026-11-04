@@ -1,3 +1,7 @@
 ﻿key,value,english,note
 mount.saddleup-dragon.dragon.name,Дракон,Dragon,a mount's name (the Mount Journal; the keeper's bubbles)
 mount.saddleup-dragon.dragon.description,"Никто не знает, откуда он взялся, а сам он помалкивает. Телегу он не тянет, зато ни забор, ни река, ни крыша в деревне его не остановят.","Nobody knows where it came from, and it isn't saying. It won't pull a cart, but no fence, river or roof in the village can stop it.",a mount's description in the Mount Journal
+skin.saddleup-dragon.dragon/default.region.coat.name,Чешуя и крылья,Scales and wings,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)
+skin.saddleup-dragon.dragon/default.region.muzzle.name,Брюхо,Belly,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)
+skin.saddleup-dragon.dragon/default.region.dark.name,Рога и шипы,Horns and spikes,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)
+skin.saddleup-dragon.dragon/default.region.eye.name,Глаза и когти,Eyes and claws,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)

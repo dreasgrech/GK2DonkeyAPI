@@ -152,11 +152,13 @@ namespace GK2DonkeyAPI
         internal static readonly Word ToneLightness = new Word("colours.tone_lightness", "{0}: lightness", "the row under it that makes that colour lighter or darker; {0}: the part's name");
         // a tone that follows a mount region (skin.cfg follows =): its first choice, in place of Game default (a tone's
         // choices, in ToneColor's order: SkinTones.Choices)
-        internal static readonly Word ToneFollowCoat = new Word("colours.tone_follow_coat", "As the coat", "a part of a skin coloured as the mount's coat colour (the first choice of a part that follows it)");
-        internal static readonly Word ToneFollowDark = new Word("colours.tone_follow_dark", "As the dark parts", "a part of a skin coloured as the mount's dark parts (its outline, mane and hooves)");
-        internal static readonly Word ToneFollowMuzzle = new Word("colours.tone_follow_muzzle", "As the second tone", "a part of a skin coloured as the mount's second tone (the Second tone row)");
-        internal static readonly Word ToneFollowEye = new Word("colours.tone_follow_eye", "As the eyes", "a part of a skin coloured as the mount's eyes");
-        internal static readonly Word ToneFollowHarness = new Word("colours.tone_follow_harness", "As the harness", "a part of a skin coloured as the mount's harness colour (the Harness colour row)");
+        // The mount regions' parts as the donkey's own look names them (SkinRegions; docs/second-tone.md 8): the colours
+        // window's rows on the donkey and on a skin worn over it.
+        internal static readonly Word RegionCoat = new Word("colours.region_coat", "Coat", "a part of the mount the player colours: the donkey's coat (its row's label in the colours window)");
+        internal static readonly Word RegionDonkeyDark = new Word("colours.region_donkey_dark", "Legs, mane and ears", "a part of the donkey the player colours: its dark lower legs, mane, ears and tail tuft, with its outline (one set of colours in the game's art)");
+        internal static readonly Word RegionDonkeyMuzzle = new Word("colours.region_donkey_muzzle", "Muzzle and belly", "a part of the donkey the player colours: its pale muzzle and belly");
+        internal static readonly Word RegionEyes = new Word("colours.region_eyes", "Eyes", "a part of the mount the player colours: its eyes");
+        internal static readonly Word RegionHarness = new Word("colours.region_harness", "Harness", "a part of the mount the player colours: the donkey's harness (its straps and collar)");
 
         // the speeds (Catalog.SpeedBands' words, shown; mount.cfg's speed = is read in English, Catalog.ParseBand)
         internal static readonly Word SpeedVerySlow = new Word("speed.very_slow", "Very slow", "a mount's speed in the journal's stats");

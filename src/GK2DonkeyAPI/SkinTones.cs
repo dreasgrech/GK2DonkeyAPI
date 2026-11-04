@@ -249,7 +249,7 @@ namespace GK2DonkeyAPI
 
         // A tone's row's choices, ToneColor's values in their order (a choice row's words go by the value's position):
         // the first one the region it follows ("As the harness", skin.cfg follows =), Game default without one.
-        internal static Word[] Choices(string follows)
+        internal static Word[] Choices()
         {
             if (choices == null)
             {
@@ -258,11 +258,7 @@ namespace GK2DonkeyAPI
                 for (int i = 0; i < all.Length; i++) words[i] = Preset(all[i]).Word ?? throw new InvalidOperationException($"ToneColor.{all[i]} has no word (SkinTones.Preset)");
                 choices = words;
             }
-            Word first = follows == "Coat" ? UiWords.ToneFollowCoat : follows == "Dark" ? UiWords.ToneFollowDark : follows == "Muzzle" ? UiWords.ToneFollowMuzzle : follows == "Eye" ? UiWords.ToneFollowEye : follows == "Harness" ? UiWords.ToneFollowHarness : null;
-            if (first == null) return choices;
-            var withFirst = (Word[])choices.Clone();
-            withFirst[0] = first;
-            return withFirst;
+            return choices;
         }
 
         // How light the colour is against the tone's own art (the average value of its colours), by the custom colours'
@@ -300,6 +296,22 @@ namespace GK2DonkeyAPI
             if (look != null && look.ColoursByRegion.TryGetValue(KeyOf(id), out List<Color32> drawn) && drawn.Count > 0) Colors.ValueRange(drawn, out art, out top);
             else if (d?.ColorRegions != null && d.ColorRegions.TryGetValue(KeyOf(id), out HashSet<string> set)) Colors.ValueRange(Colors.ColoursOfHexes(set), out art, out top);
             else { art = 0.5f; top = 1f; }
+        }
+
+        // A mount region's colour given as a part's (MountLook.Dark, Eye; docs/second-tone.md 8): the instance's keys
+        // (<region>Colorize, ColorizeAmount, Brightness) by a tone's rule against the region's own art (Colors.ArtRange: a
+        // preset stops where the region's lightest shade reaches white, Custom is the player's own lightness); null: Game,
+        // as drawn (or Custom without a usable colour).
+        internal static Dictionary<string, object> RegionValues(MountTone t, string region, string skinId)
+        {
+            if (t == null || t.Color == ToneColor.Game) return null;
+            bool preset = t.Color != ToneColor.Custom;
+            string hex = preset ? PresetHex(t.Color) : MountCompanion.Hex(t.Custom, region.ToLowerInvariant() + " colour");
+            if (hex == null) return null;
+            Colors.ArtRange(region, skinId, out float art, out float top);
+            float b = MountCompanion.LightnessAgainst(hex, art);
+            if (preset) b = Mathf.Min(b, CapOf(top));
+            return new Dictionary<string, object> { [region + "Colorize"] = hex, [region + "ColorizeAmount"] = 1f, [region + "Brightness"] = b };
         }
 
         // A skin's look's tones as the engine takes them: id to a colorize colour and its brightness; null when every tone
