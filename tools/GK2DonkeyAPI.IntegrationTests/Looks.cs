@@ -825,16 +825,19 @@ namespace GK2DonkeyAPI.IntegrationTests
             yield return Until(() => a.I.TestSkinWearing() == Sk("royal-parade") && !a.I.LooksRig.Building, 30f);
             Check(waited, "Royal Parade is worn");
             Looks.SkinDef rp = Looks.Find(Sk("royal-parade"));
-            Check(rp != null && rp.ColorRegions != null && rp.ColorRegions.TryGetValue("Harness", out HashSet<string> reds) && reds.Count == 4, "Royal Parade names its four reds under Harness");
+            // its four reds are the saddle cloth's tone since 2026-11-04 (docs/mount-colours.md 7.5): listed under [Colors]
+            // Harness too for an older API, moved to the tone by this one, which follows Harness (the players' looks kept)
+            SkinTones.ToneDef cloth = rp?.Tones?.Find(t => t.Id == "cloth");
+            List<string> reds = rp != null ? SkinTones.ColoursOf(rp, "cloth") : new List<string>();
+            Check(cloth != null && cloth.Follows == "Harness" && reds.Count == 4, $"Royal Parade's saddle cloth is a tone with its four reds that follows Harness ({reds.Count} reds, follows {cloth?.Follows ?? "none"})");
             a.Tuning.Set(Owner, "HarnessColorize", "0000FF");
             a.Tuning.Set(Owner, "HarnessColorizeAmount", 1f);
             yield return Frames(3);
             {
                 var d = a.I.ColorsRig.TestMountGroup();
                 int redsChanged = 0;
-                if (rp?.ColorRegions != null && rp.ColorRegions.TryGetValue("Harness", out HashSet<string> rr))
-                    foreach (string hex in rr) { Colors.TryHex(hex, out Color32 c); if (d.ChangedSources.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b)) redsChanged++; }
-                Check(redsChanged == 4, $"the player's harness colour reaches the cloth's four reds ({redsChanged} of 4)");
+                foreach (string hex in reds) { Colors.TryHex(hex, out Color32 c); if (d.ChangedSources.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b)) redsChanged++; }
+                Check(redsChanged == 4, $"the player's harness colour reaches the cloth's four reds, as before it was a tone ({redsChanged} of 4)");
             }
             a.Tuning.Clear(Owner, "HarnessColorize");
             a.Tuning.Clear(Owner, "HarnessColorizeAmount");

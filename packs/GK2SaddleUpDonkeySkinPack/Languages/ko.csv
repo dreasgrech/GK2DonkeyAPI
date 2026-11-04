@@ -1,4 +1,12 @@
 ﻿key,value,english,note
 skin.donkey/saddleup-donkey-skins.armored.name,갑옷,Armored,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.armored.tone.skirt.name,치마와 깃털 장식,Skirt and plume,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.steel.name,강철,Steel,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.brass.name,황동,Brass,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.hellfire.name,지옥불,Hellfire,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.hellfire.tone.lava.name,용암 균열,Lava cracks,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.horns.name,뿔과 꼬리,Horns and tail,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.glow.name,빛나는 눈,Glowing eyes,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.royal-parade.name,왕실 퍼레이드,Royal Parade,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.cloth.name,안장 덮개,Saddle cloth,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.crown.name,왕관과 테두리,Crown and trim,a part of the skin the player colours on its own: its row's label in the colours window

@@ -150,8 +150,13 @@ namespace GK2DonkeyAPI
         internal static readonly Word ToneCustomChoice = new Word("colours.tone_custom", "Custom", "a colour for a part of a skin: the player's own, picked in the row under it");
         internal static readonly Word ToneCustom = new Word("colours.tone_custom_colour", "{0}: custom colour", "the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)");
         internal static readonly Word ToneLightness = new Word("colours.tone_lightness", "{0}: lightness", "the row under it that makes that colour lighter or darker; {0}: the part's name");
-        // ToneColor's order (not a word of its own: UiWords.All lists the fields of type Word)
-        internal static readonly Word[] ToneChoices = { ToneGame, ToneRed, ToneGold, ToneGreen, ToneBlue, TonePurple, TonePink, ToneBrown, ToneBlack, ToneWhite, ToneCustomChoice };
+        // a tone that follows a mount region (skin.cfg follows =): its first choice, in place of Game default (a tone's
+        // choices, in ToneColor's order: SkinTones.Choices)
+        internal static readonly Word ToneFollowCoat = new Word("colours.tone_follow_coat", "As the coat", "a part of a skin coloured as the mount's coat colour (the first choice of a part that follows it)");
+        internal static readonly Word ToneFollowDark = new Word("colours.tone_follow_dark", "As the dark parts", "a part of a skin coloured as the mount's dark parts (its outline, mane and hooves)");
+        internal static readonly Word ToneFollowMuzzle = new Word("colours.tone_follow_muzzle", "As the second tone", "a part of a skin coloured as the mount's second tone (the Second tone row)");
+        internal static readonly Word ToneFollowEye = new Word("colours.tone_follow_eye", "As the eyes", "a part of a skin coloured as the mount's eyes");
+        internal static readonly Word ToneFollowHarness = new Word("colours.tone_follow_harness", "As the harness", "a part of a skin coloured as the mount's harness colour (the Harness colour row)");
 
         // the speeds (Catalog.SpeedBands' words, shown; mount.cfg's speed = is read in English, Catalog.ParseBand)
         internal static readonly Word SpeedVerySlow = new Word("speed.very_slow", "Very slow", "a mount's speed in the journal's stats");

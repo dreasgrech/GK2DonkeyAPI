@@ -104,6 +104,8 @@ namespace GK2DonkeyAPI.Api
             if (def == null) throw new ArgumentNullException(nameof(def));
             if (def.Source == null) throw new ArgumentException("A MountSkinDef needs a Source (IMountSkinSource).", nameof(def));
             Mounts.RequireStarted(ownerId, "the skin", def.Id);
+            // a Regions entry the loader refuses (a colour in two places, not a colour) throws its FormatException, as in
+            // 0.43 (a released mod may catch that one); a Tones entry it refuses is left out and said in the skin's report
             Looks.SkinDef d = def.ToDef(ownerId);
             d.Sprites = def.Source; // the mod's sprites stay the mod's
             d.FrontSprites = def.FrontSource;
@@ -316,7 +318,7 @@ namespace GK2DonkeyAPI.Api
                 foreach (MountSkinTone t in Tones)
                 {
                     if (t == null) continue;
-                    SkinTones.Add(d, (t.Id ?? "").Trim().ToLowerInvariant(), t.NameGiven ? t.Name : null, string.Join(" ", t.Colours), "skin '" + Id + "' (code)");
+                    SkinTones.Add(d, t.Id, t.NameGiven ? t.Name : null, string.Join(" ", t.Colours), t.Follows);
                 }
             }
             if (BaseRegions != null && Over)
@@ -423,18 +425,11 @@ namespace GK2DonkeyAPI.Api
             {
                 regions.Add("Coat");
                 if (d.ColorRegions != null) foreach (string r in d.ColorRegions.Keys) if (!SkinTones.IsTone(r) && !regions.Contains(r)) regions.Add(r);
+                // a region a tone follows reaches that tone's part (its Game default), so the skin has it
+                if (d.Tones != null) foreach (SkinTones.ToneDef t in d.Tones) if (t.Follows != null && SkinTones.HasColours(d, t.Id) && !regions.Contains(t.Follows)) regions.Add(t.Follows); // one with no colours reaches nothing
             }
             Regions = regions;
-            var tones = new List<MountSkinTone>();
-            if (d.OwnColours && d.Tones != null)
-            {
-                foreach (SkinTones.ToneDef t in d.Tones)
-                {
-                    List<string> colours = SkinTones.ColoursOf(d, t.Id);
-                    if (colours.Count > 0) tones.Add(new MountSkinTone(t.Id, t.Name, colours.ToArray()));
-                }
-            }
-            Tones = tones;
+            Tones = SkinTones.InfosOf(d); // made once per resolved state of the skin and shared (a MountSkinInfo is made at every Find)
             HasFrontLayer = d.FrontSprites != null || d.LoadFrontSheetPng != null || (d.FileNames != null && d.FileNames.Exists(f => f.StartsWith(Looks.FrontKey, StringComparison.Ordinal)));
         }
 

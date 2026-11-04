@@ -548,9 +548,11 @@ sealed class GK2DonkeyAPI.Api.MountSkinInfo
   method string ToString()
 sealed class GK2DonkeyAPI.Api.MountSkinTone
   property System.Collections.Generic.IReadOnlyList<string> Colours { get; }
+  property string Follows { get; }
   property string Id { get; }
   property string Name { get; }
-  method void .ctor(string id, string name, System.String[] colours)
+  method void .ctor(string id, string name, System.Collections.Generic.IEnumerable<string> colours)
+  method static GK2DonkeyAPI.Api.MountSkinTone Following(string region, string id, string name, System.Collections.Generic.IEnumerable<string> colours)
   method string ToString()
 sealed class GK2DonkeyAPI.Api.MountSound
   field bool ByGround

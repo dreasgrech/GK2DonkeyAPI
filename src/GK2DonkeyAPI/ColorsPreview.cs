@@ -35,15 +35,12 @@ namespace GK2DonkeyAPI
         internal static float ArtLightness(string regionKey, string skinId = null)
         {
             Looks.Loaded look = Looks.LoadedOwnColours(skinId);
-            if (look != null && !look.Def.Over && look.ColoursByRegion.TryGetValue(regionKey, out List<Color32> cols) && cols.Count > 0)
+            if (look != null && !look.Def.Over)
             {
-                float s = 0f;
-                foreach (Color32 c in cols)
-                {
-                    Color.RGBToHSV(c, out _, out _, out float v);
-                    s += v;
-                }
-                return s / cols.Count;
+                // the region's own colours, and those of the skin's tones that follow it (the parts that were the region's
+                // before they were tones: they count as they did)
+                List<Color32> all = look.ColoursReachedBy(regionKey);
+                if (all != null && all.Count > 0) return AverageValue(all);
             }
             foreach (RegionDef d in Regions)
             {
@@ -51,23 +48,49 @@ namespace GK2DonkeyAPI
                 {
                     continue;
                 }
-                float sum = 0f;
-                int n = 0;
-                foreach (var part in d.Parts)
-                {
-                    foreach (string hex in part.Colors)
-                    {
-                        if (TryHex(hex, out Color32 c))
-                        {
-                            Color.RGBToHSV(c, out _, out _, out float v);
-                            sum += v;
-                            n++;
-                        }
-                    }
-                }
-                return n > 0 ? sum / n : 0.5f;
+                var hexes = new List<string>();
+                foreach (var part in d.Parts) hexes.AddRange(part.Colors);
+                return AverageValue(hexes);
             }
             return 0.5f;
+        }
+
+        // The average HSV value (0..1) of colours: how light an art is, a region's above or a skin's tone's
+        // (SkinTones.Lightness); 0.5 for none.
+        internal static float AverageValue(List<Color32> colours)
+        {
+            ValueRange(colours, out float average, out _);
+            return average;
+        }
+
+        // The same over hex RRGGBB (one that isn't a colour doesn't count).
+        internal static float AverageValue(IEnumerable<string> hexes) => AverageValue(ColoursOfHexes(hexes));
+
+        // The colours of hex RRGGBB (one that isn't a colour left out).
+        internal static List<Color32> ColoursOfHexes(IEnumerable<string> hexes)
+        {
+            var list = new List<Color32>();
+            if (hexes != null) foreach (string hex in hexes) if (TryHex(hex, out Color32 c)) list.Add(c);
+            return list;
+        }
+
+        // The average and the highest HSV value of colours (0.5 and 1 for none).
+        internal static void ValueRange(List<Color32> colours, out float average, out float highest)
+        {
+            float sum = 0f, top = 0f;
+            int n = 0;
+            if (colours != null)
+            {
+                foreach (Color32 c in colours)
+                {
+                    Color.RGBToHSV(c, out _, out _, out float v);
+                    sum += v;
+                    if (v > top) top = v;
+                    n++;
+                }
+            }
+            average = n > 0 ? sum / n : 0.5f;
+            highest = n > 0 ? top : 1f;
         }
         private static UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<GameObject> loading;
 

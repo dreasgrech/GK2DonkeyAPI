@@ -1159,7 +1159,8 @@ namespace GK2DonkeyAPI.Api
         // presets (ToneColor; Game default is the skin as drawn) and its custom colour with the lightness (Color), keys
         // Tone.<id><suffix>, CustomTone.<id><suffix> and CustomTone.<id>Lightness<suffix>, the look's MountLook.Tone. The
         // label is the tone's name, translated by the skin's owner; the other words are the API's. A skin without tones
-        // gets no rows; one registered after the page gets them with its other PerSkin rows at CatchUp.
+        // gets no rows; one registered after the page gets them with its other PerSkin rows at CatchUp. A choice's default is
+        // the look's value when this is called (MountLook.Tone: set it first for a default of your own), as the other rows'.
         public void ToneRows(string section, string skinId, string suffix, MountCompanion companion)
         {
             if (companion == null) throw new ArgumentNullException(nameof(companion));
@@ -1167,17 +1168,24 @@ namespace GK2DonkeyAPI.Api
             if (def == null || !def.OwnColours || def.Tones == null) return;
             MountLook look = companion.LookOf(skinId);
             string sfx = suffix ?? "";
-            var english = new string[UiWords.ToneChoices.Length];
-            for (int i = 0; i < english.Length; i++) english[i] = UiWords.ToneChoices[i].English;
             foreach (SkinTones.ToneDef t in def.Tones)
             {
-                if (SkinTones.ColoursOf(def, t.Id).Count == 0) continue; // a variant's tone whose colours all went elsewhere
+                if (!SkinTones.HasColours(def, t.Id)) continue; // no colours (all moved elsewhere by a variant, or none given)
                 MountTone tone = look.Tone(t.Id);
                 Term name = SkinTones.NameTerm(def, t);
                 string who = $"{t.Name} ({def.Name ?? def.Id})";
-                ConfigEntry<ToneColor> choice = Choice(section, "Tone." + t.Id + sfx, ToneColor.Game, t.Name, $"A colour of the skin's own: {who}. Game default is the skin as drawn.", v => tone.Color = v, english, look: true);
+                // its choices: a tone that follows a region (follows =) has that region first ("As the harness": its Game
+                // default follows the region's colour, as the part did before it was a tone)
+                Word[] words = SkinTones.Choices(t.Follows);
+                var english = new string[words.Length];
+                for (int i = 0; i < english.Length; i++) english[i] = words[i].English;
+                // the English Label (logs, comparisons; drawn through LabelOf) carries the tone's id: a pack's tone named
+                // like the page's picture row would otherwise make Add refuse the page (a picture is found by its label)
+                string label = $"{t.Name} (tone {t.Id})";
+                string first = t.Follows != null ? $"{english[0]}, the first choice, colours it as the mount's {t.Follows} setting does" : "Game default is the skin as drawn";
+                ConfigEntry<ToneColor> choice = Choice(section, "Tone." + t.Id + sfx, tone.Color, label, $"A colour of the skin's own: {who}. {first}.", v => tone.Color = v, english, look: true);
                 string customKey = "CustomTone." + t.Id + sfx;
-                Color(section, customKey, t.Name + ": custom colour", $"Used when {who} is Custom.", PaletteColor.Gold, v => tone.Custom = v, () => choice.Value == ToneColor.Custom);
+                Color(section, customKey, label + ": custom colour", $"Used when {who} is Custom.", PaletteColor.Gold, v => tone.Custom = v, () => choice.Value == ToneColor.Custom);
                 // the three rows by their keys (Color's colour and lightness rows wherever it put them): their words the
                 // tone's name, in the API's templates for the custom rows, and the API's presets
                 string cfgSection = choice.Definition.Section;
@@ -1186,10 +1194,17 @@ namespace GK2DonkeyAPI.Api
                 if (choiceRow != null)
                 {
                     choiceRow.LabelOf = () => name.Text;
-                    choiceRow.ChoiceWords = UiWords.ToneChoices;
+                    choiceRow.ChoiceWords = words;
                 }
                 if (customRow != null) customRow.LabelOf = () => UiWords.ToneCustom.Format(name);
                 if (lightRow != null) lightRow.LabelOf = () => UiWords.ToneLightness.Format(name);
+                // greyed once the skin, loaded, turns out to draw none of the tone's colours (a variant drawing every
+                // frame of its own over its default's tone: the choice would colour nothing; the tenth code review), live
+                // until then (nothing is known before it loads); a row's own condition stays
+                string skinKey = def.Id, toneId = t.Id;
+                Func<bool> draws = () => SkinTones.Draws(skinKey, toneId);
+                EnableWhen(section, choice.Definition.Key, draws);
+                EnableWhen(section, customKey, draws); // its lightness row with it
             }
         }
 

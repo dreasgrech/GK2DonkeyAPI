@@ -17,7 +17,7 @@ namespace SaddleUp
     // "Built in or external"). The API is the backend; a mount is a pack; the API draws it, seats the rider, colours it,
     // hitches its cart.
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
-    [BepInDependency("dreas.gk2.donkeyapi", "0.40.0")] // at least the API it was written against (NeedsApi below)
+    [BepInDependency("dreas.gk2.donkeyapi", "0.41.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup";
@@ -25,7 +25,9 @@ namespace SaddleUp
         // mod was written against.
         public const string Version = "0.15.0";
 
-        // The API this mod is written against: 0.40 the Freeplay keys (SpeedBand, Mounts.Catalog.SpeedWords, MostCargo), the per-mount name, babies, voice and lantern (MountLook) and the
+        // The API this mod is written against: 0.41 the looks per skin (MountSettingsPage.PerSkin, SkinHasRegion,
+        // MountCompanion.LookOf: raised from 0.40 by the eleventh code review of the tones, the gate let 0.40 through to a
+        // missing method); 0.40 the Freeplay keys (SpeedBand, Mounts.Catalog.SpeedWords, MostCargo), the per-mount name, babies, voice and lantern (MountLook) and the
         // look Toggle and Text rows; 0.39 reads a mount's own [Jump]; 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
         // rename) and ships no skin; 0.35 the Mounts panel (PanelButton,
         // OpenPanel) and TuningKey (0.34
@@ -33,7 +35,16 @@ namespace SaddleUp
         // 0.28 CartSlots, 0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22 CargoZombies). Checked before anything of the API
         // is used, so an older API gets a clear message instead of a missing-method error. Keep it the same as the
         // BepInDependency minimum above.
-        private static readonly Version NeedsApi = new Version(0, 40, 0);
+        private static readonly Version NeedsApi = new Version(0, 41, 0);
+
+        // The skins' tones' rows (MountSettingsPage.ToneRows, the API with tones) in a method of their own, never inlined:
+        // on an older API the missing method is met when this is called, where the colours' page catches it and builds
+        // without them, not when the page's builder is compiled (the seventh code review). NeedsApi asks for that API at
+        // the release's version bump (docs/release-checklist.md); this keeps a mixed install's page whole until then and goes
+        // with that bump (past it a later change to ToneRows would hide behind the catch: the eighth code review).
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static void ToneRows(MountSettingsPage p, string skinId, string sfx, MountCompanion me) => p.ToneRows("Colours", skinId, sfx, me);
+        private static bool toneRowsMissingSaid;
 
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
 
@@ -171,8 +182,17 @@ namespace SaddleUp
                 p.Color("Colours", "CustomMuzzle" + sfx, "Custom second tone", "Used when the second tone is Custom.", PaletteColor.Chestnut, v => look.CustomMuzzle = v, () => muzzle.Value == MuzzleColor.Custom);
                 p.EnableWhen("Colours", "CustomMuzzle" + sfx, () => MountSettingsPage.SkinHasRegion(skinId, "Muzzle"));
                 // the skin's own tones, after the mount's three (the user, 2026-11-03: "the skin can introduce its own color
-                // tones depending on what it needs"): whatever the skin declares, a row each; none here by name
-                p.ToneRows("Colours", skinId, sfx, me);
+                // tones depending on what it needs"): whatever the skin declares, a row each; none here by name. On an API
+                // without them (one this mod still takes until NeedsApi asks for it) the page builds without these rows.
+                try
+                {
+                    ToneRows(p, skinId, sfx, me);
+                }
+                catch (MissingMethodException)
+                {
+                    if (!toneRowsMissingSaid) Logger.LogWarning($"GK2 Donkey API {Mounts.ApiVersion} has no colours of a skin's own parts (tones): their rows are left out of the colours window. Update GK2 Donkey API for them.");
+                    toneRowsMissingSaid = true;
+                }
             });
             p.Heading("Colours", "Cart colours");
             p.PerSkin((skinId, mountId, sfx, shown) =>

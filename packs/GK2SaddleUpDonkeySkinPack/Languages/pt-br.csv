@@ -1,4 +1,12 @@
 ﻿key,value,english,note
 skin.donkey/saddleup-donkey-skins.armored.name,Blindado,Armored,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.armored.tone.skirt.name,Saia e penacho,Skirt and plume,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.steel.name,Aço,Steel,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.brass.name,Latão,Brass,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.hellfire.name,Fogo Infernal,Hellfire,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.hellfire.tone.lava.name,Rachaduras de lava,Lava cracks,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.horns.name,Chifres e cauda,Horns and tail,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.glow.name,Olhos brilhantes,Glowing eyes,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.royal-parade.name,Desfile Real,Royal Parade,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.cloth.name,Manta da sela,Saddle cloth,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.crown.name,Coroa e debrum,Crown and trim,a part of the skin the player colours on its own: its row's label in the colours window

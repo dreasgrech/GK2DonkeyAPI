@@ -268,7 +268,7 @@ rows:
 
 ```csharp
 // a code skin's tones (a pack's skin.cfg says the same with [Tone.cloth] name = / colours =)
-def.Tones = new List<MountSkinTone> { new MountSkinTone("cloth", "Saddle cloth", "C41E38", "96122C", "3A0A12") };
+def.Tones = new List<MountSkinTone> { new MountSkinTone("cloth", "Saddle cloth", new[] { "C41E38", "96122C", "3A0A12" }) };
 
 // the companion's look of that skin: a preset, or Custom with a hex
 MountTone t = companion.LookOf("donkey/me.fancy").Tone("cloth");
@@ -283,8 +283,17 @@ foreach (MountSkinTone tone in Mounts.Looks.Find("donkey/me.fancy").Tones) Logge
 
 - `ToneColor`: `Game` (as drawn), `Red`, `Gold`, `Green`, `Blue`, `Purple`, `Pink`, `Brown`, `Black`, `White`,
   `Custom`. A preset gives the tone its hue and saturation over each pixel's own shading, as light against the
-  tone's art as the colour itself is.
-- `ToneRows` keys: `Tone.<id><suffix>`, `CustomTone.<id><suffix>`, `CustomTone.<id>Lightness<suffix>`. The row's label is
+  tone's art as the colour itself is, as far as its lightest shade can go before it is white.
+- `MountSkinTone.Follows` (a pack's `follows =`): the mount region a tone's `Game` follows, for a part that was under
+  that region before it was a tone: with `Game` it is coloured exactly as that region (`Mounts.Colors`, the
+  companion's look) colours it, and its row's first choice reads "As the harness" (and so on). Given with the
+  factory `MountSkinTone.Following(region, id, name, colours)` and read only after (the tones `MountSkinInfo` lists are
+  shared); a region that is none of the five (the region and the id swapped) throws `ArgumentException` there. The ids
+  are kept in lower case. The colours are a list of hex strings (any `IEnumerable<string>`), kept as a copy; a list,
+  not loose strings, so a call that leaves out the name doesn't compile.
+- `ToneRows` keys: `Tone.<id><suffix>`, `CustomTone.<id><suffix>`, `CustomTone.<id>Lightness<suffix>`. A choice's
+  default is the look's value when `ToneRows` is called (set `MountLook.Tone` first for one of your own), as the other
+  rows'; a tone's rows are greyed once the skin, loaded, draws none of its colours. The row's label is
   the tone's name, translated by the skin's owner (`skin.<skin id>.tone.<id>.name`); the other words are the API's.
 - A tone the worn skin doesn't have changes nothing; the companion applies the worn skin's tones to its mount, its
   babies and the Mounts panel's picture.
@@ -1125,7 +1134,9 @@ History:
   The `DismountIndoors` setting's text says the cart has no collider indoors.
 - Unreleased (additions only, so a minor; `tests/ApiSurface`): **a skin's own tones** (section "A skin's own tones"):
   `MountSkinTone`, `MountSkinDef.Tones`, `MountSkinInfo.Tones`, `ToneColor`, `MountTone`, `MountLook.Tone(id)`,
-  `MountSettingsPage.ToneRows`; skin.cfg `[Tone.<id>]`.
+  `MountSettingsPage.ToneRows`, `MountSkinTone.Follows`; skin.cfg `[Tone.<id>]` with `follows =`. `Register` throws a
+  `FormatException` for a `Regions` entry the loader refuses, as in 0.43; a `Tones` entry it can't take is left out
+  and said in the skin's report (the skin registers without it).
 - 0.43.0 (2026-11-01): no change to the public surface. **Translations** (section "Translations"): a page's rows,
   sections and title, a mount's and a skin's words (name, description, abilities) and the API's own (its windows, the
   keeper's bubbles, the prompts on foot, the crossroads notification) are looked up in `Languages/<id>.csv` beside the

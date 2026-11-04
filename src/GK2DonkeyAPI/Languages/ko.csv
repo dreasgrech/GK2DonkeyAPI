@@ -68,6 +68,11 @@ colours.tone_white,흰색,White,a colour for a part of a skin
 colours.tone_custom,사용자 지정,Custom,"a colour for a part of a skin: the player's own, picked in the row under it"
 colours.tone_custom_colour,{0}: 사용자 지정 색상,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
 colours.tone_lightness,{0}: 밝기,{0}: lightness,"the row under it that makes that colour lighter or darker; {0}: the part's name"
+colours.tone_follow_coat,몸 색상과 같게,As the coat,a part of a skin coloured as the mount's coat colour (the first choice of a part that follows it)
+colours.tone_follow_dark,어두운 부분과 같게,As the dark parts,"a part of a skin coloured as the mount's dark parts (its outline, mane and hooves)"
+colours.tone_follow_muzzle,보조 색조와 같게,As the second tone,a part of a skin coloured as the mount's second tone (the Second tone row)
+colours.tone_follow_eye,눈과 같게,As the eyes,a part of a skin coloured as the mount's eyes
+colours.tone_follow_harness,마구 색상과 같게,As the harness,a part of a skin coloured as the mount's harness colour (the Harness colour row)
 speed.very_slow,매우 느림,Very slow,a mount's speed in the journal's stats
 speed.slow,느림,Slow,
 speed.normal,보통,Normal,

@@ -50,8 +50,13 @@ def parse(path):
         line = raw.strip()
         if line.startswith("["):
             name = line.split("#", 1)[0].strip().strip("[]").strip().lower()
-            secs[name] = {"header": line.split("#", 1)[0].strip(), "above": pending, "lines": []}
-            order.append(name)
+            if name in secs:
+                # the same section again: one section with both blocks' lines, as the loader reads them (a [Tone.<id>] or
+                # [Colors] given twice keeps the colours of both); a block's comments go with its lines
+                secs[name]["lines"].extend(pending)
+            else:
+                secs[name] = {"header": line.split("#", 1)[0].strip(), "above": pending, "lines": []}
+                order.append(name)
             pending = []
             cur = name
             continue

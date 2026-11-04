@@ -573,6 +573,8 @@ templates shipped, both read; step 1 = the settings rows and the windows' own wo
   - `tools/l10n-sync.py` copies them into `src/<Plugin>/Languages/`. Its `--check` is in `tools/release-scans.sh`.
   - `DeployToGame.targets` deploys `Languages\` with the DLL, and `tools/make-release-zip.py` ships it in the zip and
     the Workshop folder.
+  - `tools/l10n-glyphs.py` lists the characters of the translations the game's own text never draws in their
+    language (from its strings tables, GK2_L10N_CORPUS): the ones a font may lack, for the in-game Fonts check.
 - **For translators:** `[Translations] Report` (the API's cfg, off by default) writes
   `BepInEx\GK2-l10n\<guid>\<id>.missing.txt` with the lines still to translate.
 - **The test language** (`Debug.TestLanguage`, dev only, off by default): every looked-up text 1.6 times as long and
@@ -1198,4 +1200,13 @@ its language's font, is as wide as its text wants and takes one line; a CJK font
 it draws over its edges (as the game's own Japanese prompts do), so the measurement judges a label that doesn't clip by
 its lines since (TextRoom.Fits; a label that clips keeps the height); the Keeper's bubble wasn't found by the test (the
 game types a bubble in with a transparent colour tag inside its text: the test compares without tags since).
+
+**The skins' part names** (2026-11-04): the Donkey Skin Pack's 8 new part names (docs/mount-colours.md 7.9) brought
+three characters the Japanese font lacks (摺 鍮 鞍; 鍮 one of the eight worded around before) and two the Chinese
+lacks (鞍 褥), found by the user's F11 run. Reworded with characters the game's own text in that language draws
+(`lng_ja.tsv`, `lng_zh_cn.tsv`) or the same run found in the font (草, 敷): 草ずり, 黄銅, くら敷き; 饰布. Before a new
+CJK text ships, its characters are looked up with `tools/l10n-glyphs.py` (GK2_L10N_CORPUS): it lists the characters
+of our translations the game's own text never draws (that day ja 4, zh_cn 16, ko 9, and the Fonts check found every
+one of them in the fonts: a font holds more than the game's text); a new one it lists waits for the next Fonts check,
+which judges.
 

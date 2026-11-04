@@ -129,6 +129,13 @@ namespace GK2DonkeyAPI
         // is 32 wide; the donkey 41, smaller mounts 17 to 21); over it the colour cube, one lookup for any number
         // (hand-painted mounts 300 or 720: a 720-wide swap is 720 texture samples per pixel).
         internal const int PaletteMaxColours = 48;
+        // A skin over the donkey's: 64 since 2026-11-04 (the fifth code review). It pairs the donkey's 42 and its own
+        // named colours, and on the cube two pairs of the donkey's own colours share a cell (Dark 292316 with Harness
+        // 2D2114, Coat 362815 with Harness 3C2A14: those outline and coat pixels took the harness colour). Every skin over
+        // the donkey stays on the exact swap with all its tones set (the released ones 49 to 59); the shader's loop has
+        // no fixed cap (docs/colors.md), each pixel reads up to 64 palette texels. A skin in its own colours keeps 48 (the
+        // sixth review: one of 49 to 64 colours keeps the path, and the look, it had).
+        internal const int PaletteMaxColoursOver = 64;
 
         // The donkey's own colours of a mount region, packed RGB (for the recipes: the coat to darken, the outline to keep).
         internal static HashSet<int> RegionSourceColours(string key)
@@ -648,10 +655,12 @@ namespace GK2DonkeyAPI
                 nextVerify = 0f;
             }
             // The shader path per sprite group: the player's SpriteMethod, except the mount's sprites when the worn
-            // look has more colours than the swap palette should hold (PaletteMaxColours): the cube then. Per group,
-            // so the cart's wheel sprites draw the same whatever mount pulls the cart.
+            // look has more colours than the swap palette should hold (PaletteMaxColours; a look worn over the donkey counts
+            // its pairs against PaletteMaxColoursOver): the cube then. Per group, so the cart's wheel sprites draw the same
+            // whatever mount pulls the cart.
             private readonly SpriteColorMethod[] groupMethod = new SpriteColorMethod[GroupCount];
             private int lookColourCount; // the worn look's colours in the mount's sprite group (0: the donkey's own lists)
+            private bool lookOver; // the worn look is drawn over the donkey: its count is its pairs, against PaletteMaxColoursOver
             private static readonly HashSet<string> OverSharedWarned = new HashSet<string>(StringComparer.Ordinal); // skins already told (Rebuild)
             public string Note { get; private set; } = "not attached";
 
@@ -911,12 +920,26 @@ namespace GK2DonkeyAPI
                 return (lookColourCount, groupMethod[(int)Group.DonkeySprites], pairs, changed.Count, changed);
             }
 
+            // The self-tests' view of one colour of the mount's sprite group: what it is swapped to, null when it has no pair.
+            internal Color32? TestDstOf(Color32 src)
+            {
+                if (mountPairs == null) return null;
+                foreach (var p in mountPairs) if (Same(p.Src, src)) return p.Dst;
+                return null;
+            }
+
             private readonly Color32[][] lastDst = new Color32[GroupCount][];
             private readonly bool[] builtFor = new bool[GroupCount]; // textures hold this group's current mapping
 
             // The worn look's named colour sets in pairing order, each with its map: the five mount regions (the player's
-            // settings), then the skin's own tones (SkinTones) with this instance's value, null for one as drawn.
-            private List<(string Key, RegionMap Map)> NamedMaps(Looks.Loaded look, Dictionary<RegionDef, RegionMap> maps)
+            // settings), then the skin's own tones (SkinTones): with this instance's value; without one, a tone that
+            // follows a region with that region's map (the part as it was when its colours were the region's, the
+            // player's saved colour on it), and one that follows none: on a skin over the donkey not at all, its colours
+            // as drawn without a pair, so a tone nobody set adds nothing to the swap's count there (its pairs are the
+            // donkey's and the named: a skin at 46 given an unset crown tone would have gone to 49 and the cube; the fourth code review,
+            // 2026-11-04); on a skin in its own colours (pairDrawn) with no map, a pair to itself, as every one of that
+            // look's colours has (on the cube an unpaired colour takes its cell's; the count is the look's colours there).
+            private List<(string Key, RegionMap Map)> NamedMaps(Looks.Loaded look, Dictionary<RegionDef, RegionMap> maps, bool pairDrawn)
             {
                 var list = new List<(string, RegionMap)>();
                 foreach (string region in MountRegionKeys)
@@ -931,8 +954,13 @@ namespace GK2DonkeyAPI
                     foreach (SkinTones.ToneDef t in look.Def.Tones)
                     {
                         RegionTweak v = null;
-                        bool set = forThis && owner.Tones.TryGetValue(t.Id, out v) && v != null && !v.IsIdentity;
-                        list.Add((SkinTones.KeyOf(t.Id), set ? new RegionMap(v) : null));
+                        // a value given: its colour, or as drawn (an identity one: Custom without a colour yet); none: the
+                        // region it follows, else as drawn
+                        bool given = forThis && owner.Tones.TryGetValue(t.Id, out v) && v != null;
+                        RegionDef followed = !given && t.Follows != null ? RegionOf(t.Follows) : null;
+                        if (given && !v.IsIdentity) list.Add((SkinTones.KeyOf(t.Id), new RegionMap(v)));
+                        else if (followed != null) list.Add((SkinTones.KeyOf(t.Id), maps[followed]));
+                        else if (pairDrawn) list.Add((SkinTones.KeyOf(t.Id), null));
                     }
                 }
                 return list;
@@ -960,10 +988,14 @@ namespace GK2DonkeyAPI
                     bool any = false;
                     Looks.Loaded look = g == Group.DonkeySprites ? owner?.LooksRig?.WornOwnColours : null;
                     bool over = look != null && look.Def.Over;
-                    if (g == Group.DonkeySprites) lookColourCount = look?.Colours.Count ?? 0;
+                    if (g == Group.DonkeySprites)
+                    {
+                        lookColourCount = look?.Colours.Count ?? 0;
+                        lookOver = over;
+                    }
                     if (look != null && !over)
                     {
-                        foreach ((string named, RegionMap map) in NamedMaps(look, maps))
+                        foreach ((string named, RegionMap map) in NamedMaps(look, maps, pairDrawn: true))
                         {
                             if (!look.ColoursByRegion.TryGetValue(named, out List<Color32> cols)) continue;
                             foreach (Color32 src in cols)
@@ -1003,7 +1035,7 @@ namespace GK2DonkeyAPI
                             var have = new HashSet<int>();
                             foreach (var p in pairs) have.Add(p.Src.r << 16 | p.Src.g << 8 | p.Src.b);
                             var shared = new List<string>();
-                            foreach ((string named, RegionMap map) in NamedMaps(look, maps))
+                            foreach ((string named, RegionMap map) in NamedMaps(look, maps, pairDrawn: false))
                             {
                                 if (!look.ColoursByRegion.TryGetValue(named, out List<Color32> cols)) continue;
                                 foreach (Color32 src in cols)
@@ -1176,7 +1208,7 @@ namespace GK2DonkeyAPI
             {
                 for (int gi = 0; gi < GroupCount; gi++)
                 {
-                    groupMethod[gi] = (Group)gi == Group.DonkeySprites && lookColourCount > PaletteMaxColours ? SpriteColorMethod.Lut : SpriteMethod.Value;
+                    groupMethod[gi] = (Group)gi == Group.DonkeySprites && lookColourCount > (lookOver ? PaletteMaxColoursOver : PaletteMaxColours) ? SpriteColorMethod.Lut : SpriteMethod.Value;
                 }
                 foreach (SpriteTarget t in sprites)
                 {

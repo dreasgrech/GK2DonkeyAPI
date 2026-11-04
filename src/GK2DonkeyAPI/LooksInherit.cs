@@ -178,6 +178,7 @@ namespace GK2DonkeyAPI
             if (!d.Has(SkinGiven.Colours)) d.OwnColours = p?.OwnColours ?? a.OwnColours;
             d.ColorRegions = MergeRegions(p?.ColorRegions, d.OwnColorRegions);
             d.Tones = SkinTones.Merge(p?.Tones, d.OwnTones); // a tone's colours merge with the regions above
+            d.ToneInfos = null; // the API's view of them made again when asked (SkinTones.InfosOf)
             // its own tones on a palette look taken from its default (FromCfg saw its own colours = only): they do nothing
             if (!d.OwnColours && d.OwnTones != null && layerSaid.Add(d.Id + "|tones"))
                 Plugin.Log.LogInfo($"Looks: skin '{d.Id}' is in its default's palette colours (colours = palette, which it doesn't say otherwise), so its [Tone.*] are ignored: a palette skin takes the donkey's regions. Give it colours = own for tones of its own.");

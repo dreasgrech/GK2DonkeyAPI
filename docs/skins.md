@@ -258,19 +258,46 @@ colours = 38121A 5E1C24 8A282A
   `Languages\` files as `skin.<skin id>.tone.<id>.name`).
 - A part is found by its exact colours. Give each part shades of its own: two parts in the same colours are one tone
   (draw one of them a step apart to colour them separately). A colour is in one place only: one tone, or one
-  `[Colors]` region; the loader refuses a skin that names a colour twice.
+  `[Colors]` region (a following tone's colours may stay under its region too, below). A tone naming a colour another
+  place names is left out, the loader's report says why, and the skin loads without it; a colour under two
+  `[Colors]` regions refuses the skin, as before tones.
 - The colour keeps each pixel's shading: a tone takes the picked colour's hue and saturation over its own shades,
-  as light against its own art as the colour itself is.
+  as light against its own art as the colour itself is, as far as its lightest shade can go before it is white.
 - Over the donkey, the Coat, Harness and Second tone rows still reach the donkey's own parts under the skin; a part
-  of the skin under `[Colors] Harness` follows the player's harness colour instead of having a row of its own (the
-  released skins of 0.15.0 do so). On a skin in its own colours, its tones are taken out of Coat.
-- Colours named too close together may change together on the game's colour cube (over 48 colours, or with the
-  player's `SpriteMethod = Lut`): `tools/skins/check_skin.py` and `tests/SkinsScan` fail a tone's colour that shares a
-  cube cell with any other colour of the look.
+  of the skin under `[Colors] Harness` follows the player's harness colour instead of having a row of its own. On a
+  skin in its own colours, its tones are taken out of Coat.
+- **A part that should keep following one of those rows** (a part that was under `[Colors] Harness` in a skin players
+  already wear) says `follows = Harness` (or `Dark`, `Muzzle`, `Eye`; `Coat` on a skin in its own colours, where a
+  colour named nowhere was Coat): the dropdown's first choice is then "As the harness" instead of Game default, and
+  with it the part is coloured exactly as the Harness row colours it (a player's saved harness colour keeps reaching
+  it); any other choice gives it its own. On a skin over the donkey a colour named nowhere was drawn as it is, so
+  `follows = Coat` there keeps nothing: it gives the part the player's coat colour, also on the update of a skin
+  players already wear (the checkers say so; use it for a part meant to follow the coat). Its colours may stay listed
+  under that region in `[Colors]` as well: this API moves them to the tone, and an older one, which doesn't know
+  tones, keeps colouring them as before. That is how the released skins got their parts (docs/mount-colours.md 7.9):
+
+  ```ini
+  [Colors]
+  Harness = E23A50 C41E38 96122C 3A0A12   # for an API without tones
+
+  [Tone.cloth]
+  name = Saddle cloth
+  follows = Harness
+  colours = E23A50 C41E38 96122C 3A0A12
+  ```
+- Colours named too close together may change together on the game's colour cube (a skin in its own colours over 48,
+  one over the donkey over 64 with the donkey's own 42, or with the player's `SpriteMethod = Lut`):
+  `tools/skins/check_skin.py` and `tests/SkinsScan` fail a tone's colour that shares a cube cell with any other colour
+  of the look. On the exact swap two colours one step apart in one channel are one colour (the swap's reach is 0.004,
+  a step 0.0039): both fail a tone's colour one step from a colour of another place too.
 - A variant (see below) has its default's tones. A `[Tone.<id>]` of its own with a default's id adds its colours to
-  that tone (the default's name stays), or with a `name` of its own renames it (`colours` may then be left out).
-- A tone needs GK2 Donkey API with tones (an older one ignores the section and draws the part as drawn): say so with
-  `needs =`. A code skin gives the same with `MountSkinDef.Tones`.
+  that tone (the default's name stays, and what it follows unless it says `follows =` itself), or with a `name` of
+  its own renames it (`colours` may then be left out). Listing those shades under the followed region in `[Colors]`
+  as well (for an older API) needs its own `follows =` line: the default's isn't known while the variant's file is read.
+- An older GK2 Donkey API ignores `[Tone.*]`: on a skin over the donkey the part is drawn as drawn, on a skin in its
+  own colours it is Coat (or, listed under its region too, coloured as that region). Say `needs =` the API with
+  tones when that isn't good enough. A code skin gives the same with `MountSkinDef.Tones` (a following tone with
+  `MountSkinTone.Following`).
 
 **Erasing from the donkey.** An over skin can take things off the donkey as well as add to it: every pixel of the
 **erase colour** (`erase = FF00FF`, magenta, unless the cfg says another colour or `none`) makes the donkey
@@ -478,9 +505,10 @@ A pack is someone else's files loaded into a player's game, so the loader checks
 - a file name (`sheet =`, `sheet_front =`, `portrait =`, a sound) outside the pack's own folder: `..`, a drive, a
   network share;
 - a sheet's `frames =` name that isn't a frame key (letters, digits, `_`, `-`);
-- a colour named in two places (two tones, or a tone and a `[Colors]` region), and a `[Tone.<id>]` whose id isn't
-  lower case letters, digits and `-`: the skin is refused; a tone without colours of its own colours nothing and
-  gets no row (unless it renames its default's tone), said in its report;
+- a colour under two `[Colors]` regions: the skin is refused; a `[Tone.<id>]` it can't take (a colour another tone
+  or a `[Colors]` region names, other than the region it follows; an id that isn't lower case letters, digits and
+  `-`; a `follows =` that is no mount region) is left out and said in its report, the skin loads without it; a tone
+  without colours of its own colours nothing and gets no row (unless it renames its default's tone), said in its report;
 - a `mount.cfg` whose `[Mount] id` isn't its folder's name, or whose `needs =` is newer than the API;
 - a skin of a mount that isn't installed is kept, but offered nowhere (the Mounts panel lists its mount as not
   installed); it is worn once its mount comes.

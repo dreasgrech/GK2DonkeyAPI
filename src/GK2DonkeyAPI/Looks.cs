@@ -173,6 +173,7 @@ namespace GK2DonkeyAPI
             // too, under "tone.<id>" (SkinTones; [Tone.<id>]).
             internal Dictionary<string, HashSet<string>> ColorRegions;
             internal List<SkinTones.ToneDef> Tones; // its own tones in their order (docs/mount-colours.md section 7); null: none
+            internal IReadOnlyList<MountSkinTone> ToneInfos; // the API's view of them (SkinTones.InfosOf), made once per resolved state
             internal bool Over;              // true: drawn over the base, which stays visible
             // A skin over the base may erase from it: every pixel of this colour in a picture makes the base transparent
             // there (the ears gone under horns, the tail gone under another). Such a frame is built whole at load (the
@@ -755,25 +756,50 @@ namespace GK2DonkeyAPI
             AddRegionColours(d, key, "[Colors] " + key, value, where);
         }
 
-        // A region's or a tone's colours (SkinTones.Add): every one RRGGBB and in one place only (a region or a tone).
-        internal static void AddRegionColours(SkinDef d, string key, string label, string value, string where)
+        // How a colour list is read, one way for [Colors] (AddRegionColours) and the tones (SkinTones.Add: ColourTokens,
+        // then ColourProblem with IsHexColour; a tone it takes goes into RegionColours as it is, never through
+        // AddRegionColours' throws): split at spaces, commas and tabs, a '#' dropped, upper case, six hex digits.
+        private static readonly char[] ColourSeparators = { ' ', ',', '\t' };
+        internal static string NormalHex(string token) => token.TrimStart('#').ToUpperInvariant();
+        internal static bool IsHexColour(string hex) => hex.Length == 6 && int.TryParse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out _);
+
+        // A colour list's entries, normalised (separators only: none).
+        internal static List<string> ColourTokens(string value)
+        {
+            var list = new List<string>();
+            if (string.IsNullOrEmpty(value)) return list;
+            foreach (string tok in value.Split(ColourSeparators, StringSplitOptions.RemoveEmptyEntries)) list.Add(NormalHex(tok));
+            return list;
+        }
+
+        // The skin's colours under a region's or a tone's key (ColorRegions), made empty on first ask.
+        internal static HashSet<string> RegionColours(SkinDef d, string key)
         {
             if (d.ColorRegions == null) d.ColorRegions = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             if (!d.ColorRegions.TryGetValue(key, out HashSet<string> set)) d.ColorRegions[key] = set = new HashSet<string>(StringComparer.Ordinal);
-            foreach (string tok in value.Split(new[] { ' ', ',', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            return set;
+        }
+
+        // A [Colors] line's colours: every one RRGGBB and in one place only, as 0.43 read it (a line naming none,
+        // "Harness =", makes the region all the same, its rows live; the sixth code review kept it so). The tones' come
+        // in through SkinTones.Add, checked there (one it can't take is left out, not thrown).
+        internal static void AddRegionColours(SkinDef d, string key, string label, string value, string where)
+        {
+            HashSet<string> set = RegionColours(d, key);
+            foreach (string tok in value.Split(ColourSeparators, StringSplitOptions.RemoveEmptyEntries))
             {
-                string hex = tok.TrimStart('#').ToUpperInvariant();
-                if (hex.Length != 6 || !int.TryParse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out _))
-                    throw new FormatException($"{where}: {label}: '{tok}' is not a colour (RRGGBB)");
+                string hex = NormalHex(tok);
+                if (!IsHexColour(hex)) throw new FormatException($"{where}: {label}: '{tok}' is not a colour (RRGGBB)");
                 foreach (var other in d.ColorRegions)
                 {
-                    if (other.Key != key && other.Value.Contains(hex)) throw new FormatException($"{where}: {hex} is under {PlaceOf(other.Key)} and {PlaceOf(key)}; one place per colour (a region or a tone)");
+                    if (other.Key != key && other.Value.Contains(hex)) throw new FormatException($"{where}: {label.Split(' ')[0]} {hex} is under {other.Key} and {key}; one region per colour");
                 }
                 set.Add(hex);
             }
         }
 
-        private static string PlaceOf(string key) => SkinTones.IsTone(key) ? "[Tone." + key.Substring(SkinTones.Prefix.Length) + "]" : "[Colors] " + key;
+        // A colour's place for a message: [Colors] <region>, or [Tone.<id>].
+        internal static string PlaceOf(string key) => SkinTones.IsTone(key) ? "[Tone." + key.Substring(SkinTones.Prefix.Length) + "]" : "[Colors] " + key;
 
         // skin.cfg: "key = value" lines, "#" comments, a section line ignored. bytes(file) reads a file of the pack;
         // fileNames lists its files (the PNGs are the frames, unless the cfg names a sheet).
@@ -812,7 +838,7 @@ namespace GK2DonkeyAPI
                         string toneId = section.Substring(SkinTones.Prefix.Length);
                         if (!toneLines.ContainsKey(toneId))
                         {
-                            toneLines[toneId] = new string[2];
+                            toneLines[toneId] = new string[3]; // name, colours, follows
                             toneOrder.Add(toneId);
                         }
                     }
@@ -841,9 +867,10 @@ namespace GK2DonkeyAPI
                     switch (key.ToLowerInvariant())
                     {
                         case "name": tone[0] = value; break;
+                        case "follows": tone[2] = value; break;
                         case "colours":
                         case "colors": tone[1] = tone[1] == null ? value : tone[1] + " " + value; break;
-                        default: d.Report += $"[{section}] {key}: not a tone's key (name, colours), ignored; "; break;
+                        default: d.Report += $"[{section}] {key}: not a tone's key (name, colours, follows), ignored; "; break;
                     }
                     continue;
                 }
@@ -947,7 +974,7 @@ namespace GK2DonkeyAPI
             }
             // the tones of a skin in its own colours; a palette skin's are not read at all (their colours can't refuse it
             // over a [Colors] line it ignores too)
-            if (d.OwnColours) foreach (string toneId in toneOrder) SkinTones.Add(d, toneId, toneLines[toneId][0], toneLines[toneId][1], where);
+            if (d.OwnColours) foreach (string toneId in toneOrder) SkinTones.Add(d, toneId, toneLines[toneId][0], toneLines[toneId][1], toneLines[toneId][2]);
             else if (toneOrder.Count > 0) d.Report += "[Tone.*] is for a skin in its own colours (colours = own); a palette skin takes the donkey's regions, ignored; ";
             if (!d.OwnColours && d.ColorRegions != null) d.Report += "[Colors] is for a skin in its own colours (colours = own); a palette skin takes the donkey's regions, ignored; ";
             if (unknown.Count > 0) d.Report += "unknown keys ignored: " + string.Join(", ", unknown) + "; ";
@@ -1813,6 +1840,9 @@ namespace GK2DonkeyAPI
             private bool ready;
             private int readyFrame;
             internal bool Ready => ready && Time.frameCount >= readyFrame;
+            // Its colours collected and sorted (SortColours ran): from the frame it is built, one before Ready for a
+            // sheet, the frame LoadedReady fires in.
+            internal bool ColoursSorted => ready;
             internal Queue<string> ToBuild;     // the keys still to produce
             internal Func<string, Pixels> Produce;
             internal int Bad, NotInSheet;
@@ -1867,7 +1897,27 @@ namespace GK2DonkeyAPI
                     }
             }
             internal readonly List<Color32> Colours = new List<Color32>();
+            // Each region's and tone's own colours (SortColours). A tone that follows a region has its colours under its
+            // own key, not the region's: for the colours a region's setting reaches, ask ColoursReachedBy.
             internal readonly Dictionary<string, List<Color32>> ColoursByRegion = new Dictionary<string, List<Color32>>(StringComparer.Ordinal);
+
+            // The colours of a region on this look as they were before its parts became tones: its own, and those of the
+            // skin's tones that follow it (a released skin's parts that were the region's; the region's setting colours them
+            // while they have no colour of their own, Colors.Rig.NamedMaps). The region's anchors read it, so they stay as
+            // they were (ColorsPreview.ArtLightness). A shared list when no tone follows it (not to be changed); a new one otherwise.
+            internal List<Color32> ColoursReachedBy(string region)
+            {
+                ColoursByRegion.TryGetValue(region, out List<Color32> own);
+                List<Color32> all = own;
+                if (Def.Tones == null) return own;
+                foreach (SkinTones.ToneDef t in Def.Tones)
+                {
+                    if (t.Follows != region || !ColoursByRegion.TryGetValue(SkinTones.KeyOf(t.Id), out List<Color32> tc) || tc.Count == 0) continue;
+                    if (all == own) all = own != null ? new List<Color32>(own) : new List<Color32>();
+                    all.AddRange(tc);
+                }
+                return all;
+            }
 
             // the sheet: one texture, a cell per key with a one-pixel gutter
             internal Texture2D Sheet;
@@ -2097,10 +2147,13 @@ namespace GK2DonkeyAPI
         internal static bool IsLoaded(string id) => !string.IsNullOrEmpty(id) && loaded.ContainsKey(id);
 
         // The whole, loaded sheet of a skin drawn in its own colours, or null (not loaded, still building, or a skin
-        // in the donkey's palette colours).
+        // in the donkey's palette colours), for its colours (ColorsPreview.ArtLightness, SkinTones.Lightness): from the
+        // frame they are sorted, the one LoadedReady fires in. Ready (worn) waits a frame more for a sheet, so the
+        // companion's re-apply on LoadedReady anchored the custom colours to the donkey's art and the tones to their
+        // lists, until the next change (the third code review, 2026-11-04).
         internal static Loaded LoadedOwnColours(string id)
         {
-            return !string.IsNullOrEmpty(id) && loaded.TryGetValue(id, out Loaded l) && l.Ready && l.Def.OwnColours ? l : null;
+            return !string.IsNullOrEmpty(id) && loaded.TryGetValue(id, out Loaded l) && l.ColoursSorted && l.Def.OwnColours ? l : null;
         }
         internal static int LoadedCount => loaded.Count;
 

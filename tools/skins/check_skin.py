@@ -35,7 +35,7 @@ def cfg(path):
             if colours and k == "colors":
                 k = "colours"  # a tone's two spellings are one list
             # a colour list given twice is read as the loader reads it: both lines' colours
-            out[(sec, k)] = out[(sec, k)] + " " + v if colours and k != "name" and (sec, k) in out else v
+            out[(sec, k)] = out[(sec, k)] + " " + v if colours and (sec == "Colors" or k == "colours") and (sec, k) in out else v  # a tone's name and follows: the last line, as the loader
     return out
 
 
@@ -152,15 +152,42 @@ def main(pack):
             elif sec.startswith("Tone.") and k in ("colours", "colors"):
                 yield from ((hx.upper(), "Tone." + sec[5:].lower()) for hx in v.replace(",", " ").split())
 
-    named = {}
-    for hx, place in places(c):
-        if hx in named and named[hx] != place:
-            warn.append(f"{hx} is under {named[hx]} and {place}: one place per colour (a region or a tone); the game refuses the skin")
+    # a tone's follows = (the region its Game default follows): its colours may stay under that region in [Colors] too,
+    # for an API without tones (the loader moves them to the tone)
+    regions = ("Coat", "Dark", "Muzzle", "Eye", "Harness")
+    for (sec, k), v in c.items():
+        if sec.startswith("Tone.") and k == "follows" and v.strip().capitalize() not in regions:
+            warn.append(f"[Tone.{sec[5:].lower()}] follows = {v}: not a mount region ({', '.join(regions)}); the game leaves the tone out")
             RESULT["errors"] += 1
-        named[hx] = place
+        # over the donkey a colour named nowhere is drawn as it is, never Coat: following Coat keeps no earlier look there
+        elif sec.startswith("Tone.") and k == "follows" and v.strip().capitalize() == "Coat" and over and not parent:
+            warn.append(f"[Tone.{sec[5:].lower()}] follows = Coat on a skin over the donkey: its first choice gives the part the player's coat colour, where it was drawn as it is before (on a skin over the donkey a colour named nowhere is never Coat), also on an update of a skin players wear; keep it only for a part meant to follow the coat")
+
+    def follows_of(conf):
+        """'Tone.<id>' -> the region its follows = names (as written, capitalised)"""
+        return {"Tone." + sec[5:].lower(): v.strip().capitalize() for (sec, k), v in conf.items() if sec.startswith("Tone.") and k == "follows"}
+
+    def place_map(conf, own):
+        """hex -> its place in conf: a following tone's colour listed under its region too is the tone's; a colour in
+        two other places is said (own: the skin's file; its default's is the default's check)"""
+        fol, m = follows_of(conf), {}
+        for hx, place in places(conf):
+            if hx in m and m[hx] != place:
+                tone = next((p for p, q in ((m[hx], place), (place, m[hx])) if fol.get(p) == q), None)
+                if tone:
+                    m[hx] = tone  # listed under the region its tone follows too: the tone's
+                    continue
+                if own:
+                    warn.append(f"{hx} is under {m[hx]} and {place}: one place per colour (a region or a tone); the game " + ("leaves the tone out" if place.startswith("Tone.") or m[hx].startswith("Tone.") else "refuses the skin"))
+                    RESULT["errors"] += 1
+            m[hx] = place
+        return m
+
+    follows = follows_of(c)
+    named = place_map(c, True)
     own_named = set(named)  # the stale-list warning counts its own lines only (the default's may not be in its pictures)
-    for hx, place in places(pc):
-        named.setdefault(hx, place)  # a variant's colour map: the default's, its own over it
+    for hx, place in place_map(pc, False).items():
+        named.setdefault(hx, place)  # a variant's colour map: the default's (its following tones' colours the tones'), its own over it
     donkey_cols = set()
     if over and parent:
         # over its default: the default's pictures are under it (the donkey's are not)
@@ -170,6 +197,24 @@ def main(pack):
     for im in dk.values():
         b = im.tobytes()
         donkey_cols |= {tuple(b[i:i + 3]) for i in range(0, len(b), 4) if b[i + 3] > 0}
+    # a variant drawn in its default's place takes every frame it doesn't draw from the default: those colours are on
+    # its look too (the colour-cube check below), in the default's places
+    inherited_cols = set()
+    if parent and not over:
+        for k, cell in zip(ORDER, cells):
+            im = parent_picture(k) if cell.getchannel("A").getbbox() is None else None
+            if im is not None:
+                b = im.tobytes()
+                inherited_cols |= {tuple(b[i:i + 3]) for i in range(0, len(b), 4) if b[i + 3] > 0}
+    # the default's front pictures are keys of its too (Looks.VariantProduce, "front/<key>"): drawn over it, every one is
+    # under the variant's; else it takes those it has no front picture of its own for
+    parent_front = os.path.join(parent, "front") if parent else None
+    if parent_front and os.path.isdir(parent_front):
+        for f in sorted(os.listdir(parent_front)):
+            if not f.endswith(".png") or (not over and os.path.isfile(os.path.join(pack, "front", f))):
+                continue
+            b = Image.open(os.path.join(parent_front, f)).convert("RGBA").tobytes()
+            (donkey_cols if over else inherited_cols).update(tuple(b[i:i + 3]) for i in range(0, len(b), 4) if b[i + 3] > 0)
 
     # the erase colour of an over skin (docs/skins.md): a pixel of it clears the donkey there and is never drawn; a
     # replace skin has none, so the magenta a drawing left behind is counted as the mistake it is (the scan refuses it)
@@ -245,6 +290,9 @@ def main(pack):
     under_name = "default" if parent else "donkey"
     if fight:
         warn.append(f"{len(fight)} colour(s) named in [Colors] or a tone the {under_name} itself has: {', '.join(fight)} (one colour can be in one region only; draw them a shade apart)")
+        # a tone's colour the donkey has follows the donkey, never the tone's row: tests/SkinsScan refuses it, and so does this
+        if not parent and any(named.get(h, "").startswith("Tone.") for h in fight):
+            RESULT["errors"] += 1
     if kept:
         info.append(f"{len(kept)} colour(s) of the {under_name}'s own, kept: {', '.join(kept)} (" + ("they are the default's colours: its regions reach them, Coat when unnamed" if parent else "they follow the donkey's colour settings and the skin's [Base.*], as the donkey's pixels do") + ")")
     if missing:
@@ -253,18 +301,30 @@ def main(pack):
         warn.append(f"{partial} half-transparent pixel(s): pixel art should be fully on or off")
     if strays:
         warn.append(f"{len(strays)} lone pixel(s) (nothing around them): {', '.join(strays[:8])}{' ...' if len(strays) > 8 else ''}")
-    total = len(donkey_cols) + len([h for h in named if h in hexes]) if over else len(hexes)
-    if total > 48:
-        info.append(f"{total} colours to swap: over 48, so the game's colour cube recolours it instead of the exact swap (shaded art; docs/skins.md)")
-    # the colour cube (Colors.Rig.LutIndex: red and green rounded to 32 steps, blue floored): over 48 colours, or with the
+    # over the donkey the swap pairs the donkey's colours, the named regions' and the tones that follow one; a tone that
+    # follows none is paired only once the player gives it a colour (Colors.Rig.NamedMaps), so it may move the skin to the
+    # cube then (Colors.PaletteMaxColoursOver, 64). Any other skin, a variant over its default too, counts every colour of
+    # its look, its default's frames' with them (PaletteMaxColours, 48).
+    if over and not parent:
+        paired = [h for h in named if h in hexes and (not named[h].startswith("Tone.") or named[h] in follows)]
+        later = len([h for h in named if h in hexes and named[h].startswith("Tone.") and named[h] not in follows])
+        total, limit = len(donkey_cols) + len(paired), 64
+    else:
+        later, total, limit = 0, len(set(hexes.values()) | donkey_cols | inherited_cols), 48
+    if total > limit:
+        info.append(f"{total} colours to swap: over {limit}, so the game's colour cube recolours it instead of the exact swap (shaded art; docs/skins.md)")
+    elif later and total + later > limit:
+        info.append(f"{total} colours to swap, the exact swap; with every one of its own tones given a colour {total + later}: the colour cube then (the cube check below holds for that)")
+    # the colour cube (Colors.Rig.LutIndex: red and green rounded to 32 steps, blue floored): over its limit, or with the
     # player's Lut setting, colours in one cell change together, so a tone's colour sharing a cell with any other colour
     # of the look would be recoloured with it (docs/mount-colours.md 7.3)
     def cube(rgb):
         r, g, b = rgb
         return (min(31, int(g / 255 * 31 + 0.5)), min(31, int(b / 255 * 31)), min(31, int(r / 255 * 31 + 0.5)))
     # the colours under it: the donkey's, or a variant's default's in the default's own places (its regions and tones:
-    # one of its tone's shades beside the variant's shade of the same tone is that tone, not a clash)
-    look = {rgb: (named.get("%02X%02X%02X" % rgb) if parent else None) or "the " + under_name + "'s" for rgb in donkey_cols}
+    # one of its tone's shades beside the variant's shade of the same tone is that tone, not a clash; one it names
+    # nowhere is Coat, as in the game: Loaded.SortColours)
+    look = {rgb: (named.get("%02X%02X%02X" % rgb, "Coat") if parent else "the donkey's") for rgb in donkey_cols | inherited_cols}
     for h, rgb in hexes.items():
         look.setdefault(rgb, named.get(h, "kept" if over else "Coat"))
     in_cell = {}
@@ -274,6 +334,19 @@ def main(pack):
         if len({p for _, p in v}) > 1 and any(p.startswith("Tone.") for _, p in v):
             warn.append("a tone's colour shares a colour-cube cell with another colour of the look: " + ", ".join(f"{r:02X}{g:02X}{b:02X} ({p})" for (r, g, b), p in sorted(v)) + " (draw one of them a step apart)")
             RESULT["errors"] += 1
+    # the exact swap (Colors.cs, the palette shader): a texel within 0.004 of a source colour takes that colour's
+    # replacement, and one step in one channel is 1/255 (0.0039), so two colours of the look one step apart in one
+    # channel are one colour to it: in two places (a tone and a region, a region and a colour kept as drawn) one takes
+    # the other's colour. A tone's is refused, as on the cube; the others are for the eye. A skin on the cube even with
+    # no tone set (over its limit, above) is left to the cube check.
+    if total <= limit:
+        for rgb, place in sorted(look.items()):
+            for ch in range(3):
+                n = tuple(v + (ch == i) for i, v in enumerate(rgb))
+                if n in look and look[n] != place:
+                    warn.append(f"two colours of the look one step apart in one channel, in two places: {'%02X%02X%02X' % rgb} ({place}), {'%02X%02X%02X' % n} ({look[n]}); the exact swap takes them as one colour, so one is recoloured as the other (draw one of them a step further apart)")
+                    if place.startswith("Tone.") or look[n].startswith("Tone."):
+                        RESULT["errors"] += 1
 
     # frames where the donkey is drawn the same but the skin differs: likely one of them was missed (over skins only)
     groups = {}

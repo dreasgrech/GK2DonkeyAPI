@@ -2077,7 +2077,7 @@ namespace GK2DonkeyAPI
             bool Wears(Color32 c)
             {
                 Looks.Loaded l = Looks.LoadedOwnColours("donkey/selftest.watch-test");
-                return l != null && l.Colours.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b);
+                return l != null && l.Ready && l.Colours.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b); // worn (Ready), not only its colours sorted (LoadedOwnColours, a frame earlier)
             }
             try
             {

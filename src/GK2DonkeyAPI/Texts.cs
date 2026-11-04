@@ -851,14 +851,15 @@ namespace GK2DonkeyAPI
                 Catalog.Entry m = Looks.MountOf(s);
                 if (m != null && string.IsNullOrEmpty(m.Description) && string.Equals(Looks.DefaultSkinOf(m), s.Id, StringComparison.OrdinalIgnoreCase))
                     Put("skin." + s.Id + ".description", s.Description, "the mount's description in the Mount Journal (its own look's: the mount has none of its own)");
-                // its own tones' names: their rows' labels in the colours window (MountSettingsPage.ToneRows); the ones it
-                // shows (a variant's tone without a name of its own shows its default's, and one without colours has no row)
-                List<SkinTones.ToneDef> tones = s.OwnColours ? SkinTones.DeclaredBy(s) : null;
+                // its own tones' names: their rows' labels in the colours window (MountSettingsPage.ToneRows); the ones a
+                // row shows, its own or a variant's that takes it (a variant's tone without a name of its own shows its
+                // default's; a tone with no colours, on it or on any variant taking it, has no row)
+                List<SkinTones.ToneDef> tones = SkinTones.DeclaredBy(s);
                 if (tones != null)
                 {
                     foreach (SkinTones.ToneDef t in tones)
                     {
-                        if (s.Tones != null && s.Tones.Contains(t) && SkinTones.ColoursOf(s, t.Id).Count > 0) Put("skin." + s.Id + ".tone." + t.Id + ".name", t.Name, "a part of the skin the player colours on its own: its row's label in the colours window");
+                        if (SkinTones.NameShown(s, t)) Put("skin." + s.Id + ".tone." + t.Id + ".name", t.Name, "a part of the skin the player colours on its own: its row's label in the colours window");
                     }
                 }
             }

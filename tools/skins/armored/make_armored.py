@@ -1118,10 +1118,15 @@ def skin_cfg():
         "[Skin]\nformat = 1\nname = Armored\n"
         "description = Plate barding with a plumed knight's helmet, steel lames, a cloth skirt and a steel tail guard. The skirt and the plume follow your second tone.\n"
         "author = dreas\nversion = 1.0\nbase = donkey\ncolours = own\nlayer = over\ncanvas = 96 96\n\n"
-        "# The steel and the brass are kept as drawn (always steel, as the game's guards wear it); the skirt and the plume\n"
-        "# follow the Second tone (the Muzzle row), so the harness colour reaches only the donkey's own harness (the user,\n"
-        "# 2026-11-02: under Harness the cloth took the harness colour and the Second tone did nothing on this skin).\n"
-        f"[Colors]\nMuzzle = {hexes(CLOTH)}\n"
+        "# The skirt and the plume follow the Second tone (the Muzzle row), so the harness colour reaches only the donkey's own\n"
+        "# harness (the user, 2026-11-02: under Harness the cloth took the harness colour and the Second tone did nothing on this\n"
+        "# skin). Under Muzzle here for an API without tones; this one moves them to the skirt's tone below (docs/mount-colours.md 7.9).\n"
+        f"[Colors]\nMuzzle = {hexes(CLOTH)}\n\n"
+        "# The skirt and the plume: the first choice follows the Second tone, as before; any other colour gives them their own.\n"
+        f"[Tone.skirt]\nname = Skirt and plume\nfollows = Muzzle\ncolours = {hexes(CLOTH)}\n\n"
+        "# The steel (its outline 281B26 stays as drawn) and the brass: as drawn until given a colour.\n"
+        f"[Tone.steel]\nname = Steel\ncolours = {hexes(STEEL[1:])}\n\n"  # STEEL[0] is the outline K
+        f"[Tone.brass]\nname = Brass\ncolours = {hexes(BRASS[1:])}\n"  # BRASS[0] (4E300A) is drawn nowhere
     )
 
 

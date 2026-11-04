@@ -1,4 +1,12 @@
 ﻿key,value,english,note
 skin.donkey/saddleup-donkey-skins.armored.name,В доспехах,Armored,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.armored.tone.skirt.name,Юбка и плюмаж,Skirt and plume,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.steel.name,Сталь,Steel,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.brass.name,Латунь,Brass,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.hellfire.name,Адское пламя,Hellfire,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.hellfire.tone.lava.name,Лавовые трещины,Lava cracks,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.horns.name,Рога и хвост,Horns and tail,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.glow.name,Горящие глаза,Glowing eyes,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.royal-parade.name,Королевский парад,Royal Parade,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.cloth.name,Чепрак,Saddle cloth,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.crown.name,Корона и кайма,Crown and trim,a part of the skin the player colours on its own: its row's label in the colours window

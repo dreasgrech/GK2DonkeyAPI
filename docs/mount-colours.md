@@ -100,6 +100,12 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
 
 ### 2.3 Which shader path
 
+**Amended 2026-11-04:** for a skin over the donkey the threshold is 64 pairs, the donkey's 42 and the skin's named
+colours (`PaletteMaxColoursOver`; section 7.9: on the cube, two pairs of the donkey's own colours share a cell, so a
+skin over the donkey that crossed 48 turned some of its outline and coat pixels the harness colour). A skin in its
+own colours keeps 48 (`PaletteMaxColours`; the sixth review: one of 49 to 64 colours keeps the path and the look it
+had). The text below is the 2026-10-18 decision.
+
 Per look, by its colour count: **up to 48 colours, the exact swap palette; more, the cube.** The threshold is the
 keeper's own palette (32) with room; the donkey, the dragons, the rat and Gerry stay on the exact swap, the snail and
 the worm go through the cube. The `SpriteMethod` setting keeps its meaning for looks under the threshold (Palette or
@@ -254,15 +260,20 @@ name = First motley colour
 colours = 3A0A14 641A28 862534 A23444 C2485A
 ```
 
-- The id is the section's name after `Tone.`: lower case letters, digits and `-` (it is part of the cfg keys); a
-  bad id is a format error, as a bad `[Colors]` line is.
+- The id is the section's name after `Tone.`: lower case letters, digits and `-` (it is part of the cfg keys).
+- **A tone the loader can't take is left out, the skin loads** (amended 2026-11-04, the sixth review): a bad id, a
+  `follows =` that is no mount region, a colour that isn't RRGGBB or that another place names (another tone, a
+  `[Colors]` region but the one it follows) leaves that tone out, said in the skin's report, checked before anything
+  moves (`SkinTones.ColourProblem`). A pack's typo in the new section never costs a player the skin, as an unknown
+  section never did on 0.43; a colour under two `[Colors]` regions still refuses it as in 0.43, and SkinsScan and
+  `check_skin.py` still fail every one of these for the packs we ship.
 - `name` is the row's label (default: the id); `colours` (or `colors`) the hex list, spaces or commas, on as many
   lines as wanted (every line's colours count, here and in `[Colors]`; the checkers read them so too).
 - A palette skin's tones are not read at all (reported), so a colour they share with its ignored `[Colors]` doesn't
   refuse it.
-- A colour named twice (in two tones, or in a tone and under `[Colors]`) is a format error; a colour the pictures
-  don't have is said once, as for `[Colors]`. A tone without colours of its own is said in the report and colours
-  nothing (no row), unless it is a variant's renaming its default's tone (below).
+- A colour the pictures don't have is said once, as for `[Colors]`. A tone without colours of its own is said in the
+  report and colours nothing (no row), unless it is a variant's renaming its default's tone (below). `Custom` without a
+  usable colour is the tone as drawn (not the region it follows).
 - Palette skins (`colours = palette`) take the donkey's regions: their tones are reported and ignored; a variant that
   takes palette colours from its default says so once in the log (`LooksInherit.Resolve`).
 - A variant (a skin built on its mount's default) takes its default's tones. One of its own with a default's id adds
@@ -278,7 +289,8 @@ colours = 3A0A14 641A28 862534 A23444 C2485A
 - A tone is a region of the skin's own: its colours are collected with the rest (`Loaded.SortColours`, under
   `tone.<id>`), and the mount sprite group's pairs take them after the five regions (`Colors.Rig.Rebuild`, both the
   own-colour and the over branch). The shader path doesn't change: the pairs count only grows by a colour that was
-  kept as drawn before and is now a tone's (the Jester's ten were named already: 52, the cube, as today).
+  kept as drawn before and is now a tone's (the Jester's ten were named already: 52 pairs with both its tones set,
+  on the exact swap, which holds 64 over the donkey, 7.9).
 - A tone's value is the instance's (`Mount.Instance.Tones`: id to a colorize colour and a brightness), set by the
   companion at every apply (and on every load, `OnGameReady`), as drawn when unset. Not tuning keys and not in the
   side file: the companion holds the look, and a tone id is a skin's, not a key every instance knows. They belong
@@ -286,19 +298,32 @@ colours = 3A0A14 641A28 862534 A23444 C2485A
   (said once), and they go with their owner's overrides (`InstanceTuning.ClearOwner`, `Reset`, so
   `Mounts.ClearTuning` too). They are kept with the skin they were made for (`TonesSkin`) and colour only that skin
   (`Colors.Rig.NamedMaps`): a skin changing under them (a sheet still building, another look) takes none of another
-  skin's colours. A baby in its parent's skin takes the parent's; one not in it is a plain donkey and takes none.
+  skin's colours. A baby in its parent's skin takes the parent's; one not in it is a plain donkey and takes none. On
+  a baby a following tone left on its first choice takes the baby's own shade of its region, as the region's pixels
+  do (the coat, the second tone and the dark parts are shaded per baby); a tone given a colour is that colour on the
+  parent and every baby, as the harness is. Whether a set tone should take the baby's shade too is open (the eighth
+  review; a look question, no saved look depends on it).
 - **Presets** (`ToneColor`): Game default (as drawn), Red, Gold, Green, Blue, Purple, Pink, Brown, Black, White,
   Custom. Each is a colour: the tone takes its hue and saturation and keeps each pixel's shading, and its
   brightness is the colour's own against the tone's average (`SkinTones.Lightness`, the custom colours' rule:
   `MountCompanion.LightnessAgainst`), so Gold reads gold on a navy tone as on a pale one. The average is of the
   colours the loaded skin draws (a listed colour no picture has, or a default's a variant doesn't draw, doesn't
-  count), of its list while it loads; the companion applies the look again when the sheet is whole. Custom is the
-  palette with its lightness, as the other rows.
-- **The colour cube.** Over 48 pairs (the donkey's 42 plus an over skin's named colours) the mount takes the cube,
-  where two colours in one cell change together, and on the cube a colour that isn't paired takes its cell's
-  colour too. Measured 2026-11-03 on the four over skins: the only shared cells are two pairs of the game's own
-  donkey colours (Dark 292316 with Harness 2D2114, Coat 362815 with Harness 3C2A14); no skin colour shares one.
+  count), of its list while it loads; the companion applies the look again when the sheet is whole (`LoadedReady`,
+  for the worn skin and the Mounts panel picture's), and the drawn colours are read from that frame on
+  (`Looks.LoadedOwnColours` asks for the colours sorted, not for the sheet worn, which is a frame later). Custom is
+  the palette with its lightness, as the other rows.
+- **The colour cube.** Over 64 pairs (48 until 2026-11-04; the donkey's 42 plus an over skin's named colours) the
+  mount takes the cube, where two colours in one cell change together, and on the cube a colour that isn't paired
+  takes its cell's colour too. Measured 2026-11-03 on the four over skins: the only shared cells are two pairs of the
+  game's own donkey colours (Dark 292316 with Harness 2D2114, Coat 362815 with Harness 3C2A14), which on the cube take
+  the harness colour (the last pair written; the fifth review); no skin colour shares one. With 64 every skin over the
+  donkey stays on the exact swap, all its tones set (Royal Parade 49, Hellfire 55, Armored 59, the Jester 52).
   SkinsScan fails a tone colour that shares a cell with any other colour of the look.
+- **The exact swap's reach.** The palette shader gives a texel the replacement of every source colour within 0.004
+  of it, and one step in one channel is 1/255 (0.0039): two colours of the look one step apart in one channel are one
+  colour to it, so one takes the other's colour. SkinsScan and `check_skin.py` fail a tone colour one step from a
+  colour of another place (a region, another tone, the donkey's, one kept as drawn) while the skin can be on the
+  swap; the shipped skins have no such pair (2026-11-04, the eighth review).
 
 ### 7.4 The rows and the API
 
@@ -312,18 +337,41 @@ colours = 3A0A14 641A28 862534 A23444 C2485A
   pack edited while the game runs (the dev tools' reload), shows the change in its rows at the next start, the
   limit every row of something registered late has (a List row's choices, docs/per-skin-looks.md); registered in
   plugins' Awake, before the page shows, everything has them.
+- A tone's rows are greyed once the skin, loaded, turns out to draw none of its colours (`SkinTones.Draws`: a
+  variant drawing every frame of its own over its default's tone, whose choice would colour nothing; the tenth
+  review). Until the skin is loaded nothing is known, and the rows stay live; the Colours window's picture wears the
+  skin it shows, so its rows are right there.
 - The words: the row's label is the tone's name, the skin's owner's text (`skin.<skin id>.tone.<id>.name`, step 3
   of docs/localization.md); the presets and the two custom labels ("{0}: custom colour", "{0}: lightness") are the
-  API's.
+  API's. The row's English label (logs, comparisons) is "<name> (tone <id>)", so a pack's tone named like the page's
+  picture row can't make the page refuse its rows (a picture is found by its label). A default's tone name that
+  only its variants show is in the default's English file all the same.
 - `MountLook.Tone(id)`: a `MountTone` (`Color`, `Custom`), per skin like the rest of the look. `MountSkinInfo.Tones`
   lists a skin's tones (id, name, colours). `MountSkinInfo.Regions` keeps the five regions only.
 
-### 7.5 What doesn't change
+### 7.5 The released skins (amended 2026-11-04)
 
-- No key moves and no released skin changes: Royal Parade's cloth stays under Harness, Hellfire's lava and Armored's
-  skirt under Second tone. Moving those to tones would change players' saved looks; it is a later step of its own,
-  with each player's value carried over.
-- Dark and Eye still have no player rows; the dev panel's Colors tab still shows the donkey's colours.
+The 2026-11-03 design left them as they were; the user, 2026-11-04: an update must keep a player's look ("from his
+own perspective, it would look like nothing or almost nothing changed but now there's more customization
+available"), as much as possible without holding the new system back. So their parts are tones now, each part that
+was under a region following that region (section 7.9), and the new parts as drawn:
+
+| Skin | Tone | Its colours | First choice |
+|---|---|---|---|
+| Royal Parade | Saddle cloth | the cloth's 4 reds (were Harness) | As the harness |
+| Royal Parade | Crown and trim | the 3 golds (kept as drawn) | as drawn |
+| Armored | Skirt and plume | the 5 reds (were Muzzle) | As the second tone |
+| Armored | Steel | 8 greys (its outline 281B26 stays as drawn) | as drawn |
+| Armored | Brass | 4 golds | as drawn |
+| Hellfire | Lava cracks | 3 (were Muzzle) | As the second tone |
+| Hellfire | Horns and tail | 6 (were Dark) | As the dark parts |
+| Hellfire | Glowing eyes | 4 (were Eye) | As the eyes |
+
+Royal Parade's jewels (a blue and a red) stay as drawn: one tone would turn them one colour. Armored's skirt and plume
+share their reds, so they are one part. No key moves and no saved value changes; every look is the same until the
+player picks a colour in a new row. Dark and Eye still have no player rows (Hellfire's horns and glow follow them, so
+they are as drawn, and a baby's shade of its dark parts reaches its horns as before); the dev panel's Colors tab still
+shows the donkey's colours.
 
 ### 7.6 The Jester
 
@@ -333,8 +381,10 @@ only.
 
 ### 7.7 Checks
 
-- SkinsScan: `[Tone.*]` read like `[Colors]` (the id, the colours in the pictures, one place per colour) and the cube
-  check above; `tools/skins/check_skin.py` the same while drawing.
+- SkinsScan: `[Tone.*]` read like `[Colors]` (the id, the colours in the pictures, one place per colour), the cube
+  check and the exact swap's one-step check above; `tools/skins/check_skin.py` the same while drawing (and the
+  one-step pairs of two other places for the eye). A variant is read as the game builds it: its default's places with
+  the compatible listing the tone's, and of the default's pictures only those it doesn't draw itself.
 - Self-test "colours: a skin's own tones": a temp over skin with two tones and a Harness colour; one tone set, only
   its colours change, the other tone and the Harness colours don't, the world draws them so; the rows: two per tone
   plus the lightness, under the skin's keys, the label the tone's name.
@@ -342,13 +392,15 @@ only.
 
 ### 7.8 Built (2026-11-03, the evening)
 
-- `SkinTones.cs` (the parse, the presets, the lightness, the look's values, onto an instance), `Api/MountTones.cs`
-  (`ToneColor`, `MountSkinTone`, `MountTone`); `Looks.FromCfg` reads `[Tone.<id>]` (`AddRegionColours` is the one
-  place-per-colour check for `[Colors]` and tones), `SortColours` keeps a list per tone, `LooksInherit` merges a
-  variant's; `Colors.Rig.Rebuild` pairs the five regions then the tones (`NamedMaps`) in both branches;
+- `SkinTones.cs` (the parse, the presets' table, the lightness, the look's values, onto an instance),
+  `Api/MountTones.cs` (`ToneColor`, `MountSkinTone`, `MountTone`); `Looks.FromCfg` reads `[Tone.<id>]` and hands each
+  to `SkinTones.Add`, whose `ColourProblem` is the tones' place-per-colour check (a tone it can't take is left out;
+  `AddRegionColours` is `[Colors]`' own, throwing as in 0.43), `SortColours` keeps a list per tone, `LooksInherit`
+  merges a variant's; `Colors.Rig.Rebuild` pairs the five regions then the tones (`NamedMaps`) in both branches;
   `Mount.Instance.Tones`; the companion applies them to the mount, the babies and the picture; `MountSkinInfo.Tones`,
   `Regions` without them; `MountSettingsPage.ToneRows` with two `Row` fields (`LabelOf`, `ChoiceWords`) that `Texts`
-  draws and the English dump skips (the tone names go in their skin owner's file); 13 API words in all 11 languages.
+  draws and the English dump skips (the tone names go in their skin owner's file); 18 API words in all 11 languages
+  (13, and the five follow words of the fourth review).
 - Saddle Up: one line, `p.ToneRows("Colours", skinId, sfx, me)` after its Second tone rows.
 - The Jester (`tools/skins/jester/skin.cfg`): `[Tone.motley1]` "First motley colour" and `[Tone.motley2]` "Second
   motley colour" in place of `[Colors]` Harness and Muzzle; still loose in `BepInEx\plugins\gk2mounts\`, in no pack.
@@ -358,3 +410,46 @@ only.
 - On the way: `tools/page-carryover.py` read its skins from the folders (a hand list missed Armored: the 0.15.0
   fixture's 23 Armored values read as lost), and SkinsScan's pack checks count (three "FAIL pack ...: Languages\"
   lines printed under an ALL PASS since 2026-11-01).
+
+### 7.9 A tone that follows a region: the players' looks kept (2026-11-04)
+
+A part of a released skin that was under a region (Royal Parade's cloth under Harness) becomes a tone with
+`follows = Harness`. Copying the player's saved Harness choice into the new tone's row would not give the same look:
+the Harness presets are colours of their own (Black also takes saturation away), and a custom tone colour is a
+palette swatch with a 10% lightness step. Following gives it exactly:
+
+- **The first choice of a following tone is the region** ("As the harness", in place of Game default): with it the
+  tone's colours are paired with that region's own map (`Colors.Rig.NamedMaps`), the very function that coloured
+  them when they were the region's colours. A player's saved Harness colour reaches the cloth as before; one who
+  never set one sees the cloth as drawn. Any other choice gives the tone its own colour; the first brings the
+  following back.
+- **The rest of the look is as it was:** the region's custom colour still anchors its lightness to the colours of the
+  tones that follow it (`ArtLightness`, a skin in its own colours), a baby's shade of the region reaches the tone,
+  and `MountSkinInfo.Regions` lists the followed region (the row isn't greyed).
+- **An older API reads it as before.** A following tone's colours may stay listed under its region in `[Colors]`
+  (the compatible listing): this API moves them to the tone (`SkinTones.Add`), one without tones ignores
+  `[Tone.*]` (said once as unknown sections) and colours them under the region as before. So a player who updates
+  the skin pack but not GK2 Donkey API sees no change either, and the pack needs no `needs =`.
+- **A tone nobody set doesn't move a skin to the cube.** A tone that follows nothing and has no colour of its own
+  isn't paired on a skin over the donkey (its colours drawn as they are, as before they were a tone), so Royal
+  Parade stays at 46 colours and Armored at 47 until a player gives its crown or its steel a colour (then 49 and
+  59). With 48 that would have been the cube, where the donkey's own shared cells (above) turned some of its
+  outline and coat pixels the harness colour (the fifth review): the exact swap holds 64 now, so every skin over the
+  donkey stays on it, and Hellfire (55) and the Jester (52) left the cube for it (their colours exactly as drawn).
+  A skin over 64 is still checked for shared cells by SkinsScan and `check_skin.py`.
+- **A variant listing its shades of a default's following tone under the region too** (for an older API) says
+  `follows =` itself: the loader moves the listed colours when the tone's own section says what it follows (the
+  default's isn't known yet when the variant's file is read), else the variant's tone is left out (said in the
+  report): those shades stay under the region and the default's tone keeps its own.
+- **The API version at release:** Saddle Up calls `ToneRows`, so its `NeedsApi` and `[BepInDependency]` minimum go
+  to the API version that brings tones (a minor: 0.44.0) when the versions are bumped. Until then Saddle Up calls it
+  through a wrapper kept out of line (the seventh review) that catches `MissingMethodException`: on an API of 0.41 to
+  0.43 its colours window builds without the parts' rows and the log says so once (0.40 and older get the "too old"
+  message: the gate was 0.40 though Saddle Up calls 0.41's looks per skin, raised by the eleventh review). The
+  wrapper goes with the bump (docs/release-checklist.md), so a later change to `ToneRows` can't hide behind it.
+- **A preset's lightness stops where the tone's lightest shade reaches white** (the fourth review): a preset's
+  brightness multiplies each shade's value, so on a dark tone a light preset (Gold, White) clipped the lit shades to
+  one flat colour; it lifts the tone only until its lightest shade is white now. The regions' custom colours keep
+  their rule: changing it would change players' saved looks.
+- The skin generators write the same tone sections (`make_hellfire.py --cfg`, `make_armored.py --cfg`; checked equal
+  to the pack files); Royal Parade's cfg is by hand.

@@ -43,16 +43,52 @@ MOUNTS = [""] + ["_" + k for k in KINDS if k != "donkey"] + ["_" + s for s in SK
 FOAL_ROWS = ["Foals", "FoalsFollow", "FoalsIndoors", "FoalsWearSkin"]
 
 
+def colour_sections(cfg):
+    """A skin.cfg's colour mode (True own, False palette, None not said), its [Tone.<id>] colours (id -> set, a section's
+    lines all counted, as the loader reads them) and every colour its [Colors] names"""
+    mode, tones, named, sec = None, {}, set(), ""
+    with io.open(cfg, encoding="utf-8") as f:
+        for raw in f:
+            line = raw.split("#", 1)[0].strip()
+            if line.startswith("["):
+                sec = line.strip("[] ").lower()
+                if sec.startswith("tone."):
+                    tones.setdefault(sec[5:], set())
+                continue
+            if "=" not in line:
+                continue
+            key, value = (x.strip() for x in line.split("=", 1))
+            hexes = {h.lstrip("#").upper() for h in value.replace(",", " ").split()}
+            if sec == "skin" and key.lower() == "colours":
+                mode = value.lower() != "palette"
+            elif sec == "colors":
+                named |= hexes
+            elif sec.startswith("tone.") and key.lower() in ("colours", "colors"):
+                tones[sec[5:]] |= hexes
+    return mode, tones, named
+
+
 def shipped_tones():
-    """(suffix, tone id) for every [Tone.<id>] of a shipped skin.cfg (MountSettingsPage.ToneRows, 2026-11-03)"""
+    """(suffix, tone id) for every tone a shipped skin gives a row (MountSettingsPage.ToneRows, 2026-11-03): its own, and
+    on a variant (a skin of a mount other than the donkey that isn't its "default") its default's too, less every colour
+    the variant names itself (SkinTones.Merge, LooksInherit.MergeRegions); a tone left with no colours has no row, and
+    neither has a skin in palette colours (its own, or its default's when it says none)"""
     out = []
     for cfg in SKIN_CFGS:
-        sfx = suffix_of(*skin_of(cfg))
-        with io.open(cfg, encoding="utf-8") as f:
-            for line in f:
-                t = re.match(r"^\s*\[Tone\.([a-z0-9-]+)\]", line, re.IGNORECASE)
-                if t:
-                    out.append((sfx, t.group(1).lower()))
+        mount, skin = skin_of(cfg)
+        mode, tones, named = colour_sections(cfg)
+        default_cfg = os.path.join(os.path.dirname(os.path.dirname(cfg)), "default", "skin.cfg")
+        if mount != "donkey" and skin != "default" and os.path.isfile(default_cfg):
+            dmode, dtones, _ = colour_sections(default_cfg)
+            mode = dmode if mode is None else mode
+            mine = named.union(*tones.values()) if tones else set(named)
+            merged = {t: (c - mine) for t, c in dtones.items()}
+            for t, c in tones.items():
+                merged[t] = merged.get(t, set()) | c
+            tones = merged
+        if mode is False:
+            continue
+        out.extend((suffix_of(mount, skin), t) for t, c in sorted(tones.items()) if c)
     return out
 
 

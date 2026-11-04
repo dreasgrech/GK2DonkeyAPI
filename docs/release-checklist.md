@@ -14,7 +14,10 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
   migration code was removed 2026-10-13; compatibility code is for released data only.)
 - `Plugin.Version` is the mod's one version (the plugin's and `Mounts.ApiVersion`, which reads it); bump it with every
   API change. Saddle Up has its own version and asks for the API twice (`NeedsApi` and the `BepInDependency` minimum in
-  `src/SaddleUp/Plugin.cs`, kept equal),
+  `src/SaddleUp/Plugin.cs`, kept equal), raised to the API version of the newest member it calls (the release with
+  the skins' tones: `MountSettingsPage.ToneRows`, the API's next minor; an older API then says "too old" instead of a
+  page failing on a missing method; with that bump the `ToneRows` wrapper in Saddle Up's `Plugin.cs`, a call kept out
+  of line that catches `MissingMethodException` for an API without tones, goes: the minimum then guarantees the method),
   and `tests/ApiSurface` is green (its snapshot is the public API).
 - The audited game: the build embeds the dependency manifest against the installed game (`docs/dependency-check.md`;
   no pin to move). After any update `tests/GameDiff` and `DepManifest verify` give the audit its reading list, and

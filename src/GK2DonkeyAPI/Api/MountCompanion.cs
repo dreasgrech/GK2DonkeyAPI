@@ -71,11 +71,12 @@ namespace GK2DonkeyAPI.Api
         private readonly Dictionary<string, MountTone> tones = new Dictionary<string, MountTone>(StringComparer.Ordinal);
         public MountTone Tone(string toneId)
         {
-            string id = (toneId ?? "").Trim().ToLowerInvariant();
+            string id = ToneKey(toneId);
             if (!tones.TryGetValue(id, out MountTone t)) tones[id] = t = new MountTone(this, id);
             return t;
         }
-        internal MountTone FindTone(string toneId) => tones.TryGetValue(toneId ?? "", out MountTone t) ? t : null;
+        internal MountTone FindTone(string toneId) => tones.TryGetValue(ToneKey(toneId), out MountTone t) ? t : null;
+        private static string ToneKey(string toneId) => SkinTones.NormalId(toneId); // as the loader keeps a tone's id
         internal void Changed() => owner.LookChanged(this);
     }
 
@@ -261,8 +262,10 @@ namespace GK2DonkeyAPI.Api
             Mounts.InstanceRemoved += OnRemoved;
             Looks.LoadedReady += id =>
             {
-                // the skin's own colours are known now: the custom colours' lightness anchors to them
-                if (!string.IsNullOrEmpty(skin) && string.Equals(id, skin.Trim(), StringComparison.OrdinalIgnoreCase)) ApplyLook();
+                // the skin's own colours are known now: the custom colours' lightness and the tones' anchor to them, the
+                // worn skin's and the Mounts panel picture's (a skin previewed while its sheet built)
+                bool worn = !string.IsNullOrEmpty(skin) && string.Equals(id, skin.Trim(), StringComparison.OrdinalIgnoreCase);
+                if (worn || (paper != null && SameSkin(id, PaperSkin))) ApplyLook();
             };
             Mounts.Hitched += OnHitched;
             Mounts.Unhitched += OnUnhitched;

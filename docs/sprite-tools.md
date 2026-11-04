@@ -352,7 +352,7 @@ in an over skin, which follows the donkey's colour settings and the skin's `[Bas
 Hellfire tuft and rump fill are drawn that way on purpose, so it is said, not warned; the same colour named in
 `[Colors]` is warned, one colour cannot be in two regions), half-transparent pixels, lone pixels (judged over what
 the game draws under the picture: the donkey under an over skin, the body under a front picture, so a one-pixel lava
-crack on the coat is not one), more than 48 colours (said: the game's colour cube recolours shaded art, docs/skins.md),
+crack on the coat is not one), more than 48 colours (64 with the donkey's over it; said: the game's colour cube recolours shaded art, docs/skins.md),
 and frames where the donkey is drawn the same but the skin differs (a frame missed in an edit). Only the errors
 (a missing picture, a wrong size, a bad front key, `source = game` without a prefix) fail the scans.
 

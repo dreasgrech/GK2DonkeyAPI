@@ -1,4 +1,12 @@
 ﻿key,value,english,note
 skin.donkey/saddleup-donkey-skins.armored.name,铁甲,Armored,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.armored.tone.skirt.name,裙甲与羽饰,Skirt and plume,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.steel.name,钢,Steel,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.armored.tone.brass.name,黄铜,Brass,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.hellfire.name,地狱火,Hellfire,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.hellfire.tone.lava.name,熔岩裂纹,Lava cracks,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.horns.name,角与尾巴,Horns and tail,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.hellfire.tone.glow.name,发光的眼睛,Glowing eyes,a part of the skin the player colours on its own: its row's label in the colours window
 skin.donkey/saddleup-donkey-skins.royal-parade.name,皇家巡游,Royal Parade,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.cloth.name,饰布,Saddle cloth,a part of the skin the player colours on its own: its row's label in the colours window
+skin.donkey/saddleup-donkey-skins.royal-parade.tone.crown.name,王冠与饰边,Crown and trim,a part of the skin the player colours on its own: its row's label in the colours window
