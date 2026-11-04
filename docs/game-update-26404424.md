@@ -107,9 +107,52 @@ Steam changelog was saved for this one; what it does is read from the code and t
   - The caretaker and gardener changes are inside their own order loops.
 - **Saves:** the two new fixer blocks touch the first grave module and the kitchen ovens. Neither touches a donkey, a
   cart, the side file or the hidden chest.
-- **Halloween** (`TemporaryEventDates`) runs from 24 October to 7 November. It is live now, so 1.011's check 5 (the
-  keeper's head skin override against the dragon's and the Jester's front layers) can be made in any session before
-  7 November.
+- **Halloween** (`TemporaryEventDates`) runs from 24 October to 7 November every year, by the PC's date. Its head table
+  (read from the asset 2026-11-04) swaps one zombie head, 1051 for 1060, and not the keeper's: 1.011's check 5 is
+  closed. A zombie with head 1051 on the cart is reached: the game draws it with head 1060
+  (`DropViewAtomMesh.ActivateZombie` resolves the id) while `Cargo.cs` checks the picture's name against 1051, so it
+  warns "the cargo view has no lying zombie" and draws the game's placeholder instead (no F11 scenario puts a zombie on
+  the cart; found reading the code).
+  Looked into further the same day (the user: "invesitgate this more"):
+  - The event code is the same in 1.011 and 1.011.1 (`HalloweenHeadSkinOverride`, `TemporaryEventDates`,
+    `DropViewAtomMesh`, `SkinPresetGK2` byte for byte in both decompiles).
+  - **The game has the pictures for head 1060.** The Addressables catalog names the lying and carried zombies for heads
+    1050 to 1059 only (`drops_item_zombie_pose1_t105N`, `pose2_t105N`, each addressable on its own), which first read as
+    "no 1060 picture". Read from the bundles (UnityPy): the drop atom `Assets/AddressableAssets/Drops/BigItem.prefab`
+    (bundle `b84d9175...`, the one `DropView.EnsurePools` loads for big drops) lists 11 of each, `zombieWorkerDropPrefabs`
+    and `zombieWorkerOverheadPrefabs`: the ten addressable ones in other bundles and `drops_item_zombie_pose1_t1060` /
+    `pose2_t1060` embedded in its own. So the game draws a head-1051 zombie with the event head on the ground
+    (`DropView.UpdateView`) and carried (`AnimationComponentBase`, pose 1), both through `ActivateZombie`.
+  - (Had a picture been missing, `ActivateZombie` would draw nothing: it switches both zombie containers off, skips the
+    drawing when its list has no `pose<N>_t<id>`, and `base.Activate` only switches the view on; `MeshElement` keeps
+    the last picture. Read in the decompile; not the case for 1060.)
+  - So only our cart is off: it draws through the same `ActivateZombie` (the event head shows), then compares the
+    picture's name with the unswapped id, warns and puts the item's icon in its place.
+  - **Fixed 2026-11-04** (the user: "build them now"): the cart takes any lying zombie the game switched on as the
+    right picture (`Cargo.cs` `ActivateFor`: a `drops_item_zombie_pose2_t` picture, it and its parents on inside the
+    view). The game switches the zombie pictures off before it looks one up, so a head it has no picture for still
+    leaves the old one off and still warns. Not by `ResolveDropIconId`: `Cargo` is a core class of the dependency gate
+    (game-code.txt), and an event class's changed code would stop the whole mod at start. The redraw key stays the
+    stored head: a zombie already on the cart when the event starts or ends keeps its picture until the cart's views
+    are made again (a load, a door), as the game's own ground views only redraw when their data changes. The scenario
+    "cargo: a zombie with the game's Halloween head on the cart" (`Dev/ZombieHeadTests.cs`, docs/self-tests.md)
+    checks it with the swap forced off and on; the probe shows the keeper's overhead atom's lists (the cart's source).
+  - **In game 2026-11-04 18:00: F11 1845 passed, 0 failed, 0 warnings.** The scenario passed both ways (swap off: the
+    cart shows `drops_item_zombie_pose2_t1051`, swap on: `pose2_t1060`, switched on, one view, never the icon), and the
+    cart's own line read "head 1051, drawn by the game as 1060" with no warning. The probe: the event live by the date,
+    1051 -> 1060 the only swap; the keeper's overhead atom lists 11 lying and 11 carried zombies with `pose1/pose2_t1060`,
+    as do the 55 ground drops' big atoms in the scene; the forced swap reaches the call the pictures use
+    (`ResolveDropIconId("1051")` 1051 off, 1060 on); fresh and reused copies draw the table's head when on, carried,
+    on the cart and on the ground. Its cart lines were its own copy of the old check (they said "WARNS" when on): it
+    asks the cart's own rule now (`Cargo.LyingZombieShown`, one place for `ActivateFor` and the probe), with the old
+    check's verdict beside it.
+  - The measurement: the scenario "measure: the game's Halloween head swap on the zombie pictures"
+    (`Dev/HalloweenProbe.cs`, the Measurements group; docs/self-tests.md): the lists as the game holds them, and what
+    each view draws for heads 1050 and 1051 with the swap forced off and on. Reading the list from the bundles offline
+    found the lists of the ground drops' atom (above; `Drop.prefab` is the shell only, its atoms come from
+    `SmallItem.prefab` and `BigItem.prefab`); the keeper's overhead atom, which the cart copies, is the probe's.
+  - The scene content the event loads (`SceneWgoContentPart` with `HalloweenConditionalLoad`): world objects of the
+    event, which the mounts meet like any other (safe spots, paths, jumps); nothing of ours names them.
 
 ## In game (2026-11-03, 21:35)
 
@@ -154,4 +197,5 @@ from the 21:35 one:
 ## In-game checks (pending)
 
 1. 1.011's open checks still stand ([`docs/game-update-26297960.md`](game-update-26297960.md), "In-game checks"),
-   check 5 (Halloween) before 7 November.
+   check 5 (Halloween) closed 2026-11-04 (above); a zombie with head 1051 on the cart fixed the same day, its scenario
+   and the probe to run.

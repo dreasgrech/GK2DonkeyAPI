@@ -12,6 +12,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Zombies on the cart during Halloween** (2026-11-04): from 24 October to 7 November the game gives some
+  zombies a Halloween head. Such a zombie on the cart showed as an icon (and a warning in the log); it now lies there
+  with its Halloween head, as on the ground.
 - **A skin can have colours of its own** (2026-11-03; the user, on the Jester: "harness color should only control
   the color of the harness and then the skin can introduce its own color tones depending on what it needs"). A skin
   names the parts of its drawing a player colours on their own (a cap, a cloth, a plume), as many as it needs, and
@@ -108,6 +111,17 @@ For mod authors:
 
 Development:
 
+- **A probe of the game's Halloween head swap** (2026-11-04; docs/game-update-26404424.md "Halloween"): the
+  scenario "measure: the game's Halloween head swap on the zombie pictures" (`Dev/HalloweenProbe.cs`, the
+  Measurements group, sorted `dev` in game-code.txt) lists the zombie pictures the keeper's and a ground drop's atoms
+  hold and what copies of them draw for heads 1050 and 1051, the swap forced off and on by a prefix on
+  `HalloweenHeadSkinOverride.Resolve` for the scenario only. The table (read from the game's asset) swaps zombie head
+  1051 for 1060; the ground drops' atom (`BigItem.prefab`) carries the 1060 pictures, so the game draws it, and only
+  the cart's name check (against the unswapped id) warned and drew the icon instead. Fixed in `Cargo.cs`: any lying
+  zombie the game switched on in the view is right (not by the game's event class: `Cargo` is core in the dependency
+  gate). `Dev/HalloweenSwap.cs` (the forced swap, shared) and the scenario "cargo: a zombie with the game's Halloween
+  head on the cart" (`Dev/ZombieHeadTests.cs`, a test zombie with head 1051 on a test cart, the swap off and on;
+  `Cargo.Rig.TestForgetViews` for it).
 - **Tones, the checks and tools** (2026-11-03): `tests/SkinsScan` and `tools/skins/check_skin.py` read `[Tone.*]`
   (the id, the keys, the colours in the pictures, one place per colour, not a donkey colour under an over skin) and
   fail a tone colour that shares a colour-cube cell with another colour of the look (`Colors.Rig.LutIndex`; both

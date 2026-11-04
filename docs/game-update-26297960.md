@@ -165,8 +165,13 @@ build in the READMEs and the release checklist.
 3. A corpse to the morgue door while mounted, and the crematorium unchanged for the keeper.
 4. The hint bubbles over standing donkeys and carts, the look bar and the Mounts panel at the usual place (the
    rounded `WorldToScreenPoint`).
-5. If the Halloween event is live (`TemporaryEventDates`): the keeper's head skin override against the dragon's front
-   layer (the occlusion counts assume the normal head).
+5. ~~If the Halloween event is live (`TemporaryEventDates`): the keeper's head skin override against the dragon's front
+   layer (the occlusion counts assume the normal head).~~ Closed 2026-11-04: the keeper's head is not swapped (the user,
+   during the event: "the keepers head looks the same"). `HalloweenHeadSkinOverride` is a table in its asset
+   (`Assets/AddressableAssets/Configurations/HalloweenHeadSkinOverride.asset`, read with UnityPy) with one entry,
+   head 1051 shown as 1060: a zombie head. It swaps a character's head sprites (`SkinPresetGK2`, the player's preset
+   too, by id) and the lying and carried zombies' pictures (`DropViewAtomMesh.ActivateZombie`, the head's colours left
+   off). What it does reach of ours: a zombie with head 1051 on the cart (docs/game-update-26404424.md, "Halloween").
 6. The Mods menu (the framework) still shows our pages.
 7. Zombies on the cart taken from and returned to a power source with a workbench extension (the refused case).
 

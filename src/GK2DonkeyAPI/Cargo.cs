@@ -175,6 +175,7 @@ namespace GK2DonkeyAPI
         internal static bool MeasureMeshes(Transform root, Transform space, out Bounds bounds, bool includeInactive = false) => Rig.MeasureMeshes(root, space, out bounds, includeInactive);
         internal static bool IsShadowMesh(string name) => Rig.IsShadowMesh(name);
         internal static DropViewAtomMesh FindSourceAtom() => Rig.FindSourceAtom();
+        internal static bool LyingZombieShown(DropViewAtomMesh view) => Rig.LyingZombieShown(view);
 
         private static readonly AccessTools.FieldRef<DropViewAtomMesh, List<DropViewAtomMeshElement>> ZombieDropPrefabs =
             AccessTools.FieldRefAccess<DropViewAtomMesh, List<DropViewAtomMeshElement>>("zombieWorkerDropPrefabs");
@@ -718,6 +719,7 @@ namespace GK2DonkeyAPI
             internal float BedLength => bedLength;
             internal Transform Container => container;                       // the cargo holder (the packer's space)
             internal List<DropViewAtomMesh> PlacedViews => placedViews;      // in Placed's order
+            internal void TestForgetViews() => viewKeys.Clear();              // the self-tests: the next RefreshViews draws every view again
 
             // The world box around the drawn cargo (the sheet sizes its crop to a tall stack with it).
             internal bool CargoWorldBounds(out Bounds b)
@@ -1357,8 +1359,10 @@ namespace GK2DonkeyAPI
             // ------------------------------------------------------------------ views and the packer
 
             // The drop view's zombie heads (the asset bundles, 2026-10-04: zombieWorkerDropPrefabs holds
-            // drops_item_zombie_pose2_t1050..1059 on the keeper's overhead atom the views are cloned from).
+            // drops_item_zombie_pose2_t1050..1059 on the keeper's overhead atom the views are cloned from; since 1.011 also
+            // pose2_t1060, the head the game's Halloween table draws for 1051, never a zombie's own: 2026-11-04).
             private const int FirstZombieHead = 1050, LastZombieHead = 1059;
+            private const string LyingZombie = "drops_item_zombie_pose2_t";
 
             // Shows the item on the view: the item's own mesh, or for a zombie the game's lying zombie (pose 2, as on the
             // ground: the views have isOverhead false) with its head and head colours, as the game draws a carried or
@@ -1366,6 +1370,27 @@ namespace GK2DonkeyAPI
             // shows changes. Colliders off and the holder's layer again afterwards: a zombie's mesh is instantiated into
             // the view on first use (DropViewAtomMesh.GetCachedZombieElement), after MakeView set them.
             // True when the view was (re)activated, false when it already showed this.
+            // Whether the view shows a lying zombie the game switched on: any head, the one the game resolved being the
+            // right picture. One it found no picture for stays off (ActivateZombie switches the zombie pictures off before
+            // it looks one up), and MeshElement still names the last one shown. The probe asks the same (HalloweenProbe).
+            internal static bool LyingZombieShown(DropViewAtomMesh view)
+            {
+                DropViewAtomMeshElement el = view != null ? view.MeshElement : null;
+                return el != null && el.name.StartsWith(LyingZombie, StringComparison.Ordinal) && SwitchedOn(el.transform, view.transform);
+            }
+
+            // Whether a picture is switched on inside its view: it and every parent up to the view (the view's own holder
+            // may be off, a parked or hidden cart).
+            private static bool SwitchedOn(Transform t, Transform view)
+            {
+                for (; t != null; t = t.parent)
+                {
+                    if (!t.gameObject.activeSelf) return false;
+                    if (t == view) return true;
+                }
+                return false;
+            }
+
             private bool ActivateFor(DropViewAtomMesh view, Item item)
             {
                 viewKeys.TryGetValue(view, out string had);
@@ -1400,17 +1425,20 @@ namespace GK2DonkeyAPI
                     string headId = head.ToString("D4");
                     view.isOverhead = false;
                     view.ActivateZombie(headId, tex);
-                    string want = "drops_item_zombie_pose2_t" + headId;
-                    if (view.MeshElement == null || view.MeshElement.name != want)
+                    // ActivateZombie draws the head the game resolves, which may be another than the stored one (its
+                    // Halloween table: head 1051 as 1060 from 24 October to 7 November, docs/game-update-26404424.md)
+                    DropViewAtomMeshElement lying = view.MeshElement;
+                    if (!LyingZombieShown(view))
                     {
-                        Plugin.Log.LogWarning($"Cargo: the cargo view has no lying zombie '{want}' (shows '{view.MeshElement?.name ?? "nothing"}'); zombie {z.Name} is drawn as the game's placeholder.");
+                        Plugin.Log.LogWarning($"Cargo: the cargo view drew no lying zombie for head {headId} (shows '{lying?.name ?? "nothing"}'{(lying != null && !SwitchedOn(lying.transform, view.transform) ? ", switched off" : "")}); zombie {z.Name} is drawn as the game's placeholder.");
                         string icon = ResolveIcon(item.Definition);
                         view.Activate(icon);
                         key = "icon:" + icon;
                     }
                     else
                     {
-                        Plugin.Log.LogInfo($"Cargo: zombie {z.Name} drawn lying on {owner.Describe()} (head {headId}, colours {(string.IsNullOrEmpty(lut) ? "none" : lut)}).");
+                        string drawnAs = lying.name.Substring(LyingZombie.Length);
+                        Plugin.Log.LogInfo($"Cargo: zombie {z.Name} drawn lying on {owner.Describe()} (head {headId}{(drawnAs != headId ? ", drawn by the game as " + drawnAs : "")}, colours {(string.IsNullOrEmpty(lut) ? "none" : lut)}).");
                     }
                 }
                 else
