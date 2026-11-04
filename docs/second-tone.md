@@ -166,10 +166,14 @@ the ..." any more.
 |---|---|---|---|---|---|
 | Donkey; Royal Parade, Armored, the Jester (the donkey's) | Coat | Muzzle and belly | Legs, mane and ears | Eyes | Harness |
 | Hellfire | Coat | Muzzle and belly | Legs and mane (its ears are horns) | Eyes | Harness |
-| Dragon | Scales and wings | Belly | Horns and spikes | Eyes and claws | - |
+| Dragon | Scales and wings | Belly | (outline: no row; its horns and spikes a part of their own since the same evening) | Eyes and claws | - |
 | Rat | Fur | Ears, nose, paws and tail | (outline: no row) | Eyes | - |
 | Snail | Body | Shell | (outline: no row) | Eyes | - |
 | Worm | Skin | Mouth | (outline: no row) | Eyes | - |
+
+The same evening (docs/mount-colours.md 7.11): the outline is never a row's. The donkey's Dark row colours its
+mane, ears, legs and hooves, not its outline (on every skin over it too); the dragon's horns and spikes are a part of
+their own ("Horns and spikes"), its outline its Dark with no row.
 | Gerry | Bone | - | - | - | - |
 
 ## 9. Built (2026-11-04, the evening)

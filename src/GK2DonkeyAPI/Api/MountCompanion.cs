@@ -1045,6 +1045,10 @@ namespace GK2DonkeyAPI.Api
                 Instance(Donkey, LookKeys, skinKeys);
                 SkinTones.Apply(Donkey.I, tones, OwnerId, skin);
             }
+            // a baby's own shade of the dark parts only where they are a part of the look it wears (named: the donkey's
+            // mane, legs and ears); where that look names no Dark, its Dark is the outline, the drawing's line, which no
+            // colour reaches (docs/mount-colours.md 7.11)
+            bool babyDarkIsPart = SkinRegions.NameTerm(CurrentOwn.FoalsWearSkin ? skin : MountLooks.DonkeyId, "Dark") != null;
             for (int i = 0; i < foalHandles.Length; i++)
             {
                 MountHandle h = foalHandles[i];
@@ -1055,9 +1059,9 @@ namespace GK2DonkeyAPI.Api
                     Instance(h, FoalCoatKeys, Shade(coatKeys, "Coat", own.Hue, own.Brightness, own.Saturation, own.Tinge));
                     Instance(h, HarnessKeys, harnessKeys);
                     Instance(h, FoalMuzzleKeys, Shade(muzzleKeys, "Muzzle", own.MuzzleHue, own.MuzzleBrightness, 1f, 0f));
-                    // the dark parts (a mount's wings, the donkey's mane and legs) with the coat: the whole baby its shade, of the
-                    // parent's dark colour when the look gives one (the eyes are the parent's)
-                    Instance(h, FoalDarkKeys, Shade(darkKeys, "Dark", own.Hue * 0.7f, own.Brightness, own.Saturation, 0f));
+                    // the dark parts (the donkey's mane, legs and ears) with the coat: the whole baby its shade, of the
+                    // parent's dark colour when the look gives one (the eyes are the parent's); an outline the parent's
+                    Instance(h, FoalDarkKeys, babyDarkIsPart ? Shade(darkKeys, "Dark", own.Hue * 0.7f, own.Brightness, own.Saturation, 0f) : darkKeys);
                     Instance(h, EyeKeys, eyeKeys);
                     Instance(h, LookKeys, CurrentOwn.FoalsWearSkin ? skinKeys : noSkin);
                     // the parent's tones on a baby in its skin, each given a colour in the baby's own shade (as its coat); one

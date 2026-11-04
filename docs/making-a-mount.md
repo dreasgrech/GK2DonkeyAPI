@@ -112,9 +112,19 @@ seat = 70              # the canvas row the rider's hip sits on, from the top
 HitchGapPx = 18
 
 [Colors]               # what the drawing's colours mean, by region, so the player's colour rows reach them
-Dark = 2A1008 3C1810
+Dark = 2A1008 3C1810   # the outline: a Dark not named below has no row, so the line art stays as drawn
 Eye = F0E040
+
+[Region.Coat]          # the colours window's names for the crab's parts (no name: the page's own words)
+name = Shell
+
+[Region.Eye]           # Dark and Eye get a row only when named
+name = Eyes
 ```
+
+A part that is neither (its claws, say) can be a tone of its own, a row by its own name (docs/skins.md "A skin's own
+tones"). The names are translated as `skin.<skin id>.region.<region>.name` and `skin.<skin id>.tone.<id>.name`
+(docs/localization.md); never put the outline in a row the player colours (docs/mount-colours.md 7.11).
 
 The skin's mount is the folder it sits in, and its name the folder's own (no `id =` line); a `[Mount]` section in a
 `skin.cfg` is ignored (the report says it goes in `mount.cfg`).

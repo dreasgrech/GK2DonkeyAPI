@@ -41,9 +41,10 @@ For players:
 - **Every row of the Colours window names a part of the look** (2026-11-04; the user, on "Second tone": "it's not
   self explanatory about what it refers to since the skin now defines every part itself"; docs/second-tone.md). No
   row says "Coat colour" or "Second tone" any more: the donkey's read Coat, Muzzle and belly, Harness, and two new
-  ones, Legs mane and ears and Eyes; the dragon's Scales and wings, Belly, Horns and spikes, Eyes and claws; the rat's
+  ones, Legs mane and ears and Eyes; the dragon's Scales and wings, Belly, Horns and spikes (a part of its own), Eyes and claws; the rat's
   Fur, Ears nose paws and tail, Eyes; the snail's Body, Shell, Eyes; the worm's Skin, Mouth, Eyes; Gerry's Bone. A part
-  the look doesn't have has no row (it was greyed). The dark parts and the eyes can be coloured for the first time.
+  the look doesn't have has no row (it was greyed). The dark parts and the eyes can be coloured for the first time;
+  the outline round a mount is never recoloured.
   A part that used to follow another row (Royal Parade's saddle cloth the harness, Armored's plume and skirt and
   Hellfire's lava the second tone) is a part of its own: on the first start after the update it takes the colour
   you had saved for that row, so it looks as before, and from then on that row colours only what it names. Saved
@@ -111,6 +112,18 @@ For mod authors:
 
 Development:
 
+- **The outline is the drawing's line** (2026-11-04; the user: "I dont like that the mane is that partial outline";
+  docs/mount-colours.md 7.11): measured on the game's donkey frames, its Dark's 1e190e and 301f0f are the outline (on
+  the silhouette's edge, never in the fill) and are in no region now (`Colors.cs`: Dark "Donkey mane, legs, ears and
+  hooves", the donkey's pairs 40; both in colour-cube cells of their own). Hellfire's horns' outline 1E0E0C out of its
+  `[Colors] Dark` (`make_hellfire.py`, the pack reproduced). The dragon: its Dark its outline only, by hex in
+  `colors.json` (no `[Region.Dark]`, no row), its horns and spikes `[Tone.horns]` "Horns and spikes" (the 11
+  translations moved from `region.dark` to `tone.horns`), its body's deepest shade and its wings' ribs its Coat.
+  A baby shades the parent's Dark only where its look names one (`MountCompanion.ApplyLook`: an unnamed Dark is the
+  outline, which its shade reached on every baby until then).
+  Integration scenario "colours: the outline is the drawing's line: no colour row reaches it"; docs/skins.md and
+  docs/making-a-mount.md (its example names its parts) say to keep line art out of every row. The `NamedMaps` comment
+  in `Colors.cs` no longer describes the follow pairing removed the same day.
 - **A probe of the game's Halloween head swap** (2026-11-04; docs/game-update-26404424.md "Halloween"): the
   scenario "measure: the game's Halloween head swap on the zombie pictures" (`Dev/HalloweenProbe.cs`, the
   Measurements group, sorted `dev` in game-code.txt) lists the zombie pictures the keeper's and a ground drop's atoms

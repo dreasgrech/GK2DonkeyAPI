@@ -787,6 +787,70 @@ namespace GK2DonkeyAPI.IntegrationTests
             yield return Frames(2);
         }
 
+        // The outline is the drawing's line, never a colour row's (the user, 2026-11-04: the Dark row painted the donkey's
+        // partial outline with its legs; docs/mount-colours.md 7.11). The Dark row's keys set on a test donkey: on the
+        // donkey's own look and on Hellfire the donkey's outline (1e190e, 301f0f) and Hellfire's horns' outline (1E0E0C)
+        // have no pair, drawn as they are, while the dark fill (292316, 352e1e) changes. The dragon: its outline is its
+        // Dark, which it names nowhere (no row), its horns and spikes a part of their own, its body's deepest shade and
+        // its wings' ribs (280810, 260828) its Coat.
+        internal static IEnumerator OutlineAsDrawn()
+        {
+            string noPack = MissingPack("hellfire", "dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
+            Color32 H(string hex) => new Color32(Convert.ToByte(hex.Substring(0, 2), 16), Convert.ToByte(hex.Substring(2, 2), 16), Convert.ToByte(hex.Substring(4, 2), 16), 255);
+            string[] outline = { "1e190e", "301f0f" }, fill = { "292316", "352e1e" };
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null) { Fail("could not spawn"); yield break; }
+            foreach (string skin in new[] { "", "hellfire" })
+            {
+                string id = skin == "" ? "" : Sk(skin), what = skin == "" ? "the donkey's own look" : "Hellfire";
+                a.Tuning.Set(Owner, "DarkColorizeAmount", 0f);
+                a.Tuning.Set(Owner, "Skin", id);
+                yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == id && !a.I.LooksRig.Building, 20f);
+                if (!waited) { Fail($"{what} was never worn"); continue; }
+                a.Tuning.Set(Owner, "DarkColorize", "00FF00");
+                a.Tuning.Set(Owner, "DarkColorizeAmount", 1f);
+                yield return Frames(3);
+                var lines = new List<string>();
+                bool outlineKept = true, fillChanged = true;
+                foreach (string hx in skin == "" ? outline : new[] { outline[0], outline[1], "1e0e0c" })
+                {
+                    Color32? dst = a.I.ColorsRig.TestDstOf(H(hx));
+                    bool kept = dst == null || (dst.Value.r == H(hx).r && dst.Value.g == H(hx).g && dst.Value.b == H(hx).b);
+                    outlineKept &= kept;
+                    lines.Add($"{hx} {(dst == null ? "no pair" : kept ? "kept" : "CHANGED")}");
+                }
+                foreach (string hx in fill)
+                {
+                    Color32? dst = a.I.ColorsRig.TestDstOf(H(hx));
+                    bool changed = dst != null && (dst.Value.r != H(hx).r || dst.Value.g != H(hx).g || dst.Value.b != H(hx).b);
+                    fillChanged &= changed;
+                    lines.Add($"{hx} {(changed ? "changed" : "NOT changed")}");
+                }
+                Check(outlineKept && fillChanged, $"{what}, the Dark row green: the outline drawn as it is, the dark fill coloured ({string.Join(", ", lines)})");
+            }
+            a.Tuning.Set(Owner, "DarkColorizeAmount", 0f);
+            // the dragon: the data its rows are made from
+            Looks.SkinDef dragon = Looks.Find(Sk("dragon"));
+            List<string> horns = null;
+            bool hasHorns = false;
+            if (dragon?.Tones != null) foreach (SkinTones.ToneDef t in dragon.Tones) if (t.Id == "horns") hasHorns = true;
+            if (hasHorns && dragon.ColorRegions != null && dragon.ColorRegions.TryGetValue(SkinTones.KeyOf("horns"), out HashSet<string> hs)) horns = new List<string>(hs);
+            bool darkIsOutline = dragon?.ColorRegions != null && dragon.ColorRegions.TryGetValue("Dark", out HashSet<string> dk) && dk.Count == 3 && dk.Contains("1C060C") && dk.Contains("2E0C14") && dk.Contains("1E0A0A");
+            Check(dragon != null && SkinRegions.NameTerm(dragon.Id, "Dark") == null && darkIsOutline && hasHorns && horns != null && horns.Count == 3,
+                $"the dragon: its Dark is its outline (1C060C, 2E0C14, 1E0A0A: {darkIsOutline}) with no name, so no row ({(dragon == null ? "not found" : SkinRegions.NameTerm(dragon.Id, "Dark") == null ? "none" : "named")}); its horns and spikes a part of their own ({(hasHorns ? string.Join(" ", horns) : "none")})");
+            a.Tuning.Set(Owner, "Skin", Sk("dragon"));
+            yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == Sk("dragon") && !a.I.LooksRig.Building, 20f);
+            Looks.Loaded worn = a.I.LooksRig.WornOwnColours;
+            List<Color32> coat = worn != null && worn.ColoursByRegion.TryGetValue("Coat", out List<Color32> c0) ? c0 : new List<Color32>();
+            bool shadeCoat = coat.Exists(x => x.r == 0x28 && x.g == 0x08 && x.b == 0x10), ribsCoat = coat.Exists(x => x.r == 0x26 && x.g == 0x08 && x.b == 0x28);
+            Check(waited && shadeCoat && ribsCoat, $"the dragon's body's deepest shade and its wings' ribs are its Coat, \"Scales and wings\" (280810 {shadeCoat}, 260828 {ribsCoat})");
+            a.Tuning.Set(Owner, "Skin", "");
+            a.Remove();
+            yield return Frames(2);
+        }
+
         // The two over skins we ship, on the built-ins themselves (6.4: the over-skin scenarios run on temp packs):
         // Hellfire built whole with its erase marks and the ash coat under it, kept while walking; Royal Parade's
         // reds under the harness colour and its cloth drawn in the walk; the snail's own rider offset on its wearer.

@@ -7,7 +7,7 @@
   Emblem, Jewels. Armored: Helmet, Plume, Body armour, Skirt, Brass. Hellfire: Horns, Glowing eyes, Lava cracks,
   Tail, Tail tip. A part the Harness or Second tone row coloured takes the colour saved for that row once, on the first
   start after the update, so every saved look stays as it was, and is a part of its own from then on; the parts drawn
-  as they were start as drawn. Hellfire's dark parts row reads "Legs and mane" (its ears are horns). Parts that shared one colour have shades of their own now, the same to the eye. The part names are in all
+  as they were start as drawn. Hellfire's dark parts row reads "Legs and mane" (its ears are horns); the outline stays as drawn. Parts that shared one colour have shades of their own now, the same to the eye. The part names are in all
   11 languages.
 
 ## 1.1.0, 2026-11-01

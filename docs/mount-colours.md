@@ -100,7 +100,7 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
 
 ### 2.3 Which shader path
 
-**Amended 2026-11-04:** for a skin over the donkey the threshold is 96 pairs, the donkey's 42 and the skin's named
+**Amended 2026-11-04:** for a skin over the donkey the threshold is 96 pairs, the donkey's 42 (40 since 7.11) and the skin's named
 colours (`PaletteMaxColoursOver`; 64 that morning, 72 for the Jester's six parts, 7.6, then 96 for every donkey
 skin's parts their own, 7.10: the colour swap's cost measured in game showed none up to 96, `MeasureTests.PaletteCost`,
 docs/performance.md; section 7.9: on the cube, two pairs of the donkey's own
@@ -323,7 +323,7 @@ colours = C14859 A03444 862633 641A2A 3E0A14
   for the worn skin and the Mounts panel picture's), and the drawn colours are read from that frame on
   (`Looks.LoadedOwnColours` asks for the colours sorted, not for the sheet worn, which is a frame later). Custom is
   the palette with its lightness, as the other rows.
-- **The colour cube.** Over 96 pairs (48, then 64 until 2026-11-04; the donkey's 42 plus an over skin's named colours) the
+- **The colour cube.** Over 96 pairs (48, then 64 until 2026-11-04; the donkey's 40 since 7.11 plus an over skin's named colours) the
   mount takes the cube, where two colours in one cell change together, and on the cube a colour that isn't paired
   takes its cell's colour too. Measured 2026-11-03 on the four over skins: the only shared cells are two pairs of the
   game's own donkey colours (Dark 292316 with Harness 2D2114, Coat 362815 with Harness 3C2A14), which on the cube take
@@ -504,8 +504,8 @@ and is able to be coloured". Found by `tools/skins/part_map.py` (each part's pix
 row reaches white): Royal Parade's crown jewels had no row, and one row each covered its crown with the cloth's trim
 and emblem, Armored's helmet with the body armour and its plume with the skirt, Hellfire's horns with the tail and the
 eyes with the tail's spade; the Jester's gold (the cap's band, every bell) was drawn as it is. Now every part has a
-row of its own (the table in 7.5; the Jester in 7.6). Not parts: the line art (Armored's 281B26, Hellfire's outline,
-under Dark) and the donkey's own colours a skin draws (they follow the donkey's rows).
+row of its own (the table in 7.5; the Jester in 7.6). Not parts: the line art (Armored's 281B26; Hellfire's outline,
+under Dark then, in no region since 7.11) and the donkey's own colours a skin draws (they follow the donkey's rows).
 
 - **Parts sharing a ramp got shades of their own** (a colour is one tone's only): `tools/skins/part_palette.py` finds
   each part the nearest shades the checks take (a cube cell of their own, not one step from another place's colour),
@@ -527,3 +527,53 @@ under Dark) and the donkey's own colours a skin draws (they follow the donkey's 
 - **The words:** the pack's new part names in all 11 languages (a split part takes its half of the old name's reviewed
   translation; Helmet, Body armour, Tail tip, Trim and fringe, Emblem and Jewels are new), checked with
   `tools/l10n-glyphs.py`: no character the game's own text never draws but those the Fonts check found already.
+
+### 7.11 The outline is the drawing's line (2026-11-04)
+
+The user, on Hellfire with its dark parts coloured: "one thing that i dont like is that that outline is sharing the
+same colour as the legs. is that the "mane"? I dont like that the mane is that partial outline and i think we have it
+in all skins?". Measured on the game's 44 donkey frames (the probe's export, `BepInEx\GK2-donkey-frames`; a pixel is on
+the silhouette's edge when a 4-neighbour is transparent):
+
+| Dark colour | On the edge | Inside | What it is |
+|---|---|---|---|
+| 1e190e | 3067 | 1550 | the outline of the legs, ears and tail (inside: the lines between them) |
+| 301f0f | 1619 | 1162 | the outline of the head, neck and back: the "mane" line |
+| 292316 | 0 | 1972 | the fill of the legs, hooves, ears and the tail's tuft |
+| 352e1e | 0 | 1620 | the same, lighter; the mane's strip at the withers |
+| 130a0c, 2f2c1f | 0, 2 | 0, 1 | barely drawn |
+
+The belly's edge is drawn in coat and muzzle colours, so the Dark row recoloured a part of the outline only: a line
+round the head, the back and the legs. The same in every skin over the donkey (its own pixels show), in Hellfire's own
+horns' outline (1E0E0C, under its Dark), and on the dragon, whose "Horns and spikes" row reached its whole outline
+(1C060C, 81 % on the edge; its lit top edge 2E0C14, 93 %), its body's deepest shade (280810) and its wings' ribs
+(260828). Already so: Armored's steel line (281B26, in no region) and the critters' outlines (their Dark, unnamed).
+
+- **Built: the outline is the drawing's line, no colour row reaches it, on every look.**
+  - The donkey, so every skin over it: 1e190e and 301f0f out of `Colors.cs`'s Dark (its name there "Donkey mane,
+    legs, ears and hooves"). In no region, they have no pair and are drawn as they are, on the colour cube too (each
+    in a cell of its own). The donkey's pairs: 40.
+  - Hellfire: its horns' outline out of its `[Colors] Dark` (`make_hellfire.py`; the pack reproduced byte for byte).
+  - The dragon: in its own colours a colour named nowhere is Coat, so its outline stays its Dark (1C060C, 2E0C14 and
+    its one dark pixel 1E0A0A), now named nowhere: no row, as the rat's, the snail's and the worm's. Its horns and back
+    spikes (52402E 928062 D4C6A8) are a part of their own, `[Tone.horns]` "Horns and spikes" (the name and its 11
+    translations moved from the region to the part); its body's deepest shade and its wings' ribs, Dark by value until
+    then, are its Coat ("Scales and wings"). `colors.json`: its Dark by hex, the bone golds under Coat, which keeps
+    the belly's hue range off them.
+- **The babies:** each takes its own shade of the parent's dark parts (`MountCompanion.ApplyLook`, `Shade`) only where
+  the look it wears names its Dark (the donkey's, its skins'); where it names none (the rat, the snail, the worm, the
+  dragon), its Dark is the outline and the baby has the parent's: the shade ran on every baby until then, a small hue
+  and brightness step on the line art (found by the review of this change).
+- **For a skin's author** (docs/skins.md): line art in no region on a skin over the donkey; in a skin's own colours in
+  a Dark it doesn't name.
+- **Nothing released changes:** the Dark rows and the dragon's part names are of the same day. A Dark value set since
+  reads a little lighter: its lightness is measured on the fill alone (`Colors.ArtRange`).
+- **Test:** the integration scenario "colours: the outline is the drawing's line: no colour row reaches it"
+  (docs/self-tests.md): the Dark keys set on the donkey's own look and on Hellfire, the outlines without a pair, the
+  fill coloured; the dragon's data.
+- **In game 2026-11-04 19:32: F11 1848 passed, 0 failed, 0 warnings.** The scenario: the donkey's own look and Hellfire with
+  the Dark row green, 1e190e, 301f0f (and Hellfire's 1e0e0c) no pair, 292316 and 352e1e changed; the dragon's Dark its
+  three outline colours, unnamed, its horns and spikes a part of their own, 280810 and 260828 its Coat. The Coat
+  scenario on the dragon: Coat 9 (7 and the two), 9 changed, none of another region. The colours window (TSV and
+  picture): the dragon's rows Scales and wings, Belly, Eyes and claws, Horns and spikes, no Dark row. `l10n-sync --check`
+  the same on all five templates (the hand-moved key matched the export).

@@ -98,11 +98,15 @@ namespace GK2DonkeyAPI
         }
 
         // The art's exact colours by region, most used first (read from the game's atlas and the cart textures,
-        // tools in docs/colors.md). Every colour of every group is in exactly one region of that group.
+        // tools in docs/colors.md). Every colour of every group is in one region of that group at most: the donkey's
+        // outline, 1e190e and 301f0f (the drawing's line round its head, neck, back, legs, ears and tail; the art's own,
+        // never inside its fill), is in none, so no colour row reaches it and it stays as drawn on every skin over the
+        // donkey (the user, 2026-11-04: the Dark row painted that partial outline with the legs; docs/mount-colours.md
+        // 7.11). Both have a colour-cube cell of their own, so they stay as drawn on the cube too.
         private static readonly RegionDef[] Regions =
         {
             R("Coat", "Donkey coat", "Donkey", (Group.DonkeySprites, "736c57 4a3d20 665b44 584c33 3e3019 54503b 655c49 4d4539 362815 453b2e 3c3223 3a3428 534f3a 443b31")),
-            R("Dark", "Donkey outline, mane and hooves", "Donkey", (Group.DonkeySprites, "1e190e 301f0f 292316 352e1e 130a0c 2f2c1f")),
+            R("Dark", "Donkey mane, legs, ears and hooves", "Donkey", (Group.DonkeySprites, "292316 352e1e 130a0c 2f2c1f")),
             R("Muzzle", "Donkey muzzle and belly", "Donkey", (Group.DonkeySprites, "42422c abb298 858e6b 858f6c 75755a a9a7a2")),
             R("Eye", "Donkey eye", "Donkey", (Group.DonkeySprites, "ffffff")),
             R("Harness", "Donkey harness", "Donkey", (Group.DonkeySprites, "62411b 3c2a14 2d210f 443017 885923 d68e38 2f1d08 3a2003 a06a29 5f3d14 765024 342918 2d2114 463017 472d0e")),
@@ -132,9 +136,9 @@ namespace GK2DonkeyAPI
         // A skin over the donkey's: 64 since 2026-11-04 (the fifth code review), 96 the same day for skins whose parts
         // each have shades of their own (every donkey skin's parts its own; the Jester's eight: 78 pairs with every one
         // set): the colour swap's cost, measured in game, showed none up to 96 (MeasureTests.PaletteCost,
-        // docs/performance.md "The colour swap's cost"), and a look pays only for the pairs it has. It pairs the donkey's 42 and its own named colours, and on
+        // docs/performance.md "The colour swap's cost"), and a look pays only for the pairs it has. It pairs the donkey's 40 (42 until its outline left Dark, 2026-11-04) and its own named colours, and on
         // the cube two pairs of the donkey's own colours share a cell (Dark 292316 with Harness 2D2114, Coat 362815 with
-        // Harness 3C2A14: those outline and coat pixels took the harness colour). Every skin over the donkey stays on
+        // Harness 3C2A14: those dark-fill and coat pixels took the harness colour). Every skin over the donkey stays on
         // the exact swap with all its tones set (the released ones 49 to 59); the shader's loop has no fixed cap
         // (docs/colors.md), each pixel reads up to 96 palette texels. A skin in its own colours keeps 48 (the sixth
         // review: one of 49 to 64 colours keeps the path, and the look, it had).
@@ -938,10 +942,9 @@ namespace GK2DonkeyAPI
             private readonly bool[] builtFor = new bool[GroupCount]; // textures hold this group's current mapping
 
             // The worn look's named colour sets in pairing order, each with its map: the five mount regions (the player's
-            // settings), then the skin's own tones (SkinTones): with this instance's value; without one, a tone that
-            // follows a region with that region's map (the part as it was when its colours were the region's, the
-            // player's saved colour on it), and one that follows none: on a skin over the donkey not at all, its colours
-            // as drawn without a pair, so a tone nobody set adds nothing to the swap's count there (its pairs are the
+            // settings), then the skin's own tones (SkinTones): with this instance's value; without one (a tone that
+            // follows a region too, since 2026-11-04: its first value was the region's, once, MountSettingsPage.CarryOver)
+            // on a skin over the donkey not at all, its colours as drawn without a pair, so a tone nobody set adds nothing to the swap's count there (its pairs are the
             // donkey's and the named: a skin at 46 given an unset crown tone would have gone to 49 and the cube; the fourth code review,
             // 2026-11-04); on a skin in its own colours (pairDrawn) with no map, a pair to itself, as every one of that
             // look's colours has (on the cube an unpaired colour takes its cell's; the count is the look's colours there).

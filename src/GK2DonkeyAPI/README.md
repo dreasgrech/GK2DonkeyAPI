@@ -107,7 +107,7 @@ All through the game's own sound player, in its mixer groups, so the game's volu
 
 | Feature | Reached by | Status |
 |---|---|---|
-| **Recolour every colour of the art on its own,** in 14 regions: donkey (coat, dark parts, muzzle, eye, harness), cart (body, shafts, straps, hooks, wheels, hubs), lantern (pole, lamp, glass). | cfg, API, panel | tested |
+| **Recolour every colour of the art on its own,** in 14 regions: donkey (coat, dark parts, muzzle, eye, harness; its outline, the line art, stays as drawn), cart (body, shafts, straps, hooks, wheels, hubs), lantern (pole, lamp, glass). | cfg, API, panel | tested |
 | **Per region:** hue, saturation, brightness, contrast, colorize, tint, overlay, and exact colour swaps. | cfg, API | tested |
 | **Lamp colours:** glow, lit glass and character light. | cfg, API | tested |
 | **The game's own delivery donkey stays untouched** (recolouring never reaches the parts the game reuses). | always | tested |

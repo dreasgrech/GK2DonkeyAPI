@@ -155,7 +155,7 @@ def horn_runs(pp, y, w):
 
 TUFT_ROWS = 2  # rows of mane above the horns' base row, between the horns, in every frame (4 until 2026-11-02:
 # the tuft stood a dark nub up between the horns, "a near-black nub ... sticks up between the horns", a fresh review)
-TUFT_DARK = (30, 25, 14, 255)   # the donkey's own outline dark (region Dark): the tuft's top two rows
+TUFT_DARK = (30, 25, 14, 255)   # the donkey's own outline dark (in no region since 2026-11-04: as drawn): the tuft's top two rows
 TUFT_MANE = (53, 46, 30, 255)   # the donkey's own mane shade (region Dark): the rest
 NO_TUFT = {"bdy_turn_left_03", "bdy_turn_left_04", "bdy_turn_left_05", "bdy_turn_left_06"}  # the head turning to
 # us: the horns stand apart (4-5 columns in turn 03, 7-15 in turn 04-06) and the tuft between them was a flat-topped
@@ -212,7 +212,9 @@ def skin_cfg():
     lava = [c[:3] for c in HP.LAVA]
     bone = [c[:3] for c in HP.BONE]   # the horns
     tail = [(44, 18, 16), (70, 26, 20)]   # the devil's tail and its underside (hellfire_proto.devil_tail)
-    dark = [HP.OUTLINE] + bone + tail   # the outline (the horns' and the rump's where the tail was) stays the Dark row's
+    # the horns' and the tail's, for an API without tones; the outline (HP.OUTLINE: the horns' and the rump's where the
+    # tail was) is the drawing's line, in no region, so no colour row reaches it (docs/mount-colours.md 7.11)
+    dark = bone + tail
     glow = [(255, 170, 40), (220, 60, 20)]   # the glow and its rim
     spade = [(200, 40, 30), (120, 20, 16)]   # the tail's spade and its dark
     eye = glow + spade
@@ -226,7 +228,7 @@ def skin_cfg():
         "# The cracks follow the player's muzzle colour, the horns and the tail's dark its dark parts, the glow its eye\n"
         "# colour, as the recipe had it; everything else is kept as drawn. Here for an API without tones; this one moves them\n"
         "# to the tones below, every part its own, whose first choice follows the same regions (docs/mount-colours.md 7.9).\n"
-        "# The outline stays the Dark row's, as the donkey's own outline is.\n"
+        "# The outline is the drawing's line, in no region, so no colour row reaches it, as the donkey's own (7.11).\n"
         f"[Colors]\nMuzzle = {hexes(lava)}\nDark = {hexes(dark)}\nEye = {hexes(eye)}\n\n"
         f"[Tone.horns]\nname = Horns\nfollows = Dark\ncolours = {hexes(bone)}\n\n"
         f"[Tone.glow]\nname = Glowing eyes\nfollows = Eye\ncolours = {hexes(glow)}\n\n"

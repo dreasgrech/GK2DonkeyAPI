@@ -259,7 +259,7 @@ colours = 38121A 5E1C24 8A282A
 - A part is found by its exact colours. Give each part shades of its own: two parts in the same colours are one tone
   (draw one of them a step apart to colour them separately). Parts drawn in one ramp (the Jester's cap, collar and
   caparison in one burgundy): `tools/skins/part_palette.py` finds each part the nearest shades the checks take, the
-  same colour to the eye. Over the donkey the exact swap holds 96 pairs, the donkey's 42 among them: up to 54 colours
+  same colour to the eye. Over the donkey the exact swap holds 96 pairs, the donkey's 40 among them: up to 54 colours
   of a skin's own parts with every part set. A colour is in one place only: one tone, or one
   `[Colors]` region (a following tone's colours may stay under its region too, below). A tone naming a colour another
   place names is left out, the loader's report says why, and the skin loads without it; a colour under two
@@ -276,7 +276,10 @@ colours = 38121A 5E1C24 8A282A
   (Coat, Harness, Second tone) or, for Dark and Eye, no row. A variant takes its default's names; a skin over the
   donkey the donkey's (Coat, Legs mane and ears, Muzzle and belly, Eyes, Harness) unless it names its own (Hellfire's
   `[Region.Dark]` `name = Legs and mane`: its ears are horns). Translated as `skin.<skin id>.region.<region>.name`.
-  A region whose colours are only the outline (the line art) is best left unnamed: no row.
+  Keep the line art out of every row (docs/mount-colours.md 7.11): on a skin over the donkey list its colours
+  nowhere (they are drawn as they are, as the donkey's own outline is since 2026-11-04); in a skin's own colours, where a
+  colour named nowhere is Coat, put them in a Dark you don't name (no row), and give a part drawn dark too (horns,
+  claws) a tone of its own (the dragon's "Horns and spikes").
 - **A part that was under one of those rows in a skin players already wear** (under `[Colors] Harness`, say) says
   `follows = Harness` (or `Dark`, `Muzzle`, `Eye`; `Coat` on a skin in its own colours, where a colour named nowhere
   was Coat). It is a part like any other, its first choice Game default (since 2026-11-04, docs/second-tone.md 8): on
@@ -297,7 +300,7 @@ colours = 38121A 5E1C24 8A282A
   colours = E23A50 C41E38 96122C 3A0A12
   ```
 - Colours named too close together may change together on the game's colour cube (a skin in its own colours over 48,
-  one over the donkey over 96 with the donkey's own 42, or with the player's `SpriteMethod = Lut`):
+  one over the donkey over 96 with the donkey's own 40, or with the player's `SpriteMethod = Lut`):
   `tools/skins/check_skin.py` and `tests/SkinsScan` fail a tone's colour that shares a cube cell with any other colour
   of the look. A skin on the cube whatever the player sets (over its limit) keeps one part's colours per cell, a
   region's too: two regions' colours in one cell fail (a Mouth colour would repaint the outline beside it; shades of one

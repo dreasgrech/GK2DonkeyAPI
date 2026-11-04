@@ -1,7 +1,7 @@
 ﻿key,value,english,note
 mount.saddleup-dragon.dragon.name,Smok,Dragon,a mount's name (the Mount Journal; the keeper's bubbles)
 mount.saddleup-dragon.dragon.description,"Nikt nie wie, skąd się wziął, a on sam milczy jak grób. Wozu nie pociągnie, ale żaden płot, rzeka ani dach w wiosce go nie zatrzyma.","Nobody knows where it came from, and it isn't saying. It won't pull a cart, but no fence, river or roof in the village can stop it.",a mount's description in the Mount Journal
+skin.saddleup-dragon.dragon/default.tone.horns.name,Rogi i kolce,Horns and spikes,a part of the skin the player colours on its own: its row's label in the colours window
 skin.saddleup-dragon.dragon/default.region.coat.name,Łuski i skrzydła,Scales and wings,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)
 skin.saddleup-dragon.dragon/default.region.muzzle.name,Brzuch,Belly,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)
-skin.saddleup-dragon.dragon/default.region.dark.name,Rogi i kolce,Horns and spikes,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)
 skin.saddleup-dragon.dragon/default.region.eye.name,Oczy i pazury,Eyes and claws,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)

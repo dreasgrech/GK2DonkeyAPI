@@ -233,7 +233,7 @@ foreach (MountColorRegion r in Mounts.ColorRegions)
 ```
 
 **Regions** (`Mounts.ColorRegions`, `Key` / `Name` / `Area` / `SourceColors`, the art's exact colours as hex):
-- Donkey: `Coat`, `Dark` (outline, mane, hooves), `Muzzle` (muzzle and belly), `Eye`, `Harness`.
+- Donkey: `Coat`, `Dark` (mane, ears, legs, hooves; the outline is in no region), `Muzzle` (muzzle and belly), `Eye`, `Harness`.
 - Cart: `CartBody`, `Shafts`, `Straps`, `Hooks`, `Wheels` (3D rims and the wheel sprites), `Hubs`.
 - Lantern: `Pole`, `Lamp`, `Glass` (the lamp's painted glass).
 
