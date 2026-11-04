@@ -272,10 +272,14 @@ colours = 38121A 5E1C24 8A282A
 - **A part's name for the mount's own regions** (2026-11-04; docs/second-tone.md 8): `[Region.<region>]` with
   `name =` names a region's part the way the colours window shows it, so no row says "Coat colour" or "Second
   tone": a dragon's `[Region.Coat]` `name = Scales and wings`, its `[Region.Muzzle]` `name = Belly`. A region you
-  name gets a row by that name (Dark and Eye get rows only when named); a region you don't keeps the page's words
-  (Coat, Harness, Second tone) or, for Dark and Eye, no row. A variant takes its default's names; a skin over the
-  donkey the donkey's (Coat, Legs mane and ears, Muzzle, Eyes, Harness) unless it names its own (Hellfire's
+  name gets a row by that name (Dark, Eye and Outline get rows only when named); a region you don't keeps the page's
+  words (Coat, Harness, Second tone) or, for Dark, Eye and Outline, no row. A variant takes its default's names; a skin
+  over the donkey the donkey's (Coat, Legs mane and ears, Muzzle, Eyes, Harness, Outline) unless it names its own (Hellfire's
   `[Region.Dark]` `name = Legs and mane`: its ears are horns). Translated as `skin.<skin id>.region.<region>.name`.
+- **A region's colours in its section** (2026-11-04; docs/mount-colours.md 7.15): `[Region.<region>]` `colours =` lists
+  colours of your pictures in that region, read as a `[Colors]` line (the same refusals: not Coat, each colour in one
+  place). An API that doesn't know the region skips the section and reads the skin without them, where a `[Colors]`
+  line naming the region would make it refuse the skin: Hellfire's and Armored's outlines are listed this way.
 - **A row taken away** (2026-11-04; docs/mount-colours.md 7.13): `[Region.<region>]` `row = none` gives a region no row
   at all, for a part the skin covers or doesn't want coloured: Hellfire's `[Region.Eye]` `row = none`, its glowing eyes
   over the donkey's in every frame. The region is then drawn as the look has it (the donkey's own pixels under a skin
@@ -284,8 +288,10 @@ colours = 38121A 5E1C24 8A282A
   row back). A name and `row = none` together are refused by the checks (the name would never show).
   `tools/skins/check_skin.py` says when a skin over the donkey covers one of the donkey's regions in every frame: a row
   that colours nothing you can see.
-  Keep the line art out of every row (docs/mount-colours.md 7.11): on a skin over the donkey list its colours
-  nowhere (they are drawn as they are, as the donkey's own outline is since 2026-11-04); in a skin's own colours, where a
+  The line art (docs/mount-colours.md 7.11, 7.15): on a skin over the donkey the donkey's outline is a part of its own,
+  Outline, its row Game default as drawn; your drawing's own line art joins it with `[Region.Outline]` `colours =` (not
+  `[Colors] Outline`: an API without the Outline region refuses a skin for that line, and skips the section), or stays
+  as drawn when you list it nowhere; `[Region.Outline]` `row = none` keeps the whole border as drawn. In a skin's own colours, where a
   colour named nowhere is Coat, put them in a Dark you don't name (no row), and give a part drawn dark too (horns,
   claws) a tone of its own (the dragon's "Horns and spikes").
 - **A part that was under one of those rows in a skin players already wear** (under `[Colors] Harness`, say) says

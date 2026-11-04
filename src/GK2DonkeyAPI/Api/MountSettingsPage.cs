@@ -1210,7 +1210,7 @@ namespace GK2DonkeyAPI.Api
             return k == null || k.Cart;
         }
 
-        // Whether any skin of the mount has the colour region (Coat, Dark, Muzzle, Eye, Harness), so a page can grey
+        // Whether any skin of the mount has the colour region (Coat, Dark, Muzzle, Eye, Harness, Outline), so a page can grey
         // the rows of a region the player's colour would never reach.
         public static bool MountHasRegion(string mountId, string region)
         {
@@ -1224,7 +1224,7 @@ namespace GK2DonkeyAPI.Api
         }
 
         // Whether a skin's look has a colour region (its skin.cfg's [Colors] names; the donkey's own art has the API's
-        // five): for a PerSkin row's EnableWhen, so Harness greys on a skin without tack and Second tone on one without
+        // six): for a PerSkin row's EnableWhen, so Harness greys on a skin without tack and Second tone on one without
         // a second tone. An over skin of the donkey keeps the donkey's regions under it (docs/skins.md), so those count
         // too. A skin nothing provides (its pack not installed): false.
         public static bool SkinHasRegion(string skinId, string region)
@@ -1252,10 +1252,11 @@ namespace GK2DonkeyAPI.Api
             if (companion == null) throw new ArgumentNullException(nameof(companion));
             MountLook look = companion.LookOf(skinId);
             string sfx = suffix ?? "";
-            // the mount's dark parts and eyes first: rows of their own where the look names them (docs/second-tone.md 8),
-            // the donkey's own look too (it has no SkinDef)
+            // the mount's dark parts, eyes and outline first: rows of their own where the look names them
+            // (docs/second-tone.md 8, docs/mount-colours.md 7.15), the donkey's own look too (it has no SkinDef)
             RegionPartRows(section, skinId, sfx, "Dark", look.Dark);
             RegionPartRows(section, skinId, sfx, "Eye", look.Eye);
+            RegionPartRows(section, skinId, sfx, "Outline", look.Outline);
             Looks.SkinDef def = Looks.Find(skinId);
             if (def == null || !def.OwnColours || def.Tones == null) return;
             foreach (SkinTones.ToneDef t in def.Tones)

@@ -111,7 +111,7 @@ def verify(folder):
             line = line.split("#", 1)[0].strip()
             if line.startswith("["):
                 sec = line.strip("[]").strip()
-            elif "=" in line and sec and (sec.lower() == "colors" or (sec.lower().startswith("tone.") and line.lower().startswith(("colours", "colors")))):
+            elif "=" in line and sec and (sec.lower() == "colors" or (sec.lower().startswith(("tone.", "region.")) and line.lower().startswith(("colours", "colors")))):
                 paired |= {t.upper() for t in re.findall(r"\b[0-9a-fA-F]{6}\b", line.split("=", 1)[1])}
         for p in glob.glob(os.path.join(os.path.dirname(cfg), "**", "*.png"), recursive=True):
             b = Image.open(p).convert("RGBA").tobytes()

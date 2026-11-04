@@ -35,12 +35,16 @@ namespace GK2DonkeyAPI.Api
             SkinId = skinId;
             Dark = new MountTone(this, "dark");
             Eye = new MountTone(this, "eye");
+            Outline = new MountTone(this, "outline");
         }
 
         // The mount's dark parts and its eyes (its Dark and Eye regions), where its look names them (their rows:
         // MountSettingsPage.ToneRows; docs/second-tone.md 8): coloured as a skin's own part is (ToneColor), the whole region.
         public MountTone Dark { get; }
         public MountTone Eye { get; }
+        // The line drawn round the mount (its Outline region; the user, 2026-11-04: "set its color by itself as part of
+        // an individual option"; docs/mount-colours.md 7.15), where its look has one: Game default is as drawn.
+        public MountTone Outline { get; }
 
         private CoatColor coat;
         private HarnessColor harness;
@@ -997,6 +1001,7 @@ namespace GK2DonkeyAPI.Api
             // the dark parts and the eyes, where the look names them (their rows: ToneRows), as a skin's own part is coloured
             var darkKeys = Look(SkinTones.RegionValues(l.Dark, "Dark", skin));
             var eyeKeys = Look(SkinTones.RegionValues(l.Eye, "Eye", skin));
+            var outlineKeys = Look(SkinTones.RegionValues(l.Outline, "Outline", skin));
             var skinKeys = SkinKeys(skin);
             var tones = SkinTones.ValuesOf(l, skin); // the skin's own tones (docs/mount-colours.md section 7)
             // the paper: the Mounts panel's choice while it is open (PaperSkin), with that mount's look; else the same
@@ -1017,6 +1022,7 @@ namespace GK2DonkeyAPI.Api
                 OnPaper(MuzzleKeys, sameOnPaper ? muzzleKeys : Look(MuzzlePreset(pl.Muzzle, pl.CustomMuzzle, "second tone", ps)));
                 OnPaper(DarkKeys, sameOnPaper ? darkKeys : Look(SkinTones.RegionValues(pl.Dark, "Dark", ps)));
                 OnPaper(EyeKeys, sameOnPaper ? eyeKeys : Look(SkinTones.RegionValues(pl.Eye, "Eye", ps)));
+                OnPaper(OutlineKeys, sameOnPaper ? outlineKeys : Look(SkinTones.RegionValues(pl.Outline, "Outline", ps)));
                 OnPaper(LookKeys, sameOnPaper ? skinKeys : SkinKeys(ps));
                 SkinTones.Apply(paper, sameOnPaper ? tones : SkinTones.ValuesOf(pl, ps), OwnerId, ps);
                 paper.LooksRig.MarkDirty();
@@ -1042,6 +1048,7 @@ namespace GK2DonkeyAPI.Api
                 Instance(Donkey, MuzzleKeys, muzzleKeys);
                 Instance(Donkey, DarkKeys, darkKeys);
                 Instance(Donkey, EyeKeys, eyeKeys);
+                Instance(Donkey, OutlineKeys, outlineKeys);
                 Instance(Donkey, LookKeys, skinKeys);
                 SkinTones.Apply(Donkey.I, tones, OwnerId, skin);
             }
@@ -1063,6 +1070,7 @@ namespace GK2DonkeyAPI.Api
                     // parent's dark colour when the look gives one (the eyes are the parent's); an outline the parent's
                     Instance(h, FoalDarkKeys, babyDarkIsPart ? Shade(darkKeys, "Dark", own.Hue * 0.7f, own.Brightness, own.Saturation, 0f) : darkKeys);
                     Instance(h, EyeKeys, eyeKeys);
+                    Instance(h, OutlineKeys, outlineKeys); // the line drawn round it: the parent's, no shade of its own
                     Instance(h, LookKeys, CurrentOwn.FoalsWearSkin ? skinKeys : noSkin);
                     // the parent's tones on a baby in its skin, each given a colour in the baby's own shade (as its coat); one
                     // not in the skin is a plain donkey (no tones of its own)
@@ -1088,6 +1096,7 @@ namespace GK2DonkeyAPI.Api
 
         private static readonly string[] DarkKeys = { "DarkColorize", "DarkColorizeAmount", "DarkBrightness", "DarkSaturation" };
         private static readonly string[] EyeKeys = { "EyeColorize", "EyeColorizeAmount", "EyeBrightness", "EyeSaturation" };
+        private static readonly string[] OutlineKeys = { "OutlineColorize", "OutlineColorizeAmount", "OutlineBrightness", "OutlineSaturation" };
         private static readonly string[] FoalDarkKeys = { "DarkColorize", "DarkColorizeAmount", "DarkHue", "DarkBrightness", "DarkSaturation" };
 
         // A baby's shade of the parent's colours of a region: a colorize colour turned in hue (its hue key would be

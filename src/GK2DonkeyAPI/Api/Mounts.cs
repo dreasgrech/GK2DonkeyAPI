@@ -450,7 +450,7 @@ namespace GK2DonkeyAPI.Api
             if (Plugin.Log == null) throw new InvalidOperationException($"GK2 Donkey API has not started yet ({ownerId}'s {what} '{id}'): add [BepInDependency(\"{Plugin.Guid}\")] to your plugin.");
         }
 
-        // The colour regions, in panel order: Coat, Dark, Muzzle, Eye, Harness (the donkey), CartBody, Shafts, Straps,
+        // The colour regions, in panel order: Coat, Dark, Muzzle, Eye, Harness, Outline (the donkey), CartBody, Shafts, Straps,
         // Hooks, Wheels, Hubs (the cart), Pole, Lamp, Glass (the lantern).
         public static IReadOnlyList<MountColorRegion> ColorRegions => GK2DonkeyAPI.Colors.ApiRegions ?? Array.Empty<MountColorRegion>();
 

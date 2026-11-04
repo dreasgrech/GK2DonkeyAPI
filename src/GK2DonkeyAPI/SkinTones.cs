@@ -18,7 +18,7 @@ namespace GK2DonkeyAPI
 
         // A tone as a skin declares it, in its file's order; its colours are the skin's ColorRegions[KeyOf(Id)]. NameGiven:
         // its own name = line (without one the name is the id, and a variant's tone keeps its default's name). Follows:
-        // the mount region (Coat, Dark, Muzzle, Eye, Harness) its Game default follows (a skin's part that was under
+        // the mount region (Coat, Dark, Muzzle, Eye, Harness, Outline) its Game default follows (a skin's part that was under
         // that region before it was a tone: the player's saved colour of the region keeps reaching it, docs/mount-colours.md
         // 7.9); OwnFollows as the skin said it, Follows as resolved (a variant's taken from its default's tone).
         // NameFromParent: a variant's resolved tone showing its default's name (Merge), so the default translates it.

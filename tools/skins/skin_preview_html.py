@@ -344,11 +344,11 @@ def main(argv):
         rider_dx = int(float((cfg or {}).get(("Tuning.Ride", "rideroffsetpx"), (cfg or {}).get(("Tuning", "rideroffsetpx"), "0"))))
         seat_adj = int(float((cfg or {}).get(("Tuning.Ride", "seatadjustpx"), (cfg or {}).get(("Tuning", "seatadjustpx"), "0"))))  # positive = higher
         hitch = (cfg or {}).get(("Tuning.Cart", "hitchgappx"), (cfg or {}).get(("Tuning", "hitchgappx"), ""))
-        colour_regions = sorted({k.capitalize() for (sec, k) in (cfg or {}) if sec == "Colors"})
+        colour_regions = sorted({k.capitalize() for (sec, k) in (cfg or {}) if sec == "Colors"} | {sec[7:].capitalize() for (sec, k) in (cfg or {}) if sec.startswith("Region.") and k in ("colours", "colors")})
         if cfg and layer != "over":
             colour_regions = ["Coat"] + [r for r in colour_regions if r != "Coat"]  # every colour not named is Coat
         elif cfg and colour_regions:
-            colour_regions = ["the donkey's five"] + colour_regions  # an over skin: the donkey's regions under it, its own on top
+            colour_regions = ["the donkey's six"] + colour_regions  # an over skin: the donkey's regions under it, its own on top
         mc = mcfg or cfg or {}
         babies = mc.get(("Mount", "foal_scale"), "0.6" if ("Mount", "id") in mc else "")
         facts = []
@@ -363,7 +363,7 @@ def main(argv):
     # 1. the plain donkey
     skins.append({"id": "donkey", "name": "The game's own", "mount": "donkey", "source": "the game", "layer": "replace", "canvas": 96,
                   "frames": {k: data_url(v) for k, v in donkey.items()}, "note": "the donkey as the game draws it: the reference", "missing": 0, "folder": donkey_dir,
-                  "seat": 52, "rider_dx": 0, "seat_adj": 0, "facts": "seat row 52 · colours: Coat, Dark, Muzzle, Eye, Harness"})
+                  "seat": 52, "rider_dx": 0, "seat_adj": 0, "facts": "seat row 52 · colours: Coat, Dark, Muzzle, Eye, Harness, Outline"})
     seen.add("donkey")
     # 2. the repo's packs: built in (src/*/assets/mounts/<mount>/skins/<skin>: Saddle Up's) and external
     #    (packs/<Pack>/gk2mounts/<mount>/skins/<skin>), skinroots.py

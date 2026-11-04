@@ -1133,13 +1133,17 @@ def skin_cfg():
         f"[Colors]\nMuzzle = {hexes(CLOTH[:4])} {hexes(PLUME_CLOTH)}\n\n"
         "# Every part its own (the user, 2026-11-04: \"every part is named and is able to be coloured\"). The helmet and the\n"
         "# body armour, the plume and the skirt: one steel and one cloth to the eye, each part's shades its own (a colour\n"
-        "# is one tone's only). The steel's outline 281B26 is the drawing's line and stays as drawn.\n"
+        "# is one tone's only). The steel's outline 281B26 is the drawing's line: the Outline row's (below).\n"
         f"[Tone.helmet]\nname = Helmet\ncolours = {hexes(HELM_STEEL[1:])}\n\n"  # HELM_STEEL[0] is the outline K
         "# The plume and the skirt: the first choice follows the Second tone, as before; any other colour gives them their own.\n"
         f"[Tone.plume]\nname = Plume\nfollows = Muzzle\ncolours = {hexes(PLUME_CLOTH)}\n\n"
         f"[Tone.armour]\nname = Body armour\ncolours = {hexes(STEEL[1:8])}\n\n"  # STEEL[0] is the outline K; STEEL[8] only the helmet drew
         f"[Tone.skirt]\nname = Skirt\nfollows = Muzzle\ncolours = {hexes(CLOTH[:4])}\n\n"  # CLOTH[4] only the plume drew
-        f"[Tone.brass]\nname = Brass\ncolours = {hexes(BRASS[1:])}\n"  # BRASS[0] (4E300A) is drawn nowhere
+        f"[Tone.brass]\nname = Brass\ncolours = {hexes(BRASS[1:])}\n\n"  # BRASS[0] (4E300A) is drawn nowhere
+        "# The steel's outline, the drawing's line: the donkey's Outline row colours it with the donkey's own\n"
+        "# (docs/mount-colours.md 7.15); here, not under [Colors], so an API without that row skips it and reads the skin\n"
+        "# as before.\n"
+        f"[Region.Outline]\ncolours = {hexes([K])}\n"
     )
 
 

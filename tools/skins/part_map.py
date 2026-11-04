@@ -18,12 +18,12 @@ from gamedir import donkey_frames  # noqa: E402
 
 VIVID = [(255, 60, 60), (60, 120, 255), (255, 200, 0), (0, 220, 120), (255, 0, 255), (0, 230, 230), (255, 140, 0),
          (160, 90, 255), (140, 255, 60), (255, 120, 190), (0, 150, 255), (200, 255, 255), (255, 230, 140), (120, 60, 20)]
-REGIONS = {"coat": (150, 110, 70), "dark": (90, 70, 50), "muzzle": (230, 170, 150), "eye": (255, 255, 120), "harness": (180, 120, 40)}
+REGIONS = {"coat": (150, 110, 70), "dark": (90, 70, 50), "muzzle": (230, 170, 150), "eye": (255, 255, 120), "harness": (180, 120, 40), "outline": (70, 40, 110)}
 SCALE = 5
 
 
 def parse(path):
-    """[(place, name, [rgb])] in the file's order: each tone, then each [Colors] region."""
+    """[(place, name, [rgb])] in the file's order: each tone, then each region of [Colors] and [Region.<region>] colours =."""
     tones, regions, sec = {}, {}, None
     order = []
     for line in open(path, encoding="utf-8"):
@@ -47,6 +47,8 @@ def parse(path):
                 tones[sec]["colours"] += [h for h in v.replace(",", " ").split() if len(h) == 6]
         elif sec == "colors" and k in REGIONS:
             regions.setdefault(k, []).extend(h for h in v.replace(",", " ").split() if len(h) == 6)
+        elif sec.startswith("region.") and sec[7:] in REGIONS and k in ("colours", "colors"):
+            regions.setdefault(sec[7:], []).extend(h for h in v.replace(",", " ").split() if len(h) == 6)
     rgb = lambda h: tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
     out = [(t, tones[t]["name"], [rgb(h) for h in tones[t]["colours"]]) for t in order]
     out += [("region." + r, r.capitalize() + " (region)", [rgb(h) for h in hs]) for r, hs in regions.items()]

@@ -174,7 +174,8 @@ the ..." any more.
 The same evening (docs/mount-colours.md 7.11): the outline is never a row's. The donkey's Dark row colours its
 mane, ears, legs and hooves, not its outline (on every skin over it too); the dragon's horns and spikes are a part of
 their own ("Horns and spikes"), its outline its Dark with no row. Later (7.12): the donkey's Muzzle row is its nose,
-"Muzzle", the face's dots and the belly's line its Coat.
+"Muzzle", the face's dots and the belly's line its Coat. Later still (7.15): the donkey's outline is a part of its own,
+"Outline" (its line, the belly's line with it), on the donkey and every skin over it; the other mounts' outlines no row.
 | Gerry | Bone | - | - | - | - |
 
 ## 9. Built (2026-11-04, the evening)

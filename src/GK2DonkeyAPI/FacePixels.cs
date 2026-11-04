@@ -12,8 +12,8 @@ namespace GK2DonkeyAPI
     // which are affected by the legs and mange group ... it looks sloppy otherwise"). The game draws the eye's line and the
     // nostril in the legs' and the mane's dark (292316, 352e1e), and the colour swap goes by colour, so "Legs and mane"
     // coloured them with the legs. Their places frame by frame (face-pixels.txt, made by tools/skins/donkey/face_pixels.py
-    // from rig.json's eye and muzzle points) get colours of their own: the eye's line 292319, in no region (as drawn, as the
-    // outline is), the nostril 362d1e, the Muzzle's (Colors.cs). A pixel is changed only where it still holds the game's
+    // from rig.json's eye and muzzle points) get colours of their own: the eye's line 292319, in no region (as drawn, the
+    // eye's own drawing), the nostril 362d1e, the Muzzle's (Colors.cs). A pixel is changed only where it still holds the game's
     // colour, so a redrawn frame is left alone pixel by pixel and a second pass changes nothing.
     // - The atlas: once the donkey-art check says the frames are the ones the skins were drawn on (DonkeyFrames), one frame
     //   a tick, its pixels copied into the game's character atlas on the GPU (Graphics.CopyTexture: the pages are RGBA32,

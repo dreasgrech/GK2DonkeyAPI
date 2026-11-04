@@ -69,7 +69,8 @@ a frame by a blit of its page and ReadPixels (`Looks.ReadFrame`: the skins' whol
   and in a colour-cube cell of its own (the Lut fallback keeps them apart too).
 - **What they follow (decided 2026-11-04):** the eye's as drawn (it is the eye's line, as the outline is the
   drawing's), not the Eyes row; the nostril the Muzzle row (the nose's dark spot; the user: "yes nostril should be the
-  same as muzzle"). The three calls of section 2 as proposed.
+  same as muzzle"). The three calls of section 2 as proposed. (The outline became a part of its own the same evening,
+  docs/mount-colours.md 7.15; the eye's line is not in it: the eye's own drawing.)
 - **The list:** frame key, canvas pixel and its original colour, made from `rig.json` and the export by the tool and
   embedded in the API (as `donkey-frames.txt` is): one source for the points. A pixel is repainted only when the page
   holds its original colour there, so a game update that redraws the donkey leaves the page alone pixel by pixel.

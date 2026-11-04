@@ -52,7 +52,7 @@ namespace GK2DonkeyAPI.Api
         public string Id { get; }
         public string Name { get; }
         public IReadOnlyList<string> Colours { get; }
-        // The mount region (Coat, Dark, Muzzle, Eye, Harness) the tone's Game default follows: for a part that was under
+        // The mount region (Coat, Dark, Muzzle, Eye, Harness, Outline) the tone's Game default follows: for a part that was under
         // that region before it was a tone, so the player's saved colour of the region keeps reaching it (a pack's
         // follows =). Null: as drawn. Given with MountSkinTone.Following; the tones MountSkinInfo lists are shared, so read only.
         public string Follows { get; }

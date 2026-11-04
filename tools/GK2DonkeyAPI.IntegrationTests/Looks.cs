@@ -787,18 +787,22 @@ namespace GK2DonkeyAPI.IntegrationTests
             yield return Frames(2);
         }
 
-        // The outline is the drawing's line, never a colour row's (the user, 2026-11-04: the Dark row painted the donkey's
-        // partial outline with its legs; docs/mount-colours.md 7.11). The Dark row's keys set on a test donkey: on the
-        // donkey's own look and on Hellfire the donkey's outline (1e190e, 301f0f) and Hellfire's horns' outline (1E0E0C)
-        // have no pair, drawn as they are, while the dark fill (292316, 352e1e) changes. The dragon: its outline is its
-        // Dark, which it names nowhere (no row), its horns and spikes a part of their own, its body's deepest shade and
-        // its wings' ribs (280810, 260828) its Coat.
+        // The outline is a part of its own, never another row's (the user, 2026-11-04: the Dark row painted the donkey's
+        // partial outline with its legs, docs/mount-colours.md 7.11; then "even better would be if we are able to set its
+        // color by itself as part of an individual option", 7.15). On a test donkey, on the donkey's own look and on
+        // Hellfire: the Dark row's keys set, the donkey's outline (1e190e, 301f0f and the lighter 42422c under the nose and
+        // the belly) and Hellfire's horns' outline (1E0E0C, its [Region.Outline] colours) kept while the dark fill
+        // (292316, 352e1e) changes; the Outline row's keys set, those outline colours change and the fill and the coat
+        // (736c57) don't; the Coat row's, the coat changes and 42422c doesn't (both against the look at Game default:
+        // Hellfire's coat is its ash there). Its row's name Outline on both. The dragon:
+        // its outline is its Dark, which it names nowhere (no row), its horns and spikes a part of their own, its body's
+        // deepest shade and its wings' ribs (280810, 260828) its Coat.
         internal static IEnumerator OutlineAsDrawn()
         {
             string noPack = MissingPack("hellfire", "dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
             if (noPack != null) { Skip(noPack); yield break; }
             Color32 H(string hex) => new Color32(Convert.ToByte(hex.Substring(0, 2), 16), Convert.ToByte(hex.Substring(2, 2), 16), Convert.ToByte(hex.Substring(4, 2), 16), 255);
-            string[] outline = { "1e190e", "301f0f" }, fill = { "292316", "352e1e" };
+            string[] outline = { "1e190e", "301f0f", "42422c" }, fill = { "292316", "352e1e" };
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
@@ -829,6 +833,38 @@ namespace GK2DonkeyAPI.IntegrationTests
                     lines.Add($"{hx} {(changed ? "changed" : "NOT changed")}");
                 }
                 Check(outlineKept && fillChanged, $"{what}, the Dark row green: the outline drawn as it is, the dark fill coloured ({string.Join(", ", lines)})");
+                string[] lineArt = skin == "" ? outline : new[] { outline[0], outline[1], outline[2], "1e0e0c" };
+                // the yardstick: each colour as the look draws it with every row at Game default (on Hellfire the coat is
+                // its ash already, its [Base.Coat]: 736C57 -> 2F1A16), so a row's doing is what differs from it
+                a.Tuning.Set(Owner, "DarkColorizeAmount", 0f);
+                yield return Frames(3);
+                var atDefault = new Dictionary<string, Color32?>();
+                foreach (string hx in lineArt) atDefault[hx] = a.I.ColorsRig.TestDstOf(H(hx));
+                foreach (string hx in new[] { fill[0], fill[1], "736c57" }) atDefault[hx] = a.I.ColorsRig.TestDstOf(H(hx));
+                bool Changed(string hx)
+                {
+                    Color32? d = a.I.ColorsRig.TestDstOf(H(hx)), was = atDefault[hx];
+                    if (d == null || was == null) return d != null || was != null;
+                    return d.Value.r != was.Value.r || d.Value.g != was.Value.g || d.Value.b != was.Value.b;
+                }
+                // the Outline row's keys: the outline coloured, the fill and the coat not
+                a.Tuning.Set(Owner, "OutlineColorize", "00FF00");
+                a.Tuning.Set(Owner, "OutlineColorizeAmount", 1f);
+                yield return Frames(3);
+                var own = new List<string>();
+                bool lineChanged = true, restKept = true;
+                foreach (string hx in lineArt) { bool c = Changed(hx); lineChanged &= c; own.Add($"{hx} {(c ? "changed" : "KEPT")}"); }
+                foreach (string hx in new[] { fill[0], fill[1], "736c57" }) { bool c = Changed(hx); restKept &= !c; own.Add($"{hx} {(c ? "CHANGED" : "kept")}"); }
+                Term outlineName = SkinRegions.NameTerm(id, "Outline");
+                Check(lineChanged && restKept && outlineName == UiWords.RegionOutline, $"{what}, the Outline row green: the outline coloured, the dark fill and the coat not ({string.Join(", ", own)}); its row's name {outlineName?.English ?? "none"}");
+                // the Coat row's keys: the coat coloured, the outline's lighter line under the nose and the belly not
+                a.Tuning.Set(Owner, "OutlineColorizeAmount", 0f);
+                a.Tuning.Set(Owner, "CoatColorize", "00FF00");
+                a.Tuning.Set(Owner, "CoatColorizeAmount", 1f);
+                yield return Frames(3);
+                bool coatChanged = Changed("736c57"), bellyLineKept = !Changed("42422c");
+                Check(coatChanged && bellyLineKept, $"{what}, the Coat row green: the coat coloured ({coatChanged}), the outline's line under the nose and the belly 42422c drawn as it is ({bellyLineKept})");
+                a.Tuning.Set(Owner, "CoatColorizeAmount", 0f);
             }
             a.Tuning.Set(Owner, "DarkColorizeAmount", 0f);
             // the dragon: the data its rows are made from
@@ -854,11 +890,12 @@ namespace GK2DonkeyAPI.IntegrationTests
         // The donkey's Muzzle row reaches its nose only (the user, 2026-11-04: "remove those individual pixels on the face
         // from the muzzle colours and leave it as just the nose, and also remove the belly part"; docs/mount-colours.md
         // 7.12): on its own look the Muzzle keys set, the nose (abb298, 858f6c) changes and the face's dots (858e6b) and
-        // the belly's line (42422c) don't; the Coat keys set, those two change with the coat and the nose doesn't.
+        // the belly's line (42422c) don't; the Coat keys set, the dots change with the coat and the nose doesn't, nor the
+        // belly's line: it is the outline's (7.15).
         internal static IEnumerator MuzzleNoseOnly()
         {
             Color32 H(string hex) => new Color32(Convert.ToByte(hex.Substring(0, 2), 16), Convert.ToByte(hex.Substring(2, 2), 16), Convert.ToByte(hex.Substring(4, 2), 16), 255);
-            string[] nose = { "abb298", "858f6c" }, body = { "858e6b", "42422c" };
+            string[] nose = { "abb298", "858f6c" }, body = { "858e6b" }, line = { "42422c" };
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
@@ -881,8 +918,9 @@ namespace GK2DonkeyAPI.IntegrationTests
                 var words = new List<string>();
                 bool ok = true;
                 foreach (string hx in nose) { bool c = Changed(hx); ok &= region == "Muzzle" ? c : !c; words.Add($"{hx} (nose) {(c ? "changed" : "kept")}"); }
-                foreach (string hx in body) { bool c = Changed(hx); ok &= region == "Coat" ? c : !c; words.Add($"{hx} {(hx == "858e6b" ? "(face's dots)" : "(belly's line)")} {(c ? "changed" : "kept")}"); }
-                Check(ok, $"the donkey's {region} row green: {(region == "Muzzle" ? "the nose only" : "the coat with the face's dots and the belly's line, not the nose")} ({string.Join(", ", words)})");
+                foreach (string hx in body) { bool c = Changed(hx); ok &= region == "Coat" ? c : !c; words.Add($"{hx} (face's dots) {(c ? "changed" : "kept")}"); }
+                foreach (string hx in line) { bool c = Changed(hx); ok &= !c; words.Add($"{hx} (the belly's line, the outline's) {(c ? "changed" : "kept")}"); }
+                Check(ok, $"the donkey's {region} row green: {(region == "Muzzle" ? "the nose only" : "the coat with the face's dots, not the nose nor the belly's line")} ({string.Join(", ", words)})");
             }
             a.Tuning.Set(Owner, "MuzzleColorizeAmount", 0f);
             a.Tuning.Set(Owner, "CoatColorizeAmount", 0f);

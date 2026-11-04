@@ -69,10 +69,11 @@ colours.tone_custom,Personalizada,Custom,"a colour for a part of a skin: the pla
 colours.tone_custom_colour,{0}: cor personalizada,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
 colours.tone_lightness,{0}: luminosidade,{0}: lightness,"the row under it that makes that colour lighter or darker; {0}: the part's name"
 colours.region_coat,Pelagem,Coat,a part of the mount the player colours: the donkey's coat (its row's label in the colours window)
-colours.region_donkey_dark,"Patas, crina e orelhas","Legs, mane and ears","a part of the donkey the player colours: its dark lower legs, mane, ears and tail tuft, with its outline (one set of colours in the game's art)"
+colours.region_donkey_dark,"Patas, crina e orelhas","Legs, mane and ears","a part of the donkey the player colours: its dark lower legs, mane, ears and tail tuft (its outline is a part of its own)"
 colours.region_donkey_muzzle,Focinho,Muzzle,a part of the donkey the player colours: its pale muzzle (the nose)
 colours.region_eyes,Olhos,Eyes,a part of the mount the player colours: its eyes
 colours.region_harness,Arreio,Harness,a part of the mount the player colours: the donkey's harness (its straps and collar)
+colours.region_outline,Contorno,Outline,"a part of the donkey the player colours: the dark line drawn round it, its border (and the drawing's inner lines)"
 speed.very_slow,Muito lenta,Very slow,a mount's speed in the journal's stats
 speed.slow,Lenta,Slow,
 speed.normal,Normal,Normal,

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Hellfire's and Armored's outlines follow the Outline row** (2026-11-04): Hellfire's horns and Armored's steel
+  lines, with the donkey's own outline (GK2 Donkey API with the Outline row; an older one draws them as before).
 - **Hellfire has one row for its eyes** (2026-11-04): Glowing eyes; the donkey's Eyes row is gone, its eyes being
   under the glow in every frame (GK2 Donkey API with it).
 - **Each skin's parts have colours of their own** (2026-11-04; the new rows need GK2 Donkey API with tones, and the

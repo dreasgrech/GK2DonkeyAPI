@@ -145,21 +145,28 @@ def main(pack):
                             f"front/bdy_static_left.png and leave these out")
 
     def places(conf):
-        """(hex, place) for every colour [Colors] and the skin's own tones ([Tone.<id>] colours =) name"""
+        """(hex, place) for every colour [Colors], [Region.<region>] colours = and the skin's own tones ([Tone.<id>]
+        colours =) name"""
         for (sec, k), v in conf.items():
             if sec == "Colors":
                 yield from ((hx.upper(), k.capitalize()) for hx in v.replace(",", " ").split())
+            elif sec.startswith("Region.") and k in ("colours", "colors"):
+                yield from ((hx.upper(), sec[7:].capitalize()) for hx in v.replace(",", " ").split())
             elif sec.startswith("Tone.") and k in ("colours", "colors"):
                 yield from ((hx.upper(), "Tone." + sec[5:].lower()) for hx in v.replace(",", " ").split())
 
     # a tone's follows = (the region its Game default follows): its colours may stay under that region in [Colors] too,
     # for an API without tones (the loader moves them to the tone)
-    regions = ("Coat", "Dark", "Muzzle", "Eye", "Harness")
+    regions = ("Coat", "Dark", "Muzzle", "Eye", "Harness", "Outline")
     for (sec, k), v in c.items():
-        # a look's name for a mount region's part (SkinRegions; docs/second-tone.md 8), or row = none (no row for the
-        # region: docs/mount-colours.md 7.13): one of the five
-        if sec.startswith("Region.") and (sec[7:].capitalize() not in regions or k not in ("name", "row") or not v.strip() or (k == "row" and v.strip().lower() != "none")):
-            warn.append(f"[{sec}] {k} = {v}: a region's section is one of {', '.join(regions)} with name = its part's name or row = none; the game ignores it")
+        # a look's name for a mount region's part (SkinRegions; docs/second-tone.md 8), row = none (no row for the
+        # region: docs/mount-colours.md 7.13), or colours = the skin's own colours in it (7.15, as a [Colors] line):
+        # one of the six
+        if sec.startswith("Region.") and (sec[7:].capitalize() not in regions or k not in ("name", "row", "colours", "colors") or not v.strip() or (k == "row" and v.strip().lower() != "none")):
+            warn.append(f"[{sec}] {k} = {v}: a region's section is one of {', '.join(regions)} with name = its part's name, row = none or colours = its colours; the game ignores it")
+            RESULT["errors"] += 1
+        if sec.startswith("Region.") and k in ("colours", "colors") and sec[7:].capitalize() == "Coat":
+            warn.append(f"[{sec}] colours: every colour not named is Coat; don't list it (the game refuses the skin)")
             RESULT["errors"] += 1
         if sec.startswith("Region.") and k == "name" and c.get((sec, "row"), "").strip().lower() == "none":
             warn.append(f"[{sec}]: a name and row = none: the region has no row, so the name is never shown")

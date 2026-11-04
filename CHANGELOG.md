@@ -12,6 +12,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The outline has a colour row of its own** (2026-11-04): Outline, on the donkey and every donkey skin. Game default
+  is the game's border, so nothing changes until you pick a colour. The coat no longer colours the line under the
+  belly and the nose.
 - **Legs and mane no longer colours the donkey's eye and nostril** (2026-11-04): the eye stays as drawn and the
   nostril takes the Muzzle colour, on the plain donkey and every donkey skin.
 - **Hellfire has one row for its eyes** (2026-11-04): its glowing eyes cover the donkey's, so the Eyes row coloured
@@ -20,7 +23,8 @@ For players:
   a colour on top of the ash stayed dark (Cream came out dark brown). A colour you pick now replaces the ash; Game
   default keeps it, and Dark and Black darken it. The same for the Jester's harness.
 - **The donkey's Muzzle row colours its nose** (2026-11-04): it was "Muzzle and belly" and also reached a few dots on
-  the face and a line along the belly; those follow the coat now. On every donkey skin.
+  the face and a line along the belly; the dots follow the coat now, and the line is the outline's. On every donkey
+  skin.
 - **Zombies on the cart during Halloween** (2026-11-04): from 24 October to 7 November the game gives some
   zombies a Halloween head. Such a zombie on the cart showed as an icon (and a warning in the log); it now lies there
   with its Halloween head, as on the ground.
@@ -94,6 +98,12 @@ For players:
 
 For mod authors:
 
+- **The donkey's outline is a region, `Outline`** (2026-11-04; docs/mount-colours.md 7.15, docs/skins.md): its row
+  comes with `ToneRows` (`Outline<suffix>`, `CustomOutline<suffix>`; `MountLook.Outline`, an addition), named
+  "Outline" on the donkey and every skin over it; `[Region.Outline]` `row = none`, `name =` and `[Base.Outline]` as
+  for the other regions. A skin's own line art joins it with the new `[Region.<region>]` `colours =` (read as a
+  `[Colors]` line; an API without the region skips the section, where `[Colors] Outline =` would make it refuse the
+  skin). `Mounts.ColorRegions` lists Outline after Harness; 42422c left Coat for it.
 - **A skin can take a colour row away** (2026-11-04; docs/skins.md, docs/mount-colours.md 7.13): skin.cfg
   `[Region.<region>]` `row = none` gives a region no row (a part the skin covers or doesn't want coloured); it is drawn
   as the look has it, and a colour a player saved for it is kept but not applied. A variant takes its default's away
@@ -126,6 +136,16 @@ For mod authors:
 
 Development:
 
+- **The Outline region** (2026-11-04; the user: "set its color by itself as part of an individual option", "lets keep
+  for donkey for now and game default being game's border"; docs/mount-colours.md 7.15). `Colors.cs` `Outline`
+  (1e190e 301f0f 42422c; the donkey's pairs 43), `MountRegionKeys` six, `UiWords.RegionOutline` in 11 languages (the
+  Legs, mane and ears note without "with its outline"), `SkinRegions.DonkeyWord`, `MountLook.Outline`,
+  `MountCompanion.ApplyLook` (`OutlineKeys`: the donkey, the paper, the babies the parent's), `ToneRows` after Dark
+  and Eye. `SkinRegions.Read` takes `colours =` through `Looks.AddRegionColours`. Hellfire `[Region.Outline]`
+  `colours = 1E0E0C`, Armored `colours = 281B26` (`make_hellfire.py`, `make_armored.py`; the pictures reproduced).
+  SkinsScan (six regions, the `[Region.*]` colours counted with the named ones), `check_skin.py`, `face_pixels.py`,
+  `part_map.py`, `skin_preview_html.py`; `tests/ApiSurface` updated. Tests: `OutlineAsDrawn` (the Outline and Coat
+  rows), `MuzzleNoseOnly`, the regions scenario.
 - **row = none** (2026-11-04; docs/mount-colours.md 7.13): `SkinRegions.Read` (`row`), `SkinDef.RegionsWithoutRow`,
   `SkinRegions.HasRow` (the nearest of the look and its defaults decides; a name brings a row back), no `NameTerm` and
   no `Declared` name for such a region; `RegionRows` hides its rows; `Colors.Rig`: no map in `NamedMaps`, only the

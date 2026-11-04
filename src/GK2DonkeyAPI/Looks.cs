@@ -849,7 +849,7 @@ namespace GK2DonkeyAPI
                             toneOrder.Add(toneId);
                         }
                     }
-                    else if (section.StartsWith(SkinRegions.Prefix, StringComparison.Ordinal)) { } // [Region.<region>]: its part's name, read below
+                    else if (section.StartsWith(SkinRegions.Prefix, StringComparison.Ordinal)) { } // [Region.<region>]: its part's name, its row, its colours, read below
                     else if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "sounds" && section != "sounds.ride" && section != "sounds.cart" && section != "sounds.baby" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
                     continue;
                 }
@@ -884,7 +884,7 @@ namespace GK2DonkeyAPI
                 }
                 if (section.StartsWith(SkinRegions.Prefix, StringComparison.Ordinal))
                 {
-                    SkinRegions.Read(d, section.Substring(SkinRegions.Prefix.Length), key, value);
+                    SkinRegions.Read(d, section.Substring(SkinRegions.Prefix.Length), key, value, where);
                     continue;
                 }
                 switch (section)

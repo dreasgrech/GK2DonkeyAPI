@@ -77,11 +77,12 @@ frames; the head's 16 are a subset. Rendering where each colour sits (magenta ma
 
 | Region (key) | Colours | What it is |
 |---|---|---|
-| `Coat` | 16 | the grey-brown coat (with the face's dots and the belly's line since 2026-11-04: docs/mount-colours.md 7.12) |
-| `Dark` | 4 | mane, ears, legs, hooves (the outline, 1e190e and 301f0f, is in no region since 2026-11-04: docs/mount-colours.md 7.11) |
+| `Coat` | 15 | the grey-brown coat (with the face's dots since 2026-11-04: docs/mount-colours.md 7.12) |
+| `Dark` | 4 | mane, ears, legs, hooves (the outline is its own region since 2026-11-04: docs/mount-colours.md 7.11, 7.15) |
 | `Muzzle` | 4 | the muzzle: its nose (and the mouth chewing) |
 | `Eye` | 1 | the eye's white (`FFFFFF`) |
 | `Harness` | 15 | the orange collar and strap |
+| `Outline` | 3 | the line drawn round the donkey, 1e190e and 301f0f, and the lighter 42422c under the nose and the belly; the inner lines in those colours (docs/mount-colours.md 7.15) |
 
 **The cart textures** (`donkey_cart_*_prt1`/`prt2`, 96×96, 5 to 19 colours each) split the same way:
 

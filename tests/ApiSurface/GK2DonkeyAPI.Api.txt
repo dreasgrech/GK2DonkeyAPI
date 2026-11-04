@@ -339,6 +339,7 @@ sealed class GK2DonkeyAPI.Api.MountLook
   property GK2DonkeyAPI.Api.LanternColor LanternLight { get; set; }
   property string MountId { get; }
   property GK2DonkeyAPI.Api.MuzzleColor Muzzle { get; set; }
+  property GK2DonkeyAPI.Api.MountTone Outline { get; }
   property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
   property string SkinId { get; }
   property GK2DonkeyAPI.Api.WheelColor Wheels { get; set; }

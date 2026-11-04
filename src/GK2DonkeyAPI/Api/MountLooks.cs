@@ -250,16 +250,17 @@ namespace GK2DonkeyAPI.Api
         public Dictionary<string, MountSound> SoundsBaby;
         // The rider sits on this frame's picture top instead of a row (a game creature that hops).
         public bool SeatFromPicture;
-        // Which of the skin's own colours are Dark, Muzzle, Eye or Harness (hex RRGGBB per region; everything not
+        // Which of the skin's own colours are Dark, Muzzle, Eye, Harness or Outline (hex RRGGBB per region; everything not
         // named is Coat), as a pack's [Colors]; the player's colours then reach them. Null: all Coat.
         public Dictionary<string, string[]> Regions;
         // The skin's own tones (docs/mount-colours.md section 7), as a pack's [Tone.<id>]: parts of its drawing the
         // player colours apart from the regions, each with its own row on a page's ToneRows. A colour is in one tone or
         // one region only. Null: none. Skins in the donkey's palette colours have none.
         public List<MountSkinTone> Tones;
-        // The look's names for the mount regions' parts, by region (Coat, Dark, Muzzle, Eye, Harness), as a pack's
-        // [Region.<region>] name =: the colours window labels their rows by them (docs/api.md "A look's names for its
-        // parts"); a region named nowhere keeps the page's words, and Dark and Eye get a row only when named. Null: none.
+        // The look's names for the mount regions' parts, by region (Coat, Dark, Muzzle, Eye, Harness, Outline), as a
+        // pack's [Region.<region>] name =: the colours window labels their rows by them (docs/api.md "A look's names for
+        // its parts"); a region named nowhere keeps the page's words, and Dark, Eye and Outline get a row only when named
+        // (the donkey names its own, and a skin over it takes them). Null: none.
         public Dictionary<string, string> RegionNames;
         // The mount regions the look gives no row, as a pack's [Region.<region>] row = none: drawn as the look has
         // them, a player's colour for them not applied on this look (a skin that draws its own eyes over the donkey's,

@@ -213,7 +213,7 @@ def skin_cfg():
     bone = [c[:3] for c in HP.BONE]   # the horns
     tail = [(44, 18, 16), (70, 26, 20)]   # the devil's tail and its underside (hellfire_proto.devil_tail)
     # the horns' and the tail's, for an API without tones; the outline (HP.OUTLINE: the horns' and the rump's where the
-    # tail was) is the drawing's line, in no region, so no colour row reaches it (docs/mount-colours.md 7.11)
+    # tail was) is the drawing's line, the Outline row's with the donkey's own (docs/mount-colours.md 7.15)
     dark = bone + tail
     glow = [(255, 170, 40), (220, 60, 20)]   # the glow and its rim
     spade = [(200, 40, 30), (120, 20, 16)]   # the tail's spade and its dark
@@ -228,7 +228,7 @@ def skin_cfg():
         "# The cracks follow the player's muzzle colour, the horns and the tail's dark its dark parts, the glow its eye\n"
         "# colour, as the recipe had it; everything else is kept as drawn. Here for an API without tones; this one moves them\n"
         "# to the tones below, every part its own, whose first choice follows the same regions (docs/mount-colours.md 7.9).\n"
-        "# The outline is the drawing's line, in no region, so no colour row reaches it, as the donkey's own (7.11).\n"
+        "# The outline is the drawing's line: the Outline row colours it with the donkey's own (7.15, its section below).\n"
         f"[Colors]\nMuzzle = {hexes(lava)}\nDark = {hexes(dark)}\nEye = {hexes(eye)}\n\n"
         f"[Tone.horns]\nname = Horns\nfollows = Dark\ncolours = {hexes(bone)}\n\n"
         f"[Tone.glow]\nname = Glowing eyes\nfollows = Eye\ncolours = {hexes(glow)}\n\n"
@@ -239,6 +239,9 @@ def skin_cfg():
         "[Region.Dark]\nname = Legs and mane\n\n"
         "# The donkey's eye is under the glowing eyes in every frame: no Eyes row, the glow is a part of its own (7.13).\n"
         "[Region.Eye]\nrow = none\n\n"
+        "# The outline of the horns and of the rump where the tail was: the donkey's Outline row colours it with the donkey's\n"
+        "# own (7.15); here, not under [Colors], so an API without that row skips it and reads the skin as before.\n"
+        f"[Region.Outline]\ncolours = {hexes([HP.OUTLINE])}\n\n"
         "# The ash coat: the donkey's coat under the skin, darkened and warmed (the prototype's darken_coat), before the\n"
         "# player's own coat colour.\n"
         f"[Base.Coat]\nBrightness = {brightness}\nSaturation = 1\nColorize = {colorize}\nColorizeAmount = {amount}\n"

@@ -85,7 +85,7 @@ var knownKeys = StringsIn(looksCs, "KnownKeys");
 var skinTuningKeys = StringsIn(looksCs, "SkinTuningKeys");
 var colorsCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Colors.cs"));
 var mountRegions = StringsIn(colorsCs, "MountRegionKeys");
-if (mountRegions.Count != 5) Fail($"Colors.cs MountRegionKeys: {mountRegions.Count} regions read (5 expected)"); else Pass("Colors.cs MountRegionKeys: 5 mount regions");
+if (mountRegions.Count != 6) Fail($"Colors.cs MountRegionKeys: {mountRegions.Count} regions read (6 expected)"); else Pass("Colors.cs MountRegionKeys: 6 mount regions");
 // the exact swap's limit (Colors.PaletteMaxColours): the colour cube over it
 var paletteMaxMatch = Regex.Match(colorsCs, @"PaletteMaxColours = (\d+);");
 int paletteMax = paletteMaxMatch.Success ? int.Parse(paletteMaxMatch.Groups[1].Value) : 0;
@@ -96,7 +96,7 @@ int paletteMaxOver = paletteMaxOverMatch.Success ? int.Parse(paletteMaxOverMatch
 if (paletteMaxOver == 0) Fail("Colors.cs PaletteMaxColoursOver not read");
 // the donkey's own colours by region (Colors.cs Regions, the mount's sprites): under an over skin they are the look's too
 var donkeyColours = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-foreach (Match m in Regex.Matches(colorsCs, @"R\(""(Coat|Dark|Muzzle|Eye|Harness)"", [^)]*?DonkeySprites, ""([0-9a-fA-F ]+)"""))
+foreach (Match m in Regex.Matches(colorsCs, @"R\(""(Coat|Dark|Muzzle|Eye|Harness|Outline)"", [^)]*?DonkeySprites, ""([0-9a-fA-F ]+)"""))
     foreach (var hex in m.Groups[2].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)) donkeyColours[hex.ToUpperInvariant()] = m.Groups[1].Value;
 if (donkeyColours.Count == 0) Fail("Colors.cs Regions: the donkey's own colours not read"); else Pass($"Colors.cs Regions: the donkey's {donkeyColours.Count} own colours");
 var tuningKeys = new HashSet<string>(Regex.Matches(pluginCs, @"(?:cfg\.Bind\(section|\b[FBSIC]\(cfg, section),\s*""(\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase); // every bound key, the helper-bound ones (F/B/S) too
@@ -217,7 +217,7 @@ static Dictionary<string, Dictionary<string, string>> ReadCfg(string path)
         {
             var name = line[1..^1].Trim();
             regions = name.Equals("Colors", StringComparison.OrdinalIgnoreCase);
-            tone = name.StartsWith("Tone.", StringComparison.OrdinalIgnoreCase);
+            tone = name.StartsWith("Tone.", StringComparison.OrdinalIgnoreCase) || name.StartsWith("Region.", StringComparison.OrdinalIgnoreCase); // a list key: colours
             if (!result.TryGetValue(name, out section)) result[name] = section = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             continue;
         }
@@ -623,16 +623,19 @@ foreach (var dir in skinDirs)
         }
         if (sec.StartsWith("Region.", StringComparison.OrdinalIgnoreCase))
         {
-            // a look's name for a mount region's part (SkinRegions; docs/second-tone.md 8), or row = none, no row for the
-            // region (docs/mount-colours.md 7.13): a region of the five; a name with row = none is never shown
+            // a look's name for a mount region's part (SkinRegions; docs/second-tone.md 8), row = none, no row for the
+            // region (docs/mount-colours.md 7.13), or colours =, the skin's own colours in it (7.15: read as a [Colors]
+            // line, checked with them below): a region of the six; a name with row = none is never shown
             string region = sec.Substring(7);
             if (!mountRegions.Contains(region)) Bad($"[{sec}]: not a mount region ({string.Join(", ", mountRegions)})");
-            foreach (var kv in cfg[sec]) if (!kv.Key.Equals("name", StringComparison.OrdinalIgnoreCase) && !kv.Key.Equals("row", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}] {kv.Key}: not a region's key (name, row)");
+            foreach (var kv in cfg[sec]) if (!kv.Key.Equals("name", StringComparison.OrdinalIgnoreCase) && !kv.Key.Equals("row", StringComparison.OrdinalIgnoreCase) && !kv.Key.Equals("colours", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}] {kv.Key}: not a region's key (name, row, colours)");
             bool rowless = cfg[sec].TryGetValue("row", out string rowValue);
             if (rowless && !rowValue.Trim().Equals("none", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}] row = {rowValue}: none is its one value");
             bool named = cfg[sec].TryGetValue("name", out string rname) && !string.IsNullOrWhiteSpace(rname);
+            bool coloured = cfg[sec].ContainsKey("colours");
             if (rowless && named) Bad($"[{sec}]: a name and row = none: the region has no row, so the name is never shown");
-            if (!rowless && !named) Bad($"[{sec}]: no name (or row = none)");
+            if (!rowless && !named && !coloured) Bad($"[{sec}]: no name, row = none or colours");
+            if (coloured && region.Equals("Coat", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}] colours: every colour not named is Coat; don't list it");
         }
     }
     if (order.Count == 0 || !order[0].Equals("Skin", StringComparison.OrdinalIgnoreCase)) Bad("[Skin] must be the first section");
@@ -786,6 +789,21 @@ foreach (var dir in skinDirs)
     // everything not named), every colour RRGGBB, in the pictures, and under one region only. A game-source skin has
     // no pictures here to check against.
     var seen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // a named colour's place: its region, or [Tone.<id>]
+    // a region's colours, from a [Colors] line or a [Region.<region>] colours = line (the loader reads both the same way)
+    int NameColours(string label, string region, string value)
+    {
+        int n = 0;
+        foreach (var tok in value.Split(new[] { ' ', ',', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            string hex = tok.TrimStart('#').ToUpperInvariant();
+            if (!Regex.IsMatch(hex, "^[0-9A-F]{6}$")) { Bad($"{label}: '{tok}' is not a colour (RRGGBB)"); continue; }
+            if (seen.TryGetValue(hex, out var other) && !other.Equals(region, StringComparison.OrdinalIgnoreCase)) Bad($"{label}: {hex} is under {other} and {region}; one region per colour");
+            seen[hex] = region;
+            if (inPictures != null && !inPictures.Contains(hex)) Bad($"{label} {hex}: no picture of the skin has this colour (a stale list)");
+            n++;
+        }
+        return n;
+    }
     if (cfg.TryGetValue("Colors", out var colorsSec))
     {
         int named = 0;
@@ -793,17 +811,17 @@ foreach (var dir in skinDirs)
         {
             if (!mountRegions.Contains(kv.Key)) { Bad($"[Colors] {kv.Key}: not a mount region ({string.Join(", ", mountRegions)})"); continue; }
             if (kv.Key.Equals("Coat", StringComparison.OrdinalIgnoreCase)) { Bad("[Colors] Coat: every colour not named is Coat; don't list it"); continue; }
-            foreach (var tok in kv.Value.Split(new[] { ' ', ',', '\t' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                string hex = tok.TrimStart('#').ToUpperInvariant();
-                if (!Regex.IsMatch(hex, "^[0-9A-F]{6}$")) { Bad($"[Colors] {kv.Key}: '{tok}' is not a colour (RRGGBB)"); continue; }
-                if (seen.TryGetValue(hex, out var other) && !other.Equals(kv.Key, StringComparison.OrdinalIgnoreCase)) Bad($"[Colors] {hex} is under {other} and {kv.Key}; one region per colour");
-                seen[hex] = kv.Key;
-                if (inPictures != null && !inPictures.Contains(hex)) Bad($"[Colors] {kv.Key} {hex}: no picture of the skin has this colour (a stale list)");
-                named++;
-            }
+            named += NameColours($"[Colors] {kv.Key}", kv.Key, kv.Value);
         }
         if (ok) Pass($"{id}: [Colors] names {named} colour(s) under {colorsSec.Count} region(s)" + (inPictures != null ? $" of the pictures' {inPictures.Count}" : ""));
+    }
+    foreach (var sec in order)
+    {
+        if (!sec.StartsWith("Region.", StringComparison.OrdinalIgnoreCase) || !cfg[sec].TryGetValue("colours", out var rc)) continue;
+        string region = sec.Substring(7);
+        if (!mountRegions.Contains(region) || region.Equals("Coat", StringComparison.OrdinalIgnoreCase)) continue; // said above
+        int n = NameColours($"[{sec}] colours", mountRegions.First(r => r.Equals(region, StringComparison.OrdinalIgnoreCase)), rc);
+        if (ok) Pass($"{id}: [{sec}] names {n} colour(s) of its own");
     }
     var followingTones = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // "[Tone.<id>]" of the tones with follows = (the tone block below)
     // the donkey is under a skin over the donkey only (over another mount's default, layer = over draws over that)

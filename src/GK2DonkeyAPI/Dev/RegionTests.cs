@@ -38,8 +38,29 @@ namespace GK2DonkeyAPI
 
                 // the donkey's own words on its look
                 SelfTest.Check(SkinRegions.NameTerm(MountLooks.DonkeyId, "Coat") == UiWords.RegionCoat && SkinRegions.NameTerm(MountLooks.DonkeyId, "Muzzle") == UiWords.RegionDonkeyMuzzle
-                    && SkinRegions.NameTerm(MountLooks.DonkeyId, "Dark") == UiWords.RegionDonkeyDark && SkinRegions.NameTerm(MountLooks.DonkeyId, "Eye") == UiWords.RegionEyes && SkinRegions.NameTerm(MountLooks.DonkeyId, "Harness") == UiWords.RegionHarness,
-                    "the donkey's own look names its five parts in the API's words (Coat, Legs mane and ears, Muzzle, Eyes, Harness)");
+                    && SkinRegions.NameTerm(MountLooks.DonkeyId, "Dark") == UiWords.RegionDonkeyDark && SkinRegions.NameTerm(MountLooks.DonkeyId, "Eye") == UiWords.RegionEyes && SkinRegions.NameTerm(MountLooks.DonkeyId, "Harness") == UiWords.RegionHarness
+                    && SkinRegions.NameTerm(MountLooks.DonkeyId, "Outline") == UiWords.RegionOutline,
+                    "the donkey's own look names its six parts in the API's words (Coat, Legs mane and ears, Muzzle, Eyes, Harness, Outline)");
+
+                // [Region.<region>] colours = (docs/mount-colours.md 7.15): the skin's own colours in the region, read as a
+                // [Colors] line (any case, commas); Coat refused, a colour under two regions refused
+                string Refused(string body)
+                {
+                    try
+                    {
+                        Looks.FromCfg("[Skin]\nformat = 1\nname = Lined\nlayer = over\n" + body, "selftest.regions-colours", SelfTest.Owner, "test", f => null, new[] { "bdy.png" }, Catalog.DonkeyId);
+                        return null;
+                    }
+                    catch (FormatException e)
+                    {
+                        return e.Message;
+                    }
+                }
+                Looks.SkinDef lined = Looks.FromCfg("[Skin]\nformat = 1\nname = Lined\nlayer = over\n[Region.Outline]\ncolours = 281B26, 1e0e0c\n", "selftest.regions-colours", SelfTest.Owner, "test", f => null, new[] { "bdy.png" }, Catalog.DonkeyId);
+                bool linesRead = lined.ColorRegions != null && lined.ColorRegions.TryGetValue("Outline", out HashSet<string> lineColours) && lineColours.Contains("281B26") && lineColours.Contains("1E0E0C");
+                string coatRefused = Refused("[Region.Coat]\ncolours = 281B26\n"), twiceRefused = Refused("[Colors]\nDark = 281B26\n[Region.Outline]\ncolours = 281B26\n");
+                SelfTest.Check(linesRead && coatRefused != null && twiceRefused != null,
+                    $"[Region.<region>] colours = read as a [Colors] line (281B26 and 1e0e0c under Outline: {linesRead}); Coat refused ({coatRefused ?? "NOT refused"}); a colour under two regions refused ({twiceRefused ?? "NOT refused"})");
 
                 // two temp skins: one over the donkey naming its Muzzle, with two parts that were the regions' (follows =);
                 // one in its own colours naming its Muzzle and Dark, with no harness

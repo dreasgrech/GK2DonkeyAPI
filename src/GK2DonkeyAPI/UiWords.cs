@@ -155,10 +155,11 @@ namespace GK2DonkeyAPI
         // The mount regions' parts as the donkey's own look names them (SkinRegions; docs/second-tone.md 8): the colours
         // window's rows on the donkey and on a skin worn over it.
         internal static readonly Word RegionCoat = new Word("colours.region_coat", "Coat", "a part of the mount the player colours: the donkey's coat (its row's label in the colours window)");
-        internal static readonly Word RegionDonkeyDark = new Word("colours.region_donkey_dark", "Legs, mane and ears", "a part of the donkey the player colours: its dark lower legs, mane, ears and tail tuft, with its outline (one set of colours in the game's art)");
+        internal static readonly Word RegionDonkeyDark = new Word("colours.region_donkey_dark", "Legs, mane and ears", "a part of the donkey the player colours: its dark lower legs, mane, ears and tail tuft (its outline is a part of its own)");
         internal static readonly Word RegionDonkeyMuzzle = new Word("colours.region_donkey_muzzle", "Muzzle", "a part of the donkey the player colours: its pale muzzle (the nose)");
         internal static readonly Word RegionEyes = new Word("colours.region_eyes", "Eyes", "a part of the mount the player colours: its eyes");
         internal static readonly Word RegionHarness = new Word("colours.region_harness", "Harness", "a part of the mount the player colours: the donkey's harness (its straps and collar)");
+        internal static readonly Word RegionOutline = new Word("colours.region_outline", "Outline", "a part of the donkey the player colours: the dark line drawn round it, its border (and the drawing's inner lines)");
 
         // the speeds (Catalog.SpeedBands' words, shown; mount.cfg's speed = is read in English, Catalog.ParseBand)
         internal static readonly Word SpeedVerySlow = new Word("speed.very_slow", "Very slow", "a mount's speed in the journal's stats");

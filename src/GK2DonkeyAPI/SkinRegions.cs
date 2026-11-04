@@ -16,8 +16,10 @@ namespace GK2DonkeyAPI
     {
         internal const string Prefix = "region.";
 
-        // [Region.<region>] key = value (Looks.Parse, MountSkinDef.RegionNames / RegionsWithoutRow): name, or row = none.
-        internal static void Read(Looks.SkinDef d, string region, string key, string value)
+        // [Region.<region>] key = value (Looks.Parse, MountSkinDef.RegionNames / RegionsWithoutRow): name, row = none, or
+        // colours = (the skin's own colours in the region, read as a [Colors] line is: an API without the region skips
+        // the section, where a [Colors] line naming it refuses the skin; the packs' outlines, docs/mount-colours.md 7.15).
+        internal static void Read(Looks.SkinDef d, string region, string key, string value, string where = "")
         {
             string r = Colors.RegionKeyOf(region);
             if (r == null)
@@ -36,9 +38,15 @@ namespace GK2DonkeyAPI
                 d.RegionsWithoutRow.Add(r);
                 return;
             }
+            if (string.Equals(key, "colours", StringComparison.OrdinalIgnoreCase) || string.Equals(key, "colors", StringComparison.OrdinalIgnoreCase))
+            {
+                if (r == "Coat") throw new FormatException($"{where}: [Region.Coat] colours: Coat is every colour not named under another region; don't list it");
+                Looks.AddRegionColours(d, r, $"[Region.{r}] colours", value, where);
+                return;
+            }
             if (!string.Equals(key, "name", StringComparison.OrdinalIgnoreCase))
             {
-                d.Report += $"[Region.{r}] {key}: not a region's key (name, row), ignored; ";
+                d.Report += $"[Region.{r}] {key}: not a region's key (name, row, colours), ignored; ";
                 return;
             }
             if (string.IsNullOrWhiteSpace(value)) return;
@@ -49,7 +57,7 @@ namespace GK2DonkeyAPI
         internal static string KeyOf(string skinId, string region) => "skin." + skinId + ".region." + region.ToLowerInvariant() + ".name";
 
         // The donkey's own, in the API's words: its look in the game's art, and under a skin worn over it. Its outline is
-        // in no region (docs/mount-colours.md 7.11), so the dark parts' row is its mane, ears, legs and hooves.
+        // a part of its own (Outline, docs/mount-colours.md 7.15), so the dark parts' row is its mane, ears, legs and hooves.
         private static Word DonkeyWord(string region)
         {
             switch (region)
@@ -59,6 +67,7 @@ namespace GK2DonkeyAPI
                 case "Muzzle": return UiWords.RegionDonkeyMuzzle;
                 case "Eye": return UiWords.RegionEyes;
                 case "Harness": return UiWords.RegionHarness;
+                case "Outline": return UiWords.RegionOutline;
                 default: return null;
             }
         }

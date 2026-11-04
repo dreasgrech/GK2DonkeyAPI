@@ -549,7 +549,8 @@ horns' outline (1E0E0C, under its Dark), and on the dragon, whose "Horns and spi
 (1C060C, 81 % on the edge; its lit top edge 2E0C14, 93 %), its body's deepest shade (280810) and its wings' ribs
 (260828). Already so: Armored's steel line (281B26, in no region) and the critters' outlines (their Dark, unnamed).
 
-- **Built: the outline is the drawing's line, no colour row reaches it, on every look.**
+- **Built: the outline is the drawing's line, no colour row reaches it, on every look.** (Since 7.15 the donkey's
+  outline is a part of its own with its Outline row; at Game default it is drawn as here.)
   - The donkey, so every skin over it: 1e190e and 301f0f out of `Colors.cs`'s Dark (its name there "Donkey mane,
     legs, ears and hooves"). In no region, they have no pair and are drawn as they are, on the colour cube too (each
     in a cell of its own). The donkey's pairs: 40.
@@ -593,10 +594,11 @@ so that its nose is coloured".
 | 75755a, a9a7a2 | a few pixels of the mouth, chewing (14) and grazing (3) | Muzzle |
 | 362d1e | the nostril (the game's 352e1e, repainted by place since 2026-11-04: 7.14) | Muzzle |
 | 858e6b | dots on the face round the eye and the cheek (369) | Coat |
-| 42422c | a light line along the nose's edge, the chin, the throat and the belly's bottom (1282, 89 % on the silhouette's edge) | Coat |
+| 42422c | a light line along the nose's edge, the chin, the throat and the belly's bottom (1282, 89 % on the silhouette's edge) | Coat; the Outline since the same evening (7.15) |
 
 - The row is "Muzzle" (`UiWords.RegionDonkeyMuzzle`; each language's word the first half of its "Muzzle and belly")
-  on the donkey and every skin over it. The nose's own rim is the belly's line, one colour: it follows the coat with it.
+  on the donkey and every skin over it. The nose's own rim is the belly's line, one colour: it followed the coat with it,
+  and is the outline's since 7.15.
 - 858e6b (Coat) and the nose's 858f6c are a step apart in two channels: 0.0055 in RGB, outside the exact swap's reach
   (0.004, docs/colors.md), so they are coloured apart; on the colour cube (the Lut fallback) they share a cell.
 - **A released change:** a 0.15.0 player's Second tone on the donkey reached the belly's line and the face's dots too;
@@ -635,7 +637,7 @@ Jester the white shows in every frame.
   the donkey: no pair, as drawn), and the donkey's regions under a skin over it get only the skin's `[Base.<Region>]`.
   So a saved value stays in the player's file and isn't applied, and nothing is coloured that has no row.
 - **Hellfire:** `[Region.Eye]` `row = none` (`make_hellfire.py`, the pack reproduced byte for byte). Its rows: Coat,
-  Harness, Muzzle, Legs and mane, Horns, Glowing eyes, Lava cracks, Tail, Tail tip.
+  Harness, Muzzle, Legs and mane, Outline (since 7.15), Horns, Glowing eyes, Lava cracks, Tail, Tail tip.
 - **The checks:** SkinsScan and `check_skin.py` take `row = none` and refuse it with a name; `check_skin.py` warns when
   a skin over the donkey covers one of the donkey's regions in every frame and gives it a row.
 - **Tests:** the scenario "colours: a look's names for its parts" (a temp skin without Harness and Eye rows: read, a
@@ -647,5 +649,64 @@ The user, on the Jester with "Legs and mane" Pink: "there are some pixels around
 and mange group", then "yes nostril should be the same as muzzle". The game draws the eye's line and the nostril in the
 dark fill's own colours (292316, 352e1e), and a colour swap can't tell them from the legs and the mane. The API
 repaints them in the game's atlas by place (`FacePixels.cs`, docs/face-pixels.md): the eye's line 292319, in no
-region (as drawn, as the outline is: 7.11), the nostril 362d1e, under Muzzle. The donkey's pairs are 41. A skin
+region (as drawn, the eye's own drawing), the nostril 362d1e, under Muzzle. The donkey's pairs were 41 (43 since 7.15). A skin
 drawing over the donkey draws on the asset probe's frames, which keep the game's colours.
+
+### 7.15 The outline, a part of its own (2026-11-04)
+
+The user, on Hellfire with a white coat (a screenshot): "why is it that the donkey's outline border in hellfire changing
+with the coat color? didnt we already decide that this outline border is not changeable?", then, shown the measure
+below: "i think we should keep the outline border always like this ... OR even better would be if we are able to set
+its color by itself as part of an individual option", and "lets keep for donkey for now and game default being game's
+border but we have it as an individual option".
+
+**Measured** (the 44 frames; a pixel on the edge has a transparent 4-neighbour): the donkey's border is 6550 pixels,
+4823 of them (74 %) the drawing's line 1e190e and 301f0f (as drawn since 7.11), 1145 (17.5 %) the lighter line
+**42422c** along the nose's front and bottom, the chin, the throat and the belly (the Coat's since 7.12, the
+Muzzle's in 0.15.0; inside the head it is the mouth's line, 2 to 9 pixels a frame), 577 (9 %) the harness's own
+darks where the collar and the girth cross it. So a white coat took the border under the belly and the nose away; every
+skin over the donkey showed it (about 1000 border pixels on Royal Parade and Hellfire).
+
+**Built:**
+- **The region:** `Colors.cs` `Outline` ("Donkey outline"): 1e190e, 301f0f and 42422c (out of Coat), the sixth of
+  `MountRegionKeys`. The inner lines drawn in those colours (between the legs, the mouth's line) go with it: the
+  swap goes by colour. The donkey's pairs: 43 (the exact swap's 48); each colour in a colour-cube cell of its own.
+- **The row:** `MountSettingsPage.ToneRows` makes it after the Dark and Eye rows (`Outline<sfx>`, `CustomOutline<sfx>`),
+  where the look names the region: the donkey names it "Outline" (`UiWords.RegionOutline`, in 11 languages: Umriss,
+  Contorno, Contour, ふちどり, 테두리, Kontur, Contorno, Контур, Dış çizgi, 描边; the CJK words of characters the
+  game's own text draws, `tools/l10n-glyphs.py`), and a skin over the donkey takes the donkey's names. Held by
+  `MountLook.Outline` (a `MountTone`, a public addition); the companion turns it into the region's colorize and
+  lightness as a part's (`SkinTones.RegionValues`), on the worn donkey, the paper donkey and the babies (the parent's,
+  no shade of their own). Game default is as drawn: nothing changes until a player picks a colour.
+- **A skin decides:** `[Region.Outline]` `row = none` keeps its border as drawn, `name =` renames the row,
+  `[Base.Outline]` gives the border a look of its own that a player's colour replaces (7.12).
+- **A skin's own line art** joins with `[Region.<region>]` `colours =` (new: the skin's own colours in the region,
+  read as a `[Colors]` line, the same refusals; `SkinRegions.Read`). Not `[Colors] Outline =`, which an API without the
+  region refuses the whole skin for (`Looks.ColorRegionLine`); a `[Region.*]` section such an API skips (its report
+  line "unknown sections ignored"), so the pack reads as before on it. Hellfire: its horns' and rump's outline
+  1E0E0C; Armored: its steel's line 281B26 (both by their generators, the pictures unchanged). Armored's steel line is
+  also the seams between its plates (2334 border pixels, 3759 inside), so the Outline row colours the seams too.
+- **Not in it:** the eye's line (292319, as drawn: docs/face-pixels.md), the harness's own edge (the Harness row's:
+  its darks are as much inside it as on the border), the other mounts (their outlines stay as drawn with no row: the
+  user, "lets keep for donkey for now"), and the skins' costume parts whose edges are drawn in the part's own darkest
+  shade, which is also its shading inside (Royal Parade's cloth 3a0a12, Armored's plume 381218 and skirt 38121a, the
+  Jester's bells 5a3a0a, cap, collar and caparison): they follow their part's row. On the Jester the donkey's outline is
+  43 % of the border (3016 of 6989 pixels); joining the rest would mean drawing those edges in a line colour of their
+  own (an art change, the skin's generator).
+- **The pairs with every part set:** Royal Parade 57, Hellfire 56, Armored 72 (96 the limit over the donkey).
+- **The checks:** SkinsScan and `check_skin.py` take `[Region.<region>] colours =` (Coat refused, as in `[Colors]`) and
+  count them with the skin's named colours; `face_pixels.py`'s colour check reads them; `part_map.py` shows the
+  Outline part; the review page lists it.
+- **Saved files:** the new rows start at Game default; nothing a player saved changes. On a 0.15.0 look the belly's
+  line followed "Muzzle and belly"; it is the Outline's now.
+- **Tests:** the integration scenario "colours: the outline is a part of its own" (the donkey and Hellfire: Legs and
+  mane green, the outline kept and the fill coloured; Outline green, 1e190e, 301f0f, 42422c and Hellfire's 1E0E0C
+  coloured, the fill and the coat not; Coat green, the coat coloured and 42422c not; the row named Outline), "the
+  donkey's Muzzle row reaches its nose only" (the belly's line kept under both), and the regions scenario (the
+  donkey's six names; `[Region.Outline] colours =` read, Coat and a colour under two regions refused).
+- **In game 2026-11-04 23:31 (F11 1873 passed, 1 failed, 0 warnings):** every check of this section passed but one:
+  on Hellfire with the Outline row green the test called the coat 736c57 changed. That was the test's yardstick, not
+  the engine: Hellfire's coat is its ash at Game default (`[Base.Coat]`, 736C57 to 2F1A16, the same run's "a colour
+  picked for a part a skin pre-colours" scenario), and the test compared with the drawn colour. Fixed: "kept" and
+  "changed" are against the look with every row at Game default. The fonts of all eleven languages have every
+  character of the new words; `l10n-sync --check` the same on all five templates.

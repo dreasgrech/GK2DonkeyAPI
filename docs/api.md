@@ -233,7 +233,8 @@ foreach (MountColorRegion r in Mounts.ColorRegions)
 ```
 
 **Regions** (`Mounts.ColorRegions`, `Key` / `Name` / `Area` / `SourceColors`, the art's exact colours as hex):
-- Donkey: `Coat`, `Dark` (mane, ears, legs, hooves; the outline is in no region), `Muzzle` (the muzzle, its nose), `Eye`, `Harness`.
+- Donkey: `Coat`, `Dark` (mane, ears, legs, hooves), `Muzzle` (the muzzle, its nose), `Eye`, `Harness`, `Outline` (the
+  line drawn round it and its inner lines; docs/mount-colours.md 7.15).
 - Cart: `CartBody`, `Shafts`, `Straps`, `Hooks`, `Wheels` (3D rims and the wheel sprites), `Hubs`.
 - Lantern: `Pole`, `Lamp`, `Glass` (the lamp's painted glass).
 
@@ -319,9 +320,11 @@ page.ToneRows("Colours", skinId, sfx, companion);
   of the windows while the look has no colour of the region (the value is kept). A look that names none of the region
   keeps the rows' own words, so those stay the page's texts to translate (in its English file whatever looks are
   installed: a pack from before the names, another mod's mount, draws them). Call it after the rows; a region that is none of the five throws `ArgumentException`.
-- `ToneRows` also makes a row for the mount's dark parts and one for its eyes (`Dark<suffix>`, `CustomDark<suffix>`,
-  `Eye<suffix>`, `CustomEye<suffix>`) where the look names them and has their colours: the tone presets, held by
-  `MountLook.Dark` and `MountLook.Eye` (`MountTone`s), coloured over the whole region as a part is.
+- `ToneRows` also makes a row for the mount's dark parts, one for its eyes and one for its outline (`Dark<suffix>`,
+  `CustomDark<suffix>`, `Eye<suffix>`, `CustomEye<suffix>`, `Outline<suffix>`, `CustomOutline<suffix>`) where the look
+  names them and has their colours: the tone presets, held by `MountLook.Dark`, `MountLook.Eye` and `MountLook.Outline`
+  (0.44.0; `MountTone`s), coloured over the whole region as a part is. The donkey names its outline "Outline", and a
+  skin over the donkey takes that name.
 
 ## Donkeys and carts in the world (0.6.0)
 

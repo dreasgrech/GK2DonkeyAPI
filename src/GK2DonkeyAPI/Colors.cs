@@ -98,28 +98,30 @@ namespace GK2DonkeyAPI
         }
 
         // The art's exact colours by region, most used first (read from the game's atlas and the cart textures,
-        // tools in docs/colors.md). Every colour of every group is in one region of that group at most: the donkey's
-        // outline, 1e190e and 301f0f (the drawing's line round its head, neck, back, legs, ears and tail; the art's own,
-        // never inside its fill), is in none, so no colour row reaches it and it stays as drawn on every skin over the
-        // donkey (the user, 2026-11-04: the Dark row painted that partial outline with the legs; docs/mount-colours.md
-        // 7.11). Both have a colour-cube cell of their own, so they stay as drawn on the cube too. The Muzzle is the nose
-        // only (abb298 858f6c; 75755a and a9a7a2 its mouth, chewing and grazing; 362d1e its nostril, below): the light line along the nose's edge,
-        // the chin, the throat and the belly's bottom (42422c) and the dots on the face (858e6b) are the Coat (the user,
-        // 2026-11-04: "remove those individual pixels on the face ... and also remove the belly part"; docs/mount-colours.md
-        // 7.12). 858e6b and the nose's 858f6c are a step apart in two channels, outside the exact swap's reach (0.0055 >
-        // 0.004), one cube cell: with the Lut fallback the face's dots take the nose's colour. Two colours are the API's
-        // own, not the art's: the game draws the eye's line and the nostril in the legs' and the mane's dark (292316,
-        // 352e1e), which a colour swap can only give to "Legs and mane" with them; FacePixels repaints those pixels in the
-        // game's atlas by place (face-pixels.txt), the nostril 362d1e here under Muzzle (the user, 2026-11-04: "nostril
-        // should be the same as muzzle"), the eye's line 292319 in no region: it stays as drawn, as the outline does
-        // (docs/face-pixels.md).
+        // tools in docs/colors.md). Every colour of every group is in one region of that group at most. The donkey's
+        // outline is a region of its own, Outline (the user, 2026-11-04: "even better would be if we are able to set its
+        // color by itself as part of an individual option"; docs/mount-colours.md 7.15): the drawing's line, 1e190e and
+        // 301f0f round its head, neck, back, legs, ears and tail (the Dark row painted it with the legs until 7.11) and
+        // the lighter 42422c along the nose's front, the chin, the throat and the belly (the Coat's for a day, the
+        // Muzzle's before: 7.12), with the inner lines drawn in the same colours (between the legs, the mouth's line).
+        // At Game default it is drawn as the game draws it, on every skin over the donkey. The Muzzle is the nose only
+        // (abb298 858f6c; 75755a and a9a7a2 its mouth, chewing and grazing; 362d1e its nostril, below): the dots on the
+        // face (858e6b) are the Coat (the user, 2026-11-04: "remove those individual pixels on the face ... and also
+        // remove the belly part"; docs/mount-colours.md 7.12). 858e6b and the nose's 858f6c are a step apart in two
+        // channels, outside the exact swap's reach (0.0055 > 0.004), one cube cell: with the Lut fallback the face's dots
+        // take the nose's colour. Two colours are the API's own, not the art's: the game draws the eye's line and the
+        // nostril in the legs' and the mane's dark (292316, 352e1e), which a colour swap can only give to "Legs and mane"
+        // with them; FacePixels repaints those pixels in the game's atlas by place (face-pixels.txt), the nostril 362d1e
+        // here under Muzzle (the user, 2026-11-04: "nostril should be the same as muzzle"), the eye's line 292319 in no
+        // region: it stays as drawn, the eye's own drawing (docs/face-pixels.md).
         private static readonly RegionDef[] Regions =
         {
-            R("Coat", "Donkey coat", "Donkey", (Group.DonkeySprites, "736c57 4a3d20 665b44 584c33 3e3019 54503b 655c49 4d4539 362815 453b2e 3c3223 3a3428 534f3a 443b31 42422c 858e6b")),
+            R("Coat", "Donkey coat", "Donkey", (Group.DonkeySprites, "736c57 4a3d20 665b44 584c33 3e3019 54503b 655c49 4d4539 362815 453b2e 3c3223 3a3428 534f3a 443b31 858e6b")),
             R("Dark", "Donkey mane, legs, ears and hooves", "Donkey", (Group.DonkeySprites, "292316 352e1e 130a0c 2f2c1f")),
             R("Muzzle", "Donkey muzzle", "Donkey", (Group.DonkeySprites, "abb298 858f6c 75755a a9a7a2 362d1e")),
             R("Eye", "Donkey eye", "Donkey", (Group.DonkeySprites, "ffffff")),
             R("Harness", "Donkey harness", "Donkey", (Group.DonkeySprites, "62411b 3c2a14 2d210f 443017 885923 d68e38 2f1d08 3a2003 a06a29 5f3d14 765024 342918 2d2114 463017 472d0e")),
+            R("Outline", "Donkey outline", "Donkey", (Group.DonkeySprites, "1e190e 301f0f 42422c")),
             R("CartBody", "Cart body", "Cart", (Group.CartBody, "885923 784c1d 443017 4f361a 634623 2d210f 593b21 392516 b97b30 a06a29 402a13")),
             R("Shafts", "Cart shafts", "Cart", (Group.Bars, "473015 885923 2d210f 62411b a06a29 b97b30 463017")),
             R("Straps", "Shaft straps", "Cart", (Group.Bars, "3a2003 2f1d08 5f3d14 482a04 886031 765024")),
@@ -137,16 +139,16 @@ namespace GK2DonkeyAPI
         // atlas colours into them (Regions above); a skin drawn in its own colours maps every colour of its pictures
         // to Coat unless its [Colors] names it under another one. A skin never adds a region; it may add tones of its own
         // (SkinTones, section 7 of the doc), paired after these with the instance's value.
-        internal static readonly string[] MountRegionKeys = { "Coat", "Dark", "Muzzle", "Eye", "Harness" };
+        internal static readonly string[] MountRegionKeys = { "Coat", "Dark", "Muzzle", "Eye", "Harness", "Outline" };
 
         // The swap palette's size limit for a look: up to this many colours the exact swap (the keeper's own palette
-        // is 32 wide; the donkey 41, smaller mounts 17 to 21); over it the colour cube, one lookup for any number
+        // is 32 wide; the donkey 43, smaller mounts 17 to 21); over it the colour cube, one lookup for any number
         // (hand-painted mounts 300 or 720: a 720-wide swap is 720 texture samples per pixel).
         internal const int PaletteMaxColours = 48;
         // A skin over the donkey's: 64 since 2026-11-04 (the fifth code review), 96 the same day for skins whose parts
         // each have shades of their own (every donkey skin's parts its own; the Jester's eight: 78 pairs with every one
         // set): the colour swap's cost, measured in game, showed none up to 96 (MeasureTests.PaletteCost,
-        // docs/performance.md "The colour swap's cost"), and a look pays only for the pairs it has. It pairs the donkey's 40 (42 until its outline left Dark, 2026-11-04) and its own named colours, and on
+        // docs/performance.md "The colour swap's cost"), and a look pays only for the pairs it has. It pairs the donkey's 43 (42 until its outline left Dark, 40 until it was the Outline's, 2026-11-04) and its own named colours, and on
         // the cube two pairs of the donkey's own colours share a cell (Dark 292316 with Harness 2D2114, Coat 362815 with
         // Harness 3C2A14: those dark-fill and coat pixels took the harness colour). Every skin over the donkey stays on
         // the exact swap with all its tones set (the released ones 49 to 59); the shader's loop has no fixed cap
