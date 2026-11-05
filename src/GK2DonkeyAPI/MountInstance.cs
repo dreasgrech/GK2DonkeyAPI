@@ -750,6 +750,10 @@ namespace GK2DonkeyAPI
                 {
                     Stand(); // the view there now, not next frame
                 }
+                // its babies out of reach come with it, as its cart does (docs/foals-called.md): a ridden one never stands
+                // for them to catch up
+                int came = BringFarBabies("came with its parent, called to the keeper");
+                if (came > 0) Plugin.Log.LogInfo($"Mount: {FullId} came to the keeper with {came} baby(ies) from out of their reach, placed by it.");
             }
 
             // Sets everything on this cart down on the ground at it, for good (a mod removing its cart keeps the cargo in

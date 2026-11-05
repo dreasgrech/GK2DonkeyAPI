@@ -153,12 +153,15 @@ namespace GK2DonkeyAPI
 
             // 2. riding: the ride goes on, the mount at the keeper
             MountHandle donkey = Spawn(Spot(me, 3f) ?? me, right: homeFacing > 0f);
+            MountHandle baby = null;
             try
             {
                 if (donkey == null) Fail("could not spawn the test's donkey");
                 else
                 {
                     yield return Until(() => donkey.IsReady, 6f);
+                    // its baby, put out of reach before the return: placed by it once the ridden mount is back (docs/foals-called.md)
+                    baby = Mounts.SpawnFoal(Owner, donkey, 0.5f);
                     MountResult ride = donkey.Ride(showMessage: false);
                     if (!ride.Ok) Fail($"not ridden ({Said(ride)})");
                     else
@@ -168,12 +171,19 @@ namespace GK2DonkeyAPI
                         Vector3 rideSpot = Mounts.LastSafeSpot ?? me;
                         PutKeeper(away.Value, homeFacing);
                         yield return Frames(3);
+                        float reach = IdleShuffle.FollowMaxDistance.Value;
+                        Vector3? farOff = baby != null && baby.Exists ? Spot(rideSpot, 16f, p => Flat(p - rideSpot) > reach + 2f) : null;
+                        if (farOff.HasValue) baby.MoveTo(farOff.Value);
                         r = Mounts.ReturnToSafeSpot("the self-test, riding");
                         yield return Frames(5);
                         now = Keeper();
                         Mount.Instance ridden = Mount.Ridden;
                         Check(r.Ok && Mounts.IsMounted && Vector3.Distance(now, rideSpot) < 0.5f && ridden != null && Flat(ridden.Position - now) < 2.5f,
                             $"riding, put 10 away: back, still riding, the mount at the keeper ({Said(r)}; {(ridden != null ? Flat(ridden.Position - now).ToString("0.0") : "-")} apart)");
+                        // read as soon as the arrival check has run (it places the babies): too soon for a trot to have brought it
+                        yield return Until(() => SafeSpots.TestChecksPending == 0, 1f);
+                        if (!farOff.HasValue) Info(baby == null || !baby.Exists ? "no baby could be spawned: its safe-spot step skipped" : "no open ground out of reach of the ride's spot: the baby's step skipped");
+                        else Check(baby.Exists && ridden != null && Flat(baby.Position - ridden.Position) < 3f, $"its baby, out of reach of where it came back to: placed by it ({(baby.Exists && ridden != null ? Flat(baby.Position - ridden.Position).ToString("0.0") : "-")} from it)");
                         Mounts.Dismount("self-test");
                         yield return Until(() => !Mounts.IsMounted, 5f);
                     }
@@ -182,6 +192,7 @@ namespace GK2DonkeyAPI
             finally
             {
                 if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                try { if (baby != null && baby.Exists) baby.Remove(); } catch { }
                 try { if (donkey != null && donkey.Exists) donkey.Remove(); } catch { }
             }
 

@@ -273,6 +273,14 @@ namespace GK2DonkeyAPI
                 yield return null;
                 Rigidbody rb = pc?.PhysicalBody?.Rb;
                 if (rb == null || !Mount.IsGameReady) yield break;
+                // riding: the mount came with him (it follows the rider); its babies out of reach come too, as through a door
+                // (docs/foals-called.md)
+                Mount.Instance ridden = Mount.Ridden;
+                if (ridden != null)
+                {
+                    int came = ridden.BringFarBabies("came back to the safe spot with its parent");
+                    if (came > 0) Plugin.Log.LogInfo($"[safe-spot] {came} baby(ies) of {ridden.FullId} came back with it, placed by it.");
+                }
                 Vector3 p = rb.position;
                 bool ok = Vector3.Distance(p, put) < 0.5f && SurfaceUnder(p, FeetSurface) && Mount.Instance.WhyUnderground(p) == null;
                 if (ok) yield break;

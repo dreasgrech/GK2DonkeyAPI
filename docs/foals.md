@@ -366,6 +366,9 @@ never needs route finding.
     parent.
   - **Other scenes:** the foal is moved into the parent's scene. With its own scene unloaded, this runs from
     `StandTick`'s no-view branch.
+  - **A parent that jumps for a ride** (a door ridden through, a call to the keeper, back to a safe spot while
+    ridden) never stands for this. Its babies out of reach are placed by it in the jump instead: the door's since
+    2026-10-24, the call's and the safe spot's since 2026-11-05 (`BringFarBabies`, docs/foals-called.md).
 - **Checking the way ahead while trotting:** every 0.2 s, as far as it moves in that time plus 0.4. At first it
   checked 0.6 every 0.25 s, and at a 4 u/s trot a foal ran into an obstacle between two checks (found 2026-09-30).
 - **Stuck inside something:** once a second a standing donkey or foal checks whether its spot is blocked. If it is,

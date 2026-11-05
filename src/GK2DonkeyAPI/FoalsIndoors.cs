@@ -316,6 +316,26 @@ namespace GK2DonkeyAPI
                 WakeNow();
             }
 
+            // This mount jumped without a door (called to the keeper, back to a safe spot): its babies out of reach come
+            // with it, placed by it as through a door (the user, 2026-11-05: a left mount called from the house to the yard
+            // and ridden at once left its babies inside; a baby waits for its parent to stand, and a ridden one never does;
+            // docs/foals-called.md). Out of reach: in another scene, or farther than ShuffleFollowMaxDistance from it; the
+            // ones within it trot over as before. Every baby of it, whatever "come indoors" says: a ridden mount's go through
+            // a door with it too. Returns how many came.
+            internal int BringFarBabies(string why)
+            {
+                Instance parent = this;
+                int came = 0;
+                ForEachInstance(f =>
+                {
+                    if (f == parent || f.Parent != parent || f.IsRidden) return;
+                    if (f.SceneId == parent.SceneId && FlatDistanceStatic(f.Position, parent.Position) <= IdleShuffle.FollowMaxDistance.Value) return;
+                    f.FollowParentThroughDoor(why);
+                    came++;
+                });
+                return came;
+            }
+
             // Back to its parent: placed next to the keeper first when it comes out through the door with him, then it
             // follows its parent as usual (trots after it, or catches up out of sight).
             internal void LeaveKeeper(string why, bool place)

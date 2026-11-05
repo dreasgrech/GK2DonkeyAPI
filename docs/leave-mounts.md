@@ -22,6 +22,12 @@ This page is what was found, what was decided and built, and what is left to loo
   turned off, they stayed; now they go home (section 3), one ridden by hand once he is off it, a load with the
   option off too. The row's text says so (11 languages) and "Pick it again in the journal". Hand items 6, 8 and 11.
   **The whole F11 on it (16:54): 1957 passed, 0 failed, 0 warnings.**
+- **The user's test, 2026-11-05 evening: a left mount picked from afar comes without its babies.** All mounts called
+  inside the house, the donkey ridden out (its babies came through the door), then the dragon and the rat picked
+  outside: their babies stayed inside. The cause is the API's call (`ComeTo` moves the mount alone, and a baby waits for
+  a ridden parent that never stands). The same was fixed for doors on 2026-10-24. Investigated in
+  [foals-called.md](foals-called.md). Built the same evening (section 8 there): a called mount's babies out of reach
+  come with it, in or out, as through a door; the safe spot too. Whole F11 green 19:19 (1978/0/0).
 - **First F11.** New: three scenarios named "mounts left in the world" (two in "API, side file, carts,
   colours", one in "Flying") and Saddle Up's row check in the integration tests. Every other scenario runs with the
   switch held to the old way (`HeldForTests`), so green there means the old path is intact, not that the feature ran.

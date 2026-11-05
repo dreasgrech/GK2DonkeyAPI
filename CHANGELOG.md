@@ -12,6 +12,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **A mount you call brings its babies** (2026-11-05): picked in the journal or called with H or G from far away (the
+  house while you are in the yard), its babies came only once you got off it and left it standing. They come with it
+  now. Back to the last safe spot while riding brings them too.
 - **The options have five tabs** (2026-11-05): Keys, Mount, Cart, Safe spot and Freeplay. Mount Behaviour and Sound
   are in the Mount tab now, under their own headings, and keep your settings. The Mount tab's button is called Mount
   Journal, like the window, and "Send your mount away" comes right after the keys that call your mount.
@@ -109,6 +112,10 @@ For players:
 
 For mod authors:
 
+- **`ComeToKeeper` brings the mount's babies** (2026-11-05; docs/foals-called.md): every baby of it in another scene,
+  or farther than `ShuffleFollowMaxDistance` from where it now stands, is placed by it, as the door does for a ridden
+  mount's (a baby waits for its parent to stand, and a mount called for a ride never does). The ones within reach trot
+  over as before. `Mounts.ReturnToSafeSpot` while riding does the same for the ridden mount's.
 - **`MountSettingsPage.Button` takes `visible:`** (2026-11-05): the button shows only while it returns true, as a
   Toggle's `visible` (a button with nothing to do while another row is off). The signature without it is kept for mods
   built against it, every parameter required, so no call is ambiguous (`tests/ApiSurface` snapshot updated).
@@ -162,6 +169,18 @@ For mod authors:
 
 Development:
 
+- **A called mount's babies** (2026-11-05 evening; the user: "from ourside i spawned mount b but its babies stayed in
+  the house"; investigated in docs/foals-called.md first, "lets investigate this a bit more").
+  - The log: the dragon's babies 145 away, asleep, "following" a ridden parent. They came out only once he picked the
+    rat and the dragon stood; the rat's stayed inside to the end.
+  - The cause: `ComeTo` moves the mount alone, and the catch-up waits for an unridden parent to stand. It's the
+    2026-10-24 door bug without a door.
+  - The fix: `Instance.BringFarBabies` (the door's own `FollowParentThroughDoor` for each baby out of reach), called by
+    `ComeTo` and by the safe spot's arrival check.
+  - Tests: the scenario "a called mount brings its babies" (the journal, the ride key, a baby within reach not moved),
+    and a baby in "Back to the last safe spot".
+  - Seen on the way, left for later: a catch-up loop on a blocked slot, and the stuck report firing on asleep babies.
+  - The whole F11 on it (19:19): 1978 passed, 0 failed, 0 warnings.
 - **A save and a load of the mounts left, the whole way, in F11** (2026-11-05 evening; the user: "regarding
   persistency with the new option to keep mounts spawned, are we handling that?"). The new scenario "mounts left in the
   world: a save and a load the whole way" (docs/leave-mounts.md section 5):

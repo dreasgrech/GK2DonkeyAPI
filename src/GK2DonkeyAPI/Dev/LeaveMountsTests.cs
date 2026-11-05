@@ -710,5 +710,132 @@ namespace GK2DonkeyAPI
             yield return Frames(3);
             Check(Mounts.InstancesOf(Owner).Count == 0 && c.LeftMounts.Count == 0, $"every mount of the test went ({Mounts.InstancesOf(Owner).Count} left)");
         }
+
+        private static MountHandle FirstBaby(MountHandle parent)
+        {
+            if (parent == null || !parent.Exists) return null;
+            foreach (MountHandle h in parent.Children) if (h.Exists) return h;
+            return null;
+        }
+
+        private static float Flat(MountHandle a, MountHandle b)
+        {
+            Vector3 p = a.Position, q = b.Position;
+            return new Vector2(p.x - q.x, p.z - q.z).magnitude;
+        }
+
+        // A mount called from afar brings its babies (the user, 2026-11-05 evening: a left mount picked in the yard came
+        // without its babies, which stayed in the house; docs/foals-called.md). Its babies out of reach (farther than
+        // ShuffleFollowMaxDistance) are placed by it in the call itself, though it is ridden at once; one within reach is
+        // left to trot over. Through the journal (a left one taken back) and through the ride key (the mount out, standing
+        // with its baby far off). Their follow on foot is off, as a left mount's babies' is.
+        internal static IEnumerator CalledBabies()
+        {
+            string notHere = WhyNotFromHere();
+            if (notHere != null)
+            {
+                Skip(notHere);
+                yield break;
+            }
+            Action unmake = MakeTestMount();
+            if (unmake == null) yield break;
+            MountCompanion c = Mounts.Companion(Owner);
+            Was was = Take(c);
+            try
+            {
+                c.SendAwayAll();
+                yield return Frames(1);
+                c.TestFamiliesFree = true; // the run holds every companion's mount in place (MountCompanion.HeldForTests): this one's are the test's
+                c.KeepWithSaves = false;
+                c.LeaveMountsInWorld = true;
+                c.OwnOf(MountCatalog.DonkeyId).FoalCount = 1;
+                c.OwnOf(TestMount).FoalCount = 1;
+                c.OwnOf(MountCatalog.DonkeyId).FoalsFollowOnFoot = false;
+                c.OwnOf(TestMount).FoalsFollowOnFoot = false;
+                float reach = IdleShuffle.FollowMaxDistance.Value;
+                Func<Vector3, bool> outOfReach = p => { Vector3 k = Keeper(); return new Vector2(p.x - k.x, p.z - k.z).magnitude > reach + 2f; };
+                c.Skin = TestSkin;
+                MountResult r = c.Use(MountStyle.Ride);
+                yield return Until(() => Mounts.IsMounted && c.Donkey != null && c.Donkey.Mount == TestMount && Babies(c.Donkey) == 1, 12f);
+                Check(r.Ok && waited, $"riding the test mount with its baby ({Said(r)})");
+                if (!waited) yield break;
+                MountHandle a = c.Donkey;
+                c.Skin = "";
+                r = c.UseFromPanel(MountStyle.Ride);
+                yield return Until(() => Mounts.IsMounted && c.Donkey != null && c.Donkey != a && Mounts.Riding?.I == c.Donkey.I && Babies(c.Donkey) == 1, 12f);
+                Check(r.Ok && waited && c.LeftMounts.Count == 1 && c.LeftMounts[0] == a && Babies(a) == 1, $"the donkey ridden, the test mount left with its baby ({Said(r)})");
+                if (!waited) yield break;
+                MountHandle d = c.Donkey;
+                yield return Seconds(0.5f);
+
+                // 1. the journal: the left one's baby out of reach; the left one picked and ridden: its baby is placed by it
+                Vector3? far = Spot(Keeper(), 16f, outOfReach);
+                MountHandle ab = FirstBaby(a);
+                if (!far.HasValue || ab == null)
+                {
+                    Skip(ab == null ? "the test mount left has no baby" : "no open ground out of reach from here for the baby");
+                    yield break;
+                }
+                ab.MoveTo(far.Value);
+                float before = Flat(ab, a);
+                c.Skin = TestSkin; // the switch: the donkey left, the test mount his again
+                r = c.UseFromPanel(MountStyle.Ride); // the call: it comes to him, in this frame
+                float after = Flat(ab, a);
+                Check(r.Ok && before > reach && after < 3f, $"the journal: the left one picked with its baby out of reach: placed by it in the call ({before:F1} -> {after:F1} from it; reach {reach:F0}; {Said(r)})");
+                yield return Until(() => Mounts.IsMounted && Mounts.Riding?.I == a.I, 12f);
+                yield return Seconds(1f);
+                Check(waited && ab.Exists && Flat(ab, a) < 3.5f, $"and it stays by it, ridden ({Flat(ab, a):F1} from it)");
+
+                // 2. within reach: the donkey's baby 6 off, the donkey picked: the baby isn't placed, it trots over
+                MountHandle db = FirstBaby(d);
+                Vector3? near = Spot(Keeper(), 6f);
+                if (db == null || !near.HasValue)
+                {
+                    Info(db == null ? "the donkey left has no baby: the within-reach step skipped" : "no open ground 6 from here: the within-reach step skipped");
+                }
+                else
+                {
+                    db.MoveTo(near.Value);
+                    yield return Frames(1);
+                    Vector3 stood = db.Position;
+                    c.Skin = "";
+                    r = c.UseFromPanel(MountStyle.Ride);
+                    float moved = new Vector2(db.Position.x - stood.x, db.Position.z - stood.z).magnitude;
+                    Check(r.Ok && Flat(db, d) <= reach && moved < 0.01f, $"a baby within reach ({Flat(db, d):F1} from its mount) isn't placed in the call (moved {moved:F2}; {Said(r)})");
+                    yield return Until(() => Mounts.IsMounted && Mounts.Riding?.I == d.I, 12f);
+                    yield return Until(() => db.Exists && Flat(db, d) < 3f, 10f);
+                    Check(waited, $"it trots over to it ({Flat(db, d):F1} from it)");
+                }
+
+                // 3. the ride key: the mount out standing, its baby out of reach: it comes with it
+                MountHandle o = c.Donkey;
+                MountHandle ob = FirstBaby(o);
+                Mounts.Dismount("self-test");
+                yield return Until(() => !Mounts.IsMounted, 5f);
+                yield return Frames(2);
+                far = Spot(Keeper(), 16f, outOfReach);
+                if (ob == null || !far.HasValue)
+                {
+                    Info(ob == null ? "the mount out has no baby: the ride key's step skipped" : "no open ground out of reach from here: the ride key's step skipped");
+                }
+                else
+                {
+                    ob.MoveTo(far.Value);
+                    before = Flat(ob, o);
+                    r = c.Use(MountStyle.Ride);
+                    after = Flat(ob, o);
+                    Check(r.Ok && before > reach && after < 3f, $"the ride key: the mount out called with its baby out of reach: placed by it ({before:F1} -> {after:F1} from it; {Said(r)})");
+                    yield return Until(() => Mounts.IsMounted && Mounts.Riding?.I == o.I, 12f);
+                    Check(waited, "and ridden");
+                }
+            }
+            finally
+            {
+                PutBack(c, was);
+                unmake();
+            }
+            yield return Frames(3);
+            Check(Mounts.InstancesOf(Owner).Count == 0 && c.LeftMounts.Count == 0, $"every mount of the test went ({Mounts.InstancesOf(Owner).Count} left)");
+        }
     }
 }
