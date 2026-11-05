@@ -9,6 +9,7 @@ Includes GK2 Donkey API 0.44.0. Built for game 1.011.1.
 - Added colour rows for the donkey's outline, its legs and mane, and its eyes. Game default keeps them as the game draws them.
 - Babies take their own shade of every part you colour.
 - Fixed a coat colour on Hellfire coming out darker than picked, and a few of the donkey's pixels under a skin taking the harness colour.
+- Fixed a mount turning into a plain donkey when its chosen skin isn't installed: it now wears its own look and keeps your choice.
 - Fixed zombies on the cart showing as an icon during Halloween.
 - Fixed a jump over things sometimes putting you back where you jumped from.
 - Translation fixes in Brazilian Portuguese, Japanese and Korean.

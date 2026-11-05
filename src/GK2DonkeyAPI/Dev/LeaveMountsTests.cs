@@ -837,5 +837,70 @@ namespace GK2DonkeyAPI
             yield return Frames(3);
             Check(Mounts.InstancesOf(Owner).Count == 0 && c.LeftMounts.Count == 0, $"every mount of the test went ({Mounts.InstancesOf(Owner).Count} left)");
         }
+
+        // A mount whose saved skin isn't installed, the mount itself being installed (the user, 2026-11-05, rehearsal B: the
+        // mount picked showed and rode as the donkey; docs/missing-skin.md): its own default look stands in (Looks.StandIn),
+        // so it is that mount, in that look, its baby too, while the saved id stays the choice. The donkey's own missing
+        // skin is still the plain donkey, and a skin of a mount that isn't installed still the donkey.
+        internal static IEnumerator MissingSkin()
+        {
+            string notHere = WhyNotFromHere();
+            if (notHere != null)
+            {
+                Skip(notHere);
+                yield break;
+            }
+            Action unmake = MakeTestMount();
+            if (unmake == null) yield break;
+            MountCompanion c = Mounts.Companion(Owner);
+            Was was = Take(c);
+            string missing = TestMount + "/selftest.not-installed";
+            string donkeyMissing = MountCatalog.DonkeyId + "/selftest.not-installed";
+            const string noMount = "selftest.no-such-mount/default";
+            try
+            {
+                // the rule
+                Check(Looks.StandIn(missing) == TestSkin && Looks.StandIn(TestSkin) == TestSkin,
+                    $"a skin not installed of an installed mount: its own look stands in ({Looks.StandIn(missing)}); an installed one is itself");
+                Check(Looks.StandIn(donkeyMissing) == donkeyMissing && Looks.StandIn(noMount) == noMount && Looks.StandIn("") == "",
+                    "the donkey's missing skin, a skin of a mount not installed and no skin are themselves (the donkey, as before)");
+                Check(MountCompanion.MountOfSkin(missing) == TestMount && MountCompanion.MountOfSkin(donkeyMissing) == MountCatalog.DonkeyId
+                    && MountCompanion.MountOfSkin(noMount) == MountCatalog.DonkeyId,
+                    $"the companion's mount for them: the test mount, the donkey, the donkey ({MountCompanion.MountOfSkin(missing)}, {MountCompanion.MountOfSkin(donkeyMissing)}, {MountCompanion.MountOfSkin(noMount)})");
+
+                // live: the test mount called with a missing skin
+                c.SendAwayAll();
+                yield return Frames(1);
+                c.TestFamiliesFree = true; // the run holds every companion's mount in place (MountCompanion.HeldForTests): this one's are the test's
+                c.KeepWithSaves = false;
+                c.LeaveMountsInWorld = false;
+                c.OwnOf(TestMount).FoalCount = 1;
+                c.Skin = missing;
+                MountResult r = c.Use(MountStyle.Ride);
+                yield return Until(() => Mounts.IsMounted && c.Donkey != null && Babies(c.Donkey) == 1 && !c.Donkey.I.LooksRig.Settling, 12f);
+                Check(r.Ok && waited, $"called and ridden with its baby ({Said(r)})");
+                if (!waited) yield break;
+                MountHandle d = c.Donkey, baby = FirstBaby(d);
+                Check(c.MountId == TestMount && d.Mount == TestMount, $"it is the test mount, not the donkey (the companion's {c.MountId}, the instance's {d.Mount})");
+                Check(d.I.LooksRig.WornDef?.Id == TestSkin, $"it wears the mount's own look ({d.I.LooksRig.WornDef?.Id ?? "the game's donkey"})");
+                Check(SkinSet(d) == missing && c.Skin == missing, $"the choice is kept: its Skin {SkinSet(d)}, the companion's {c.Skin}");
+                Check(baby != null && baby.Mount == TestMount, $"its baby is the test mount's too ({baby?.Mount ?? "no baby"})");
+
+                // the donkey's own missing skin: the plain donkey, as before (off: changed in place)
+                Mounts.Dismount("self-test");
+                yield return Until(() => !Mounts.IsMounted, 5f);
+                c.Skin = donkeyMissing;
+                yield return Until(() => c.Donkey != null && c.Donkey.Mount == MountCatalog.DonkeyId && !c.Donkey.I.LooksRig.Settling, 6f);
+                Check(waited && c.MountId == MountCatalog.DonkeyId && c.Donkey.I.LooksRig.WornDef == null,
+                    $"the donkey's missing skin: the plain donkey ({c.Donkey?.Mount}, wearing {c.Donkey?.I.LooksRig.WornDef?.Id ?? "the game's donkey"})");
+            }
+            finally
+            {
+                PutBack(c, was);
+                unmake();
+            }
+            yield return Frames(3);
+            Check(Mounts.InstancesOf(Owner).Count == 0, $"every mount of the test went ({Mounts.InstancesOf(Owner).Count} left)");
+        }
     }
 }

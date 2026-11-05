@@ -1072,8 +1072,8 @@ namespace GK2DonkeyAPI.Api
         public static string PinnedBy(MountCompanion companion, string tuningKey)
         {
             if (companion == null || string.IsNullOrEmpty(tuningKey)) return null;
-            Looks.SkinDef d = Looks.Find(companion.Skin);
-            if (d == null || d.Unavailable != null) return null; // not installed, or set aside: the donkey comes instead, which pins nothing
+            Looks.SkinDef d = Looks.Find(Looks.StandIn(companion.Skin)); // a skin not installed of a mount that is: its own look's (docs/missing-skin.md)
+            if (d == null || d.Unavailable != null) return null; // not installed (nor its mount), or set aside: the donkey comes instead, which pins nothing
             Catalog.Entry k = d.Mount;
             if (k == null || k == Catalog.Donkey) return null;
             if (!Looks.Rig.MountMayPin(tuningKey)) return null; // a key a mount may not pin is refused at the merge: the row stays live
@@ -1423,11 +1423,13 @@ namespace GK2DonkeyAPI.Api
             if (!isFirst) SeedFromMount(mine, skinId, mountId, "_" + skinId, mountSfx);
         }
 
-        // The Skin row's value for a mount (its first skin when the row has none).
+        // The skin a mount's Skin row stands for (its first skin when the row has none): the look worn for it, so a skin not
+        // installed of a mount that is gives that mount's own, whose rows the windows show (docs/missing-skin.md). The row
+        // itself keeps the choice.
         internal string SkinChosen(string mountId)
         {
             string id = string.IsNullOrEmpty(mountId) ? MountCatalog.DonkeyId : mountId;
-            if (skinRows.TryGetValue(id, out ConfigEntry<string> row) && !string.IsNullOrEmpty(row.Value)) return row.Value;
+            if (skinRows.TryGetValue(id, out ConfigEntry<string> row) && !string.IsNullOrEmpty(row.Value)) return Looks.StandIn(row.Value);
             return Looks.FirstSkinOf(id);
         }
 

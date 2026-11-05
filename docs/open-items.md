@@ -73,13 +73,14 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
-- **After the 0.16.0 release, a bug to fix (the user, 2026-11-05: "we fix it afterwards not now"): a mount whose saved
-  skin isn't installed is drawn as the plain donkey.** Seen in rehearsal B: the 0.15.0 fixture saves
-  `saddleup-dragon.dragon/default-x` (a made-up id), and with the dragon picked the journal's picture was a donkey with
-  the cart. The Skin row rightly said "Default x (not installed)". `Looks.cs` ~3014 (the skin tick) draws "the donkey as
-  the game draws it" for any missing id. That's right for the donkey's own skins (a removed Donkey Skin Pack), wrong for
-  another mount: it should wear that mount's own default look and keep the saved choice. Players meet it only with a
-  dragon or Gerry skin from a pack they later remove (none exists yet). Check the ridden one too, not just the picture.
+- **A mount whose saved skin isn't installed** (found in rehearsal B, 2026-11-05: the dragon picked was drawn and ridden
+  as the plain donkey). The user moved it into 0.16.0 ("as part of the same major update ... public release will wait").
+  - Investigated and built 2026-11-05 night, deployed 22:13 (docs/missing-skin.md): one rule, `Looks.StandIn`, in all
+    eleven places that fell back to the donkey.
+  - The whole F11 green 23:20 (2000 passed, 0 failed, 0 warnings) with the twelfth place fixed; seen by hand ~23:03 (the
+    user: "ok seems fixed now").
+  - Then by hand: rehearsal B again (the 0.15.0 fixture's dragon `default-x`: the journal's picture and the ride are the
+    dragon in its own look, and the Skin row still says "Default x (not installed)").
 
 - **Seen by hand 2026-11-05 evening** (the user, after the F11 of 19:19: "hand tests ran well too"): the three entries
   of this release below (the five tabs, the mounts left in the world, a called mount's babies, docs/foals-called.md).

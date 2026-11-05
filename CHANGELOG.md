@@ -16,6 +16,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **A mount whose chosen skin isn't installed is still itself** (2026-11-05): with the skin's pack removed (or a skin a
+  pack renamed), the mount turned into a plain donkey: drawn as one, ridden as one, its babies too. It wears its own
+  look now and keeps your choice for when the skin is back. The donkey's own skins are as before.
 - **A mount you call brings its babies** (2026-11-05): picked in the journal or called with H or G from far away (the
   house while you are in the yard), its babies came only once you got off it and left it standing. They come with it
   now. Back to the last safe spot while riding brings them too.
@@ -116,6 +119,12 @@ For players:
 
 For mod authors:
 
+- **A skin id that names no installed skin, its mount installed, wears that mount's own default** (2026-11-05;
+  docs/missing-skin.md). Before, it fell back to the donkey in eleven places: the drawing, the instance's mount, the
+  companion's `MountId`, its look and the events that re-apply it, a left one's look, `PinnedBy`, the page's skin rows,
+  the spawn's cart rule, the warm sheet and the record's label. Each now looks up `Looks.StandIn(id)`. The saved id stays
+  where it is stored (the companion's `Skin`, each instance's `Skin`, the cfg, the side file). The donkey's own skins, a
+  skin of a mount that isn't installed and a set-aside skin are as before.
 - **`ComeToKeeper` brings the mount's babies** (2026-11-05; docs/foals-called.md): every baby of it in another scene,
   or farther than `ShuffleFollowMaxDistance` from where it now stands, is placed by it, as the door does for a ridden
   mount's (a baby waits for its parent to stand, and a mount called for a ride never does). The ones within reach trot
@@ -173,6 +182,20 @@ For mod authors:
 
 Development:
 
+- **The missing-skin fallback** (2026-11-05 night; found in rehearsal B, where the 0.15.0 fixture's made-up dragon skin
+  drew the dragon as a donkey; the user: "let's tackle this bug ... as part of the same major update"; docs/missing-skin.md):
+  - An audit of every skin lookup by id found eleven places falling back to the donkey; all eleven now look up
+    `Looks.StandIn`.
+  - The rig's set-aside recheck is untouched, since the stand-in covers only an id that names no skin.
+  - Tests: the scenario "a mount whose saved skin isn't installed ..." (the rule's cases, then live: that mount in its
+    own look, its baby too, the choice kept, and the donkey's missing skin still the plain donkey), and the integration
+    scenario on Saddle Up's dragon row.
+  - The whole F11 on it (22:50): 1998 passed, 0 failed, 0 warnings (the 0.16.0 fixture read by both upgrade tests too).
+  - The user's hand test then found a twelfth place: the rig's check of a sheet still building compared it with the saved
+    id, so a slow stand-in (Gerry's, 44 frames) was let go at every refresh and built again, the journal's picture
+    stuck. Fixed (`Find(StandIn(stillWant))`); every read of a saved `Skin` value checked again; the integration
+    scenario "a slow stand-in ... is worn though its rig is refreshed every frame".
+  - The whole F11 on it (23:20): 2000 passed, 0 failed, 0 warnings.
 - **The 0.16.0 release** (2026-11-05; the user's picks: 0.16.0 / API 0.44.0, both packs as 1.2.0, Critters held):
   - Saddle Up's API minimum is 0.44.0, and its out-of-line calls for an older API (`ToneRows`, `RegionRows`,
     `LeaveMountsRow`) are gone.

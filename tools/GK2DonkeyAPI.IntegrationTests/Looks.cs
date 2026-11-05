@@ -1222,5 +1222,79 @@ namespace GK2DonkeyAPI.IntegrationTests
             }
             yield break;
         }
+
+        // Saddle Up's page with the dragon's Skin row naming a skin that isn't installed (docs/missing-skin.md; the user's
+        // rehearsal B, 2026-11-05: the 0.15.0 fixture's made-up dragon skin): the row keeps the choice, and the skin its rows
+        // stand for (SkinChosen) is the dragon's own default, so the journal's colours window shows that look's rows. Put
+        // back as it was.
+        internal static IEnumerator SaddleUpMissingSkinRows()
+        {
+            const string dragon = "saddleup-dragon.dragon";
+            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
+            Catalog.Entry k = Catalog.Find(dragon);
+            if (saddle == null || k == null)
+            {
+                Info(saddle == null ? "Saddle Up's page isn't shown: its missing-skin rows not checked" : "the dragon's pack is not installed: its missing-skin rows not checked");
+                yield break;
+            }
+            var row = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "Skin_" + dragon)?.Entry as ConfigEntry<string>;
+            Check(row != null, "Saddle Up has the dragon's Skin row");
+            if (row == null) yield break;
+            string was = row.Value, missing = dragon + "/selftest-not-installed", own = Looks.DefaultSkinOf(k);
+            try
+            {
+                row.Value = missing;
+                yield return null;
+                Check(row.Value == missing && saddle.SkinChosen(dragon) == own,
+                    $"the row keeps the choice ({row.Value}); its rows stand for the dragon's own look ({saddle.SkinChosen(dragon)}, its default {own})");
+                bool hasRows = saddle.Rows.Exists(x => x.IsLook && x.Entry != null && x.Entry.Definition.Key.StartsWith("Coat_" + dragon, StringComparison.Ordinal));
+                Check(hasRows, "and that look has its colour rows on the page (its Coat row)");
+            }
+            finally
+            {
+                row.Value = was;
+            }
+            Check(row.Value == was, "put back");
+        }
+
+        // A stand-in that takes many frames to build (Gerry's, ~44 frames from the game's own pictures), its rig refreshed
+        // every frame as the Mounts panel's picture is (the user's journal, 2026-11-05: Gerry picked with a skin not
+        // installed, his look built, let go at the next refresh and built again, the picture stuck on the mount before;
+        // the rig compared the sheet being built with the saved id, which names nothing; docs/missing-skin.md). It must be
+        // worn within a few seconds.
+        internal static IEnumerator MissingSkinSlowBuild()
+        {
+            const string gerry = "saddleup.gerry";
+            Catalog.Entry k = Catalog.Find(gerry);
+            if (k == null)
+            {
+                Info("Gerry isn't registered (Saddle Up not loaded): the slow stand-in not checked");
+                yield break;
+            }
+            string own = Looks.DefaultSkinOf(k), missing = gerry + "/selftest-not-installed";
+            Vector3 at = Spot(Keeper(), 3f) ?? Keeper();
+            MountHandle h = Mounts.Spawn(Owner, new MountSpawn { Position = at, Skin = missing, Rideable = false });
+            if (h == null)
+            {
+                Check(false, "a mount spawned with Gerry's missing skin");
+                yield break;
+            }
+            try
+            {
+                yield return Until(() => h.IsReady, 6f);
+                Check(waited && h.Mount == gerry, $"spawned with a skin not installed, it is Gerry ({h.Mount})");
+                float until = Time.realtimeSinceStartup + 8f;
+                while (h.Exists && h.I.LooksRig.WornDef?.Id != own && Time.realtimeSinceStartup < until)
+                {
+                    h.I.LooksRig.MarkDirty(); // the panel's picture refreshes it this often (ApplyLook, the colours' events)
+                    yield return null;
+                }
+                Check(h.Exists && h.I.LooksRig.WornDef?.Id == own, $"his own look is worn, though refreshed every frame while it was built ({h.I.LooksRig.WornDef?.Id ?? "none worn"})");
+            }
+            finally
+            {
+                if (h.Exists) h.Remove();
+            }
+        }
     }
 }

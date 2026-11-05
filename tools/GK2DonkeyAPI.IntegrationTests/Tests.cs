@@ -24,6 +24,8 @@ namespace GK2DonkeyAPI.IntegrationTests
             new Scenario { Group = GroupLooks, Name = "effect: the ring's size by the worn skin's drawn width (the test hook)", Body = SkinEffect },
             new Scenario { Group = GroupLooks, Name = "front layer: the dragon's near wing stays in front of the rider (a readback)", Body = FrontLayer },
             new Scenario { Group = GroupLooks, Name = "preview: the cart sits at the new mount's hitch gap as soon as the mount is switched", Body = PreviewGap },
+            new Scenario { Group = GroupLooks, Name = "skins: Saddle Up's dragon with a skin not installed: the row keeps the choice, its colour rows are the dragon's own look's", Body = SaddleUpMissingSkinRows },
+            new Scenario { Group = GroupLooks, Name = "skins: a slow stand-in (Gerry with a skin not installed) is worn though its rig is refreshed every frame while it builds", Body = MissingSkinSlowBuild },
             new Scenario { Group = GroupLooks, Name = "colours: the Coat row reaches every body colour of every shipped mount, and no other", Body = CoatEveryBuiltIn },
             new Scenario { Group = GroupLooks, Name = "colours: the Second tone row reaches the rat's pink parts, the snail's shell and the dragon's belly, and is left out elsewhere", Body = SecondTone },
             new Scenario { Group = GroupLooks, Name = "colours: the outline is a part of its own: its Outline row colours it, Legs and mane and the Coat don't (the donkey, Hellfire; the dragon's outline no row)", Body = OutlineAsDrawn },

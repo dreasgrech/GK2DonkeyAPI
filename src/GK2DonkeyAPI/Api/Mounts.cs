@@ -529,7 +529,7 @@ namespace GK2DonkeyAPI.Api
             // the cart rule (docs/mounts-design.md §3): a mount that can't pull the cart is not spawned with one
             if (spec.WithCart && spec.Donkey && !string.IsNullOrEmpty(skinId))
             {
-                GK2DonkeyAPI.Looks.SkinDef sd = GK2DonkeyAPI.Looks.Find(skinId);
+                GK2DonkeyAPI.Looks.SkinDef sd = GK2DonkeyAPI.Looks.Find(GK2DonkeyAPI.Looks.StandIn(skinId)); // the look worn for it (docs/missing-skin.md)
                 if (sd != null && !sd.Mount.Cart)
                 {
                     Plugin.Log.LogInfo($"API: {ownerId} could not spawn with a cart: a {sd.Mount.NounText} can't pull the cart.");

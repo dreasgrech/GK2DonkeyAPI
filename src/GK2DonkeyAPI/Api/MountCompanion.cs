@@ -308,9 +308,10 @@ namespace GK2DonkeyAPI.Api
             {
                 // the skin's own colours are known now: the custom colours' lightness and the tones' anchor to them, the
                 // worn skin's and the Mounts panel picture's (a skin previewed while its sheet built)
-                bool worn = !string.IsNullOrEmpty(skin) && string.Equals(id, skin.Trim(), StringComparison.OrdinalIgnoreCase);
-                if (worn || (paper != null && SameSkin(id, PaperSkin))) ApplyLook();
-                foreach (Family f in LeftNow()) if (SameSkin(id, WornSkin(f.Donkey))) ApplyLeftLook(f); // a mount left wearing it
+                // (each by the look worn for it: a skin not installed wears its mount's own, docs/missing-skin.md)
+                bool worn = !string.IsNullOrEmpty(skin) && SameSkin(id, Worn(skin));
+                if (worn || (paper != null && SameSkin(id, Worn(PaperSkin)))) ApplyLook();
+                foreach (Family f in LeftNow()) if (SameSkin(id, Worn(WornSkin(f.Donkey)))) ApplyLeftLook(f); // a mount left wearing it
             };
             Mounts.Hitched += OnHitched;
             Mounts.Unhitched += OnUnhitched;
@@ -374,17 +375,23 @@ namespace GK2DonkeyAPI.Api
             return o;
         }
 
-        // The mount the companion's skin is a look of (the donkey without a skin, or with one that isn't installed).
+        // The mount the companion's skin is a look of (the donkey without a skin, or with one whose mount isn't installed;
+        // a skin not installed of a mount that is: that mount, wearing its own look, docs/missing-skin.md).
         public string MountId => MountOfSkin(skin);
 
         internal static string MountOfSkin(string skinId)
         {
             string s = (skinId ?? "").Trim();
             if (s.Length == 0 || s.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return MountCatalog.DonkeyId;
-            return Mounts.Looks.Find(s)?.Mount ?? MountCatalog.DonkeyId;
+            return Mounts.Looks.Find(Worn(s))?.Mount ?? MountCatalog.DonkeyId;
         }
 
-        private MountLook Current => LookOf(skin);       // the worn skin's look
+        // The look worn for a skin id: itself, or for a skin not installed of a mount that is, that mount's own default
+        // (Looks.StandIn, docs/missing-skin.md). The saved id stays the companion's and its mounts'; what is drawn, whose
+        // colours apply and which rows show follow this.
+        private static string Worn(string skinId) => GK2DonkeyAPI.Looks.StandIn(skinId);
+
+        private MountLook Current => LookOf(Worn(skin));       // the worn skin's look (a stand-in's own, docs/missing-skin.md)
         private MountOwn CurrentOwn => OwnOf(MountId);   // the current mount's own
 
         // One of a mount's own settings changed: applied when it is the current mount's.
@@ -409,10 +416,10 @@ namespace GK2DonkeyAPI.Api
         // panel's preview's.
         internal void LookChanged(MountLook l)
         {
-            bool worn = SameSkin(l.SkinId, skin);
+            bool worn = SameSkin(l.SkinId, Worn(skin)); // a stand-in's look is the worn one (docs/missing-skin.md)
             if (worn) ApplyRide();
-            if (worn || SameSkin(l.SkinId, PaperSkin)) ApplyLook();
-            foreach (Family f in LeftNow()) if (SameSkin(l.SkinId, WornSkin(f.Donkey))) ApplyLeftLook(f); // a mount left wearing it
+            if (worn || SameSkin(l.SkinId, Worn(PaperSkin))) ApplyLook();
+            foreach (Family f in LeftNow()) if (SameSkin(l.SkinId, Worn(WornSkin(f.Donkey)))) ApplyLeftLook(f); // a mount left wearing it
         }
         private static bool SameSkin(string a, string b)
         {
@@ -1844,8 +1851,9 @@ namespace GK2DonkeyAPI.Api
             var tones = k.Tones;
             // the paper: the Mounts panel's choice while it is open (PaperSkin), with that mount's look; else the same
             string ps = PaperSkin;
+            string pw = Worn(ps); // the look worn for it (a stand-in's, docs/missing-skin.md); ps stays its Skin
             bool sameOnPaper = string.Equals(ps, skin, StringComparison.Ordinal);
-            MountLook pl = sameOnPaper ? l : LookOf(ps); // the previewed skin's own look (per skin since 0.41.0)
+            MountLook pl = sameOnPaper ? l : LookOf(pw); // the previewed skin's own look (per skin since 0.41.0)
             if (paper != null)
             {
                 // the previewed skin's own lantern (part of the look, 0.41.0): the paper's own overrides, so the worn skin's
@@ -1854,14 +1862,14 @@ namespace GK2DonkeyAPI.Api
                 paper.Overrides["LanternLightDayDim"] = pl.LanternByDay ? Plugin.Cart.LanternLightDayDim.Entry.Value : 0f;
                 paper.OverrideOwners["LanternShow"] = OwnerId;
                 paper.OverrideOwners["LanternLightDayDim"] = OwnerId;
-                OnPaper(CoatKeys, sameOnPaper ? coatKeys : Look(CoatPreset(pl.Coat, pl.CustomCoat, "coat", ps)));
-                OnPaper(HarnessKeys, sameOnPaper ? harnessKeys : Look(HarnessPreset(pl.Harness, pl.CustomHarness, "harness", ps)));
-                OnPaper(MuzzleKeys, sameOnPaper ? muzzleKeys : Look(MuzzlePreset(pl.Muzzle, pl.CustomMuzzle, "second tone", ps)));
-                OnPaper(DarkKeys, sameOnPaper ? darkKeys : Look(SkinTones.RegionValues(pl.Dark, "Dark", ps)));
-                OnPaper(EyeKeys, sameOnPaper ? eyeKeys : Look(SkinTones.RegionValues(pl.Eye, "Eye", ps)));
-                OnPaper(OutlineKeys, sameOnPaper ? outlineKeys : Look(SkinTones.RegionValues(pl.Outline, "Outline", ps)));
+                OnPaper(CoatKeys, sameOnPaper ? coatKeys : Look(CoatPreset(pl.Coat, pl.CustomCoat, "coat", pw)));
+                OnPaper(HarnessKeys, sameOnPaper ? harnessKeys : Look(HarnessPreset(pl.Harness, pl.CustomHarness, "harness", pw)));
+                OnPaper(MuzzleKeys, sameOnPaper ? muzzleKeys : Look(MuzzlePreset(pl.Muzzle, pl.CustomMuzzle, "second tone", pw)));
+                OnPaper(DarkKeys, sameOnPaper ? darkKeys : Look(SkinTones.RegionValues(pl.Dark, "Dark", pw)));
+                OnPaper(EyeKeys, sameOnPaper ? eyeKeys : Look(SkinTones.RegionValues(pl.Eye, "Eye", pw)));
+                OnPaper(OutlineKeys, sameOnPaper ? outlineKeys : Look(SkinTones.RegionValues(pl.Outline, "Outline", pw)));
                 OnPaper(LookKeys, sameOnPaper ? skinKeys : SkinKeys(ps));
-                SkinTones.Apply(paper, sameOnPaper ? tones : SkinTones.ValuesOf(pl, ps), OwnerId, ps);
+                SkinTones.Apply(paper, sameOnPaper ? tones : SkinTones.ValuesOf(pl, pw), OwnerId, pw);
                 paper.LooksRig.MarkDirty();
             }
             var paperPaint = Look(PaintPreset(pl.Paint, pl.CustomPaint, "cart paint"));
@@ -1902,23 +1910,28 @@ namespace GK2DonkeyAPI.Api
             internal Dictionary<string, Colors.RegionTweak> Tones;
         }
 
-        private static LookSet LookSetOf(MountLook l, string skinId) => new LookSet
+        // skinId: the skin chosen, kept as the instance's Skin; its parts and tones are the look worn for it (a stand-in's,
+        // docs/missing-skin.md)
+        private static LookSet LookSetOf(MountLook l, string skinId) => LookSetOf(l, skinId, Worn(skinId));
+
+        private static LookSet LookSetOf(MountLook l, string skinId, string look) => new LookSet
         {
-            Coat = Look(CoatPreset(l.Coat, l.CustomCoat, "coat", skinId)),
-            Harness = Look(HarnessPreset(l.Harness, l.CustomHarness, "harness", skinId)),
-            Muzzle = Look(MuzzlePreset(l.Muzzle, l.CustomMuzzle, "second tone", skinId)),
+            Coat = Look(CoatPreset(l.Coat, l.CustomCoat, "coat", look)),
+            Harness = Look(HarnessPreset(l.Harness, l.CustomHarness, "harness", look)),
+            Muzzle = Look(MuzzlePreset(l.Muzzle, l.CustomMuzzle, "second tone", look)),
             // the dark parts and the eyes, where the look names them (their rows: ToneRows), as a skin's own part is coloured
-            Dark = Look(SkinTones.RegionValues(l.Dark, "Dark", skinId)),
-            Eye = Look(SkinTones.RegionValues(l.Eye, "Eye", skinId)),
-            Outline = Look(SkinTones.RegionValues(l.Outline, "Outline", skinId)),
+            Dark = Look(SkinTones.RegionValues(l.Dark, "Dark", look)),
+            Eye = Look(SkinTones.RegionValues(l.Eye, "Eye", look)),
+            Outline = Look(SkinTones.RegionValues(l.Outline, "Outline", look)),
             SkinKeys = SkinKeys(skinId),
-            Tones = SkinTones.ValuesOf(l, skinId), // the skin's own tones (docs/mount-colours.md section 7)
+            Tones = SkinTones.ValuesOf(l, look), // the skin's own tones (docs/mount-colours.md section 7)
         };
 
         // A family's donkey and babies in a skin's look (the current one's from ApplyLook, a left one's from ApplyLeftLook):
         // the donkey wears it, each baby its own shade of it (FoalVariety.cs).
         private void LookOnFamily(Family fam, string skinId, MountLook l, MountOwn mountOwn, LookSet k)
         {
+            string look = Worn(skinId); // the look worn for the skin chosen (a stand-in's, docs/missing-skin.md)
             MountHandle d = fam.Donkey;
             if (d != null && d.Exists)
             {
@@ -1929,12 +1942,12 @@ namespace GK2DonkeyAPI.Api
                 Instance(d, EyeKeys, k.Eye);
                 Instance(d, OutlineKeys, k.Outline);
                 Instance(d, LookKeys, k.SkinKeys);
-                SkinTones.Apply(d.I, k.Tones, OwnerId, skinId);
+                SkinTones.Apply(d.I, k.Tones, OwnerId, look);
             }
             // a baby's own shade of the dark parts only where they are a part of the look it wears (named: the donkey's
             // mane, legs and ears); where that look names no Dark, its Dark is the outline, the drawing's line, which no
             // colour reaches (docs/mount-colours.md 7.11)
-            bool babyDarkIsPart = SkinRegions.NameTerm(mountOwn.FoalsWearSkin ? skinId : MountLooks.DonkeyId, "Dark") != null;
+            bool babyDarkIsPart = SkinRegions.NameTerm(mountOwn.FoalsWearSkin ? look : MountLooks.DonkeyId, "Dark") != null;
             var noSkin = new Dictionary<string, object>();
             for (int i = 0; i < fam.Foals.Length; i++)
             {
@@ -1954,7 +1967,7 @@ namespace GK2DonkeyAPI.Api
                     Instance(h, LookKeys, mountOwn.FoalsWearSkin ? k.SkinKeys : noSkin);
                     // the parent's tones on a baby in its skin, each given a colour in the baby's own shade (as its coat); one
                     // not in the skin is a plain donkey (no tones of its own)
-                    SkinTones.Apply(h.I, mountOwn.FoalsWearSkin && k.Tones != null ? SkinTones.ValuesOf(l, skinId, own) : null, OwnerId, skinId);
+                    SkinTones.Apply(h.I, mountOwn.FoalsWearSkin && k.Tones != null ? SkinTones.ValuesOf(l, look, own) : null, OwnerId, look);
                 }
             }
         }
@@ -1967,13 +1980,14 @@ namespace GK2DonkeyAPI.Api
             {
                 return;
             }
-            string worn = WornSkin(f.Donkey);
+            string chosen = WornSkin(f.Donkey); // its Skin: the choice, kept
+            string worn = Worn(chosen);         // the look it wears for it (a stand-in's, docs/missing-skin.md)
             if (!SameSkin(worn, MountLooks.DonkeyId) && Mounts.Looks.Find(worn) == null)
             {
-                return; // its skin's pack is away: its colours stay as they are until the skin's rows are back
+                return; // its skin's pack is away (its mount's too): its colours stay as they are until the skin's rows are back
             }
             MountLook l = LookOf(worn);
-            LookOnFamily(f, worn, l, OwnOf(f.MountId), LookSetOf(l, worn));
+            LookOnFamily(f, chosen, l, OwnOf(f.MountId), LookSetOf(l, chosen));
         }
 
         private static Dictionary<string, object> Look(Dictionary<string, object> d) => d ?? new Dictionary<string, object>();

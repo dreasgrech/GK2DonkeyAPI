@@ -1739,6 +1739,25 @@ namespace GK2DonkeyAPI
             return skins.Count > 0 ? skins[0].Id : MountLooks.DonkeyId;
         }
 
+        // A saved skin id that names no skin while its mount is installed (the skin's pack removed, a pack's skin renamed,
+        // a hand-edited cfg; the user, 2026-11-05: a mount picked showed as the donkey; docs/missing-skin.md): that
+        // mount's own default look stands in for it, so the mount is still itself. Any other id is itself, as before: a
+        // skin that is installed (worn, or set aside), the donkey's own ids and skins, a skin whose mount isn't installed.
+        // The saved id is kept wherever it is stored; every place that turns it into what is drawn, what the mount is or
+        // whose colours apply looks up this instead.
+        internal static string StandIn(string id)
+        {
+            string s = (id ?? "").Trim();
+            if (s.Length == 0 || s.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) || Find(s) != null) return id;
+            int slash = s.IndexOf('/');
+            if (slash <= 0) return id;
+            string m = s.Substring(0, slash);
+            Catalog.Entry k = Catalog.Find(m) ?? Catalog.FindShort(m);
+            if (k == null || k == Catalog.Donkey) return id;
+            string def = DefaultSkinOf(k);
+            return Find(def) != null ? def : id;
+        }
+
         internal const string DefaultLabel = "Default";
 
         // For a mount's Skin dropdown: "Default" first (DefaultSkinOf), then its other skins by name.
@@ -2624,7 +2643,7 @@ namespace GK2DonkeyAPI
         internal static void TickWarm()
         {
             string id = (WarmWanted ?? "").Trim();
-            SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(id);
+            SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(StandIn(id)); // the look worn for it (docs/missing-skin.md)
             if (d != null && d.Unavailable != null) d = null;
             if (warm != null && warm.Def == d && warm.Parent == d.Parent) return; // a new default is a new sheet
             if (warm == null && d == null) return;
@@ -2863,7 +2882,7 @@ namespace GK2DonkeyAPI
                         want = (Skin.Value ?? "").Trim();
                     }
                     if (want.Length == 0 || want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return null;
-                    SkinDef d = Find(want);
+                    SkinDef d = Find(StandIn(want)); // a skin not installed, of a mount that is: its own look (docs/missing-skin.md)
                     if (d == null || d.Unavailable != null || d.Base != viewBase) return null; // set aside (its game frames gone): the donkey comes instead, in mount too, not only in the drawing
                     if (Catalog.Find(d.MountId) == null) return null; // a skin whose mount isn't installed: the donkey as it is, never the skin on the donkey's facts (the choice is kept)
                     if (owner.ViewScale != 1f && !d.Mount.Foals) return null;
@@ -2975,7 +2994,7 @@ namespace GK2DonkeyAPI
                         {
                             stillWant = (Skin.Value ?? "").Trim();
                         }
-                        if (ReferenceEquals(pending.Def, Find(stillWant)) && pending.Parent == pending.Def.Parent) return; // the same skin (the same definition: a replaced or reloaded one is new and must be switched to), still building: a colour or mount change doesn't throw the half-built sheet away
+                        if (ReferenceEquals(pending.Def, Find(StandIn(stillWant))) && pending.Parent == pending.Def.Parent) return; // the same skin (a stand-in for one not installed: the look being built, docs/missing-skin.md; the user's journal, 2026-11-05: compared with the saved id, a stand-in still building was let go at every refresh and built again, the picture stuck on the mount before) or (the same definition: a replaced or reloaded one is new and must be switched to), still building: a colour or mount change doesn't throw the half-built sheet away
                         Looks.Release(pending); // the choice changed again before it was ready
                         pending = null;
                     }
@@ -2997,7 +3016,14 @@ namespace GK2DonkeyAPI
                 Loaded next = null;
                 if (want.Length > 0 && !want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))
                 {
-                    SkinDef d = Find(want);
+                    // a skin not installed, of a mount that is: the mount's own look stands in (docs/missing-skin.md), the
+                    // choice kept; worn as any skin below (set aside, another base, a foal's rule: as that look's own)
+                    string standIn = StandIn(want);
+                    SkinDef d = Find(standIn);
+                    if (d != null && !string.Equals(standIn, want, StringComparison.OrdinalIgnoreCase) && missingIdLogged.Add(want))
+                    {
+                        Plugin.Log.LogInfo($"Looks: no skin '{want}' is installed (its mod or pack isn't loaded); the {d.Mount.NounText}'s own look '{d.Id}' is worn instead (the choice is kept and comes back with it).");
+                    }
                     if (d != null && d.Unavailable != null)
                     {
                         if (RecheckGameSource(d))

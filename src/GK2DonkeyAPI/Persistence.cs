@@ -498,7 +498,7 @@ namespace GK2DonkeyAPI
                     {
                         if (s.Length >= 3 && s[0] == "Skin" && !string.IsNullOrEmpty(s[2]))   // a set is [key, owner, value]
                         {
-                            Looks.SkinDef sd = Looks.Find(s[2]);
+                            Looks.SkinDef sd = Looks.Find(Looks.StandIn(s[2])); // the look worn for it (docs/missing-skin.md)
                             Catalog.Entry k = sd != null && sd.Unavailable == null ? sd.Mount : null; // set aside: it is a donkey in play
                             if (k != null && k != Catalog.Donkey) noun = k.NounText;
                             break;
