@@ -219,6 +219,10 @@ Development:
     exact swap's 48: on the cube for every 0.15.0 player, so the harness-colour pixels were a public bug and stay in
     the note). The Workshop texts, untouched for 0.16.0 until then, brought in step with the Nexus ones; the Saddle Up
     Workshop changenote names the missing-skin fix; Saddle Up's README's Skin and Colours rows.
+  - **The pages' new pictures** (2026-11-06): eight screenshots, cut on each window's own frame into the 560-wide
+    page pictures and the Steam gallery's full-size JPEGs (the options window is a new size: 392,132-2168,1308). The
+    leave-mounts picture shows the unreleased critters too (the user: "i want to show the unreleased there"), and its
+    paragraph says they come in the Critters Mount Pack later.
 - **A called mount's babies** (2026-11-05 evening; the user: "from ourside i spawned mount b but its babies stayed in
   the house"; investigated in docs/foals-called.md first, "lets investigate this a bit more").
   - The log: the dragon's babies 145 away, asleep, "following" a ridden parent. They came out only once he picked the
