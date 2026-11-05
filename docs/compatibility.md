@@ -142,7 +142,11 @@ changelog line that says it reaches new installs only.
   the 0.13.0 and 0.15.0 Saddle Up fixtures kept their 46 and 69 per-skin colour and lantern rows at the defaults, so a
   lost per-skin look didn't show. Flipped since, by the same tool run again over the fixtures (a value is set from its
   default, so the others came out the same and the header stays); each new value checked against today's cfg (an
-  enum one of its values, a number inside its range).
+  enum one of its values, a number inside its range). `0.16.0` (2026-11-05): the cfgs of the 0.16.0 / API 0.44.0
+  zip's first run (rehearsal A 20:08), flipped (487 API values, 274 Saddle Up's after the 56 rows of an unreleased dev
+  skin were taken out; it was in the game folder during A), and its `defaults.cfg`; no side file (nothing saved). It is
+  the first with the five tabs' layout (six keys moved into Mount) and the looks' named parts (Dark, Eye, Outline and
+  the skins' tones per skin).
 - **Self-test "upgrade: a released version's player files are all read"** (group "API, side file, carts, colours"):
   for every version folder, the API's cfg key by key against what this build binds, the side file through the real
   reader (every record whole), and the set-aside of a format-99 file. Saddle Up's cfg through the live page's own

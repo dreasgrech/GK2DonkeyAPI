@@ -10,6 +10,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 0.16.0 (GK2 Donkey API 0.44.0), 2026-11-05
+
 For players:
 
 - **A mount you call brings its babies** (2026-11-05): picked in the journal or called with H or G from far away (the
@@ -169,6 +173,15 @@ For mod authors:
 
 Development:
 
+- **The 0.16.0 release** (2026-11-05; the user's picks: 0.16.0 / API 0.44.0, both packs as 1.2.0, Critters held):
+  - Saddle Up's API minimum is 0.44.0, and its out-of-line calls for an older API (`ToneRows`, `RegionRows`,
+    `LeaveMountsRow`) are gone.
+  - `release.sh` green; rehearsal A and B passed. B was over the 0.15.0 fixture: 189 of 189 values kept, the six moved
+    ones in Mount, and the cart with 4 items back.
+  - The fixture `tests/fixtures/released/0.16.0/` is made. `tools/page-carryover.py` now knows ToneRows' Dark, Eye and
+    Outline rows, and `tools/rehearsal.sh` puts a loose `plugins\gk2mounts\` dev folder aside (A loaded an unreleased
+    skin from it; its rows were taken out of the fixture).
+  - docs/release-checklist.md section 5 has the run.
 - **A called mount's babies** (2026-11-05 evening; the user: "from ourside i spawned mount b but its babies stayed in
   the house"; investigated in docs/foals-called.md first, "lets investigate this a bit more").
   - The log: the dragon's babies 145 away, asleep, "following" a ridden parent. They came out only once he picked the

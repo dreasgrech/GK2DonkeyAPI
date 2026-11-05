@@ -1,0 +1,7 @@
+GK2 Saddle Up 0.16.0
+
+- Added an option to leave your mounts in the world: the mount you had stays where it is with its babies when you call another, kept with your save. Off by default (Options, Mount).
+- A mount you call from far away now brings its babies with it.
+- The options have five tabs now: Mount Behaviour and Sound are part of the Mount tab.
+- Every row in the colours window names the part it colours; new rows for the donkey's outline, legs and mane, and eyes.
+- Fixes for Hellfire's coat colour, zombies on the cart during Halloween, and jumps over things.

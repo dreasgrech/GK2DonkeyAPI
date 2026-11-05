@@ -18,7 +18,7 @@
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/riding-cart.gif?v=2[/img][/center]
 
-[size=3]Twice your walking speed on the donkey, one and a half times with the cart. Faster steps in the settings.[/size]
+[size=3]Twice your walking speed on the donkey, one and a half times with the cart.[/size]
 
 [size=4][b]Name it, and give it foals[/b][/size]
 [size=3]"[E] Ride Balthazar". Up to five baby donkeys follow yours around, and can come indoors with you.[/size]
@@ -27,7 +27,7 @@
 
 
 [size=4][b]A cart that carries six[/b][/size]
-[size=3]Everything you pick up while driving goes on the cart, stacked in three layers (or four or two items, in the settings). Piles, tables, graves and quest hand-ins take from it as if you held the item.[/size]
+[size=3]Everything you pick up while driving goes on the cart, stacked in three layers. Piles, tables, graves and quest hand-ins take from it as if you held the item. Each mount pulls its own load: the donkey six, Gerry four.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/cargo-sixitems-cycle.gif?v=2[/img][/center]
 
@@ -64,11 +64,11 @@
 
 
 [size=4][b]Your donkey, your colours[/b][/size]
-[size=3]Coat and harness, cart paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey.[/size]
+[size=3]Every part by its name: the donkey's coat, muzzle and belly, legs, mane and ears, eyes, outline and harness, and a skin's own parts too. The cart's paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey. Your babies wear each colour in their own shade.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-cart-colors-cycle.gif?v=2[/img][/center]
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/journal-donkey.png?v=1[/img][/center]
-[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/colours-donkey.png?v=1[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/colours-donkey.png?v=2[/img][/center]
 
 
 [size=4][b]Leave it standing[/b][/size]
@@ -76,6 +76,12 @@
 Kept with your save: after a reload your donkey is where you left it, the load still on the cart, and Steam Cloud carries it along with the save.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/SteamCloudSync.png?v=2[/img][/center]
+
+
+[size=4][b]Leave your mounts in the world[/b][/size]
+[size=3]An option, off by default (Options, Mount). Call another mount and the one you had stays where it is with its babies, kept with your save. Pick it again in the Mount Journal and that same one comes back to you, its babies with it. Your cart stays standing where you left it, and [b]G[/b] brings it to the mount you have. [b]Send your other mounts home[/b] sends them all home.[/size]
+
+{{ media/leave-mounts.png: the yard with the donkey, Gerry and the dragon standing with their babies, the keeper riding one of them }}
 
 
 [size=4][b]Optional: bodies left at the crossroads[/b][/size]
@@ -90,6 +96,8 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [*][size=3][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item. Driving with nothing in front: set the top item down behind the cart (a chest too).[/size][/*]
 [*][size=3][b]L[/b] — the Mount Journal: pick your mount (the donkey, Gerry, or a pack's), name it, choose its skin and babies, open its colours.[/size][/*]
 [*][size=3][b]B[/b] — ring the bell.[/size][/*]
+[*][size=3][b]V[/b] — your mount calls out, and its babies answer.[/size][/*]
+[*][size=3][b]Space[/b] — your mount jumps. On a mount that flies, Space again in the air takes off.[/size][/*]
 [*][size=3][b]Send your mount away[/b] (no key until you set one) — your mount, its cart and its babies go; the load is set down first. H or G calls one again.[/size][/*]
 [/list]
 [size=3]All keys can be changed. You get off by yourself for work, ladders, fishing, sleep and at building doors.[/size]
@@ -97,11 +105,11 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [line]
 [size=5][b][color=#f0b45a]Settings[/color][/b][/size]
 
-[size=3]In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Saddle Up options[/b] button opens Saddle Up's own options. The Mount Journal (L) has an [b]Options[/b] button too. To set a key, click its box and press the key. Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.[/size]
+[size=3]In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Saddle Up options[/b] button opens Saddle Up's own options. The Mount Journal (L) has an [b]Options[/b] button too. Five tabs: Keys, Mount, Cart, Safe spot and Freeplay (every mount one speed and the most cargo, for players who don't want that part of the game). To set a key, click its box and press the key. Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/settings-button.png?v=2[/img][/center]
 
-[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/options-window.png?v=2[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/options-window.png?v=3[/img][/center]
 
 [size=3]If you have [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, Saddle Up's [b]Settings[/b] button in its Mods menu opens these options too.[/size]
 
@@ -122,7 +130,7 @@ The game's own [b]Mods[/b] window (main menu) lists only the mods the game insta
 [/list]
 [size=3][b]Safe for your save.[/b] Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
 
-[b]Game updates.[/b] Built for Steam game v1.011. After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.
+[b]Game updates.[/b] Built for Steam game v1.011.1. After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.
 
 [b]Uninstall.[/b] Unload the cart and set any chest down first, so nothing is left riding on it. Then delete the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] from [i]BepInEx\plugins[/i]. Your saves still load without them.
 
@@ -143,7 +151,7 @@ The game's own [b]Mods[/b] window (main menu) lists only the mods the game insta
 [center][size=3][url=https://www.nexusmods.com/graveyardkeeper2/mods/420]Download the Dragons Mount Pack on Nexus Mods[/url][/size][/center]
 
 [size=4][b]Donkey Skin Pack[/b][/size]
-[size=3][b]Hellfire[/b] and [b]Royal Parade[/b]: two new looks for your donkey, with your colours under them and babies that wear them too.[/size]
+[size=3][b]Hellfire[/b], [b]Royal Parade[/b] and [b]Armored[/b]: three new looks for your donkey, each part in a colour of your own, and babies that wear them too.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/royal-parade-riding.png?v=2[/img][/center]
 

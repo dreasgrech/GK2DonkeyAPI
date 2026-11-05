@@ -14,11 +14,11 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
   migration code was removed 2026-10-13; compatibility code is for released data only.)
 - `Plugin.Version` is the mod's one version (the plugin's and `Mounts.ApiVersion`, which reads it); bump it with every
   API change. Saddle Up has its own version and asks for the API twice (`NeedsApi` and the `BepInDependency` minimum in
-  `src/SaddleUp/Plugin.cs`, kept equal), raised to the API version of the newest member it calls (the release with
-  the skins' tones: `MountSettingsPage.ToneRows`, the API's next minor; an older API then says "too old" instead of a
-  page failing on a missing method; with that bump the `ToneRows` wrapper in Saddle Up's `Plugin.cs`, a call kept out
-  of line that catches `MissingMethodException` for an API without tones, goes: the minimum then guarantees the method),
-  and `tests/ApiSurface` is green (its snapshot is the public API).
+  `src/SaddleUp/Plugin.cs`, kept equal), raised to the API version of the newest member it calls (an older API then
+  says "too old" instead of a page failing on a missing method). A member called before its API is released may sit in
+  a call kept out of line that catches `MissingMethodException`, but only until that release's bump, when the minimum
+  guarantees the method (0.16.0 raised it to 0.44.0 and dropped three: `ToneRows`, `RegionRows`, `LeaveMountsRow`).
+  And `tests/ApiSurface` is green (its snapshot is the public API).
 - The audited game: the build embeds the dependency manifest against the installed game (`docs/dependency-check.md`;
   no pin to move). After any update `tests/GameDiff` and `DepManifest verify` give the audit its reading list, and
   `tools/game-asset-diff.py` the art and data the update changed, its donkey's-art line included (the audit notes are
@@ -336,6 +336,29 @@ window's options button in ten languages, every language's four files read from 
 no warning, error or exception in 551 lines; the saves identical after. The fixture `tests/fixtures/released/0.15.0/`
 made from A's cfgs. B (an upgrade over the previous release's cfgs) not run: the full F11's upgrade self-tests read every
 released fixture, and no cfg key moved in this release.
+Run 2026-11-05 for 0.16.0 / API 0.44.0 (five option tabs, the mounts left in the world, the looks' named parts) with
+the Dragons Mount Pack 1.2.0 and the Donkey Skin Pack 1.2.0, Critters held.
+- **Before the run:** the full F11 1978/0/0 (19:19) and the user's hand tests; Saddle Up's minimum raised to 0.44.0 and its
+  three out-of-line calls for an older API gone (section 1); `release.sh` at 19:34-19:42: every scan green, the three
+  zips new, the released ones byte-identical after (their timestamps touched only).
+- **A on fresh cfgs (20:08):** 0.44.0 / 0.16.0 and both packs loaded, the cargo layout embedded, no `Dev tools` line, no
+  `[Debug]` in the API cfg, no warning or error in 531 lines; H, G, H left the cart, G hitched the same one (twice; the
+  cart empty); the journal with three mounts; the options window with five sections.
+  - A loose dev folder, `plugins\gk2mounts\` (the Jester's work in progress), was in the game: its skin loaded, and its
+    56 rows got into A's cfg. They were stripped from the fixture (every other entry unchanged), and `rehearsal.sh` puts
+    that folder aside since.
+- **The fixture** `tests/fixtures/released/0.16.0/`: 274 Saddle Up and 487 API values flipped, plus `defaults.cfg`.
+  `tools/page-carryover.py` now knows ToneRows' Dark, Eye and Outline rows (a superset), and all six fixtures pass: 0
+  lost.
+- **B over the 0.15.0 fixture's Saddle Up cfg** (`fixture-live.py`, Hellfire worn) with A's API cfg:
+  - the log: the six moved keys and the three renumbered sections "carried over", 15 old lines left out, no warning or
+    error in 475 lines;
+  - key by key, 189 of 189 values kept, 0 changed, 0 missing, the six moved ones in Mount with their old values; the
+    options' Mount tab showed them;
+  - the cart left with 4 items and came back with "4 of 4 item(s) put back".
+  - Found: with the fixture's made-up dragon skin (`default-x`), the journal drew the dragon as the plain donkey. That's
+    a bug for after the release (docs/open-items.md), the user's call.
+- **Restore:** everything back, the saves identical; the dev builds rebuilt (`--no-incremental`) and deployed at 20:26.
 
 ## 6. Versions, changelog and hand-off
 

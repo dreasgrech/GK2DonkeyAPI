@@ -17,15 +17,18 @@ namespace SaddleUp
     // "Built in or external"). The API is the backend; a mount is a pack; the API draws it, seats the rider, colours it,
     // hitches its cart.
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
-    [BepInDependency("dreas.gk2.donkeyapi", "0.41.0")] // at least the API it was written against (NeedsApi below)
+    [BepInDependency("dreas.gk2.donkeyapi", "0.44.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup";
         // This mod's own version; the GK2 Donkey API counts its own (Mounts.ApiVersion), and NeedsApi says which one this
         // mod was written against.
-        public const string Version = "0.15.0";
+        public const string Version = "0.16.0";
 
-        // The API this mod is written against: 0.41 the looks per skin (MountSettingsPage.PerSkin, SkinHasRegion,
+        // The API this mod is written against: 0.44 the mounts left in the world (MountCompanion.LeaveMountsInWorld,
+        // LeftMounts, SendLeftAway), a button's visible, and the looks' named parts and the skins' tones
+        // (MountSettingsPage.RegionRows, ToneRows; with this minimum the out-of-line calls that caught an older API's
+        // missing methods went, as the release checklist says); 0.41 the looks per skin (MountSettingsPage.PerSkin, SkinHasRegion,
         // MountCompanion.LookOf: raised from 0.40 by the eleventh code review of the tones, the gate let 0.40 through to a
         // missing method); 0.40 the Freeplay keys (SpeedBand, Mounts.Catalog.SpeedWords, MostCargo), the per-mount name, babies, voice and lantern (MountLook) and the
         // look Toggle and Text rows; 0.39 reads a mount's own [Jump]; 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
@@ -35,37 +38,7 @@ namespace SaddleUp
         // 0.28 CartSlots, 0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22 CargoZombies). Checked before anything of the API
         // is used, so an older API gets a clear message instead of a missing-method error. Keep it the same as the
         // BepInDependency minimum above.
-        private static readonly Version NeedsApi = new Version(0, 41, 0);
-
-        // The skins' tones' rows (MountSettingsPage.ToneRows, the API with tones) in a method of their own, never inlined:
-        // on an older API the missing method is met when this is called, where the colours' page catches it and builds
-        // without them, not when the page's builder is compiled (the seventh code review). NeedsApi asks for that API at
-        // the release's version bump (docs/release-checklist.md); this keeps a mixed install's page whole until then and goes
-        // with that bump (past it a later change to ToneRows would hide behind the catch: the eighth code review).
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-        private static void ToneRows(MountSettingsPage p, string skinId, string sfx, MountCompanion me) => p.ToneRows("Colours", skinId, sfx, me);
-        // The three rows by the look's own names of its parts ("Coat", another mount's "Belly"), left out where the look has
-        // no such part (the API's RegionRows; it names them, this mod names nothing of any pack).
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-        private static void RegionRows(MountSettingsPage p, string skinId, string sfx)
-        {
-            p.RegionRows("Colours", skinId, "Coat", "Coat" + sfx, "CustomCoat" + sfx);
-            p.RegionRows("Colours", skinId, "Harness", "Harness" + sfx, "CustomHarness" + sfx);
-            p.RegionRows("Colours", skinId, "Muzzle", "Muzzle" + sfx, "CustomMuzzle" + sfx);
-        }
-        private static bool toneRowsMissingSaid;
-        // The mounts left in the world (MountCompanion.LeaveMountsInWorld, the API since 2026-11-05), in a method of its own
-        // for the same reason as ToneRows: an older API's missing member is met here, inside the caller's catch.
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-        private static void LeaveMountsRow(MountSettingsPage p, MountCompanion me)
-        {
-            bool had = me.LeaveMountsInWorld;
-            ConfigEntry<bool> leave = p.Toggle("Mount", "LeaveMounts", had, "Leave your mounts in the world", "When you call another mount, the one you had stays where it is with its babies, kept with the save like your mount. Pick it again in the journal and it comes back to you. Your cart is left standing beside it. Turn this off and the mounts you left go home.", v => me.LeaveMountsInWorld = v);
-            // the way back from a crowded world: every mount left goes home (greyed while none is out); shown only with the
-            // row above on (the user, 2026-11-05: off, no mount stays left, so it would be greyed for good)
-            p.Button("Mount", "Send your other mounts home", "The mounts you left in the world go home with their babies. A cart one of them pulls is left standing where it is.",
-                () => me.SendLeftAway(), enabled: () => me.LeftMounts.Count > 0, visible: () => leave.Value);
-        }
+        private static readonly Version NeedsApi = new Version(0, 44, 0);
 
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
 
@@ -163,15 +136,12 @@ namespace SaddleUp
             });
             p.Toggle("Mount", "KeepWithSaves", me.KeepWithSaves, "Keep your mount with the save", "After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs.", v => me.KeepWithSaves = v);
             // the mount you had stays out when you call another (the user, 2026-11-05: "this will make the world much more
-            // lively"; the API's MountCompanion.LeaveMountsInWorld, off to start with): an older API builds the page without the row
-            try
-            {
-                LeaveMountsRow(p, me);
-            }
-            catch (MissingMethodException)
-            {
-                Logger.LogWarning($"GK2 Donkey API {Mounts.ApiVersion} can't leave your mounts in the world: the option is left out. Update GK2 Donkey API for it.");
-            }
+            // lively"; the API's MountCompanion.LeaveMountsInWorld, off to start with)
+            ConfigEntry<bool> leave = p.Toggle("Mount", "LeaveMounts", me.LeaveMountsInWorld, "Leave your mounts in the world", "When you call another mount, the one you had stays where it is with its babies, kept with the save like your mount. Pick it again in the journal and it comes back to you. Your cart is left standing beside it. Turn this off and the mounts you left go home.", v => me.LeaveMountsInWorld = v);
+            // the way back from a crowded world: every mount left goes home (greyed while none is out); shown only with the
+            // row above on (the user, 2026-11-05: off, no mount stays left, so it would be greyed for good)
+            p.Button("Mount", "Send your other mounts home", "The mounts you left in the world go home with their babies. A cart one of them pulls is left standing where it is.",
+                () => me.SendLeftAway(), enabled: () => me.LeftMounts.Count > 0, visible: () => leave.Value);
 
             // The babies (a section of their own since 0.12): how many, following you on foot, indoors, the same mount and skin.
             p.FoalRows("Mount", me);
@@ -244,19 +214,14 @@ namespace SaddleUp
                 p.EnableWhen("Colours", "Muzzle" + sfx, () => MountSettingsPage.SkinHasRegion(skinId, "Muzzle"));
                 p.Color("Colours", "CustomMuzzle" + sfx, "Custom second tone", "Used when the second tone is Custom.", PaletteColor.Chestnut, v => look.CustomMuzzle = v, () => muzzle.Value == MuzzleColor.Custom);
                 p.EnableWhen("Colours", "CustomMuzzle" + sfx, () => MountSettingsPage.SkinHasRegion(skinId, "Muzzle"));
+                // the three rows by the look's own names of its parts ("Coat", another mount's "Belly"), left out where the
+                // look has no such part (the API's RegionRows; it names them, this mod names nothing of any pack)
+                p.RegionRows("Colours", skinId, "Coat", "Coat" + sfx, "CustomCoat" + sfx);
+                p.RegionRows("Colours", skinId, "Harness", "Harness" + sfx, "CustomHarness" + sfx);
+                p.RegionRows("Colours", skinId, "Muzzle", "Muzzle" + sfx, "CustomMuzzle" + sfx);
                 // the skin's own tones, after the mount's three (the user, 2026-11-03: "the skin can introduce its own color
-                // tones depending on what it needs"): whatever the skin declares, a row each; none here by name. On an API
-                // without them (one this mod still takes until NeedsApi asks for it) the page builds without these rows.
-                try
-                {
-                    RegionRows(p, skinId, sfx);
-                    ToneRows(p, skinId, sfx, me);
-                }
-                catch (MissingMethodException)
-                {
-                    if (!toneRowsMissingSaid) Logger.LogWarning($"GK2 Donkey API {Mounts.ApiVersion} has no named colour parts (a skin's own parts and the names of a mount's): the colours window keeps its plain rows. Update GK2 Donkey API for them.");
-                    toneRowsMissingSaid = true;
-                }
+                // tones depending on what it needs"): whatever the skin declares, a row each; none here by name
+                p.ToneRows("Colours", skinId, sfx, me);
             });
             p.Heading("Colours", "Cart colours");
             p.PerSkin((skinId, mountId, sfx, shown) =>

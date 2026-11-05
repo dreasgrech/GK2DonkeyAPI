@@ -1,0 +1,4 @@
+# GK2 Saddle Up: Dragons Mount Pack 1.2.0
+
+- The dragon's colour rows name its parts (needs GK2 Saddle Up 0.16.0): Scales and wings, Belly, Horns and spikes, Eyes and claws. The horns and spikes can be coloured on their own.
+- Your dragon's colours carry over.

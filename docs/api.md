@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.43.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.44.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -1164,11 +1164,21 @@ History:
   starts it at 0 unless its line says `start` (it inherited the base's `MountSoundStart` before; docs/mount-sounds.md),
   and `Sounds.PlayId` drops a start offset at or past the clip's end with one warning instead of seeking past it.
   The `DismountIndoors` setting's text says the cart has no collider indoors.
-- Unreleased (additions only, so a minor; `tests/ApiSurface`): **a skin's own tones** (section "A skin's own tones"):
-  `MountSkinTone`, `MountSkinDef.Tones`, `MountSkinInfo.Tones`, `ToneColor`, `MountTone`, `MountLook.Tone(id)`,
-  `MountSettingsPage.ToneRows`, `MountSkinTone.Follows`; skin.cfg `[Tone.<id>]` with `follows =`. `Register` throws a
-  `FormatException` for a `Regions` entry the loader refuses, as in 0.43; a `Tones` entry it can't take is left out
-  and said in the skin's report (the skin registers without it).
+- 0.44.0 (2026-11-05; additions only, so a minor; `tests/ApiSurface`):
+  - **A skin's own tones** (section "A skin's own tones"): `MountSkinTone`, `MountSkinDef.Tones`,
+    `MountSkinInfo.Tones`, `ToneColor`, `MountTone`, `MountLook.Tone(id)`, `MountSettingsPage.ToneRows`,
+    `MountSkinTone.Follows`; skin.cfg `[Tone.<id>]` with `follows =`.
+    - `Register` throws a `FormatException` for a `Regions` entry the loader refuses, as in 0.43.
+    - A `Tones` entry it can't take is left out and said in the skin's report (the skin registers without it).
+  - **A look's names for its parts** (section "A look's names for its parts"): skin.cfg `[Region.<region>]` `name =`,
+    `row = none` and `colours =`; `MountSkinDef.RegionNames` and `RegionsWithoutRow`; `MountSettingsPage.RegionRows`;
+    `MountLook.Dark`, `Eye` and `Outline`. The donkey's outline is a region of its own, `Outline`.
+  - **The mounts left in the world** (docs/leave-mounts.md): `MountCompanion.LeaveMountsInWorld` (off),
+    `LeftMounts`, `SendLeftAway()`, under the keys `left:<mount id>` and `left:<mount id>#foal`. Off, no mount stays
+    left.
+  - `MountSettingsPage.Button` takes `visible:`; the signature without it is kept.
+  - `ComeToKeeper` and `Mounts.ReturnToSafeSpot` (riding) bring the mount's babies that are out of reach (docs/foals-called.md).
+  - A donkey view let go no longer stands in the world till the frame's end (docs/pooled-parts.md).
 - 0.43.0 (2026-11-01): no change to the public surface. **Translations** (section "Translations"): a page's rows,
   sections and title, a mount's and a skin's words (name, description, abilities) and the API's own (its windows, the
   keeper's bubbles, the prompts on foot, the crossroads notification) are looked up in `Languages/<id>.csv` beside the

@@ -1,0 +1,6 @@
+GK2 Saddle Up: Donkey Skin Pack 1.2.0
+
+- Added Armored, a new look for your donkey: plate armour with an ornate knight's helmet and a swaying plume.
+- Each skin's parts have colour rows of their own (needs GK2 Saddle Up 0.16.0): Royal Parade, Armored and Hellfire.
+- Added localization support: French, German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean.
+- Polished Hellfire and Royal Parade. Your colours carry over.

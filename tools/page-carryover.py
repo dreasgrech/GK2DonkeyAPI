@@ -122,6 +122,12 @@ def page_rows(src):
         # a skin's own tones: a choice and its custom colour with the lightness, under the skin's suffix
         for sfx, tone in shipped_tones():
             rows.update((m.group(1), k + sfx) for k in ("Tone." + tone, "CustomTone." + tone, "CustomTone." + tone + "Lightness"))
+        # and the regions ToneRows gives a row where the look names them (2026-11-04: Dark, Eye, the donkey's Outline;
+        # MountLook.Dark, Eye, Outline), the same three keys each. Taken for every mount and skin, a superset: which look
+        # names which is the skins' and the API's words, read by the in-game upgrade test on the live page (the 0.16.0
+        # fixture holds them, and this dry run called all 36 of them lost before, 2026-11-05)
+        for region in ("Dark", "Eye", "Outline"):
+            rows.update((m.group(1), k + sfx) for k in (region, "Custom" + region, "Custom" + region + "Lightness") for sfx in MOUNTS)
     return rows, aliases
 
 

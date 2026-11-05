@@ -24,9 +24,9 @@
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/dragons-mount-pack/journal-dragon.png?v=2[/img][/center]
 
 [size=4][b]Customize it[/b][/size]
-[size=3]The Colours window works on the dragon as on the donkey: the coat colour for its scales and the second tone for its belly, presets or a custom colour, with the preview of your real dragon. It has no harness and no cart, so those rows don't apply to it. Its name, its babies and its voice volume are in the journal.[/size]
+[size=3]The Colours window names the dragon's parts: scales and wings, belly, horns and spikes, eyes and claws, presets or a custom colour, with the preview of your real dragon (the names need GK2 Saddle Up 0.16.0; an older one shows the plain rows). It has no harness and no cart, so it has no rows for them. Its name, its babies and its voice volume are in the journal.[/size]
 
-[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/dragons-mount-pack/colours-dragon.png?v=2[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/dragons-mount-pack/colours-dragon.png?v=3[/img][/center]
 
 [size=4][b]The babies[/b][/size]
 [size=3]Up to five little dragons follow yours around, jump when it jumps and answer its roar ([b]V[/b]) with growls of their own. They can follow you on foot and come indoors with you, like the donkey's.[/size]
@@ -72,7 +72,7 @@
 [size=5][b][color=#f0b45a]Other Saddle Up Mounts and Skins Packs[/color][/b][/size]
 
 [size=4][b]Donkey Skin Pack[/b][/size]
-[size=3][b]Hellfire[/b] and [b]Royal Parade[/b]: two new looks for your donkey mount, with your colours under them and babies that wear them too.[/size]
+[size=3][b]Hellfire[/b], [b]Royal Parade[/b] and [b]Armored[/b]: three new looks for your donkey mount, each part in a colour of your own, and babies that wear them too.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/royal-parade-riding.png?v=2[/img][/center]
 

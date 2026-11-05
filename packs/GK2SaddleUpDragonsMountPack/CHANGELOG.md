@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 1.2.0, 2026-11-05
+
 - **The dragon's colour rows name its parts** (2026-11-04; the new names need GK2 Donkey API with them, an older one
   shows the plain rows): Scales and wings, Belly, Horns and spikes, Eyes and claws, in all 11 languages; the horns and
   spikes are a part of their own, and the outline is never recoloured. The belly keeps

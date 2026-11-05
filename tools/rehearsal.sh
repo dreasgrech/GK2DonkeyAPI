@@ -18,8 +18,8 @@
 # MountsKey, RideKey and CartKey must be keys a keyboard has (a fixture's are on the numpad). A file that fails is not
 # staged.
 set -e
-SADDLEUP_ZIP="GK2-Saddle-Up-0.15.0.zip"
-PACK_ZIPS="GK2-Saddle-Up-Dragons-Mount-Pack-1.1.0.zip GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip GK2-Saddle-Up-Donkey-Skin-Pack-1.1.0.zip"
+SADDLEUP_ZIP="GK2-Saddle-Up-0.16.0.zip"
+PACK_ZIPS="GK2-Saddle-Up-Dragons-Mount-Pack-1.2.0.zip GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip GK2-Saddle-Up-Donkey-Skin-Pack-1.2.0.zip"
 ASIDE_NAME="rehearsal-aside-$(date +%Y-%m-%d)"
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -29,7 +29,7 @@ G="$(cygpath -u "$(sed -n 's/.*<GameDir[^>]*>\([^<]*\)<\/GameDir>.*/\1/p' "$REPO
 B="$G/BepInEx"
 ASIDE="$B/$ASIDE_NAME"
 SAVES="$(cygpath -u "$USERPROFILE")/AppData/LocalLow/Lazy Bear Games/Graveyard Keeper 2"
-DEVPLUG="GK2DonkeyAPI GK2SaddleUp GK2SaddleUpCrittersMountPack GK2SaddleUpDragonsMountPack GK2SaddleUpDonkeySkinPack GK2DonkeyAPI.IntegrationTests GK2ShowcaseDirector GK2PerfRunner GK2AssetProbe PerformanceHog"
+DEVPLUG="GK2DonkeyAPI GK2SaddleUp GK2SaddleUpCrittersMountPack GK2SaddleUpDragonsMountPack GK2SaddleUpDonkeySkinPack GK2DonkeyAPI.IntegrationTests GK2ShowcaseDirector GK2PerfRunner GK2AssetProbe PerformanceHog gk2mounts"
 CFGS="dreas.gk2.donkeyapi.cfg dreas.gk2.saddleup.cfg"
 
 running() { [ "$(tasklist | grep -ic graveyard)" != 0 ]; }

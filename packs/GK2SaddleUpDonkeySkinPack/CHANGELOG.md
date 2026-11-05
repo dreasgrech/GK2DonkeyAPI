@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 1.2.0, 2026-11-05
+
 - **Translation fixes** (2026-11-05): Royal Parade's trim and fringe in Brazilian Portuguese and Chinese.
 - **Hellfire's and Armored's outlines follow the Outline row** (2026-11-04): Hellfire's horns and Armored's steel
   lines, with the donkey's own outline (GK2 Donkey API with the Outline row; an older one draws them as before).
@@ -15,7 +19,7 @@
   as they were start as drawn. Hellfire's dark parts row reads "Legs and mane" (its ears are horns); the outline stays as drawn. Parts that shared one colour have shades of their own now, the same to the eye. The part names are in all
   11 languages.
 
-## 1.1.0, 2026-11-01
+## 1.1.0, 2026-11-01 (never uploaded: held back over Armored; it ships with 1.2.0)
 
 - **The plugin is named "GK2 Saddle Up: Donkey Skin Pack"** (2026-10-30; it was "GK2 Saddle Up: Donkey Skins"): the name BepInEx logs and the framework's Mods
   menu shows is the pack's public name, the one of its Nexus page, its Workshop item and the game's own Mods window
