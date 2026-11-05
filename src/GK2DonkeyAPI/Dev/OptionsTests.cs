@@ -138,6 +138,7 @@ namespace GK2DonkeyAPI
                     string outside = OptionsWindow.TestOutside();
                     SelfTest.Check(OptionsWindow.TestRowCount == shown && OptionsWindow.TestGameRows() == 0 && outside == null,
                         $"{name}: its {shown} rows are drawn, every one our own control ({OptionsWindow.TestGameRows()} game rows), inside the column ({outside ?? "nothing outside"})");
+                    SelfTest.Info($"{name}: its rows take {OptionsWindow.TestRowsHeight:0} of {OptionsWindow.TestRowsRoom:0} px{(OptionsWindow.TestRowsHeight > OptionsWindow.TestRowsRoom + 0.5f ? ": it scrolls" : "")}");
                 }
                 var kindWords = new List<string>();
                 foreach (var kv in kinds) kindWords.Add(kv.Key + " " + kv.Value);

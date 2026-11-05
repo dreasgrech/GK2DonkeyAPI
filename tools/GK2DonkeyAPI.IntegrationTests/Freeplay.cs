@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using GK2DonkeyAPI.Api;
+using LazyBearTechnology;
 using UnityEngine;
 using static GK2DonkeyAPI.SelfTest;
 
@@ -80,6 +81,66 @@ namespace GK2DonkeyAPI.IntegrationTests
             {
                 foreach (BehaviourHeld h in held) h.Restore();
                 reg?.Dispose();
+            }
+        }
+
+        // Saddle Up's options window since 2026-11-05 (the user: "a lot of tabs on the side"; docs/options-regroup.md): five
+        // tabs, Mount Behaviour and Sound under their headings in Mount, the journal button named as the window, Send your
+        // mount away after the two keys that call the mount; drawn, the Mount tab fits without a scrollbar with every row
+        // shown (Send your other mounts home too, the option on for the measure and put back).
+        internal static IEnumerator SaddleUpTabs()
+        {
+            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
+            if (saddle == null)
+            {
+                Info("Saddle Up's page isn't shown: its tabs not checked");
+                yield break;
+            }
+            var tabs = new List<string>();
+            foreach (MountSettingsPage.Row r in saddle.Rows) if (saddle.InOptions(r) && !tabs.Contains(r.ShownSection)) tabs.Add(r.ShownSection);
+            Check(string.Join(", ", tabs) == "Keys, Mount, Cart, Safe spot, Freeplay", $"Saddle Up's options have five tabs ({string.Join(", ", tabs)})");
+            // the Mount tab's rows in the window's order: keys by their cfg key, a heading as "# <label>", a button by its label
+            var mount = new List<string>();
+            foreach (MountSettingsPage.Row r in saddle.Rows)
+            {
+                if (r.ShownSection != "Mount" || !saddle.InOptions(r)) continue;
+                mount.Add(r.RowKind == MountSettingsPage.RowKind.Note ? "# " + r.Label : r.Entry != null ? r.Entry.Definition.Key : r.Label);
+            }
+            const string expected = "Mount Journal, KeepWithSaves, LeaveMounts, Send your other mounts home, # Mount Behaviour, MountIndoors, CartIndoors, ShowMessages, IdleShuffle, # Sound, Brays, StandingSounds";
+            Check(string.Join(", ", mount) == expected, $"the Mount tab: its rows and headings in order ({string.Join(", ", mount)})");
+            MountSettingsPage.Row journal = saddle.Rows.Find(x => x.OpensPanel);
+            Check(journal != null && journal.Label == "Mount Journal" && journal.ShownSection == "Mount", $"the journal's button is labelled as the window ({journal?.Label ?? "missing"})");
+            var keys = new List<string>();
+            foreach (MountSettingsPage.Row r in saddle.Rows) if (r.RowKind == MountSettingsPage.RowKind.Key && r.ShownSection == "Keys") keys.Add(r.Entry.Definition.Key);
+            int ride = keys.IndexOf("RideKey"), cart = keys.IndexOf("CartKey"), away = keys.IndexOf("SendAwayKey");
+            Check(ride >= 0 && cart == ride + 1 && away == cart + 1, $"Send your mount away comes after the two keys that call the mount ({string.Join(", ", keys)})");
+
+            if (LazyWindowsStackController.ActiveWindow != null || MountsPanel.IsOpen || OptionsWindow.IsOpen)
+            {
+                Info("a window is open: the Mount tab's room not measured");
+                yield break;
+            }
+            var leave = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "LeaveMounts")?.Entry as BepInEx.Configuration.ConfigEntry<bool>;
+            bool leaveWas = leave != null && leave.Value;
+            try
+            {
+                if (leave != null) leave.Value = true; // every row shown: the most the tab holds
+                OptionsWindow.Open(saddle);
+                yield return Frames(2);
+                if (!OptionsWindow.IsShown || !OptionsWindow.TestShowSection("Mount"))
+                {
+                    Check(false, "the options window opens on its Mount tab");
+                    yield break;
+                }
+                yield return Frames(1);
+                float h = OptionsWindow.TestRowsHeight, room = OptionsWindow.TestRowsRoom;
+                Check(OptionsWindow.TestRowCount == mount.Count && room > 0f && h <= room + 0.5f,
+                    $"drawn, the Mount tab's {OptionsWindow.TestRowCount} rows and headings fit without a scrollbar ({h:0} of {room:0} px)");
+            }
+            finally
+            {
+                if (OptionsWindow.IsOpen) OptionsWindow.TestClose(back: true);
+                if (leave != null) leave.Value = leaveWas;
             }
         }
     }

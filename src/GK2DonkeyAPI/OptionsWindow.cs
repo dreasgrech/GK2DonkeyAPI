@@ -603,6 +603,9 @@ namespace GK2DonkeyAPI
         // ---- the self-tests' view ----
 
         internal static int TestRowCount => rows.Count;
+        // The shown section's rows' height and the room the column has for them (a scrollbar when the first is more).
+        internal static float TestRowsHeight => rowsRoot != null ? rowsRoot.sizeDelta.y : 0f;
+        internal static float TestRowsRoom => rowsScroll != null && rowsScroll.viewport != null ? rowsScroll.viewport.rect.height : 0f;
         internal static string TestSection => section;
         internal static Transform TestRoot => window != null ? window.transform : null;
         internal static string TestHeadingText => heading != null ? heading.text : null;

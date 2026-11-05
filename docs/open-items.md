@@ -73,6 +73,17 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
+- **Saddle Up's options in five tabs** (2026-11-05 evening, deployed 17:19; docs/options-regroup.md): F11 green 17:55
+  (1957 passed, 0 failed, 0 warnings; the scenario "options: Saddle Up's five tabs" with it). By hand:
+  - the tabs Keys, Mount, Cart, Safe spot, Freeplay;
+  - the Mount tab's two headings, Mount Behaviour and Sound, the first headings this window draws (bold, a faint line
+    under each), and no scrollbar;
+  - the button reads "Mount Journal" and opens the journal;
+  - "Send your other mounts home" is gone while "Leave your mounts in the world" is off and comes back when it's on;
+  - Keys: Send your mount away right after Drive the cart;
+  - the first start's log: one "carried over" INFO line per moved key (six) and per renumbered section, no warning.
+  At the next release, the fixture of this cfg (docs/release-checklist.md 3b): six keys changed section and the
+  sections after Colours renumbered, so "no new fixture, the same keys" (0.14.0's reasoning) doesn't hold.
 - **The options window** (2026-10-30, API 0.42.0, deployed 21:05; docs/options-window.md): F11 done (the full run 1402
   passed, its one failure the stale integration-tests DLL; the garbage survey rerun 3 of 3; the final build's full run
   21:50: 1412 of 1412, the framework installed; a start without the framework 21:54: clean, the Settings window's

@@ -566,5 +566,149 @@ namespace GK2DonkeyAPI
             yield return Frames(3);
             Check(Mounts.InstancesOf(Owner).Count == 0 && c.LeftMounts.Count == 0, $"every mount of the test went ({Mounts.InstancesOf(Owner).Count} left)");
         }
+
+        // What a save holds of one mount and what must come back as it was.
+        private sealed class Saved
+        {
+            internal string FullId, Key, Scene, Parent, Name, Skin;
+            internal Vector3 At;
+            internal bool Right, HasDonkey, HasCart;
+        }
+
+        private static string SkinSet(MountHandle h) => h.Tuning.IsSet("Skin") ? h.Tuning.Get<string>("Skin") : "";
+
+        // A save and a load of the mounts left, the whole way (the user, 2026-11-05: "regarding persistency with the new
+        // option to keep mounts spawned, are we handling that?"): the test mount drives the cart, then the donkey is chosen,
+        // so the test mount is left with its baby, its name, its skin and the cart standing by it. The side file is written
+        // for the run's owner into a temp folder, every one of its mounts is taken away as a load does, the file is restored
+        // by the side file's own restore (Mount.RestoreFromFile) and the companion's load step runs (OnGameReady's). Each is
+        // back where it was, under its key, its baby with its parent, the left one in its skin and with its name and found as
+        // left, the donkey his, one cart; picked again, that same one comes. The player's own side file is never touched.
+        internal static IEnumerator SaveAndLoad()
+        {
+            string notHere = WhyNotFromHere();
+            if (notHere != null)
+            {
+                Skip(notHere);
+                yield break;
+            }
+            Action unmake = MakeTestMount();
+            if (unmake == null) yield break;
+            MountCompanion c = Mounts.Companion(Owner);
+            Was was = Take(c);
+            string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-leave-save");
+            var back = new List<MountHandle>();
+            try
+            {
+                c.SendAwayAll();
+                yield return Frames(1);
+                c.TestFamiliesFree = true; // the run holds every companion's mount in place (MountCompanion.HeldForTests): this one's are the test's
+                c.KeepWithSaves = true; // kept with the save, as a player's are by default
+                c.LeaveMountsInWorld = true;
+                c.OwnOf(MountCatalog.DonkeyId).FoalCount = 1;
+                c.OwnOf(TestMount).FoalCount = 1;
+                c.OwnOf(TestMount).Name = "Kept Test";
+                c.Skin = TestSkin;
+                MountResult r = c.Use(MountStyle.Cart);
+                yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Cart && c.Donkey != null && c.Donkey.Mount == TestMount && c.Donkey.HasCart && Babies(c.Donkey) == 1, 12f);
+                Check(r.Ok && waited, $"the test mount drives the cart, its baby with it ({Said(r)})");
+                if (!waited) yield break;
+                MountHandle a = c.Donkey;
+                c.Skin = "";
+                r = c.UseFromPanel(MountStyle.Ride);
+                yield return Until(() => Mounts.IsMounted && c.Donkey != null && c.Donkey != a && Mounts.Riding?.I == c.Donkey.I && Babies(c.Donkey) == 1, 12f);
+                Check(r.Ok && waited && a.Exists && !a.HasCart && c.Cart != null && c.Cart.Exists && c.LeftMounts.Count == 1 && c.LeftMounts[0] == a,
+                    $"the donkey ridden; the test mount left, the cart standing by it ({Said(r)})");
+                if (!waited) yield break;
+                Check(a.DisplayName == "Kept Test" && a.Mount == TestMount && SkinSet(a) == TestSkin, $"the one left has its name and its skin ({a.DisplayName}, {SkinSet(a)})");
+                Mounts.Dismount("self-test"); // a game saves with the keeper in bed, on foot
+                yield return Until(() => !Mounts.IsMounted, 5f);
+                yield return Frames(2);
+                string aId = a.FullId, dId = c.Donkey.FullId, cartId = c.Cart.FullId;
+
+                // the save: the side file of the run's owner, in a temp folder
+                List<Mount.Instance> kept = Mount.KeptInstances(i => i.OwnerId == Owner, log: false);
+                var saved = new List<Saved>();
+                foreach (Mount.Instance i in kept)
+                {
+                    MountHandle h = i.Handle;
+                    saved.Add(new Saved
+                    {
+                        FullId = h.FullId, Key = h.Key, Scene = h.SceneId, Parent = h.Parent?.FullId, Name = h.DisplayName, Skin = SkinSet(h),
+                        At = h.Position, Right = h.FacingRight, HasDonkey = h.HasDonkey, HasCart = h.HasCart,
+                    });
+                }
+                var keys = new List<string>();
+                foreach (Saved s in saved) keys.Add(s.Key ?? "(none)");
+                keys.Sort(StringComparer.Ordinal);
+                string expected = string.Join(", ", new[] { MountCompanion.CartKey, MountCompanion.DonkeyKey, MountCompanion.FoalKeyOf(0), MountCompanion.LeftKey(TestMount), MountCompanion.LeftFoalKey(TestMount, 0) });
+                Check(string.Join(", ", keys) == expected, $"the save keeps all five: the donkey and the test mount left, each with its baby, and the cart ({string.Join(", ", keys)})");
+                System.IO.Directory.CreateDirectory(dir);
+                foreach (string f in System.IO.Directory.GetFiles(dir)) System.IO.File.Delete(f);
+                string path = System.IO.Path.Combine(dir, "Slot.gk2donkeyapi.dat");
+                // the run's owner's counter only: the restore sets every counter the file names, and a player mod's must
+                // never be put back by a test
+                var text = new System.Text.StringBuilder();
+                foreach (string line in Mount.BuildSideText("Slot", "test time", 7, kept, withDormant: false, out _).TrimEnd('\n').Split('\n'))
+                {
+                    if (!line.StartsWith("next\t", StringComparison.Ordinal) || line.StartsWith("next\t" + Owner + "\t", StringComparison.Ordinal)) text.Append(line).Append('\n');
+                }
+                System.IO.File.WriteAllText(path, text.ToString());
+
+                // the load: every one of them taken away (the parents first, their babies go with them), then the file restored
+                foreach (Mount.Instance i in kept) if (i.Parent == null && i.Handle.Exists) i.Handle.Remove();
+                foreach (Mount.Instance i in kept) if (i.Handle.Exists) i.Handle.Remove();
+                yield return Frames(1);
+                Check(Mounts.InstancesOf(Owner).Count == 0 && c.Donkey == null && c.Cart == null && c.LeftMounts.Count == 0,
+                    $"taken away as a load does: none of them in the world, the companion has none ({Mounts.InstancesOf(Owner).Count} left)");
+                back = Mount.RestoreFromFile(path, "Slot", "test time", 7);
+                var wrong = new List<string>();
+                foreach (Saved s in saved)
+                {
+                    MountHandle h = back.Find(x => x.FullId == s.FullId);
+                    if (h == null) { wrong.Add(s.FullId + " didn't come back"); continue; }
+                    if (h.Key != s.Key) wrong.Add($"{s.FullId}: key {h.Key}, saved {s.Key}");
+                    if (h.SceneId != s.Scene) wrong.Add($"{s.FullId}: scene {h.SceneId}, saved {s.Scene}");
+                    if ((h.Position - s.At).magnitude > 0.01f) wrong.Add($"{s.FullId}: at {h.Position:F2}, saved {s.At:F2}");
+                    if (h.FacingRight != s.Right) wrong.Add($"{s.FullId}: facing {(h.FacingRight ? "right" : "left")}, saved the other way");
+                    if (h.Parent?.FullId != s.Parent) wrong.Add($"{s.FullId}: parent {h.Parent?.FullId ?? "none"}, saved {s.Parent ?? "none"}");
+                    if (h.DisplayName != s.Name) wrong.Add($"{s.FullId}: name {h.DisplayName ?? "none"}, saved {s.Name ?? "none"}");
+                    if (SkinSet(h) != s.Skin) wrong.Add($"{s.FullId}: skin {SkinSet(h)}, saved {s.Skin}");
+                    if (h.HasDonkey != s.HasDonkey || h.HasCart != s.HasCart) wrong.Add($"{s.FullId}: donkey {h.HasDonkey}, cart {h.HasCart}; saved {s.HasDonkey}, {s.HasCart}");
+                }
+                Check(back.Count == saved.Count && wrong.Count == 0,
+                    $"the file restored: {back.Count} of {saved.Count} back, each its own id, key, scene, place, facing, parent, name and skin ({(wrong.Count == 0 ? "as saved" : string.Join("; ", wrong))})");
+
+                // the companion's load step: found by their keys
+                c.TestFindAgain();
+                MountHandle a2 = back.Find(x => x.FullId == aId), d2 = back.Find(x => x.FullId == dId), cart2 = back.Find(x => x.FullId == cartId);
+                Check(a2 != null && d2 != null && cart2 != null && c.Donkey == d2 && c.Cart == cart2 && c.LeftMounts.Count == 1 && c.LeftMounts[0] == a2,
+                    $"the load step: the donkey his, the cart his, the test mount left (out {c.Donkey?.FullId ?? "none"}, cart {c.Cart?.FullId ?? "none"}, {c.LeftMounts.Count} left)");
+                if (a2 == null || d2 == null || cart2 == null) yield break;
+                yield return Until(() => a2.IsReady && d2.IsReady && cart2.IsReady, 6f);
+                yield return Frames(3);
+                Check(Babies(a2) == 1 && Keys(a2) == MountCompanion.LeftFoalKey(TestMount, 0) && Babies(d2) == 1 && Keys(d2) == MountCompanion.FoalKeyOf(0),
+                    $"each with its own baby, none added (the test mount's {Keys(a2)}, the donkey's {Keys(d2)})");
+                Check(a2.Mount == TestMount && SkinSet(a2) == TestSkin && a2.DisplayName == "Kept Test" && d2.Mount == MountCatalog.DonkeyId,
+                    $"the one left in its skin, with its name ({a2.Mount}, {SkinSet(a2)}, {a2.DisplayName}); the donkey the donkey");
+                Check(Carts() == 1, $"one cart ({Carts()})");
+
+                // picked again: that same one comes, the donkey is left in its turn
+                c.Skin = TestSkin;
+                r = c.UseFromPanel(MountStyle.Ride);
+                yield return Until(() => Mounts.IsMounted && c.Donkey == a2 && Mounts.Riding?.I == a2.I, 12f);
+                Check(r.Ok && waited && d2.Exists && c.LeftMounts.Count == 1 && c.LeftMounts[0] == d2,
+                    $"picked again: the same test mount comes and is ridden ({a2.FullId}), the donkey left ({Said(r)})");
+            }
+            finally
+            {
+                PutBack(c, was);
+                foreach (MountHandle h in back) if (h.Exists) h.Remove();
+                unmake();
+                try { if (System.IO.Directory.Exists(dir)) System.IO.Directory.Delete(dir, true); } catch { }
+            }
+            yield return Frames(3);
+            Check(Mounts.InstancesOf(Owner).Count == 0 && c.LeftMounts.Count == 0, $"every mount of the test went ({Mounts.InstancesOf(Owner).Count} left)");
+        }
     }
 }

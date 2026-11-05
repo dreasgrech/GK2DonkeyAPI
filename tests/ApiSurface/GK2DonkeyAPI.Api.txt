@@ -449,7 +449,8 @@ static class GK2DonkeyAPI.Api.Mounts
   method static GK2DonkeyAPI.Api.MountHandle Unhitch(GK2DonkeyAPI.Api.MountHandle donkey)
   method static GK2DonkeyAPI.Api.MountHandle UnhitchRidden()
 sealed class GK2DonkeyAPI.Api.MountSettingsPage
-  method void Button(string section, string label, string description, System.Action onClick, string buttonText = Go, System.Func<bool> enabled = null)
+  method void Button(string section, string label, string description, System.Action onClick, string buttonText, System.Func<bool> enabled)
+  method void Button(string section, string label, string description, System.Action onClick, string buttonText = Go, System.Func<bool> enabled = null, System.Func<bool> visible = null)
   method void CartRow(string section, string key)
   method BepInEx.Configuration.ConfigEntry<T> Choice(string section, string key, T value, string label, string description, System.Action<T> apply = null, System.String[] labels = null, bool look = False, System.Func<bool> visible = null)
   method void Color(string section, string key, string label, string description, GK2DonkeyAPI.Api.PaletteColor value, System.Action<string> apply, System.Func<bool> visible = null)

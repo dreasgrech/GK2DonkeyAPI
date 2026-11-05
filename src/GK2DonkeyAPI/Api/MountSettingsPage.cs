@@ -848,14 +848,20 @@ namespace GK2DonkeyAPI.Api
             Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = UiWords.Open.English, ButtonWord = UiWords.Open, OnClick = () => MountsPanel.Open(this, toggle: false), OpensPanel = true });
         }
 
+        // The signature from before visible (added 2026-11-05), kept for mods built against it (every parameter required:
+        // a call is never ambiguous between the two).
+        public void Button(string section, string label, string description, Action onClick, string buttonText, Func<bool> enabled)
+            => Button(section, label, description, onClick, buttonText, enabled, visible: null);
+
         // A button of the mod's own (0.36.0): onClick runs when it is pressed in the options window, only in a game (greyed
-        // in the main menu). buttonText: the word on it. enabled: greyed while false. No cfg key. A handler that throws is
+        // in the main menu). buttonText: the word on it. enabled: greyed while false. visible: shown only while true, as a
+        // Toggle's (2026-11-05: a button with nothing to do while another row is off). No cfg key. A handler that throws is
         // logged.
-        public void Button(string section, string label, string description, Action onClick, string buttonText = "Go", Func<bool> enabled = null)
+        public void Button(string section, string label, string description, Action onClick, string buttonText = "Go", Func<bool> enabled = null, Func<bool> visible = null)
         {
             if (onClick == null) throw new ArgumentNullException(nameof(onClick));
             bool go = string.IsNullOrEmpty(buttonText) || buttonText == UiWords.Go.English; // the default word is the API's, a mod's own word its own
-            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = go ? UiWords.Go.English : buttonText, ButtonWord = go ? UiWords.Go : null, OnClick = onClick, Enabled = enabled });
+            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = go ? UiWords.Go.English : buttonText, ButtonWord = go ? UiWords.Go : null, OnClick = onClick, Enabled = enabled, Visible = visible });
         }
 
         // The same (the panel grew out of the look bar); kept so a mod written for 0.30 to 0.34 still opens it.

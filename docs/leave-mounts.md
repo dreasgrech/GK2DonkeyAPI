@@ -262,6 +262,24 @@ test's own (a code mount with a temp pack's skin, as "mount from code" makes one
   - off with none left: the mount out changes under the rider, as before;
   - a load whose mount out isn't the chosen one (on): it is left; found again by its key at the next load, its baby too;
   - the side file's text keeps the left key and the baby's parent.
+- **"mounts left in the world: a save and a load the whole way ..."** (2026-11-05 evening; the user: "regarding
+  persistency with the new option to keep mounts spawned, are we handling that?"), with "Keep your mount with the save"
+  on:
+  - the test mount drives the cart, then the donkey is chosen, so the test mount is left with its baby, its name and its
+    skin, and the cart stands by it;
+  - the side file is written for the run's owner into a temp folder, with only its own id counter, so no player mod's
+    counter is put back;
+  - all five are taken away as a load does: the donkey, the test mount, a baby each, and the cart;
+  - the file goes through the side file's own restore (`Mount.RestoreFromFile`), then the companion's load step runs;
+  - each comes back with its id, key, scene, place, facing, parent, name and skin;
+  - the donkey and the cart are his again, and the test mount is left, with its baby under its left key, in its skin and
+    with its name;
+  - no baby is added, and there is one cart;
+  - picked again, that same test mount comes and is ridden.
+
+  Not in it: the game's own save and load (sleep, quit to the menu, load). Hand items 4 and 11 cover those.
+  **Green in the whole F11, 2026-11-05 18:21** (1969 passed, 0 failed, 0 warnings): 12 of 12, "5 of 5 donkey(s)/cart(s)
+  back", no warning in its span.
 
 **In "Flying": "mounts left in the world: another mount chosen in the air ..."**: a flier of the test's own ridden and
 taken off, the donkey chosen and Ride pressed in the air: the flier still ridden, his, in its own skin; once landed, the

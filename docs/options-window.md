@@ -9,6 +9,10 @@ how we needed it, we write our own ... the options are important."
 Status: built and deployed 2026-10-30 evening (API 0.42.0, unreleased): §10. F11 and the hand checks are open
 (docs/open-items.md "To check in game").
 
+Since 2026-11-05 Saddle Up's page has five tabs (Keys, Mount, Cart, Safe spot, Freeplay): Mount Behaviour and Sound
+are headings in Mount. The tables below are the page as it was; the review and the choices are in
+[options-regroup.md](options-regroup.md).
+
 ## 1. What there is today (read 2026-10-30)
 
 A player mod's settings are a `MountSettingsPage` (API, `Api/MountSettingsPage.cs`). Saddle Up only declares rows

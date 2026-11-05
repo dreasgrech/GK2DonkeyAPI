@@ -108,11 +108,11 @@ namespace GK2DonkeyAPI.IntegrationTests
             {
                 // Saddle Up's row
                 MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
-                MountSettingsPage.Row row = saddle?.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "StandingSounds" && x.ShownSection == "Sound");
+                MountSettingsPage.Row row = saddle?.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "StandingSounds" && x.ShownSection == "Mount"); // the Mount section's since 2026-11-05 (Sound before)
                 if (saddle == null) Info("Saddle Up's page isn't shown: its row not checked");
                 else
                 {
-                    Check(row != null, "Saddle Up has the StandingSounds row in its Sound section");
+                    Check(row != null, "Saddle Up has the StandingSounds row in its Mount section");
                     if (row != null)
                     {
                         var re = (BepInEx.Configuration.ConfigEntry<bool>)row.Entry;

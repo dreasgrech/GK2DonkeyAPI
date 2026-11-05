@@ -60,10 +60,11 @@ namespace SaddleUp
         private static void LeaveMountsRow(MountSettingsPage p, MountCompanion me)
         {
             bool had = me.LeaveMountsInWorld;
-            p.Toggle("Mount", "LeaveMounts", had, "Leave your mounts in the world", "When you call another mount, the one you had stays where it is with its babies, kept with the save like your mount. Pick it again in the journal and it comes back to you. Your cart is left standing beside it. Turn this off and the mounts you left go home.", v => me.LeaveMountsInWorld = v);
-            // the way back from a crowded world: every mount left goes home (greyed while none is out)
+            ConfigEntry<bool> leave = p.Toggle("Mount", "LeaveMounts", had, "Leave your mounts in the world", "When you call another mount, the one you had stays where it is with its babies, kept with the save like your mount. Pick it again in the journal and it comes back to you. Your cart is left standing beside it. Turn this off and the mounts you left go home.", v => me.LeaveMountsInWorld = v);
+            // the way back from a crowded world: every mount left goes home (greyed while none is out); shown only with the
+            // row above on (the user, 2026-11-05: off, no mount stays left, so it would be greyed for good)
             p.Button("Mount", "Send your other mounts home", "The mounts you left in the world go home with their babies. A cart one of them pulls is left standing where it is.",
-                () => me.SendLeftAway(), enabled: () => me.LeftMounts.Count > 0);
+                () => me.SendLeftAway(), enabled: () => me.LeftMounts.Count > 0, visible: () => leave.Value);
         }
 
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
@@ -98,12 +99,13 @@ namespace SaddleUp
                 pressed: () => me.Use(MountStyle.Ride));
             ConfigEntry<KeyboardShortcut> cartKey = p.Key("Keys", "CartKey", new KeyboardShortcut(KeyCode.G), "Drive the cart", "Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart.",
                 pressed: () => me.Use(MountStyle.Cart));
+            // after the two that call it (the user, 2026-11-05: call, call with the cart, send away; then the riding keys)
+            p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send your mount away", "Sends your mount, its cart and its babies away. The cart's load is put down first.",
+                pressed: me.SendAway);
             p.Key("Keys", "BellKey", new KeyboardShortcut(KeyCode.B), "Ring the bell", "Rings the bell while you drive the cart.", pressed: me.RingBell);
             // the mount's own cry on demand (the user, 2026-10-25): the voice event of the ridden mount, as its idle timer
             // plays it, and its babies answer; V is unbound in the game (docs/api-design.md "Showcase keys")
             p.Key("Keys", "CallOutKey", new KeyboardShortcut(KeyCode.V), "Call out", "Your mount calls out while you ride, and its babies answer.", pressed: Mounts.Bray);
-            p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send your mount away", "Sends your mount, its cart and its babies away. The cart's load is put down first.",
-                pressed: me.SendAway);
             // jumping and flying (on for everyone since API 0.38.0; the rows grey while a dev switched it off). One key for
             // both: a press jumps, a second press in the air takes off on a mount that flies, a press while flying lands;
             // in the air, Climb and Descend are held.
@@ -122,7 +124,9 @@ namespace SaddleUp
 
             // The page since 0.11: Keys; Mount (what you have: its picture, its name, what it is and how it is drawn,
             // its babies, whether it is kept with the save); Colours (every colour of it and of the cart); Behaviour (what
-            // it does); Cart (what the cart does); Sound. (The Effect section went on 2026-10-25: its keys are retired below.) A row that lived
+            // it does); Cart (what the cart does); Sound. (The Effect section went on 2026-10-25: its keys are retired below.)
+            // Since 2026-11-05 the window has five tabs: Keys, Mount (Mount Behaviour and Sound under their headings in it),
+            // Cart, Safe spot, Freeplay; Colours is the journal's only (docs/options-regroup.md). A row that lived
             // elsewhere in a released version names its old place with MovedKey before it, so a player's value carries
             // over; the call stays for good (docs/compatibility.md). Name and the babies were in Donkey before 0.10;
             // KeepWithSaves in Behaviour, the colours in Donkey and Cart, the cart's rows in Behaviour before 0.11.
@@ -145,7 +149,8 @@ namespace SaddleUp
             // panel of its own, the mounts listed, the chosen one drawn with its stats and abilities; it stays the
             // same size however many mounts are installed). The rows below are bound as before (the same cfg keys)
             // and marked look: true, which keeps them out of the menu and in the panel.
-            p.PanelButton("Mount", "Mounts", "Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.");
+            // labelled as the window and its key are since 2026-11-05 (the user; "Mounts" before)
+            p.PanelButton("Mount", "Mount Journal", "Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.");
             // before any mount's own settings are made (each starts from the companion's): on in Saddle Up (the user,
             // 2026-10-22); the API's stays off for other mods
             me.FoalsFollowOnFoot = true;
@@ -180,6 +185,34 @@ namespace SaddleUp
                 p.Steps("Mount", "BabyStepsVolume" + sfx, Mathf.RoundToInt(own.BabyStepsVolume * 100f), 0, 150, 10, "Baby steps volume", "How loud its babies' steps are.", v => own.BabyStepsVolume = v / 100f, v => v + "%", look: true,
                     visible: () => Mounts.Catalog.Find(mountId)?.Foals ?? true);
             });
+
+            // Mount Behaviour and Sound are the Mount section's since 2026-11-05 (the user: "we have a lot of tabs on the side
+            // ... like mount and mount behaviour since these are from the time when mount customization was in there"), each
+            // under a heading of its old name; with the four rows above the window's Mount tab fits without a scrollbar. The
+            // values carry over from Mount Behaviour (0.12 to 0.15), Behaviour (before) and Sound. After the section's journal
+            // rows, so no journal row comes after a heading.
+            p.Heading("Mount", "Mount Behaviour");
+            p.MovedKey("Mount", "MountIndoors", "Mount Behaviour");
+            p.MovedKey("Mount", "MountIndoors", "Behaviour");
+            p.MovedKey("Mount", "CartIndoors", "Mount Behaviour");
+            p.MovedKey("Mount", "CartIndoors", "Behaviour");
+            p.MovedKey("Mount", "ShowMessages", "Mount Behaviour");
+            p.MovedKey("Mount", "ShowMessages", "Behaviour");
+            p.MovedKey("Mount", "IdleShuffle", "Mount Behaviour");
+            p.MovedKey("Mount", "IdleShuffle", "Behaviour");
+            // Indoors (a player asked, 2026-10-21): both off = as before, the ride ends at a building's door. The API's
+            // DismountIndoors is the first row turned round; CartIndoors only counts with it on, so its row greys.
+            ConfigEntry<bool> indoors = p.Toggle("Mount", "MountIndoors", false, "Allow mounting indoors", "Ride into houses, the church and the morgue. Doors with a loading screen still end the ride.", v => Mounts.Behaviour.Set(Guid, "DismountIndoors", !v));
+            p.Toggle("Mount", "CartIndoors", false, "Allow mounting with the cart indoors", "The cart comes inside too. It has no collider indoors, so it rolls through furniture and door frames rather than getting stuck; it only looks odd. When this is off, the cart waits at the door.", v => Mounts.Behaviour.Set(Guid, "CartIndoors", v));
+            p.EnableWhen("Mount", "CartIndoors", () => indoors.Value);
+            p.Toggle("Mount", "ShowMessages", true, "Say why you can't get on", "The keeper says why in a thought bubble.", v => Mounts.Behaviour.Set(Guid, "ShowMessages", v));
+            p.Toggle("Mount", "IdleShuffle", true, "Shuffles while standing", "Your mount takes a few slow steps now and then while it waits without its cart.", v => Mounts.Behaviour.Set(Guid, "IdleShuffle", v));
+            p.Heading("Mount", "Sound");
+            p.MovedKey("Mount", "Brays", "Sound");
+            p.MovedKey("Mount", "StandingSounds", "Sound");
+            p.Toggle("Mount", "Brays", me.Brays, "Mount calls", "Your mount calls out now and then, and when you get on.", v => me.Brays = v);
+            p.TuningKey("Mount", "Brays", "BrayOnMountChance", me);
+            p.Toggle("Mount", "StandingSounds", true, "Standing mounts and babies sound", "Parked mounts and babies near you make their sounds too. When this is off, you only hear the mount you ride.", v => Mounts.Behaviour.Set(Guid, "StandingSounds", v));
 
             // The colours: the button opens them over the game, the rows are here too, under a heading for the mount
             // and one for the cart (not the picture rows' labels: a picture is found on screen by its label). Kept per skin since 0.13 (PerSkin, the user, 2026-10-28:
@@ -267,18 +300,8 @@ namespace SaddleUp
             // old lines leave the file.
             p.RetiredKey("Behaviour", "RideSpeed");
             p.RetiredKey("Behaviour", "CartSpeed");
-            // the section is "Mount Behaviour" since 0.12 (the user, 2026-10-27), "Behaviour" before: its values carry over
-            p.MovedKey("Mount Behaviour", "ShowMessages", "Behaviour");
-            p.MovedKey("Mount Behaviour", "IdleShuffle", "Behaviour");
-            p.MovedKey("Mount Behaviour", "MountIndoors", "Behaviour");
-            p.MovedKey("Mount Behaviour", "CartIndoors", "Behaviour");
-            p.Toggle("Mount Behaviour", "ShowMessages", true, "Say why you can't get on", "The keeper says why in a thought bubble.", v => Mounts.Behaviour.Set(Guid, "ShowMessages", v));
-            p.Toggle("Mount Behaviour", "IdleShuffle", true, "Shuffles while standing", "Your mount takes a few slow steps now and then while it waits without its cart.", v => Mounts.Behaviour.Set(Guid, "IdleShuffle", v));
-            // Indoors (a player asked, 2026-10-21): both off = as before, the ride ends at a building's door. The API's
-            // DismountIndoors is the first row turned round; CartIndoors only counts with it on, so its row greys.
-            ConfigEntry<bool> indoors = p.Toggle("Mount Behaviour", "MountIndoors", false, "Allow mounting indoors", "Ride into houses, the church and the morgue. Doors with a loading screen still end the ride.", v => Mounts.Behaviour.Set(Guid, "DismountIndoors", !v));
-            p.Toggle("Mount Behaviour", "CartIndoors", false, "Allow mounting with the cart indoors", "The cart comes inside too. It has no collider indoors, so it rolls through furniture and door frames rather than getting stuck; it only looks odd. When this is off, the cart waits at the door.", v => Mounts.Behaviour.Set(Guid, "CartIndoors", v));
-            p.EnableWhen("Mount Behaviour", "CartIndoors", () => indoors.Value);
+            // the section was "Mount Behaviour" from 0.12 (the user, 2026-10-27), "Behaviour" before; its rows are the Mount
+            // section's since 2026-11-05 (above, with a MovedKey for each old place)
 
             // Cart capacity was a row here until 0.12: each mount carries its own cargo now ([Mount] cargo; the Mounts panel
             // shows it), so the player's number is dropped (the user, 2026-10-27: a player's old 2 kept every cart at two)
@@ -300,10 +323,7 @@ namespace SaddleUp
             p.RetiredKey("Behaviour", "CartStaysParked");
             p.RetiredKey("Cart", "Bell");
             p.RetiredKey("Sound", "Bell");
-
-            p.Toggle("Sound", "Brays", me.Brays, "Mount calls", "Your mount calls out now and then, and when you get on.", v => me.Brays = v);
-            p.TuningKey("Sound", "Brays", "BrayOnMountChance", me);
-            p.Toggle("Sound", "StandingSounds", true, "Standing mounts and babies sound", "Parked mounts and babies near you make their sounds too. When this is off, you only hear the mount you ride.", v => Mounts.Behaviour.Set(Guid, "StandingSounds", v));
+            // the Sound section's two rows are the Mount section's since 2026-11-05 (above)
 
             // Never lost (the API's safe spots, docs/never-lost.md), a section of its own at the end (the user, 2026-10-27;
             // before, the key sat in Keys and the rest in Behaviour, never released there): the fall watchdog, the same by

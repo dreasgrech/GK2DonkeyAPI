@@ -12,11 +12,14 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The options have five tabs** (2026-11-05): Keys, Mount, Cart, Safe spot and Freeplay. Mount Behaviour and Sound
+  are in the Mount tab now, under their own headings, and keep your settings. The Mount tab's button is called Mount
+  Journal, like the window, and "Send your mount away" comes right after the keys that call your mount.
 - **Leave your mounts in the world** (2026-11-05; a new option in the Mount section, off by default). When you
   call another mount, the one you had stays where it is with its babies, and is kept with the save. Pick it again in
   the journal and that same one comes back to you. Your cart is left standing beside it; G or Drive the cart brings it
-  to the mount you have. "Send your other mounts home" (a button under it) sends every mount you left home with its
-  babies; a cart one of them pulls stays standing. Turn the option off and the mounts you left go home too (one you are
+  to the mount you have. "Send your other mounts home" (a button under it, shown while the option is on) sends every
+  mount you left home with its babies; a cart one of them pulls stays standing. Turn the option off and the mounts you left go home too (one you are
   riding goes once you get off it).
 - **Translation fixes** (2026-11-05): the colour names in Brazilian Portuguese, the custom colour row in Japanese,
   the Outline row in Korean.
@@ -106,6 +109,9 @@ For players:
 
 For mod authors:
 
+- **`MountSettingsPage.Button` takes `visible:`** (2026-11-05): the button shows only while it returns true, as a
+  Toggle's `visible` (a button with nothing to do while another row is off). The signature without it is kept for mods
+  built against it, every parameter required, so no call is ambiguous (`tests/ApiSurface` snapshot updated).
 - **A donkey view let go no longer stands in the world till the frame's end** (2026-11-05; docs/pooled-parts.md).
   Restored for the game's pool, its colliders and navmesh cuts were live until `Destroy` at the frame's end, so any
   check later in that frame (a hitch right after an unhitch, a spot judged for the keeper) found an obstacle no mount
@@ -156,6 +162,33 @@ For mod authors:
 
 Development:
 
+- **A save and a load of the mounts left, the whole way, in F11** (2026-11-05 evening; the user: "regarding
+  persistency with the new option to keep mounts spawned, are we handling that?"). The new scenario "mounts left in the
+  world: a save and a load the whole way" (docs/leave-mounts.md section 5):
+  - the test mount is left with its baby, name and skin, the cart standing by it;
+  - the side file is written for the run's owner into a temp folder, with its own id counter only;
+  - all five mounts are taken away, then restored by `Mount.RestoreFromFile` and the companion's load step;
+  - each must be back as saved, found as left, with no baby added and one cart, and the same one comes when picked
+    again.
+
+  The game's own sleep-and-load stays hand items 4 and 11. The whole F11 on it (18:21): 1969 passed, 0 failed, 0
+  warnings.
+- **Saddle Up's options regrouped** (2026-11-05; the user: "we have a lot of tabs on the side when a lot of the
+  options can be consolidated into single tabs instead of split, like mount and mount behaviour"; review and choices in
+  docs/options-regroup.md). Seven tabs to five: Mount Behaviour's four rows and Sound's two are the Mount section's,
+  under `Heading`s of those names, after its journal rows (no journal row follows a heading). Measured on paper first:
+  10 rows and 2 headings take 424 of the column's 445 px. Each moved key has a `MovedKey` for every old place (Mount
+  Behaviour and Behaviour, or Sound); `tools/page-carryover.py`: 0 lost over the five fixtures. The journal button is
+  labelled Mount Journal, "Send your other mounts home" has `visible:` the Leave row, SendAwayKey follows CartKey. The
+  language files by a one-off script (no new words): `heading.mount_behaviour` and `heading.sound` take
+  the retired `section.*` lines' values in every language, `panel.mount_journal` the file's own `MountsKey.label`, the
+  moved rows' notes say Mount, in the dump's order (`l10n-sync --check` shows the 4 renamed keys until the next dev
+  run's dump). Tests: the integration scenario "options: Saddle Up's five tabs" (the tabs in order, the Mount tab's
+  rows and headings, the journal button's label, the keys' order, and drawn with every row shown, the Mount tab without
+  a scrollbar), the Leave row's test checks the button shows only with the row on, the StandingSounds test looks in
+  Mount; the options Smoke test says each section's height against its room. All scans green. The next release needs
+  a fixture of this cfg (docs/release-checklist.md 3b): six keys changed section, the sections after Colours renumbered.
+  The whole F11 on it (17:55): 1957 passed, 0 failed, 0 warnings; `l10n-sync --check` "same" after the run.
 - **Mounts left in the world** (2026-11-05; the user: "leave summoned mounts along with their foals in the game
   instead of despawning them"; docs/leave-mounts.md). `MountCompanion` keeps a family per mount (the current one and
   the ones left; the look, the babies and the name applied per family, the current one's path as before), switches them

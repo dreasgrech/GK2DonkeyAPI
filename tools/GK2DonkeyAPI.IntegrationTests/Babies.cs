@@ -88,18 +88,22 @@ namespace GK2DonkeyAPI.IntegrationTests
                 Check(Equals(e.DefaultValue, false), $"off by default ({e.DefaultValue})");
                 Check(me.LeaveMountsInWorld == e.Value, $"the companion has the row's value ({e.Value})");
                 bool was = e.Value;
+                MountSettingsPage.Row home = saddle.Rows.Find(x => x.RowKind == MountSettingsPage.RowKind.Button && x.Label == "Send your other mounts home");
+                Check(home != null && home.ShownSection == "Mount" && saddle.InOptions(home), $"the button \"Send your other mounts home\" is in the Mount section ({home?.ShownSection ?? "missing"})");
+                // the button shows only while the row is on (the user, 2026-11-05: off, no mount stays left)
+                bool Shows() => home?.Visible != null && home.Visible();
                 try
                 {
                     e.Value = !was;
                     Check(me.LeaveMountsInWorld == !was, $"switched: the companion follows ({me.LeaveMountsInWorld})");
+                    Check(home != null && Shows() == !was, $"and the button {(Shows() ? "shows" : "is hidden")} with the row {(!was ? "on" : "off")}");
                 }
                 finally
                 {
                     e.Value = was;
                 }
                 Check(me.LeaveMountsInWorld == was, "put back");
-                MountSettingsPage.Row home = saddle.Rows.Find(x => x.RowKind == MountSettingsPage.RowKind.Button && x.Label == "Send your other mounts home");
-                Check(home != null && home.ShownSection == "Mount" && saddle.InOptions(home), $"the button \"Send your other mounts home\" is in the Mount section ({home?.ShownSection ?? "missing"})");
+                Check(home != null && Shows() == was, $"the button {(Shows() ? "shows" : "is hidden")} again with the row {(was ? "on" : "off")}");
                 // (read as it is now: no mount of the player's is left or sent home to see it change; the API's own scenario
                 // sends a test companion's left mounts home)
                 Check(home?.Enabled != null && home.Enabled() == (me.LeftMounts.Count > 0), $"and its greying follows his mounts left in the world ({me.LeftMounts.Count} now, the button {(home?.Enabled != null && home.Enabled() ? "usable" : "greyed")})");
