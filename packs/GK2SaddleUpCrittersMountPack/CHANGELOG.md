@@ -23,6 +23,8 @@
 
 ## 1.0.0, 2026-10-28
 
+Never uploaded (held back; checked 2026-11-05): this entry and Unreleased go out together in the pack's first release.
+
 - The pack is `GK2SaddleUpCrittersMountPack`: its DLL, plugin folder (`BepInEx\plugins\GK2SaddleUpCrittersMountPack\`), source folder
   (`packs\GK2SaddleUpCrittersMountPack\`) and zip (`GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip`) (the user, 2026-10-28; the pack's
   mount and skin ids, its GUID and its name are unchanged).

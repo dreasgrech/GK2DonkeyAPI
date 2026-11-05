@@ -91,7 +91,7 @@ All of these apply at once:
 | 2. Mount | Your mount (the picture) | | Your mount, drawn in its colours. |
 | | Mount Journal | | A button. Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours. Done keeps your choices and Cancel puts them back. |
 | | Mount | Donkey | (in the Mounts panel) The mount you ride. Saddle Up has the donkey and Gerry. Packs and other mods add more. |
-| | Skin | Default | (in the Mounts panel) How your mount looks. With GK2 Saddle Up: Donkey Skins the donkey also has Hellfire and Royal Parade. |
+| | Skin | Default | (in the Mounts panel) How your mount looks. With the Donkey Skin Pack the donkey also has Hellfire, Royal Parade and Armored. |
 | | Name | none | (in the Mounts panel) Shown when you walk up to your mount, as in "Ride Bella". |
 | | Keep your mount with the save | on | After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs. |
 | | Leave your mounts in the world | off | When you call another mount, the one you had stays where it is with its babies, kept with the save like your mount. Pick it again in the journal and it comes back to you. Your cart is left standing beside it. Turn this off and the mounts you left go home. |
@@ -108,10 +108,14 @@ All of these apply at once:
 | | Shuffles while standing | on | Your mount takes a few slow steps now and then while it waits without its cart. |
 | | *Sound:* Mount calls | on | Your mount calls out now and then, and when you get on. |
 | | Standing mounts and babies sound | on | Parked mounts and babies near you make their sounds too. When this is off, you only hear the mount you ride. |
-| 3. Colours | | | All of these are in the Mounts panel's colours window and kept per mount. A mount that pulls no cart (the dragon) has no cart colours. |
+| 3. Colours | | | All of these are in the Mounts panel's colours window and kept per mount, each row named there after the part it colours (the donkey's Coat, Muzzle and Harness, the dragon's Scales and wings and Belly). A part a mount doesn't have has no row; a mount that pulls no cart (the dragon) has no cart colours. |
 | | *Mount colours:* Coat colour | Game default | (in the Mounts panel) The colour of your mount's body. Brown, Dark, Cream, Black or Custom. |
 | | Harness colour | Game default | (in the Mounts panel) The colour of your mount's harness. Black, Red, Blue, Green or Custom. Mounts without one ignore it. |
 | | Second tone | Game default | (in the Mounts panel) Your mount's second colour, such as the donkey's muzzle or the dragon's belly. Pale, Rose, Brown, Green, Blue, Dark or Custom. Mounts without one ignore it. |
+| | Legs, mane and ears | Game default | (in the Mounts panel) The donkey's dark parts. Red, Gold, Green, Blue, Purple, Pink, Brown, Black, White or Custom; Game default is as drawn. |
+| | Eyes | Game default | (in the Mounts panel) The mount's eyes (the dragon's eyes and claws). The same colours. |
+| | Outline | Game default | (in the Mounts panel) The dark line drawn round the donkey. The same colours. |
+| | A skin's own parts | Game default | (in the Mounts panel) A skin can name parts of its own (Royal Parade's crown, the dragon's horns and spikes), each a row with the same colours; Game default is the skin as drawn. |
 | | *Cart colours:* Paint | Game default | (in the Mounts panel) The colour of the cart. Dark wood, Red, Green, Blue or Custom. |
 | | Wheel colour | Game default | (in the Mounts panel) The colour of the wheels. Dark wood, Red, Green, Blue, Black or Custom. |
 | | Wheel hub colour | Game default | (in the Mounts panel) The colour of the metal in the middle of the wheels. Black, Brass, Silver or Custom. |
@@ -135,7 +139,7 @@ All of these apply at once:
 - **Custom** shows two more rows for that part: a colour by name (24 of them: Chestnut, Sand, Cream, Snow, Ash, Slate,
   Charcoal, Black, Rust, Brick, Wine, Coral, Rose, Plum, Lavender, Navy, Sky, Teal, Mint, Moss, Forest, Olive,
   Mustard, Gold) and its lightness. The picture shows the result.
-- **The Mounts panel** (the Mount section's Mounts button, or the Mounts panel key) closes the menu and opens over the
+- **The Mounts panel** (the Mount tab's Mount Journal button, or the Mount Journal key) closes the menu and opens over the
   game: every mount you can ride listed on the left, the chosen one drawn on the right with what it is and does, and
   under it its journal page (Name, Skin, the babies, Voices, Steps and Baby steps volume). **Customize** opens the colours window (your
   mount's colours and the cart's under their two headings, the lantern with the cart's). You see

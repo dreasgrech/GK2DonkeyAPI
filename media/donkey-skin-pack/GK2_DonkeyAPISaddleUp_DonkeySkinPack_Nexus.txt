@@ -27,7 +27,7 @@
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/journal-royal-parade.png?v=2[/img][/center]
 
 [size=4][b]Customize it[/b][/size]
-[size=3]The Colours window names each skin's own parts next to the donkey's (coat, legs, mane and ears, outline, harness) and the cart's paint, wheels and hubs, with the preview of your real donkey. The parts' own rows need GK2 Saddle Up 0.16.0; with an older one the skins keep the plain rows. Colours you set before carry over: a part that followed the harness or the second tone keeps that colour.[/size]
+[size=3]The Colours window names each skin's own parts next to the donkey's own rows, and the cart's paint, wheels and hubs, with the preview of your real donkey. The parts' own rows need GK2 Saddle Up 0.16.0; with an older one the skins keep the plain rows. Colours you set before carry over: a part that followed the harness or the second tone keeps that colour.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-hellfire.png?v=3[/img][/center]
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-royal-parade.png?v=3[/img][/center]

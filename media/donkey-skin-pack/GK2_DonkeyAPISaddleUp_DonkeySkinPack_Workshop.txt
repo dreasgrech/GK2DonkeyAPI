@@ -1,19 +1,24 @@
 [h1]GK2 Saddle Up - Donkey Skin Pack[/h1]
 A donkey skin pack for the donkey mount in the Saddle Up mod
-[b]Hellfire[/b] and [b]Royal Parade[/b]: two new looks for your donkey mount.
+[b]Hellfire[/b], [b]Royal Parade[/b] and [b]Armored[/b]: three new looks for your donkey mount.
 
 [hr][/hr]
 [h2]Skins[/h2]
 
 [h3]Hellfire[/h3]
-Horns, a devil's tail, glowing eyes and lava cracks over an ash coat. The bishop does not approve. The cracks glow in your second tone colour, so they burn whatever colour you give them in the colours window.
+Horns, a devil's tail, glowing eyes and lava cracks over an ash coat. The bishop does not approve. The horns, the glowing eyes, the lava cracks, the tail and its tip each take a colour of your own in the colours window.
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/hellfire-riding.png?v=2[/img]
 
 [h3]Royal Parade[/h3]
-A crown and a royal saddle cloth, fit for a coronation or at least a good funeral. The cloth follows your harness colour; the crown and the gold trim stay gold.
+A crown and a royal saddle cloth, fit for a coronation or at least a good funeral. The saddle cloth, the crown, the trim and fringe, the emblem and the jewels each take a colour of your own; on Game default they stay as drawn, the crown gold.
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/royal-parade-riding.png?v=2[/img]
+
+[h3]Armored[/h3]
+Plate barding for a war donkey: an ornate knight's helmet with a plume that sways as it walks, a chest plate, steel plates over the body and a cloth skirt under them. The helmet, the plume, the body armour, the skirt and the brass each take a colour of your own.
+
+{{ media/donkey-skin-pack/armored-riding.png: riding the Armored donkey in the yard, by day }}
 
 [h3]Pick it in the Mount Journal[/h3]
 Press [b]L[/b], pick the Donkey, and choose the skin in its [b]Skin[/b] list. The picture shows it with the cart before you ride. Your coat, harness and cart colours still apply under the skin, and the choice is kept with your save.
@@ -22,13 +27,14 @@ Press [b]L[/b], pick the Donkey, and choose the skin in its [b]Skin[/b] list. Th
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/journal-royal-parade.png?v=2[/img]
 
 [h3]Customize it[/h3]
-The Colours window works on the skins as on the plain donkey: coat, harness and second tone on the mount, paint, wheels and hubs on the cart, with the preview of your real donkey. Hellfire's cracks take the second tone; Royal Parade's cloth takes the harness colour.
+The Colours window names each skin's own parts next to the donkey's own rows, and the cart's paint, wheels and hubs, with the preview of your real donkey. Colours you set before carry over: a part that followed the harness or the second tone keeps that colour.
 
-[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-hellfire.png?v=2[/img]
-[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-royal-parade.png?v=2[/img]
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-hellfire.png?v=3[/img]
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-royal-parade.png?v=3[/img]
+{{ media/donkey-skin-pack/colours-armored.png: the colours window on Armored, its five parts' rows showing }}
 
 [h3]The babies wear it too[/h3]
-Your donkey's babies look like their parent: little horns and cracks, or little crowns and cloths, each its own size and shade.
+Your donkey's babies look like their parent: little horns and cracks, little crowns and cloths, or little helmets, each its own size and shade.
 
 [h3]Languages[/h3]
 Available in English, French, German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean (with GK2 Saddle Up 0.15.0 or newer).
@@ -42,7 +48,7 @@ Needs [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3830136851]GK2
 
 [olist]
 [*]Subscribe. The game installs the pack itself: on the next start the main menu's [b]Mods[/b] window lists it with its version and an Enable/Disable switch.
-[*]Start the game, press [b]L[/b], pick the Donkey: Hellfire and Royal Parade are in its Skin list.
+[*]Start the game, press [b]L[/b], pick the Donkey: Hellfire, Royal Parade and Armored are in its Skin list.
 [/olist]
 [b]Steam Deck and Linux (Proton).[/b] Set the game's launch options to [code]WINEDLLOVERRIDES="winhttp=n,b" %command%[/code] so BepInEx loads.
 

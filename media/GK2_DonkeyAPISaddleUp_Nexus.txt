@@ -64,7 +64,7 @@
 
 
 [size=4][b]Your donkey, your colours[/b][/size]
-[size=3]Every part by its name: the donkey's coat, muzzle and belly, legs, mane and ears, eyes, outline and harness, and a skin's own parts too. The cart's paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey. Your babies wear each colour in their own shade.[/size]
+[size=3]Every part by its name: the donkey's coat, muzzle, legs, mane and ears, eyes, outline and harness, and a skin's own parts too. The cart's paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey. Your babies wear each colour in their own shade.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-cart-colors-cycle.gif?v=2[/img][/center]
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/journal-donkey.png?v=1[/img][/center]

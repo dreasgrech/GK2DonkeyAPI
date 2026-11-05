@@ -32,7 +32,8 @@ For players:
   mount you left home with its babies; a cart one of them pulls stays standing. Turn the option off and the mounts you left go home too (one you are
   riding goes once you get off it).
 - **Translation fixes** (2026-11-05): the colour names in Brazilian Portuguese, the custom colour row in Japanese,
-  the Outline row in Korean.
+  the Outline row in Korean. All three are texts new in this version, so no translation a player has seen changed
+  (the 0.15.0 zip's language files against these, 2026-11-05): not in the player notes.
 - **The outline has a colour row of its own** (2026-11-04): Outline, on the donkey and every donkey skin. Game default
   is the game's border, so nothing changes until you pick a colour. The coat no longer colours the line under the
   belly and the nose.
@@ -205,6 +206,19 @@ Development:
     Outline rows, and `tools/rehearsal.sh` puts a loose `plugins\gk2mounts\` dev folder aside (A loaded an unreleased
     skin from it; its rows were taken out of the fixture).
   - docs/release-checklist.md section 5 has the run.
+  - **What is public, checked again** (2026-11-05 night, the user: "be very diligent regarding what releases were public
+    and which werent"). Steam's GetPublishedFileDetails for the three Workshop items: Saddle Up and the Dragons Mount
+    Pack last uploaded 2026-11-01 23:23 and 23:24, their sizes exactly the 0.15.0 and 1.1.0 zips' files and their
+    modinfo.json (3,373,565 and 622,258 bytes); the Donkey Skin Pack 2026-10-30 15:15, its 1.0.0 DLL and modinfo.json
+    (72,838; 1.1.0 would be 118,512); the descriptions on Steam those staged that night. Nexus: the user's word
+    (2026-11-01, "i uploaded everything except the updated donkey skin pack"). So the notes run from Saddle Up 0.15.0,
+    the Dragons Mount Pack 1.1.0 and the Donkey Skin Pack 1.0.0; Critters was never uploaded.
+  - **The notes checked line by line** against the 0.15.0 zip: its language files (no translation a player has seen
+    changed, so the translation-fix line left the notes), its texts (the row is "Legs, mane and ears"; the Muzzle row
+    no longer reaches the belly) and its colour code (Hellfire 1.0.0 named 13 colours over the donkey's 42, past the
+    exact swap's 48: on the cube for every 0.15.0 player, so the harness-colour pixels were a public bug and stay in
+    the note). The Workshop texts, untouched for 0.16.0 until then, brought in step with the Nexus ones; the Saddle Up
+    Workshop changenote names the missing-skin fix; Saddle Up's README's Skin and Colours rows.
 - **A called mount's babies** (2026-11-05 evening; the user: "from ourside i spawned mount b but its babies stayed in
   the house"; investigated in docs/foals-called.md first, "lets investigate this a bit more").
   - The log: the dragon's babies 145 away, asleep, "following" a ridden parent. They came out only once he picked the
