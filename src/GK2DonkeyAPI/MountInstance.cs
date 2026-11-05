@@ -1046,6 +1046,9 @@ namespace GK2DonkeyAPI
 
             private Transform bubblePoint;
 
+            // BodyPoint reads the body drawn (else its root: no view, or a new view not prepared yet).
+            internal bool BodyDrawn => bodySprite != null && bodySprite;
+
             // Where the keeper's reach is measured to: the donkey's body (a free cart: where its donkey's body would be).
             internal Vector3 BodyPoint()
             {

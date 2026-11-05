@@ -665,6 +665,8 @@ namespace GK2DonkeyAPI.Api
 
         internal static void RaiseGameReady()
         {
+            // no self-test run spans a load: one whose coroutine died mid-run leaves no hold on the companions behind
+            MountCompanion.HeldForTests = false;
             if (GameReady == null)
             {
                 return;

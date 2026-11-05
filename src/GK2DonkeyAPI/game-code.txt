@@ -33,4 +33,4 @@ warned the Mounts panel and the options window (and the parts they share): Mount
 warned the options button in the game's Settings window: SettingsButtons
 warned the translations (docs/localization.md, the game's language read when our windows draw): Texts
 
-dev SelfTest OptionsTests TranslationTests MeasureTests TestLoads CargoSheet TuningWindow ScriptDump CarryProbe ChestProbe HeadProbe HeldItemProbe LanternProbe ReachProbe ShapeProbe StrideProbe HalloweenProbe HalloweenSwap ZombieHeadTests
+dev SelfTest OptionsTests TranslationTests MeasureTests TestLoads CargoSheet TuningWindow ScriptDump CarryProbe ChestProbe HeadProbe HeldItemProbe LanternProbe ReachProbe ShapeProbe StrideProbe HalloweenProbe HalloweenSwap ZombieHeadTests LeaveMountsTests

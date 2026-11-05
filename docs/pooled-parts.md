@@ -7,13 +7,14 @@ The game's donkey parts are recycled:
   that wakes.
 
 So anything the mod changes on a view and doesn't undo is carried into the next donkey. Three bugs of 2026-10-03
-were exactly that:
+were exactly that; the fourth (2026-11-05) was the undo itself, live in the world for the rest of a frame:
 
 | Bug | What was carried over | Fix |
 |---|---|---|
 | Keeper thrown up and stuck in a doorway | A reused or new view's `Obstacle` capsule was live for a physics step before `PrepareParts` muted it | `MuteColliders` the moment a view comes alive |
 | Second, still head on the walking donkey | The head layer's sprite when the animator started, the walk's fallback (see "The double donkey, settled" below) | The animator started again with the head layer empty (`RestartWithoutHead`); emptied before an idle view is switched on |
 | (Found in the audit, not seen yet) Frozen or invisible donkey from reused parts | The idle tier's frozen state (animators off, renderers forced off) left on a view removed, sent away or unloaded while frozen | `ReleaseView` undoes the freeze first (`UnquietForPool`) |
+| A cart switch's step aside found no free spot; a hitch right after an unhitch was refused ("I can't get to that cart from here") | The view let go: `ReleaseView` turns its colliders and navmesh cuts back on for the pool, and `Destroy` waits for the frame's end, so till then it stood where it was as an `Obstacle` capsule and two `NavMeshCutSphereCustom` no mount owns (`IsModView` knows only views in use); every check after it in that frame hit them (the mounts-left F11: six round the keeper in the cart switch's frame, none two frames on) | `DestroyDonkey` switches the view off right after `ReleaseView`, as `ViewPool.Park` does; the parts keep the prefab's state. The self-test "another mount chosen while riding" counts them in the switch's frame |
 
 ## The guard (`DonkeyPrefab.cs`)
 
@@ -43,7 +44,7 @@ The game's `npc_donkey` prefab is the measure of a clean view. It's read once fr
 | A free cart's donkey hidden | `HideDonkeyOnly` | `ReleaseView` |
 | Idle freeze: animators off, keep-state on, renderers off | `QuietAnimators(true)` (`Tiers.cs`) | `QuietAnimators(false)`; `ReleaseView` → `UnquietForPool` |
 | Whole view switched off (idle) | `QuietAnimators(true)` | `QuietAnimators(false)` (the `Wgo` itself, not the parts) |
-| Colliders off, layer 26; navmesh cuts off | `MuteColliders` (alive: colliders), `PrepareParts` (both) | `RestoreColliders` (values recorded once per view life) |
+| Colliders off, layer 26; navmesh cuts off | `MuteColliders` (alive: colliders), `PrepareParts` (both) | `RestoreColliders` (values recorded once per view life), then the view switched off at once (`DestroyDonkey`, `ViewPool.Park`): restored, they would stand in the world till `Destroy` at the frame's end |
 | Cart part nodes: active, position, rotation | `PrepareParts`, the cart pose, slopes | `partRest` in `ReleaseView` |
 | Colours (materials, LUTs) | `ColorsRig` | `ColorsRig.Detach` |
 | Lantern pole and lights; the hanging lamp object | `LanternRig`, `LampHang` | `LanternRig.Detach` (lamp unparented, then destroyed: `Destroy` waits for the frame's end, and the first `[pool]` check, 2026-10-03, found the lamp still on returned views) |

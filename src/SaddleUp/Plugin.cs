@@ -54,6 +54,17 @@ namespace SaddleUp
             p.RegionRows("Colours", skinId, "Muzzle", "Muzzle" + sfx, "CustomMuzzle" + sfx);
         }
         private static bool toneRowsMissingSaid;
+        // The mounts left in the world (MountCompanion.LeaveMountsInWorld, the API since 2026-11-05), in a method of its own
+        // for the same reason as ToneRows: an older API's missing member is met here, inside the caller's catch.
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static void LeaveMountsRow(MountSettingsPage p, MountCompanion me)
+        {
+            bool had = me.LeaveMountsInWorld;
+            p.Toggle("Mount", "LeaveMounts", had, "Leave your mounts in the world", "When you call another mount, the one you had stays where it is with its babies, kept with the save like your mount. Call it again and it comes back to you. Your cart is left standing beside it.", v => me.LeaveMountsInWorld = v);
+            // the way back from a crowded world: every mount left goes home (greyed while none is out)
+            p.Button("Mount", "Send your other mounts home", "The mounts you left in the world go home with their babies. A cart one of them pulls is left standing where it is.",
+                () => me.SendLeftAway(), enabled: () => me.LeftMounts.Count > 0);
+        }
 
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
 
@@ -146,6 +157,16 @@ namespace SaddleUp
                 p.Text("Mount", "Name" + sfx, own.Name ?? "", "Name", "Shown when you walk up to your mount, as in \"Ride Bella\".", v => own.Name = v, look: true);
             });
             p.Toggle("Mount", "KeepWithSaves", me.KeepWithSaves, "Keep your mount with the save", "After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs.", v => me.KeepWithSaves = v);
+            // the mount you had stays out when you call another (the user, 2026-11-05: "this will make the world much more
+            // lively"; the API's MountCompanion.LeaveMountsInWorld, off to start with): an older API builds the page without the row
+            try
+            {
+                LeaveMountsRow(p, me);
+            }
+            catch (MissingMethodException)
+            {
+                Logger.LogWarning($"GK2 Donkey API {Mounts.ApiVersion} can't leave your mounts in the world: the option is left out. Update GK2 Donkey API for it.");
+            }
 
             // The babies (a section of their own since 0.12): how many, following you on foot, indoors, the same mount and skin.
             p.FoalRows("Mount", me);

@@ -44,6 +44,10 @@ of fire comes in a later update) and Royal Parade (a saddle cloth and a crown; t
 - **Your donkey stays in the world** where you got off, with its cart and its load. Walk up to it and press E, or
   press H or G anywhere: it comes to you.
 - **It's kept with the save:** after loading, it's where you left it, the load on the cart.
+- **Leave your mounts in the world** (an option, off by default): when you call another mount, the one you had stays
+  where it is with its babies, and is kept with the save. Call it again and that same one comes back. Your cart is left
+  standing beside it, and the next mount fetches it with G. A mount you left keeps its name, babies and colours as
+  you set them in the journal, and its skin until you call it again.
 - **The cart carries the mount's own number of items**, the table above. The donkey's carries six, in three layers
   of two. Anything you pick up while driving goes onto it; piles, tables, graves and quest
   hand-ins take from it as if you held the item. On the donkey alone, your hands stay empty.
@@ -89,6 +93,8 @@ All of these apply at once:
 | | Skin | Default | (in the Mounts panel) How your mount looks. With GK2 Saddle Up: Donkey Skins the donkey also has Hellfire and Royal Parade. |
 | | Name | none | (in the Mounts panel) Shown when you walk up to your mount, as in "Ride Bella". |
 | | Keep your mount with the save | on | After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs. |
+| | Leave your mounts in the world | off | When you call another mount, the one you had stays where it is with its babies, kept with the save like your mount. Call it again and it comes back to you. Your cart is left standing beside it. |
+| | Send your other mounts home | | A button. The mounts you left in the world go home with their babies. A cart one of them pulls is left standing where it is. |
 | | Babies | none | (in the Mounts panel) How many little ones follow your mount around, up to 5. They always look like their parent. Only for a mount that has babies. |
 | | Babies follow you on foot | on | (in the Mounts panel) When you get off, the babies follow you instead of staying with your mount. |
 | | Babies come indoors | on | (in the Mounts panel) The babies follow you into buildings and back out. |

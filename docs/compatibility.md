@@ -95,6 +95,9 @@ the numbers in the API's `[Colors.Coat]`. Both must survive every update as they
 - **Unknown lines are skipped, missing lines default.** The reader is a `switch` on the line's name with no
   `default:` abort; a record is whole when its `end` line was read. New per-record lines (`set` lines a skin owns,
   `chest`, `name`) are additions, never a change to an existing line's meaning.
+- **New kinds of instance are new key values, not new lines.** The mounts left in the world (2026-11-05,
+  docs/leave-mounts.md) are ordinary records under the keys `left:<mount id>` and `left:<mount id>#foal` ...; an
+  older version restores them as instances of the owner that nothing calls (they stand where they were).
 - **A newer file under an older version** is the only unguarded case: an older version sees a format it doesn't
   know and, before 0.10.0, deletes it at the next save. Players don't downgrade; Steam Cloud can carry a file between
   two machines on different versions, which is why the warning names the file and the newer version.

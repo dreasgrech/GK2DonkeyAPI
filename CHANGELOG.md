@@ -12,6 +12,11 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Leave your mounts in the world** (2026-11-05; a new option in the Mount section, off by default). When you
+  call another mount, the one you had stays where it is with its babies, and is kept with the save. Call it again and
+  that same one comes back to you. Your cart is left standing beside it; G or Drive the cart brings it to the mount
+  you have. "Send your other mounts home" (a button under it) sends every mount you left home with its babies; a cart
+  one of them pulls stays standing.
 - **Translation fixes** (2026-11-05): the colour names in Brazilian Portuguese, the custom colour row in Japanese,
   the Outline row in Korean.
 - **The outline has a colour row of its own** (2026-11-04): Outline, on the donkey and every donkey skin. Game default
@@ -100,6 +105,17 @@ For players:
 
 For mod authors:
 
+- **A donkey view let go no longer stands in the world till the frame's end** (2026-11-05; docs/pooled-parts.md).
+  Restored for the game's pool, its colliders and navmesh cuts were live until `Destroy` at the frame's end, so any
+  check later in that frame (a hitch right after an unhitch, a spot judged for the keeper) found an obstacle no mount
+  owns where it stood. The view is switched off at once now.
+- **`MountCompanion.LeaveMountsInWorld`** (off), **`LeftMounts`** and **`SendLeftAway()`** (2026-11-05; docs/leave-mounts.md): another
+  mount chosen (`Skin`, the Mounts panel's Ride and Drive the cart) leaves the one out where it stands with its babies,
+  under the keys `left:<mount id>` and `left:<mount id>#foal` ..., kept with the save; chosen again, that one is the
+  companion's again (`donkey`, `foal` ...). One of each mount at most: with the option off, a mount left earlier is still
+  taken back and the one out goes home. The cart key fetches the companion's cart from another of its own mounts that
+  has it (a left one, or its current one standing with it while a left one is ridden), never a second cart; for another
+  mod's mount ridden it is as before.
 - **The donkey's outline is a region, `Outline`** (2026-11-04; docs/mount-colours.md 7.15, docs/skins.md): its row
   comes with `ToneRows` (`Outline<suffix>`, `CustomOutline<suffix>`; `MountLook.Outline`, an addition), named
   "Outline" on the donkey and every skin over it; `[Region.Outline]` `row = none`, `name =` and `[Base.Outline]` as
@@ -138,6 +154,72 @@ For mod authors:
 
 Development:
 
+- **Mounts left in the world** (2026-11-05; the user: "leave summoned mounts along with their foals in the game
+  instead of despawning them"; docs/leave-mounts.md). `MountCompanion` keeps a family per mount (the current one and
+  the ones left; the look, the babies and the name applied per family, the current one's path as before), switches them
+  where the skin is taken (`TakeSkin` -> `SwitchFamilies`: off the keeper, his cart unhitched, the left keys, the babies'
+  follow switches off), finds them again at a load by their keys (a save's other mount left, with the option on), and
+  the mount left by the keeper steps aside for the one called (`Mount.Instance.StepAsideFrom`, IdleShuffle.cs: checked as
+  `StepOutIfInside` checks a spot, clear of the cart it just left). Saddle Up's row `LeaveMounts` (Mount, after Keep
+  your mount with the save) and the button "Send your other mounts home" under it, in all eleven language files (the Korean reworded once: 둡 isn't in the game's Korean
+  text). Three new self-tests, two in "API, side file, carts, colours" (the switch, babies, adoption, the journal reaching a
+  left mount, one cart; off, a load, the side file) and one in "Flying" (a choice in the air waits for the landing), and an integration check of Saddle Up's row. ApiSurface updated
+  (+3); the version bump is the user's. Review pass 1 (two fresh readers): a choice in the air now waits for the
+  landing (it changed the flying mount in place before), a load never sends a mount home, a mount whose pack is away is
+  left as it is, the step aside measures the body on the view, stops a step under way and keeps off carts, and the
+  runner holds every other scenario to the old way (the panel's scenarios would have left the player's own mount out).
+  Review pass 2: the journal reopened while a choice waits keeps it and its call, a load takes the waiting choice, a
+  call while flying a left mount by hand waits too, babies without a key take their slots at a load, `Foals` stays
+  one live list for the companion's life (the current family's slots), the adoption comes before the cart check.
+  Review pass 3: a call alone waiting for a landing is kept through the journal closed again, a load never sends a
+  mount home in any branch, the wait for a landing is for his own left mounts only (another mod's mount refused as
+  before), a left one he stands by steps aside when the ride key calls his mount too, a wider mount steps further.
+  Review pass 4 (a reader walking the morning's hand list through the code): the left one stepped aside twice at every
+  journal switch (the switch, then its call in the same frame, the body still drawn on the old spot), so once per
+  switch now and the self-test calls in the same frame as the panel does; ahead of its nose first (a cart brought to
+  the new mount stands behind it); Drive the cart refused after the switch brings the chosen mount for a ride. Its
+  second reader: a load took a mod's own unkeyed baby of the companion's mount into a slot (only a baby the companion
+  unkeyed is marked and taken back now, into its own slot), a companion made mid-game switched nothing but its first
+  skin is in place, a choice during a scene load waits for the game, the wait holds while the panel is open again, the
+  step aside can't break a switch, the babies' variety applied as before, `LeftMounts` read-only. Review pass 5: a
+  waiting call no longer outlives a later call made at once, and the cart is fetched only for the companion's own
+  mounts (on another mod's mount his loaded cart would have become that mod's), so the option off is as before exactly;
+  a call refused where he stands no longer leaves the mount spawned for it at the scene's origin; the journal reopened
+  at the end of a landing keeps the waiting call; the babies' follow switches are on in the test before it checks they
+  are cleared. Review pass 6: that removal only with the option on or mounts left (off is the old way exactly).
+  Review pass 7: the ride and cart keys leave his cart standing off a left mount by him before it steps aside (it
+  never stepped with a cart on, and his mount came into it). Review pass 8: behind comes last in the step's order
+  (with ahead taken by a mount left there earlier, the next stepped where the cart brought for Drive stands); the
+  send-away key calls off a call waiting for a landing. Passes 9 to 11 clean (no must-fix from either reader). Review
+  pass 12: a third party's skin of a pack's mount, the pack away, was counted as the donkey (its def falls back to it),
+  so a load changed his mount into a donkey instead of leaving it; the mount its id names is kept now. Pass 13
+  clean, its note taken after it (a short mount part from before the prefixes, "crab/x", is the registered mount's).
+  Passes 14 to 18 clean: five in a row on the final code (docs/leave-mounts.md section 6; the last three passes'
+  nits, below the bar and not fixed, in its section 7). The first F11 (13:06): 1946 passed, 2 failed, both in "another
+  mount chosen while riding". The test mount's distance was read in the frame the donkey came, before its step was
+  drawn (0.00; the check now reads it two frames on, and logs both). After Drive the cart, the donkey left wasn't
+  stepped off the cart's spot (0.42 from the cart's body), and no step was even tried. The companion now logs why a
+  mount doesn't step aside, and the test logs where the donkey and the keeper are before the cart switch; the cause
+  is to be measured in the next run. The second run (13:53): the distance passes. The cart switch came in the frame
+  of the hitch (the donkey's view not ready yet), and this time the step was tried and found no free spot: the run's
+  spot is 0.24 from an obstacle, and the dismount's safety had put the donkey onto the keeper's spot, the cart's.
+  Two checks after it failed because of that (the keeper's seat for the cart there was inside the obstacle). "Found no
+  free spot" now lists each spot tried and what ruled it out. The third run (14:12): every spot was ruled out by a
+  `NavMeshCutSphereCustom` round the keeper, one of the donkey prefab's navmesh cuts, always at the same offset from
+  a mount's own spot: the view swapped out for the cart. `ReleaseView` turns a view's cuts back on for the game's
+  pool before `Destroy`, which waits for the frame's end. That is older than this feature (every hitch, unhitch and
+  removal); the self-test listed the colliders round the keeper at five moments of the cart switch, with whose they
+  are. The fourth run (14:36): at the start none of a donkey view; in the cart switch's frame six (an `Obstacle`
+  capsule and two navmesh cuts each of the view the hitch let go and of the one the unhitch let go, on the keeper's
+  spot); none two frames on. The refused hitch was the same in one call: the cart taken off the test mount let its
+  view go, and the hitch right after saw it (not one lingering, as first read). Reviewed again before the fix: every
+  navmesh cut the logs name sits at a view let go in that frame (the prefab's two at its root +0.40 and -0.45);
+  `Blocks()` leaves out views in use only (`IsModView`); every view let go passes through `DestroyDonkey`.
+  **Fixed:** `DestroyDonkey` switches the view off right after `ReleaseView`, as `ViewPool.Park` already did (the
+  parts keep the prefab's state; idle views are destroyed switched off already). The test checks that no view let go
+  stands round the keeper in the cart switch's frame; the probes and the "stepped a moment ago" line came out;
+  docs/pooled-parts.md has the row. `LeaveMountsTests` is listed with the dev classes in game-code.txt (its check
+  reads the game's `Wgo`). The whole F11 on the fix (16:06): 1949 passed, 0 failed, 0 warnings; no `[pool]` leftover.
 - **A review of the words since 2026-11-01** (2026-11-05: two fresh reviewers, the colour choices, the parts' and
   the skins' part names in ten languages, against the game's own texts; ru, tr and fr clean). Fixed: pt-br colour
   choices masculine (a part's row has no feminine noun to agree with), ja `{0}の色（カスタム）`, ko Outline 외곽선 (테두리

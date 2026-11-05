@@ -125,6 +125,8 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupCore, Name = "the start's check of the game's code: the A* pathfinding's module id read, found and counted", Body = GateTests.Scopes },
             new Scenario { Group = GroupCore, Name = "hitch and unhitch", Body = HitchUnhitch },
             new Scenario { Group = GroupCore, Name = "unhitch without a view (a parked cart stays)", Body = UnhitchWithoutView },
+            new Scenario { Group = GroupCore, Name = "mounts left in the world: another mount chosen while riding (the one ridden stays with its babies, steps aside, the new one ridden; chosen again, the same one back; the journal's babies, name and colours reach it; one cart, left standing and fetched, taken off the mount that has it)", Body = LeaveMountsTests.Switch },
+            new Scenario { Group = GroupCore, Name = "mounts left in the world: off (one left comes back and the one out goes home; none left, changed in place as before), a load (found by their keys; a save's other mount left), the side file's keys and parents", Body = LeaveMountsTests.OffAndLoad },
             new Scenario { Group = GroupCore, Name = "shared colour textures", Body = SharedColours },
             new Scenario { Group = GroupCore, Name = "settings: a moved section keeps a player's values", Body = MovedSections },
             new Scenario { Group = GroupCore, Name = "upgrade: a released version's player files are all read", Body = UpgradeFiles },
@@ -227,6 +229,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupFlying, Name = "jump: the home yard (every built thing and fence jumped at, a slide along the fence): down, never sent back, never underground", Body = FlightJumpYard },
             new Scenario { Group = GroupFlying, Name = "jump: a real hillside (terrain levels) run up and down: the body moves in the air, down on the ground, never held, never sent back", Body = FlightJumpSlope },
             new Scenario { Group = GroupFlying, Name = "in the air: the game's E and F prompts off (a jump leaves them), the work state refused, a ride ended up there parks the mount on the ground", Body = FlightInTheAir },
+            new Scenario { Group = GroupFlying, Name = "mounts left in the world: another mount chosen in the air waits for the landing (the flier still his and in its skin), then the flier is left where it landed and the one chosen comes and is ridden", Body = LeaveMountsTests.InTheAir },
             new Scenario { Group = GroupSafety, Name = "safe spots: standing records one, under the ground never; a seed after the load", Body = SafeRecord },
             new Scenario { Group = GroupSafety, Name = "the fall watchdog: under the ground, far below the world, caught; a drop onto the ground and standing under a bridge, left alone", Body = SafeWatchdog },
             new Scenario { Group = GroupSafety, Name = "back to the last safe spot: the API call (on foot, riding), refused with the reason (controls taken, no spot), the watchdog off", Body = SafeReturn },
@@ -504,6 +507,7 @@ namespace GK2DonkeyAPI
         internal static IEnumerator Drive(IEnumerator root)
         {
             Running = true; // set and cleared here only
+            MountCompanion.HeldForTests = true; // with it: no test's pick leaves the player's mount in the world (MountCompanion)
             var stack = new Stack<IEnumerator>();
             stack.Push(root);
             while (stack.Count > 0)
@@ -549,6 +553,7 @@ namespace GK2DonkeyAPI
                 }
                 yield return cur;
             }
+            MountCompanion.HeldForTests = false;
             Running = false;
         }
 
@@ -3403,15 +3408,29 @@ namespace GK2DonkeyAPI
                 }
                 if (commit != null && meNow != null)
                 {
-                    // the way Ride and Drive the cart close it: the pick becomes his
-                    MountsPanel.Open(page, toggle: false);
-                    yield return Frames(2);
-                    MountsPanel.TestSelect(commit);
-                    yield return Frames(2);
-                    MountsPanel.TestClose(keep: true, commit: true);
-                    yield return Frames(2);
-                    Check(string.Equals(page.MountChosen, commit, StringComparison.OrdinalIgnoreCase) && string.Equals(meNow.MountId, commit, StringComparison.OrdinalIgnoreCase), $"closed as Ride and Drive close it: {commit} is his (the companion's mount {meNow.MountId}, \"{meNow.Skin}\"{(hisCart ? "; one that pulls his cart" : "")})");
-                    page.SelectMount(was); // put back, outside the panel: at once
+                    // the way Ride and Drive the cart close it: the pick becomes his (in place: the run holds the left mounts,
+                    // MountCompanion.HeldForTests); put back whatever happens, so a broken run leaves his own mount his
+                    bool putBack = false;
+                    try
+                    {
+                        MountsPanel.Open(page, toggle: false);
+                        yield return Frames(2);
+                        MountsPanel.TestSelect(commit);
+                        yield return Frames(2);
+                        MountsPanel.TestClose(keep: true, commit: true);
+                        yield return Frames(2);
+                        Check(string.Equals(page.MountChosen, commit, StringComparison.OrdinalIgnoreCase) && string.Equals(meNow.MountId, commit, StringComparison.OrdinalIgnoreCase), $"closed as Ride and Drive close it: {commit} is his (the companion's mount {meNow.MountId}, \"{meNow.Skin}\"{(hisCart ? "; one that pulls his cart" : "")})");
+                        page.SelectMount(was); // put back, outside the panel: at once
+                        putBack = true;
+                    }
+                    finally
+                    {
+                        if (!putBack)
+                        {
+                            try { if (MountsPanel.IsOpen) MountsPanel.TestClose(keep: false); } catch { }
+                            try { page.SelectMount(was); } catch { }
+                        }
+                    }
                     yield return Frames(2);
                     // a chosen mount that isn't installed: the page keeps the choice, the companion rides the donkey meanwhile
                     Check(wasMissing ? string.Equals(page.MountChosen, was, StringComparison.OrdinalIgnoreCase) && string.Equals(meNow.MountId, MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase)

@@ -652,6 +652,148 @@ namespace GK2DonkeyAPI
                 }
             }
 
+            // Another mount comes to where this one stands (MountCompanion: the mount he had, left in the world, and the one
+            // called brought under the keeper on its spot): it stands a step aside, on free, level ground next to where it
+            // stood, its body at least clear from the point (where the keeper is), ahead of its nose first (it leads, the one
+            // called behind it facing the same way, room behind that for a cart), then the ahead diagonals, away from and towards
+            // the camera, and behind last (where a cart brought to the one called stands). Each spot is checked as
+            // StepOutIfInside checks one (its whole body out of anything, on the keeper's part of the walkable mesh, in a
+            // clear line from him). avoid: where the cart it just left was drawn (the free cart has no view yet to tell), kept
+            // clear too. False when none fits: it stays where it is.
+            internal bool StepAsideFrom(Vector3 point, float clear, Vector3? avoid = null, float scale = 1f)
+            {
+                stepAsideFrame = Time.frameCount; // one step per call to it: its view draws the new spot only at the next stand (SteppedAsideJustNow)
+                Vector3 away = AwayFromCamera();
+                Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
+                // the body's offset from the root as ComeTo takes it: measured on the view (the shuffle's own measure may never
+                // have run: idle shuffle off), else the shuffle's, else Follow's fallback
+                float lat;
+                if (bodySprite != null && bodySprite && donkey != null && donkey)
+                {
+                    lat = Vector3.Dot(bodySprite.position - donkey.transform.position, right);
+                }
+                else
+                {
+                    lat = shuffleLateralKnown ? LateralFor(riderFacingX) : S.CenterOffset.Value * riderFacingX;
+                }
+                Vector3 body = Position + right * lat;
+                float worldToRight = Vector3.Dot(Vector3.right, right) >= 0f ? 1f : -1f; // facing is the sign of world x (TryStartStep)
+                Vector3 back = -right * (riderFacingX * worldToRight);
+                PlayerController kpc = MainGame.PlayerController;
+                bool keeperHere = kpc != null && kpc.PlayerData != null && kpc.PlayerData.currentGameSceneId == SceneId;
+                Vector3 kp = keeperHere ? KeeperNow(kpc) : point;
+                // ahead first: the mount called comes under the keeper facing his way, and a cart brought to it stands behind
+                // it, where "behind its tail" would be (review pass 4); so behind comes last, after the ahead diagonals and the
+                // camera's two ways (review pass 8: with ahead taken by a mount left there before, behind came next)
+                var ways = new[] { -back, (-back + away).normalized, (-back - away).normalized, away, -away, (back + away).normalized, (back - away).normalized, back };
+                // what ruled each spot out, for the log when none fits (the first F11 of the mounts left, 2026-11-05: none fitted
+                // after Drive the cart by an obstacle; measured before deciding the fix)
+                var tried = new System.Text.StringBuilder();
+                foreach (float r0 in new[] { 1.8f, 2.3f, 1.4f })
+                {
+                    float r = r0 * scale; // scale: its drawn width against the donkey's (1 to 2), a wider mount steps further
+                    for (int wi = 0; wi < ways.Length; wi++)
+                    {
+                        Vector3 p = body + ways[wi] * r;
+                        string no = null;
+                        float g = float.NaN;
+                        if (new Vector2(p.x - point.x, p.z - point.z).sqrMagnitude < clear * clear)
+                        {
+                            no = "the keeper";
+                        }
+                        else if (avoid.HasValue && new Vector2(p.x - avoid.Value.x, p.z - avoid.Value.z).sqrMagnitude < CartClear * CartClear)
+                        {
+                            no = "the cart's spot";
+                        }
+                        else
+                        {
+                            g = StandHeight(p);
+                            if (float.IsNaN(g))
+                            {
+                                no = "no ground";
+                            }
+                            else if (Mathf.Abs(g - body.y) > MaxRise)
+                            {
+                                no = $"a rise of {g - body.y:F2}";
+                            }
+                            else
+                            {
+                                p.y = g;
+                                string fb = null, wc = null;
+                                Instance o = null;
+                                if (!FreeAt(p, out Collider hit) || !FreeAt(p - right * lat, out hit))
+                                {
+                                    no = "in " + (hit != null ? hit.name : "something");
+                                }
+                                else if (Rideable && kpc != null && (fb = FootprintBlocked(kpc, p, right)) != null)
+                                {
+                                    no = fb;
+                                }
+                                else if (keeperHere && (wc = WhyNotConnected(kp, p) ?? PlaceBlocked(kpc, kp, p)) != null)
+                                {
+                                    no = wc;
+                                }
+                                else if ((o = CrowdingAt(p)) != null)
+                                {
+                                    no = $"by {o.FullId} at {o.BodyPoint():F2}"; // not onto another mount or a cart
+                                }
+                            }
+                        }
+                        if (no != null)
+                        {
+                            tried.Append(tried.Length > 0 ? "; " : "").Append(r.ToString("F1")).Append(' ').Append(WayNames[wi]).Append(": ").Append(no);
+                            continue;
+                        }
+                        Vector3 root = p - right * lat;
+                        root.y = g;
+                        StopShuffle(); // a step or turn under way would carry it back onto its old line; home again where it lands
+                        SetShufflePosition(root);
+                        Plugin.Log.LogInfo($"Mount: {Describe()} steps aside for the mount called: {r:F1} from where it stood, to {root:F2}.");
+                        return true;
+                    }
+                }
+                Plugin.Log.LogInfo($"Mount: {Describe()} found no free spot beside it for the mount called; it stays at {Position:F2}. Its body at {body:F2} "
+                    + $"({(bodySprite != null && bodySprite ? "drawn" : "no body drawn, the offset " + (shuffleLateralKnown ? "measured before" : "of the settings"))}), "
+                    + $"clear of {point:F2} by {clear:F2}{(avoid.HasValue ? $" and of the cart's spot {avoid.Value:F2} by {CartClear:F1}" : "")}, the keeper at {kp:F2}; tried: {tried}.");
+                return false;
+            }
+
+            private static readonly string[] WayNames = { "ahead", "ahead-away", "ahead-toward", "away", "toward", "back-away", "back-toward", "behind" };
+
+            private const float CartClear = 1.5f; // StepAsideFrom's room round the cart body it left
+
+            // A step aside tried in the last few frames: its body is still drawn where it was (BodyPoint) until the view's next
+            // stand, so a second caller in the same call (the panel's switch, then its call of the mount) must not step it
+            // again from there.
+            private int stepAsideFrame = -1000;
+            internal bool SteppedAsideJustNow => Time.frameCount - stepAsideFrame < 5;
+
+            // Another instance in the scene closer to the point than two of them stand apart (NearOther's gap), at its body
+            // and, with a cart, at the cart's body; its own babies left out (they follow it). Every instance, not this frame's
+            // InScene list: the cart it left this frame is new. Null when none is.
+            private Instance CrowdingAt(Vector3 point)
+            {
+                foreach (Instance o in All)
+                {
+                    if (o == this || o.Parent == this || o.SceneId != SceneId)
+                    {
+                        continue;
+                    }
+                    float gap = InstanceGap * 0.5f * (ViewScale + o.ViewScale);
+                    if (Near(o.BodyPoint(), point, gap) || o.HasCart && Near(o.CartPoint(), point, gap))
+                    {
+                        return o;
+                    }
+                }
+                return null;
+            }
+
+            private static bool Near(Vector3 a, Vector3 b, float gap)
+            {
+                float dx = a.x - b.x, dz = a.z - b.z;
+                return dx * dx + dz * dz < gap * gap;
+            }
+
             // Nothing keeper-blocking at a ground point (the capsule LineWalkable uses).
             private bool FreeAt(Vector3 foot, out Collider hit)
             {

@@ -68,5 +68,43 @@ namespace GK2DonkeyAPI.IntegrationTests
 
             yield break;
         }
+
+        // Saddle Up's "Leave your mounts in the world" (the user, 2026-11-05; the API's MountCompanion.LeaveMountsInWorld,
+        // whose own scenarios run its switching): an options row in the Mount section, off by default, reaching the
+        // companion both ways (put back as it was). The player's own mounts are not switched here: they stay as he left them.
+        internal static IEnumerator SaddleUpLeaveMountsRow()
+        {
+            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
+            if (saddle == null)
+            {
+                Info("Saddle Up's page isn't shown: its Leave your mounts row not checked");
+                yield break;
+            }
+            MountSettingsPage.Row row = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "LeaveMounts");
+            Check(row != null && row.ShownSection == "Mount" && !row.IsLook && saddle.InOptions(row), $"the row is in the options window's Mount section ({(row == null ? "missing" : row.ShownSection + (row.IsLook ? ", a look row" : ""))})");
+            if (row?.Entry is ConfigEntry<bool> e)
+            {
+                MountCompanion me = Mounts.Companion("dreas.gk2.saddleup");
+                Check(Equals(e.DefaultValue, false), $"off by default ({e.DefaultValue})");
+                Check(me.LeaveMountsInWorld == e.Value, $"the companion has the row's value ({e.Value})");
+                bool was = e.Value;
+                try
+                {
+                    e.Value = !was;
+                    Check(me.LeaveMountsInWorld == !was, $"switched: the companion follows ({me.LeaveMountsInWorld})");
+                }
+                finally
+                {
+                    e.Value = was;
+                }
+                Check(me.LeaveMountsInWorld == was, "put back");
+                MountSettingsPage.Row home = saddle.Rows.Find(x => x.RowKind == MountSettingsPage.RowKind.Button && x.Label == "Send your other mounts home");
+                Check(home != null && home.ShownSection == "Mount" && saddle.InOptions(home), $"the button \"Send your other mounts home\" is in the Mount section ({home?.ShownSection ?? "missing"})");
+                // (read as it is now: no mount of the player's is left or sent home to see it change; the API's own scenario
+                // sends a test companion's left mounts home)
+                Check(home?.Enabled != null && home.Enabled() == (me.LeftMounts.Count > 0), $"and its greying follows his mounts left in the world ({me.LeftMounts.Count} now, the button {(home?.Enabled != null && home.Enabled() ? "usable" : "greyed")})");
+            }
+            yield break;
+        }
     }
 }

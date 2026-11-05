@@ -37,6 +37,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             new Scenario { Group = GroupSounds, Name = "the dragon's sound files: the flight's in its pack's mount folder (the mount's, for every dragon skin), none the red dragon's own, decoded once through the cache from the pack's DLL", Body = SoundsDragonFiles },
             new Scenario { Group = GroupLevels, Name = "babies: Saddle Up's babies rows, in the journal, reaching its companion", Body = SaddleUpBabiesRows },
             new Scenario { Group = GroupLevels, Name = "babies: Saddle Up's own babies, each its own temperament", Body = SaddleUpFoalTempers },
+            new Scenario { Group = GroupLevels, Name = "mounts left in the world: Saddle Up's row (the options window's Mount section, off by default, reaching its companion)", Body = SaddleUpLeaveMountsRow },
             new Scenario { Group = GroupIndoors, Name = "indoors: Saddle Up's two rows (the second greys while the first is off; the first reaches the API)", Body = SaddleUpIndoorsRows },
             new Scenario { Group = GroupLooks, Name = "layering: the Donkey Skins pack's two skins have no default, nothing resolved, as before", Body = DonkeySkinsUnlayered },
             new Scenario { Group = GroupLooks, Name = "freeplay: Saddle Up's Freeplay rows (the last section, the API's words, shown with the switch on, each driving its key)", Body = SaddleUpFreeplayRows },

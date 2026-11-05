@@ -2780,6 +2780,19 @@ namespace GK2DonkeyAPI
                     {
                         if (donkey)
                         {
+                            // Switched off at once, as ViewPool.Park does: ReleaseView turned its colliders and navmesh cuts
+                            // back on for the pool, and Destroy waits for the frame's end. Till then the view stood in the
+                            // world as an obstacle no mount owns (IsModView knows only views in use), and every check after
+                            // it in that frame hit it: a cart switch's step aside, a hitch right after an unhitch (the
+                            // mounts-left F11, 2026-11-05; docs/pooled-parts.md).
+                            try
+                            {
+                                donkey.gameObject.SetActive(false);
+                            }
+                            catch (Exception e)
+                            {
+                                Plugin.Log.LogWarning($"Mount: switching the donkey view off failed: {e.Message}");
+                            }
                             UnityEngine.Object.Destroy(donkey.gameObject);
                         }
                     }
