@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Translation fixes** (2026-11-05): the snail's shell in German (Schneckenhaus) and Japanese (カラ).
 - **The critters' colour rows name their parts** (2026-11-04): the rat's Fur, Ears nose paws and tail, Eyes; the
   snail's Body, Shell, Eyes; the worm's Skin, Mouth, Eyes, in all 11 languages. The snail's eyes and the worm's eyes
   and mouth are parts of their own (they were the outline's colours); the worm's mouth is drawn a shade redder, so its

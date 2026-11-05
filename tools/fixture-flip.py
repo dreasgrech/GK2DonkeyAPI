@@ -1,5 +1,6 @@
 # Makes a released-version cfg fixture: every value set to something other than its default (docs/compatibility.md 4).
 # usage: flip_cfg.py <in.cfg> <out.cfg> <header line>
+# Over a fixture already made (to flip what an older version of this left): the same command, its header kept.
 import sys, re
 src, dst, header = sys.argv[1], sys.argv[2], sys.argv[3]
 raw = open(src, "rb").read().decode("utf-8-sig")
@@ -19,7 +20,9 @@ for ln in lines:
     if m:
         meta[m.group(1)] = m.group(2)
         out.append(ln); continue
-    m = re.match(r"^([A-Za-z0-9_.\-]+) = (.*)$", ln)
+    # a key may hold a skin id (Coat_donkey/saddleup-donkey-skins.hellfire, the per-skin looks since 0.13.0): without
+    # the '/' those rows were never flipped (the 0.13.0 and 0.15.0 fixtures' 46 and 69, found 2026-11-05)
+    m = re.match(r"^([A-Za-z0-9_.\-/]+) = (.*)$", ln)
     if m and "Setting type" in meta:
         k, v = m.group(1), m.group(2)
         t, d = meta.get("Setting type"), meta.get("Default value", "")
@@ -60,7 +63,9 @@ for ln in lines:
         meta = {}
         continue
     out.append(ln)
-text = "## " + header + "\n" + "\n".join(out)
+# run again over a fixture (its first line "## ## Fixture: ..."): its header stays and no second one is added; every
+# value is set from its default, so the ones already off it come out the same
+text = "\n".join(out) if lines and lines[0].startswith("## ## Fixture:") else "## " + header + "\n" + "\n".join(out)
 open(dst, "wb").write(text.replace("\n", nl).encode("utf-8"))
 print("%s: %d set off their default, %d left" % (dst.rsplit("/", 1)[-1], flipped, kept))
 for r in report[:40]: print("  " + r)

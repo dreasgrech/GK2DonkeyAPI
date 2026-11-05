@@ -12,6 +12,8 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Translation fixes** (2026-11-05): the colour names in Brazilian Portuguese, the custom colour row in Japanese,
+  the Outline row in Korean.
 - **The outline has a colour row of its own** (2026-11-04): Outline, on the donkey and every donkey skin. Game default
   is the game's border, so nothing changes until you pick a colour. The coat no longer colours the line under the
   belly and the nose.
@@ -136,6 +138,17 @@ For mod authors:
 
 Development:
 
+- **A review of the words since 2026-11-01** (2026-11-05: two fresh reviewers, the colour choices, the parts' and
+  the skins' part names in ten languages, against the game's own texts; ru, tr and fr clean). Fixed: pt-br colour
+  choices masculine (a part's row has no feminine noun to agree with), ja `{0}の色（カスタム）`, ko Outline 외곽선 (테두리
+  was also Royal Parade's trim), the snail's shell de Schneckenhaus and ja カラ, Royal Parade's trim pt-br Galão e
+  franjas and zh_cn 饰边和流苏. Every new character is in the game's own text of its language. Left as they are: the
+  optional style points (Gemas for jewels, katakana for the dragon's parts and the like).
+- **The released fixtures' per-skin looks set off their defaults** (2026-11-05; docs/compatibility.md 4).
+  `tools/fixture-flip.py` never flipped a key with a `/` (a per-skin key holds the skin id), so the 0.13.0 and 0.15.0
+  Saddle Up fixtures' 46 and 69 per-skin rows stayed at their defaults and the upgrade scenario couldn't see a lost
+  per-skin colour. The pattern takes `/`; run again over a fixture it keeps the header; both fixtures flipped (only
+  those rows changed).
 - **The review page against the export of every skin** (2026-11-05; the first export of all nine: every skin 0 px
   differ, docs/sprite-tools.md). `skin_preview_html.py` takes the frames the game built whole from the export's
   manifest (its guess took Armored's overlays, covering most of the donkey, for whole frames: 10525 px "differ", the

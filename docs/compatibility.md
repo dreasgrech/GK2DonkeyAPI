@@ -134,7 +134,12 @@ changelog line that says it reaches new installs only.
   to be replaced by one with a parked loaded cart saved by the 0.40.0 build. `0.15.0` (2026-11-01): the cfgs of the
   0.15.0 / API 0.43.0 zip's first run (rehearsal A 22:40), flipped (477 API values, 120 Saddle Up's), and its
   `defaults.cfg`; no side file (the rehearsal saved nothing, and the side file's format is 0.13.0's: no persistence change
-  since). Every value in a cfg fixture differs from its default, so a lost value shows.
+  since). Every value in a cfg fixture differs from its default, so a lost value shows. Until 2026-11-05 the flip left
+  the per-skin rows alone (its key pattern had no `/`, and a per-skin key holds a skin id: `Coat_donkey/saddleup-donkey-skins.hellfire`):
+  the 0.13.0 and 0.15.0 Saddle Up fixtures kept their 46 and 69 per-skin colour and lantern rows at the defaults, so a
+  lost per-skin look didn't show. Flipped since, by the same tool run again over the fixtures (a value is set from its
+  default, so the others came out the same and the header stays); each new value checked against today's cfg (an
+  enum one of its values, a number inside its range).
 - **Self-test "upgrade: a released version's player files are all read"** (group "API, side file, carts, colours"):
   for every version folder, the API's cfg key by key against what this build binds, the side file through the real
   reader (every record whole), and the set-aside of a format-99 file. Saddle Up's cfg through the live page's own

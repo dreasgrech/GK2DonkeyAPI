@@ -66,7 +66,7 @@ colours.tone_brown,茶色,Brown,a colour for a part of a skin
 colours.tone_black,黒,Black,a colour for a part of a skin
 colours.tone_white,白,White,a colour for a part of a skin
 colours.tone_custom,カスタム,Custom,"a colour for a part of a skin: the player's own, picked in the row under it"
-colours.tone_custom_colour,{0}（カスタム）,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
+colours.tone_custom_colour,{0}の色（カスタム）,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
 colours.tone_lightness,{0}：明るさ,{0}: lightness,"the row under it that makes that colour lighter or darker; {0}: the part's name"
 colours.region_coat,体,Coat,a part of the mount the player colours: the donkey's coat (its row's label in the colours window)
 colours.region_donkey_dark,足とたてがみと耳,"Legs, mane and ears","a part of the donkey the player colours: its dark lower legs, mane, ears and tail tuft (its outline is a part of its own)"
