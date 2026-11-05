@@ -961,8 +961,9 @@ namespace GK2DonkeyAPI.Api
         // one left back: it comes as a mount called comes. Each mount once at most: a mount left keeps its name, its
         // babies' number and its colours as the journal sets them, and the skin it was left in until it is called again
         // (docs/leave-mounts.md). Off (to start with): the mount he has changes into the one called, where it stands, as
-        // before; a mount left while it was on is still taken back when called, and the one he had then goes (its cart
-        // left standing). Switching it off sends none away.
+        // before, and no mount stays left: switched off, or a save loaded with it off, the mounts left go home with their
+        // babies (a cart one pulls left standing), one he rides by hand once he is off it; that one, called while he
+        // rides it, is his again and the one he had goes.
         public bool LeaveMountsInWorld { get; set; }
 
         // The mounts left in the world, one per mount (their babies are each one's Children), in no set order. Made again only
@@ -1000,6 +1001,38 @@ namespace GK2DonkeyAPI.Api
             }
             Plugin.Log.LogInfo($"Companion: {OwnerId}: {n} mount(s) left in the world sent home.");
             return n;
+        }
+
+        // Off, no mount stays left in the world (the user, 2026-11-05: "switching the option from the options should
+        // unsummon the other mounts you're not using right now"): switched off, or a save loaded with it off (FindFamilies
+        // found them), the mounts left go home as SendLeftAway sends them; one he rides by hand stays till he is off it.
+        // Not during an F11 run (the player's companion is held to the old way) nor behind the Mounts panel. Four times a
+        // second, from Tick; nothing to do costs one compare.
+        private float nextLeftOffCheck;
+
+        private void SendLeftHomeWhileOff()
+        {
+            if (LeaveMountsInWorld || left.Count == 0 || Time.unscaledTime < nextLeftOffCheck || FamiliesHeld || panelHeld
+                || !Mounts.IsAvailable || !Mounts.IsGameReady)
+            {
+                return;
+            }
+            nextLeftOffCheck = Time.unscaledTime + 0.25f;
+            int n = 0;
+            foreach (Family f in LeftNow())
+            {
+                MountHandle d = f.Donkey;
+                bool was = d != null && d.Exists;
+                if (was && d.IsRidden)
+                {
+                    continue; // ridden by hand: it goes once he is off it
+                }
+                if (GoHome(f, "the option is off") && was) n++;
+            }
+            if (n > 0)
+            {
+                Plugin.Log.LogInfo($"Companion: {OwnerId}: {n} mount(s) left in the world sent home: leaving mounts in the world is off.");
+            }
         }
 
         // Their keys: "left:<mount id>" and its babies' "left:<mount id>#foal", "#foal2" ... (found again after a load).
@@ -1429,6 +1462,7 @@ namespace GK2DonkeyAPI.Api
         private void Tick()
         {
             TakeDeferred();
+            SendLeftHomeWhileOff();
             if (pending.HasValue)
             {
                 ContinuePending();

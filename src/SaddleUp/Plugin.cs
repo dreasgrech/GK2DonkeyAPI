@@ -60,7 +60,7 @@ namespace SaddleUp
         private static void LeaveMountsRow(MountSettingsPage p, MountCompanion me)
         {
             bool had = me.LeaveMountsInWorld;
-            p.Toggle("Mount", "LeaveMounts", had, "Leave your mounts in the world", "When you call another mount, the one you had stays where it is with its babies, kept with the save like your mount. Call it again and it comes back to you. Your cart is left standing beside it.", v => me.LeaveMountsInWorld = v);
+            p.Toggle("Mount", "LeaveMounts", had, "Leave your mounts in the world", "When you call another mount, the one you had stays where it is with its babies, kept with the save like your mount. Pick it again in the journal and it comes back to you. Your cart is left standing beside it. Turn this off and the mounts you left go home.", v => me.LeaveMountsInWorld = v);
             // the way back from a crowded world: every mount left goes home (greyed while none is out)
             p.Button("Mount", "Send your other mounts home", "The mounts you left in the world go home with their babies. A cart one of them pulls is left standing where it is.",
                 () => me.SendLeftAway(), enabled: () => me.LeftMounts.Count > 0);

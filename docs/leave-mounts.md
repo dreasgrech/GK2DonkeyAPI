@@ -18,6 +18,10 @@ This page is what was found, what was decided and built, and what is left to loo
     and removal; docs/pooled-parts.md). Fixed 15:49 (a view let go is switched off at once); the scenario now checks
     no view let go stands round him in the switch's frame. **Then the whole F11 (16:06): 1949 passed, 0 failed, 0
     warnings.** Next: the hand list (section 5).
+- **Since then (the user's test, 2026-11-05 afternoon): off sends the mounts left home.** Three mounts out, the option
+  turned off, they stayed; now they go home (section 3), one ridden by hand once he is off it, a load with the
+  option off too. The row's text says so (11 languages) and "Pick it again in the journal". Hand items 6, 8 and 11.
+  **The whole F11 on it (16:54): 1957 passed, 0 failed, 0 warnings.**
 - **First F11.** New: three scenarios named "mounts left in the world" (two in "API, side file, carts,
   colours", one in "Flying") and Saddle Up's row check in the integration tests. Every other scenario runs with the
   switch held to the old way (`HeldForTests`), so green there means the old path is intact, not that the feature ran.
@@ -75,10 +79,13 @@ This page is what was found, what was decided and built, and what is left to loo
 - **Off (the default).** The mount he has changes into the one chosen, under him, as before, babies and cart with it.
   The one exception is a mount left while the option was on: it is taken back when its mount is chosen (one of each
   mount), and the one out goes home instead. Its babies go with it; any cart it pulls is left standing first, so no cart
-  and no load is lost. Switching the option off sends no mount away.
+  and no load is lost. Since the user's call of 2026-11-05 afternoon, no mount stays left while the option is off:
+  switched off, or a save loaded with it off, the mounts left go home as the button sends them, one he rides by hand
+  once he is off it (the companion's tick, `SendLeftHomeWhileOff`). So the exception above is a left one he rides by
+  hand and then picks in the journal: it is his again, and the one out goes home.
 - **At a load** (`OnGameReady`), a save whose mount out isn't the one chosen (a save from before the choice) is handled
-  as a switch, except that nothing goes home, on or off: the one out is left instead. No mount of the player's goes
-  without his doing.
+  as a switch, except that nothing goes home there, on or off: the one out is left instead. With the option off, the
+  mounts left then go home (the tick, above): the save's mount out is never the one sent.
 - **A call refused where he stands** (indoors, busy) after the switch: the mount chosen is spawned for the call (at the
   scene's origin, to be placed by its come to the keeper) and, refused, goes again rather than stand there with its
   babies (review pass 5: with the mounts left every new mount's first call spawns one; before, only the first call
@@ -208,14 +215,18 @@ the left one steps aside (`Mount.Instance.StepAsideFrom`, in IdleShuffle.cs besi
 - **A left mount ridden by hand (E) doesn't become the chosen one.** The journal still chooses; the ride key calls the
   chosen mount. Riding one by hand is riding it, as any world donkey. Making the mount ridden the chosen one would mean
   the API changing the page's Mount and Skin rows from a ride: possible, not built.
-- **Turning the option off sends none away**: they stay until chosen again (then the one out goes home).
+- **Turning the option off sends the mounts left home** (the user, 2026-11-05 afternoon: "switching the option from
+  the options should unsummon the other mounts you're not using right now"), with their babies, as the button does (a
+  cart one pulls is left standing). One he rides by hand goes once he is off it (his choice), and a save loaded with
+  the option off sends its mounts left home too (his choice: off means only his mount is out). The companion's tick
+  does it, four times a second, held in F11 runs and behind the Mounts panel (`SendLeftHomeWhileOff`).
 - **Its skin stays** until it is chosen again (above).
 - **A left mount's sound volumes** (voices, steps, babies' steps) are the mount out's: they are one setting for the
   mount you have, and a left one's volume rows in the journal reach it when it is chosen again. Its name, babies and
   colours are its own. Giving it its own volumes would need them as per-mount values, as its colours are: not built
   (review pass 18 noted it).
 - **Flying:** choosing another mount in the air waits for the landing (above), then switches. Not refused.
-- **A load never sends a mount home**, even with the option off (above).
+- **A load never sends the mount out home** (above); with the option off, the mounts left go home after it (above).
 - **Another mod's mount ridden, his cart called:** a cart of its own comes, as before (his own stays where it is): his
   loaded cart on another mod's mount would be that mod's once left (review pass 5). So with the option off and no
   mount left, nothing differs from before the feature.
@@ -277,15 +288,19 @@ switched by the tests.
 5. Change a left mount's babies, name or colours in the journal: the one in the world follows (the colours of the skin
    it wears: leave its Skin row as it is, a left mount keeps its skin until it is chosen again). Its sound volumes
    don't follow (section 3).
-6. Turn the option off, pick the donkey (left in 3) and Ride: it comes back, and Gerry goes home.
-7. Turn the option back on. Pick Gerry and Ride, so the donkey is left again. Get off Gerry (the ride key), walk up
-   to the donkey and press E: you ride it. The ride key gets you off it; pressed again, it calls the journal's mount (Gerry), which comes beside it
-   (the donkey steps aside, in view: no journal covers it here).
-8. Pick the dragon and Ride, fly, open the journal, pick the donkey and Ride: the dragon lands first (a "land first"
+6. Turn the option off (Options, Mount): within a moment the donkey left in 3 goes home with its babies; Gerry, under
+   you, stays with the cart. Turn it back on.
+7. Pick the donkey and Ride, so Gerry is left (the cart standing beside him). Get off the donkey (the ride key), walk
+   up to Gerry and press E: you ride him. The ride key gets you off him; pressed again, it calls the journal's mount
+   (the donkey), which comes beside him (Gerry steps aside, in view: no journal covers it here).
+8. Press E on Gerry again and, riding him, turn the option off: he stays under you. Get off: he goes home with his
+   babies, the cart stays standing. Turn the option back on.
+9. Pick the dragon and Ride, fly, open the journal, pick the donkey and Ride: the dragon lands first (a "land first"
    bubble, once or twice), then the donkey comes and you are on it, the dragon left where it landed (a step aside, in
    view).
-9. Options, Mount, "Send your other mounts home": every mount you left goes, their babies with them (a cart one of
-   them pulled would stay standing; in this order none pulls one).
+10. Options, Mount, "Send your other mounts home": the dragon goes, its babies with it.
+11. Pick Gerry and Ride, so the donkey is left, and save. Turn the option off (the donkey goes home), then load that
+    save: the donkey comes back with it and goes home again at once; Gerry stays yours.
 
 ## 6. Review passes
 

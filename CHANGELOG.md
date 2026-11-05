@@ -13,10 +13,11 @@ straight away; at release that heading becomes the version and date (docs/releas
 For players:
 
 - **Leave your mounts in the world** (2026-11-05; a new option in the Mount section, off by default). When you
-  call another mount, the one you had stays where it is with its babies, and is kept with the save. Call it again and
-  that same one comes back to you. Your cart is left standing beside it; G or Drive the cart brings it to the mount
-  you have. "Send your other mounts home" (a button under it) sends every mount you left home with its babies; a cart
-  one of them pulls stays standing.
+  call another mount, the one you had stays where it is with its babies, and is kept with the save. Pick it again in
+  the journal and that same one comes back to you. Your cart is left standing beside it; G or Drive the cart brings it
+  to the mount you have. "Send your other mounts home" (a button under it) sends every mount you left home with its
+  babies; a cart one of them pulls stays standing. Turn the option off and the mounts you left go home too (one you are
+  riding goes once you get off it).
 - **Translation fixes** (2026-11-05): the colour names in Brazilian Portuguese, the custom colour row in Japanese,
   the Outline row in Korean.
 - **The outline has a colour row of its own** (2026-11-04): Outline, on the donkey and every donkey skin. Game default
@@ -112,8 +113,9 @@ For mod authors:
 - **`MountCompanion.LeaveMountsInWorld`** (off), **`LeftMounts`** and **`SendLeftAway()`** (2026-11-05; docs/leave-mounts.md): another
   mount chosen (`Skin`, the Mounts panel's Ride and Drive the cart) leaves the one out where it stands with its babies,
   under the keys `left:<mount id>` and `left:<mount id>#foal` ..., kept with the save; chosen again, that one is the
-  companion's again (`donkey`, `foal` ...). One of each mount at most: with the option off, a mount left earlier is still
-  taken back and the one out goes home. The cart key fetches the companion's cart from another of its own mounts that
+  companion's again (`donkey`, `foal` ...). One of each mount at most. Off, no mount stays left: switched off, or a save
+  loaded with it off, the mounts left go home as `SendLeftAway` sends them (one ridden by hand once he is off it; that
+  one, chosen while he rides it, is the companion's again and the one out goes home). The cart key fetches the companion's cart from another of its own mounts that
   has it (a left one, or its current one standing with it while a left one is ridden), never a second cart; for another
   mod's mount ridden it is as before.
 - **The donkey's outline is a region, `Outline`** (2026-11-04; docs/mount-colours.md 7.15, docs/skins.md): its row
@@ -220,6 +222,15 @@ Development:
   stands round the keeper in the cart switch's frame; the probes and the "stepped a moment ago" line came out;
   docs/pooled-parts.md has the row. `LeaveMountsTests` is listed with the dev classes in game-code.txt (its check
   reads the game's `Wgo`). The whole F11 on the fix (16:06): 1949 passed, 0 failed, 0 warnings; no `[pool]` leftover.
+  **Off, no mount stays left** (the user, 2026-11-05 afternoon: three mounts out, the option turned off, they stayed; "switching
+  the option from the options should unsummon the other mounts you're not using right now"; his two choices taken: one
+  ridden by hand goes once he is off it, and a save loaded with the option off sends them home too). The companion's
+  tick (four times a second, held in F11 runs and behind the Mounts panel) sends the mounts left home as
+  `SendLeftAway` does while the option is off; one ridden is left till he is off it. The off scenario checks each way
+  (switched off, ridden by hand, a load). The row's description: "Pick it again in the journal" (it said "Call it
+  again", which read as the ride key) and "Turn this off and the mounts you left go home", in all 11 languages, each
+  with its own file's words (the journal's name; ja, ko and zh_cn only with characters our files already have).
+  The whole F11 on it (16:54): 1957 passed, 0 failed, 0 warnings.
 - **A review of the words since 2026-11-01** (2026-11-05: two fresh reviewers, the colour choices, the parts' and
   the skins' part names in ten languages, against the game's own texts; ru, tr and fr clean). Fixed: pt-br colour
   choices masculine (a part's row has no feminine noun to agree with), ja `{0}の色（カスタム）`, ko Outline 외곽선 (테두리

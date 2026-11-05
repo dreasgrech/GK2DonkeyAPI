@@ -429,9 +429,10 @@ namespace GK2DonkeyAPI
         }
 
         // Off: chosen again, a mount left earlier comes back and the one out goes home (its babies too; the cart left
-        // standing); with none left, the one out changes into the new mount where it is, as before. A load: the mounts left
-        // found again by their keys; a save whose mount out isn't the one chosen leaves it (on). The side file keeps the
-        // left keys and the babies' parent.
+        // standing); with none left, the one out changes into the new mount where it is, as before. Switched off, the
+        // mounts left go home, one he rides by hand once he is off it. A load: the mounts left found again by their keys; a
+        // save whose mount out isn't the one chosen leaves it (on); with the option off they go home. The side file keeps
+        // the left keys and the babies' parent.
         internal static IEnumerator OffAndLoad()
         {
             string notHere = WhyNotFromHere();
@@ -465,7 +466,8 @@ namespace GK2DonkeyAPI
                 if (!waited) yield break;
                 MountHandle b = c.Donkey;
 
-                // off: the donkey chosen comes back, the test mount goes home with its baby
+                // off: the donkey chosen comes back, the test mount goes home with its baby (switched off and chosen in one
+                // frame, before the tick sends a left one home: as when he rides a left one by hand and picks its mount)
                 c.LeaveMountsInWorld = false;
                 MountHandle bBaby = b.Children.Count > 0 ? b.Children[0] : null;
                 c.Skin = "";
@@ -479,7 +481,49 @@ namespace GK2DonkeyAPI
                 yield return Until(() => a.Mount == TestMount, 6f);
                 Check(waited && c.Donkey == a && a.Exists && Mounts.Riding?.I == a.I && c.LeftMounts.Count == 0, $"off, the test mount chosen with none left: the donkey changed into it under the rider, as before ({a.Mount}, riding {Mounts.Riding?.FullId ?? "nothing"})");
 
-                // a load: the save's mount out (the test mount, still a) is not the one the cfg chose (the donkey): left (on)
+                // switched off, the mounts left go home (the user, 2026-11-05: "switching the option from the options should
+                // unsummon the other mounts you're not using right now"); the one he rides stays his
+                c.LeaveMountsInWorld = true;
+                c.Skin = "";
+                r = c.UseFromPanel(MountStyle.Ride);
+                yield return Until(() => Mounts.IsMounted && c.Donkey != null && c.Donkey != a && Mounts.Riding?.I == c.Donkey.I && Babies(c.Donkey) == 1, 12f);
+                Check(r.Ok && waited && a.Exists && a.Key == MountCompanion.LeftKey(TestMount), $"on again, the donkey chosen: a new one ridden, the test mount left ({Said(r)}; {a.Key})");
+                if (!waited) yield break;
+                MountHandle d = c.Donkey;
+                yield return Until(() => Babies(a) == 1, 6f);
+                MountHandle aBaby = a.Children.Count > 0 ? a.Children[0] : null;
+                c.LeaveMountsInWorld = false;
+                yield return Until(() => !a.Exists, 3f);
+                Check(waited && (aBaby == null || !aBaby.Exists) && c.LeftMounts.Count == 0, $"switched off: the test mount left went home with its baby ({a.Exists}, {aBaby?.Exists}; {c.LeftMounts.Count} left)");
+                Check(c.Donkey == d && d.Exists && Mounts.Riding?.I == d.I && Babies(d) == 1, $"and the donkey he rides stays his, with its baby (riding {Mounts.Riding?.FullId ?? "nothing"})");
+
+                // one he rides by hand stays while he is on it, and goes once he is off it
+                c.LeaveMountsInWorld = true;
+                c.Skin = TestSkin;
+                r = c.UseFromPanel(MountStyle.Ride);
+                yield return Until(() => Mounts.IsMounted && c.Donkey != null && c.Donkey.Mount == TestMount && Mounts.Riding?.I == c.Donkey.I, 12f);
+                Check(r.Ok && waited && d.Exists && d.Key == MountCompanion.LeftKey(MountCatalog.DonkeyId), $"on, the test mount chosen: the donkey left ({Said(r)}; {d.Key})");
+                if (!waited) yield break;
+                MountHandle e = c.Donkey;
+                Mounts.Dismount("self-test");
+                yield return Until(() => !Mounts.IsMounted, 5f);
+                PutKeeper(d.Position, d.FacingRight ? 1f : -1f);
+                yield return Frames(3);
+                r = d.Ride(showMessage: false);
+                yield return Until(() => Mounts.IsMounted && Mounts.Riding?.I == d.I, 5f);
+                Check(r.Ok && waited, $"the donkey left ridden by hand ({Said(r)})");
+                if (!waited) yield break;
+                MountHandle dBaby = d.Children.Count > 0 ? d.Children[0] : null;
+                c.LeaveMountsInWorld = false;
+                yield return Seconds(0.75f); // three of the ticks that send a left one home
+                Check(d.Exists && Mounts.Riding?.I == d.I && c.LeftMounts.Count == 1, $"switched off while he rides a left one by hand: it stays under him ({d.Exists}, riding {Mounts.Riding?.FullId ?? "nothing"})");
+                Check(e.Exists && c.Donkey == e, $"and his own mount stays ({c.Donkey?.FullId})");
+                Mounts.Dismount("self-test");
+                yield return Until(() => !d.Exists, 3f);
+                Check(waited && (dBaby == null || !dBaby.Exists) && c.LeftMounts.Count == 0, $"off it, it went home with its baby ({d.Exists}, {dBaby?.Exists})");
+                a = e; // the test mount out, for the load below
+
+                // a load: the save's mount out (the test mount, a) is not the one the cfg chose (the donkey): left (on)
                 Mounts.Dismount("self-test");
                 yield return Until(() => !Mounts.IsMounted, 5f);
                 c.LeaveMountsInWorld = true;
@@ -507,6 +551,12 @@ namespace GK2DonkeyAPI
                 Check(ra != null && ra.Sets.Exists(x => x[0] == "Skin" && x[x.Length - 1] == TestSkin), "and its skin (a left one comes back in the skin it was left in)");
                 Check(rb != null && rb.ParentFull == a.FullId, $"and its baby's, with its parent ({rb?.ParentFull ?? "no record"})");
                 c.KeepWithSaves = false;
+
+                // a load with the option off: the mounts left go home (off: only the mount he has is out)
+                c.LeaveMountsInWorld = false;
+                c.TestFindAgain();
+                yield return Until(() => !a.Exists, 3f);
+                Check(waited && c.LeftMounts.Count == 0, $"a load with the option off: the mount left went home ({a.Exists}; {c.LeftMounts.Count} left)");
             }
             finally
             {

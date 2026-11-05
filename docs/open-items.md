@@ -450,9 +450,9 @@ closed):
 ## Undecided
 
 - **Mounts left in the world: the choices taken for the first build** (2026-11-05; docs/leave-mounts.md section 3):
-  off by default; a left mount ridden by hand (E) doesn't become the chosen one; turning the option off sends none
-  away (the button does); a left one keeps the skin it was left in until chosen again; a choice in the air waits for the
-  landing; a load never sends a mount home. Each is the user's to change.
+  off by default; a left mount ridden by hand (E) doesn't become the chosen one; turning the option off sends the
+  mounts left home (the user's call, 2026-11-05 afternoon; one ridden by hand once he is off it, a load with it off too); a left one keeps the skin it was left in until chosen again; a choice in the air waits for the
+  landing; a load never sends the mount out home. Each is the user's to change.
 
 - **The settings picture at night is blue-lit** (found 2026-10-19 by the colours self-test: the worm's outline 36141C
   read back as 1E0A1C, red and green halved, blue kept). PreviewStage.cs says its own point light makes it "lit the
