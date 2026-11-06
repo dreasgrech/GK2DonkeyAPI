@@ -18,7 +18,7 @@ A crown and a royal saddle cloth, fit for a coronation or at least a good funera
 [h3]Armored[/h3]
 Plate barding for a war donkey: an ornate knight's helmet with a plume that sways as it walks, a chest plate, steel plates over the body and a cloth skirt under them. The helmet, the plume, the body armour, the skirt and the brass each take a colour of your own.
 
-{{ media/donkey-skin-pack/armored-riding.png: riding the Armored donkey in the yard, by day }}
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/armored-riding.png?v=1[/img]
 
 [h3]Pick it in the Mount Journal[/h3]
 Press [b]L[/b], pick the Donkey, and choose the skin in its [b]Skin[/b] list. The picture shows it with the cart before you ride. Your coat, harness and cart colours still apply under the skin, and the choice is kept with your save.
@@ -31,7 +31,7 @@ The Colours window names each skin's own parts next to the donkey's own rows, an
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-hellfire.png?v=3[/img]
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-royal-parade.png?v=3[/img]
-{{ media/donkey-skin-pack/colours-armored.png: the colours window on Armored, its five parts' rows showing }}
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-armored.png?v=1[/img]
 
 [h3]The babies wear it too[/h3]
 Your donkey's babies look like their parent: little horns and cracks, little crowns and cloths, or little helmets, each its own size and shade.

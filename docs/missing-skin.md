@@ -4,7 +4,7 @@ The user, in rehearsal B of the 0.16.0 release: "im selecting dragon but its kee
 this bug because it does look serious and then we'll have it as part of the same major update ... public release will
 wait after it", and "are we sure that the fix will be enough as it is?"
 
-Status: **built 2026-11-05 night (sections 6 and 7); seen by hand fixed ~23:03; the whole F11 green 23:20 (2000 passed, 0 failed, 0 warnings); the release steps open.**
+Status: **built 2026-11-05 night (sections 6 and 7); seen by hand fixed ~23:03; the whole F11 green 23:20 (2000 passed, 0 failed, 0 warnings); in the 0.16.0 release zip since 2026-11-06 01:09, rehearsal B passed with it (section 8).**
 
 ## 1. What was missing
 
@@ -136,11 +136,8 @@ The user: "Build, keep 0.16.0".
 **Built and deployed** 22:13, 0 warnings. NoLinq, Cecil, ApiSurface (no public change) and layering all pass; two
 comments named the dragon at first and were reworded.
 
-**Open:**
-- F11;
-- the user's commit removing the unuploaded `release/GK2-Saddle-Up-0.16.0.zip`;
-- then `build-dist.sh --rebuild GK2DonkeyAPI`, `make-release-zip.py --only saddleup`, the scans, and rehearsals A and
-  B.
+**Done since** (section 8): the F11, the user's commit removing the unuploaded zip, the rebuild, the scans, and
+rehearsals A and B.
 
 ## 7. The hand test found a twelfth place (2026-11-05, ~23:00)
 
@@ -174,3 +171,15 @@ picked and the dragon still drawn.
 - no warning or error.
 
 The user's own Saddle Up cfg was put back afterwards and the saves compared: identical.
+
+## 8. In the release (2026-11-06)
+
+- **The first 0.16.0 zip** (2026-11-05 19:42, never uploaded: Steam's item still held 0.15.0's bytes) held the API from
+  before the fix. The user's yes, then their commit `e16dd41` removed it.
+- **`build-dist.sh --rebuild GK2DonkeyAPI`** (00:59): only the API new (3,245,056 bytes, still 0.44.0, its manifest of
+  902 game members identical to the installed game); Saddle Up and the packs kept their committed bytes. 27 of 27
+  release scans green; the zip written again (01:09, 1,191,828 bytes).
+- **Rehearsal A** (01:29) on fresh cfgs: no warning or error; the same cfg keys as the 0.16.0 fixture.
+- **Rehearsal B** (01:41) over the 0.15.0 fixture's Saddle Up cfg: the dragon picked with its saved skin `default-x`
+  wore its own look ("the dragon's own look 'saddleup-dragon.dragon/default' is worn instead") and the ride went on
+  as the dragon; Gerry the same; the choice kept in the cfg; 188 of 189 values kept, 0 missing; no warning or error.

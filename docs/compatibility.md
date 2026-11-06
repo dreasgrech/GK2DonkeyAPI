@@ -146,7 +146,8 @@ changelog line that says it reaches new installs only.
   zip's first run (rehearsal A 20:08), flipped (487 API values, 274 Saddle Up's after the 56 rows of an unreleased dev
   skin were taken out; it was in the game folder during A), and its `defaults.cfg`; no side file (nothing saved). It is
   the first with the five tabs' layout (six keys moved into Mount) and the looks' named parts (Dark, Eye, Outline and
-  the skins' tones per skin).
+  the skins' tones per skin). The rebuilt zip of 2026-11-06 01:09 (the missing-skin fix; the one released) writes the
+  same keys (rehearsal A 01:29: 487 and 274), and `defaults.cfg` is unchanged, so the fixture stands for it.
 - **Self-test "upgrade: a released version's player files are all read"** (group "API, side file, carts, colours"):
   for every version folder, the API's cfg key by key against what this build binds, the side file through the real
   reader (every record whole), and the set-aside of a format-99 file. Saddle Up's cfg through the live page's own

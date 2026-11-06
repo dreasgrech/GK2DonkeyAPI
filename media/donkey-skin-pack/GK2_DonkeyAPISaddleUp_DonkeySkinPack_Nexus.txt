@@ -18,7 +18,7 @@
 [size=4][b]Armored[/b][/size]
 [size=3]Plate barding for a war donkey: an ornate knight's helmet with a plume that sways as it walks, a chest plate, steel plates over the body and a cloth skirt under them. The helmet, the plume, the body armour, the skirt and the brass each take a colour of your own.[/size]
 
-{{ media/donkey-skin-pack/armored-riding.png: riding the Armored donkey in the yard, by day }}
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/armored-riding.png?v=1[/img][/center]
 
 [size=4][b]Pick it in the Mount Journal[/b][/size]
 [size=3]Press [b]L[/b], pick the Donkey, and choose the skin in its [b]Skin[/b] list. The picture shows it with the cart before you ride. Your coat, harness and cart colours still apply under the skin, and the choice is kept with your save.[/size]
@@ -31,7 +31,7 @@
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-hellfire.png?v=3[/img][/center]
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-royal-parade.png?v=3[/img][/center]
-{{ media/donkey-skin-pack/colours-armored.png: the colours window on Armored, its five parts' rows showing }}
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-armored.png?v=1[/img][/center]
 
 [size=4][b]The babies wear it too[/b][/size]
 [size=3]Your donkey's babies look like their parent: little horns and cracks, little crowns and cloths, or little helmets, each its own size and shade.[/size]

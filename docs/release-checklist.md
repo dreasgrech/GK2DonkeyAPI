@@ -360,6 +360,24 @@ the Dragons Mount Pack 1.2.0 and the Donkey Skin Pack 1.2.0, Critters held.
     a bug for after the release (docs/open-items.md), the user's call.
 - **Restore:** everything back, the saves identical; the dev builds rebuilt (`--no-incremental`) and deployed at 20:26.
 
+Run 2026-11-06 for 0.16.0 rebuilt with the missing-skin fix (the first zip, never uploaded, deleted by the user's
+commit `e16dd41`; docs/missing-skin.md section 8):
+- **Before the run:** the whole F11 2000/0/0 (2026-11-05 23:20) and the user's hand test; `build-dist.sh --rebuild
+  GK2DonkeyAPI` at 00:59 (only the API new, 3,245,056 bytes; Saddle Up and the packs their committed bytes); 27 of 27
+  release scans green; `make-release-zip.py --only saddleup` at 01:09 (1,191,828 bytes, its DLLs those of `dist/`);
+  the skin pack's Workshop folder restaged (its description with the Armored pictures).
+- **A on fresh cfgs (01:29):** 0.44.0 / 0.16.0 and both packs 1.2.0 loaded, the cargo layout embedded, no `Dev tools`
+  line, no `[Debug]` in the API cfg, no warning or error in 510 lines; the dragon ridden and flown, the cart left and
+  hitched again with 2 of 2 items through two skin changes, G bringing a cart left standing, Armored, Hellfire and
+  Royal Parade worn, the journal with three mounts, the options with five sections. Its cfgs have the 0.16.0
+  fixture's keys exactly (487 and 274), so the fixture stands (its header says so).
+- **B over the 0.15.0 fixture's Saddle Up cfg** (`fixture-live.py`, Hellfire worn) with A's API cfg (01:41): the six
+  moved keys and the three renumbered sections carried over, 15 old lines left out, no warning or error in 434 lines;
+  the dragon picked with its saved skin `default-x` wore its own look and was ridden as the dragon (the ride went on),
+  Gerry the same; key by key 188 of 189 values kept, 0 missing, the one change the tester's own pick (Mount: Gerry).
+- **Restore:** everything back, the saves identical; the five dev builds rebuilt (`--no-incremental`) and deployed at
+  01:44.
+
 ## 6. Versions, changelog and hand-off
 
 Released versions are never reused (0.9.0 went public 2026-10-16): a release with any change gets new numbers.

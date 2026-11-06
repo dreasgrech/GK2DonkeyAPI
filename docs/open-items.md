@@ -79,12 +79,15 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
     eleven places that fell back to the donkey.
   - The whole F11 green 23:20 (2000 passed, 0 failed, 0 warnings) with the twelfth place fixed; seen by hand ~23:03 (the
     user: "ok seems fixed now").
-  - Then by hand: rehearsal B again (the 0.15.0 fixture's dragon `default-x`: the journal's picture and the ride are the
+  - Rehearsal B again, PASSED 2026-11-06 01:41 with the rebuilt release zip: the dragon with `default-x` wore its own
+    look and was ridden as the dragon, Gerry the same, no warning (docs/missing-skin.md section 8). Asked for: the
+    journal's picture and the ride are the
     dragon in its own look, and the Skin row still says "Default x (not installed)").
 
 - **Seen by hand 2026-11-05 evening** (the user, after the F11 of 19:19: "hand tests ran well too"): the three entries
   of this release below (the five tabs, the mounts left in the world, a called mount's babies, docs/foals-called.md).
-  Kept here till the 0.16.0 release's rehearsal has captured the fixture (the last line of the first entry).
+  Kept here till the 0.16.0 release's rehearsal has captured the fixture (the last line of the first entry): done,
+  the rehearsals of 2026-11-06 confirmed it (the same keys); these entries go once 0.16.0 is public.
 - **Saddle Up's options in five tabs** (2026-11-05 evening, deployed 17:19; docs/options-regroup.md): F11 green 17:55
   (1957 passed, 0 failed, 0 warnings; the scenario "options: Saddle Up's five tabs" with it). By hand:
   - the tabs Keys, Mount, Cart, Safe spot, Freeplay;

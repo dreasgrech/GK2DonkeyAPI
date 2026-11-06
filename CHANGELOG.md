@@ -223,6 +223,10 @@ Development:
     page pictures and the Steam gallery's full-size JPEGs (the options window is a new size: 392,132-2168,1308). The
     leave-mounts picture shows the unreleased critters too (the user: "i want to show the unreleased there"), and its
     paragraph says they come in the Critters Mount Pack later.
+  - **Rebuilt with the missing-skin fix** (2026-11-06): the user's commit `e16dd41` removed the first zip (never
+    uploaded); `build-dist.sh --rebuild GK2DonkeyAPI` (only the API new), 27 of 27 scans green, the zip written again
+    (1,191,828 bytes); rehearsals A and B passed again (B: the dragon with its missing saved skin ridden as the
+    dragon), the saves identical; docs/release-checklist.md section 5.
 - **A called mount's babies** (2026-11-05 evening; the user: "from ourside i spawned mount b but its babies stayed in
   the house"; investigated in docs/foals-called.md first, "lets investigate this a bit more").
   - The log: the dragon's babies 145 away, asleep, "following" a ridden parent. They came out only once he picked the

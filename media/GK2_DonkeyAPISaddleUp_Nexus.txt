@@ -81,7 +81,7 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [size=4][b]Leave your mounts in the world[/b][/size]
 [size=3]An option, off by default (Options, Mount). Call another mount and the one you had stays where it is with its babies, kept with your save. Pick it again in the Mount Journal and that same one comes back to you, its babies with it. Your cart stays standing where you left it, and [b]G[/b] brings it to the mount you have. [b]Send your other mounts home[/b] sends them all home. The snail and the worm in the picture are from the Critters Mount Pack, coming later.[/size]
 
-{{ media/leave-mounts.png: the yard with the Armored donkey, Gerry, the dragon, the snail and the worm standing with their babies, the keeper on foot among them (screenshot 2026-11-06 00:28, box 520,150-2300,1150) }}
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/leave-mounts.png?v=1[/img][/center]
 
 
 [size=4][b]Optional: bodies left at the crossroads[/b][/size]
