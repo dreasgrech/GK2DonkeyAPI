@@ -70,6 +70,11 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 - **DONE 2026-10-31: the key that opens the Mount Journal is labelled "Mount Journal"** (it said "Mounts panel"),
   its description and the Mounts button's "Opens the Mount Journal.", Saddle Up's README table with them; the cfg key
   stays. Ships with Saddle Up's next release.
+- **The Jester: a later Donkey Skin Pack update** (decided 2026-11-06, the user, at the 0.16.0 hand-off: "Ship now,
+  Jester later"). Not in 0.16.0 or the packs' 1.2.0. It goes into the pack (1.3.0) once the user has approved its
+  look; open from its last review: the in-between lip frames (lips 04 and 06) and a bell on the tail tip (a tail-tip
+  point in the rig first); then its name and parts in the 11 languages, the pack's notes, pages and pictures
+  (docs/sprite-tools.md, "Into the pack").
 
 ## To check in game (built and deployed, not yet seen)
 

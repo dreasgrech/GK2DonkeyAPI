@@ -6,11 +6,11 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.44.0 (with Saddle Up 0.16.0; the last release 0.43.0 / 0.15.0 of 2026-11-01) | 26404424 (1.011.1), built 2026-11-06 00:59 (`--rebuild`, with the missing-skin fix; first built 2026-11-05 19:34) (the mounts left in the world, a called mount's babies, the looks' named parts and the skins' tones, the outline row) |
-| `GK2SaddleUp.dll` | 0.16.0 (needs GK2 Donkey API 0.44.0 or newer; the last release 0.15.0 of 2026-11-01) | 26404424 (1.011.1), built 2026-11-05 19:34 (five option tabs, Leave your mounts in the world) |
-| `GK2SaddleUpDragonsMountPack.dll` | 1.2.0 (needs GK2 Donkey API 0.40.0; its parts named, needing 0.44.0 for the names; 1.1.0 public 2026-11-01, mods/420) | the external pack: the dragon embedded, built 2026-11-05 19:34 |
+| `GK2DonkeyAPI.dll` | 0.44.0 (with Saddle Up 0.16.0; public 2026-11-06 on Nexus and the Workshop; before it 0.43.0 / 0.15.0 of 2026-11-01) | 26404424 (1.011.1), built 2026-11-06 00:59 (`--rebuild`, with the missing-skin fix; first built 2026-11-05 19:34) (the mounts left in the world, a called mount's babies, the looks' named parts and the skins' tones, the outline row) |
+| `GK2SaddleUp.dll` | 0.16.0 (needs GK2 Donkey API 0.44.0 or newer; public 2026-11-06, mods/391 and the Workshop; before it 0.15.0 of 2026-11-01) | 26404424 (1.011.1), built 2026-11-05 19:34 (five option tabs, Leave your mounts in the world) |
+| `GK2SaddleUpDragonsMountPack.dll` | 1.2.0 (needs GK2 Donkey API 0.40.0; its parts named, needing 0.44.0 for the names; public 2026-11-06, mods/420 and the Workshop; before it 1.1.0 of 2026-11-01) | the external pack: the dragon embedded, built 2026-11-05 19:34 |
 | `GK2SaddleUpCrittersMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; never released, as of 2026-11-06) | the external pack: the rat (cargo 2), snail (6) and worm (4) embedded, built 2026-10-29 14:37 |
-| `GK2SaddleUpDonkeySkinPack.dll` | 1.2.0 (needs GK2 Donkey API 0.40.0; Armored, each skin's parts their own colours, needing 0.44.0 for the rows; 1.0.0 public 2026-10-28, mods/419; 1.1.0 built 2026-11-01 but never uploaded, Armored held back then) | the external pack: the donkey's skins Hellfire, Royal Parade and Armored and Hellfire's effect embedded, built 2026-11-05 19:34 |
+| `GK2SaddleUpDonkeySkinPack.dll` | 1.2.0 (needs GK2 Donkey API 0.40.0; Armored, each skin's parts their own colours, needing 0.44.0 for the rows; public 2026-11-06, mods/419 and the Workshop; before it 1.0.0 of 2026-10-28; 1.1.0 built 2026-11-01 but never uploaded, Armored held back then) | the external pack: the donkey's skins Hellfire, Royal Parade and Armored and Hellfire's effect embedded, built 2026-11-05 19:34 |
 
 The API DLL carries the list of every game member it uses (840 entries against this build); at start it compares
 them with the installed game and decides per feature what a changed one means (`docs/dependency-check.md`).
@@ -38,7 +38,10 @@ GK2DonkeyAPI` at 00:59, only the API new, Saddle Up and the packs their committe
 `make-release-zip.py --only saddleup`): `GK2-Saddle-Up-0.16.0.zip` 1,191,828 bytes (`GK2DonkeyAPI.dll` 3,245,056 bytes,
 `GK2SaddleUp.dll` 36,864, each with its `Languages\` of 11 files); the pack zips of 2026-11-05 19:42 unchanged
 (`GK2-Saddle-Up-Dragons-Mount-Pack-1.2.0.zip` 457,611 bytes, `GK2-Saddle-Up-Donkey-Skin-Pack-1.2.0.zip` 77,264). Rehearsal
-A and B passed again (docs/release-checklist.md section 5). Uploaded so far: nothing of 0.16.0 or the packs' 1.2.0.
+A and B passed again (docs/release-checklist.md section 5). Uploaded: Nexus 2026-11-06 (the user: Saddle Up 0.16.0 on 391, the Donkey Skin
+Pack 1.2.0 on 419, the Dragons Mount Pack 1.2.0 on 420); the Workshop 2026-11-06 02:19-02:20, checked against Steam's
+GetPublishedFileDetails: each item's size its folder's exactly (3,657,054, 630,766 and 172,481 bytes: the zip's files and
+`modinfo.json`), its description the staged one.
 
 Sizes 2026-11-05 19:42, superseded (that Saddle Up zip, never uploaded, held the API from before the missing-skin
 fix; the user's commit e16dd41 deleted it) (`bash tools/release.sh` for 0.16.0 / API 0.44.0 with the Dragons Mount Pack 1.2.0 and the

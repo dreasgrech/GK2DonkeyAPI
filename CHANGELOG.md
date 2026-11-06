@@ -43,7 +43,8 @@ For players:
   nothing; it is gone, and Glowing eyes colours them.
 - **A coat colour you pick shows as itself on Hellfire** (2026-11-04): Hellfire darkens the donkey's coat to ash, and
   a colour on top of the ash stayed dark (Cream came out dark brown). A colour you pick now replaces the ash; Game
-  default keeps it, and Dark and Black darken it. The same for the Jester's harness.
+  default keeps it, and Dark and Black darken it. The same holds for the Jester's harness (a skin still
+  in progress, not in this release).
 - **The donkey's Muzzle row colours its nose** (2026-11-04): it was "Muzzle and belly" and also reached a few dots on
   the face and a line along the belly; the dots follow the coat now, and the line is the outline's. On every donkey
   skin.
