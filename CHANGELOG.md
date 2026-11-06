@@ -10,7 +10,38 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
-(Nothing yet.)
+For players:
+
+- **A baby with no room beside its parent stands still instead of jumping** (2026-11-06): beside a parent standing
+  against a wall or a fence (the house door), a baby that couldn't take a step was put back on its own spot every few
+  seconds, in view, and the log filled with its lines. It stands there now until its parent moves, and still trots off
+  to a free place when there is one (docs/foals-catch-up-loop.md).
+- **Babies placed by their parent get their own spot again** (2026-11-06): coming through a door, called with their
+  mount, or caught up, a baby behind a parent that doesn't idle about was always put one spot over. Its own spot
+  counted as taken by the parent.
+
+Development:
+
+- **The self-tests hold the game's own story** (2026-11-06, `Dev/GameQuiet.cs`): while a run goes on, no quest trigger
+  fires (`GlobalEventsSystem.FireTrigger`) and no zone runs its script (`GDZone.ExecuteEvent`). The world zones its walks
+  visit are taken off the visited list again. Patched only for the run. The yard's jump test had slid the keeper into
+  the morgue's story zone: the event `Event_33_Base_Complain` took his controls (14 tests refused), completed
+  `33_base_complain_morgue` and started `42_crossroad_nun_donkey`, in memory only.
+- **A parent that doesn't shuffle no longer takes its baby's slot** (2026-11-06, `Foals.cs` `Taken`): its body was read
+  with `BodyAt`, whose offset is measured only while the shuffle runs, so it stood at its root, 0.44 from the baby's
+  own slot. Without the offset, its view's body point (`BodyPoint`, as the lead's own Body). Found by the new no-room
+  test, which skipped at four spots: "its own slot has another donkey's body on it".
+
+- **The wedge's ways out go somewhere** (2026-11-06, `Foals.cs`): a rejoin leaves out a target where the baby stands
+  (`PickReachableSlot`'s `skipWithin`, the arrival distance); a rejoin resets the wedge count, so a new wedge takes three
+  fresh failed picks over 8 s; a wedged baby's catch-up asks `FreeSlot` first and, put back where it stands, it stands
+  without room instead (not lost, said once for the spot). The wedge's lines are at most six per baby.
+- **The stuck report leaves out babies still by design** (2026-11-06, `FoalHops.cs`): idle ones, and asleep ones whose
+  parent `AsleepTick` doesn't go to (`AsleepGoesTo`, one test for both). Its line names the parent's level and real
+  view: "the lead has its view" was `Lead.Here`, its view or its scene loaded.
+- **Self-tests** (Levels and views): "foals: a baby with no room beside its parent stands there" (a U of temporary
+  walls) and "foals: the stuck report leaves out a baby still by design" (an asleep pair, and an active baby shut in a
+  pen still reported).
 
 ## 0.16.0 (GK2 Donkey API 0.44.0), 2026-11-05
 

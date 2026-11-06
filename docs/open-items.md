@@ -78,6 +78,15 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
+- **A baby with no room beside its lead, and the stuck report on resting babies** (built 2026-11-06, deployed 03:51;
+  docs/foals-catch-up-loop.md section 5). The user's choice: A + B2 and the report fix. Since then, the `Taken` fix
+  (deployed 14:34): a parent that doesn't shuffle took its baby's own slot. Open:
+  - the F11: GREEN 2026-11-06 23:40 (2009/0/0, nothing skipped; the story hold worked). Before: With the `Taken` fix the no-room test passed,
+    but 14 others were refused: a story event the yard's jump test started took the keeper's controls. Now held for
+    every run (`Dev/GameQuiet.cs`, docs/self-tests.md "Safety"). To run the whole F11 again;
+  - by hand: a mount left by the yard's house door with its babies. They stand or trot, with no jump in view and no
+    stream of "[foal]" lines.
+
 - **A mount whose saved skin isn't installed** (found in rehearsal B, 2026-11-05: the dragon picked was drawn and ridden
   as the plain donkey). The user moved it into 0.16.0 ("as part of the same major update ... public release will wait").
   - Investigated and built 2026-11-05 night, deployed 22:13 (docs/missing-skin.md): one rule, `Looks.StandIn`, in all

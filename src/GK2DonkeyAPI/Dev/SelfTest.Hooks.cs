@@ -119,6 +119,58 @@ namespace GK2DonkeyAPI
             internal bool TestEffectLit() => EffectsRig.Lit;
             internal Vector3? TestEffectRingPosition() => EffectsRig.TestRingPosition;
             internal int TestEffectInWorld() => EffectsRig.TestInWorld;
+
+            // A baby with no room (Dev/FoalRoomTests.cs): put on the spot a catch-up gives it now, facing away from its
+            // lead, so the test can build its walls. Returns the body point; forward: the way it faces (flat), depth: away
+            // from the camera.
+            // Bound to it, as in its own frame: the slots read its own ShuffleFollowGap override.
+            internal Vector3 TestPlaceFacingAway(out Vector3 forward, out Vector3 depth)
+            {
+                using (Bind(this))
+                {
+                    Lead l = LeadNow();
+                    Vector3 away = AwayFromCamera();
+                    Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
+                    float worldToRight = Vector3.Dot(Vector3.right, right) >= 0f ? 1f : -1f;
+                    Vector3 s = CatchUpSpot(l, out bool clear, out string fail);
+                    float h = Vector3.Dot(s - l.Body, right) >= 0f ? 1f : -1f; // its side of the lead along the screen
+                    riderFacingX = h * worldToRight; // a step goes along right * facing * worldToRight (TryStartStep)
+                    PlaceBy(l, s, clear, fail, "self-test: placed beside its lead, facing away from it");
+                    forward = right * h;
+                    depth = away;
+                    return s;
+                }
+            }
+
+            // Why a catch-up wouldn't put it on its own slot (FreeSlot's first choice), or null when it would. F11 of
+            // 2026-11-06: by the yard the catch-up gave the slot beside its own, so its own was a real place to go (a
+            // route out of the test's walls), and the test wasn't the case it is about.
+            internal string TestWhyNotOwnSlot()
+            {
+                using (Bind(this))
+                {
+                    Lead l = LeadNow();
+                    if (!l.Here)
+                    {
+                        return "its lead isn't here";
+                    }
+                    Vector3 s = SlotNearParent(SiblingIndex());
+                    if (Taken(s, l.SceneId))
+                    {
+                        return $"its own slot {s:F2} has another donkey's body on it";
+                    }
+                    groundFail = null;
+                    bool ok = LineWalkable(l.Body, s, "catch-up");
+                    string why = groundFail;
+                    groundFail = null;
+                    return ok ? null : $"no clear line from its lead to its own slot {s:F2} ({why ?? "no reason kept"})";
+                }
+            }
+
+            internal float TestLateral => shuffleLateralKnown ? shuffleLateral : -1f;
+            internal bool TestLost => followLost;
+            internal bool TestWedged => wedged;
+            internal Vector3 TestBody => BodyAt(Position, riderFacingX);
         }
     }
 

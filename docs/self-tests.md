@@ -61,6 +61,16 @@ The Tests tab (the dev panel): every group folded, its title white with no resul
 - **The panel's state** (`Debug.TuningWindowHidden`) is left as it was: hidden for the frame-time scenario only, and
   back afterwards.
 - **Nothing is saved.**
+- **The game's own story is held for the run** (`Dev/GameQuiet.cs`, since 2026-11-06). It is patched at the run's start
+  and unpatched at its end, so a player's game is never hooked.
+  - No quest trigger fires (`GlobalEventsSystem.FireTrigger`: every quest start, finish and fail).
+  - No zone runs its own script (`GDZone.ExecuteEvent`).
+  - The world zones the run's walks visit are taken off the save's visited list again.
+  - Each held trigger that a quest waits on is logged once (`[test] held the game's trigger ...`), and the counts come
+    at the end.
+  - Why: the yard's jump test once slid the keeper into the morgue's story zone. Its one-time event took his controls
+    for a talk, completed one quest and started the donkey quest, and the 14 tests after it were refused (F11 of
+    2026-11-06). That was in memory only, since the game saves on waking, but a sleep afterwards would have kept it.
 - **The level settings** are restored at the end.
 - **The Behaviour switches the run holds:** Freeplay (`FreeplayMaxCargo`, `FreeplaySameSpeed`) off, and
   `StandingSounds` (since 2026-10-27) for the tests that drive it; whoever held them (a player's settings page) gets
@@ -102,6 +112,8 @@ a failure of the mod. Try another spot.
 | Mounted while idle | a donkey frozen off screen facing away is brought to the keeper and ridden in the same frame (the showcase's H) | the same-frame ride waits (refused); ready within 3 s; ridden, it's drawn and faces the keeper's way |
 | Reused views | a donkey and a 0.6 foal fall asleep (keeper 42–50 away), are removed, and two new ones are spawned | both views parked; parked views taken again (by anyone: the world's own donkeys waking with the keeper take them too); full size and foal size each where they belong; no cart parts; facing as spawned |
 | Foals keep up off screen | a parent with two foals (following however far) is ridden 22 away | the foals stay active, and reach the parent by trotting, with no catch-up jumps (a jump gives WARN) |
+| Foals: a baby with no room beside its parent (`FoalRoomTests.NoRoom`) | a standing parent 6 from the keeper and its baby, put on the spot a catch-up gives it, facing away from the parent, in a U of temporary walls (Obstacle layer) open towards the parent: no step or turn fits, every other slot is behind a wall; 30 s | wedged at least once (else WARN: the case wasn't made); no rejoin, no catch-up; it stood without room; at most 4 wedges; moved under 0.15 (docs/foals-catch-up-loop.md) |
+| Foals: the stuck report on resting babies (`FoalRoomTests.ReportResting`) | the report's window shortened to 3 s. A baby moved 5 from its parent while both are asleep (keeper 42–50 away); then a baby moved into a closed pen 6 from its parent, 3.5 from the keeper | the asleep one: not reported in 5 s, counted as resting, its line would say "the lead is asleep, without a view". The penned one, active: reported within 6 s |
 | No leaks | 80 donkeys (8 with carts) spawned and removed, twice | instances, colour materials, colour textures (also shared), lamps, meshes and cargo holders all back at the start |
 | Corpses: drop and stand points | reads the GD points the feature uses | the drop point, the three stand points, the game's spawn and fallback points exist; the walk out is short; what the morgue looks like in this save (door, pallets, count) as INFO |
 | Corpses: one body left | a body generated the way the game's node does it, through the mod's drop step | taken; `CorpseLeft` raised; one notification pending, only one; a plain item drop of the very same instance with its inside intact; within a unit of the point; the game's rot timer started; a view (WARN if the keeper is far from the crossroads) |

@@ -187,6 +187,9 @@ walking back to a stopped baby did **not** wake it, so the level cause below is 
   foal's body; up to two quick re-plans within a second (`QuickReplan`, reset at a corner, its slot, a catch-up).
 - Rejoin: routes within 3 x `ShuffleRouteRange` (24); `wedged` no longer stops a rejoin; lost 10 s and out of sight:
   caught up even while the lead walks (`LongLostS`).
+  - That opened a loop beside a parent against a wall: a rejoin to where the baby stood, and a catch-up onto it.
+  - Fixed 2026-11-06 (docs/foals-catch-up-loop.md): a rejoin resets the wedge count and skips a target where the baby
+    stands. A wedged baby with nowhere else to go stands without room.
 - **The measurement for the cause still unknown:** `WatchFollowing` (every level, once a second): a baby that hasn't
   got 0.5 nearer its lead for 20 s, the lead in its scene and not riding away, writes one `[foal] ... has not got
   nearer` line with its level, view, shuffle status, phase, lost / wedged / with the keeper, picks failed, route and

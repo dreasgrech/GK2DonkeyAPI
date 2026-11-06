@@ -141,6 +141,8 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLevels, Name = "foals keep up off screen", Body = FoalsFollow },
             new Scenario { Group = GroupLevels, Name = "foals: follow the keeper on foot outdoors, with the other babies settings", Body = FoalsOnFoot },
             new Scenario { Group = GroupLevels, Name = "foals: each baby its own size, shade and temperament, the same every load", Body = FoalVarietyChecks },
+            new Scenario { Group = GroupLevels, Name = "foals: a baby with no room beside its parent stands there (wedged, no rejoin to where it stands, no catch-up onto its own spot)", Body = FoalRoomTests.NoRoom },
+            new Scenario { Group = GroupLevels, Name = "foals: the stuck report leaves out a baby still by design (asleep beside its asleep parent), names the parent's real view, and still reports an active one that can't get nearer", Body = FoalRoomTests.ReportResting },
             new Scenario { Group = GroupLevels, Name = "no leaks over spawn and remove", Body = Leaks },
             new Scenario { Group = GroupLevels, Name = "frame time by mode", Body = FrameTimes, HidesPanel = true },
             new Scenario { Group = GroupChest, Name = "chest: hide, move, show (and off screen)", Body = ChestHideMoveShow },
@@ -511,6 +513,7 @@ namespace GK2DonkeyAPI
         {
             Running = true; // set and cleared here only
             MountCompanion.HeldForTests = true; // with it: no test's pick leaves the player's mount in the world (MountCompanion)
+            GameQuiet.Begin(); // the game's own story held: no test starts a quest's event (GameQuiet.cs, F11 of 2026-11-06)
             var stack = new Stack<IEnumerator>();
             stack.Push(root);
             while (stack.Count > 0)
@@ -557,6 +560,7 @@ namespace GK2DonkeyAPI
                 yield return cur;
             }
             MountCompanion.HeldForTests = false;
+            GameQuiet.End();
             Running = false;
         }
 

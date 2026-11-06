@@ -175,17 +175,24 @@ namespace GK2DonkeyAPI
                 if (Time.time >= nextTargetPick || followTargetSlot == NoSlot)
                 {
                     nextTargetPick = Time.time + 0.5f;
-                    int k = PickReachableSlot(body);
+                    int k = PickReachableSlot(body, 0f);
                     groundFail = null;
                     followTargetSlot = k == NoSlot ? SiblingIndex() : k; // nothing clear: its own (the trot's check stops it)
                 }
                 return followTargetSlot == NearSide ? NearSideOfParent(body) : SlotNearParent(followTargetSlot);
             }
 
-            private int PickReachableSlot(Vector3 body)
+            // Following ends this close to its target (FollowParentTick).
+            private const float ArriveDist = 0.25f;
+
+            // skipWithin: a target this close to its body is left out. The rejoin passes ArriveDist: a rejoin to where the
+            // baby already stands "arrived" the next frame without moving, and a wedged baby went from wedged to rejoined
+            // and back, over and over (docs/foals-catch-up-loop.md). The trot's own pick (FollowTarget) passes 0.
+            private int PickReachableSlot(Vector3 body, float skipWithin)
             {
                 int own = SiblingIndex();
-                if (LineWalkable(body, SlotNearParent(own), "slot"))
+                Vector3 ownAt = SlotNearParent(own);
+                if (FlatDistance(body, ownAt) >= skipWithin && LineWalkable(body, ownAt, "slot"))
                 {
                     return own;
                 }
@@ -196,7 +203,7 @@ namespace GK2DonkeyAPI
                     if (k == own) continue;
                     Vector3 s = SlotNearParent(k);
                     float dk = FlatDistance(body, s);
-                    if (dk < bestD && LineWalkable(body, s, "slot"))
+                    if (dk >= skipWithin && dk < bestD && LineWalkable(body, s, "slot"))
                     {
                         best = k;
                         bestD = dk;
@@ -206,9 +213,14 @@ namespace GK2DonkeyAPI
                 {
                     return best;
                 }
-                return LineWalkable(body, NearSideOfParent(body), "near side") ? NearSide : NoSlot;
+                Vector3 near = NearSideOfParent(body);
+                return FlatDistance(body, near) >= skipWithin && LineWalkable(body, near, "near side") ? NearSide : NoSlot;
             }
 
+            // 0.9 from the lead, on the line to the baby. It is ShuffleFollowGap's default too, so a baby standing at the
+            // gap beside its lead is already at its near side ("0.9 away, to its near side" in the loop's log). The rejoin
+            // goes by distance (PickReachableSlot's skipWithin), so neither number has to change for it; changing the gap
+            // would not fix that loop.
             private Vector3 NearSideOfParent(Vector3 body)
             {
                 Lead l = LeadNow();
@@ -224,6 +236,12 @@ namespace GK2DonkeyAPI
             private float lostSince;            // when it last got lost
             private const float LongLostS = 10f; // lost this long and out of sight: caught up even while the lead walks
             private bool wedged;                // no step fits where it stands (spawned against a wall): caught up like a lost one
+            private bool roomlessSaid;          // StandWithoutRoom said so for roomlessAt: not again for that spot
+            private Vector3 roomlessAt;
+            private int wedgeLines;             // the wedge's lines written for this baby (WedgeLine)
+            private const int WedgeLinesMax = 6;
+            // Counted for the self-tests (Dev/FoalRoomTests.cs): placed by a catch-up, rejoined, wedged, stood without room.
+            internal int CatchUps, Rejoins, Wedges, StoodWithoutRoom;
             private int pickFailsInRow;
             private float firstPickFailAt;
             private float nextAheadCheck;
@@ -385,7 +403,7 @@ namespace GK2DonkeyAPI
                 float maxFollow = IdleShuffle.FollowAlways != null && IdleShuffle.FollowAlways.Value ? float.MaxValue : IdleShuffle.FollowMaxDistance.Value;
                 if (shufflePhase == ShufflePhase.Following)
                 {
-                    if (d < 0.25f)
+                    if (d < ArriveDist)
                     {
                         StopFollowing();
                         EndStep(firstPause: true);
@@ -418,8 +436,7 @@ namespace GK2DonkeyAPI
                     // stand (a keeper on foot often never stands 1.5 s; the baby waited where it got stuck).
                     else if (!l.Moving && Time.time - lostSince >= LongLostS && OffScreen(body))
                     {
-                        CatchUp("lost for a while, out of sight");
-                        return true;
+                        return LostCatchUp(l, body, "lost for a while, out of sight");
                     }
                     // Wedged too: a way to the lead may well be clear though no shuffle step fits where it stands (both ways
                     // back were off for a wedged foal: it stood there in view until the lead stood still 6 s).
@@ -431,27 +448,39 @@ namespace GK2DonkeyAPI
                         // found 2026-09-30). Each rejoin that is lost again within 1.5 s doubles the wait, up to 8 s.
                         nextRejoinCheck = Time.time + Mathf.Min(8f, 0.5f * Mathf.Pow(2f, rejoinBackoff));
                         nextTargetPick = 0f;
-                        int k = PickReachableSlot(body);
+                        // Somewhere to go only: not where it stands (ArriveDist; docs/foals-catch-up-loop.md).
+                        int k = PickReachableSlot(body, ArriveDist);
                         groundFail = null;
                         if (k != NoSlot)
                         {
+                            bool fromWedge = wedged;
                             followLost = false;
                             wedged = false;
+                            pickFailsInRow = 0; // a new wedge takes three fresh world-blocked picks over 8 s (the count stayed, and the next one wedged it at once)
+                            Rejoins++;
                             followTargetSlot = k;
                             nextTargetPick = Time.time + 0.5f;
                             shufflePhase = ShufflePhase.Following;
                             nextAheadCheck = 0f;
                             rejoinedAt = Time.time;
-                            DiagLog($"[foal] {Describe()} follows {l.Name} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).");
+                            string note = null;
+                            if (!fromWedge || WedgeLine(out note))
+                            {
+                                DiagLog($"[foal] {Describe()} follows {l.Name} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).{note}");
+                            }
                             return true;
                         }
                         // No straight way to any place next to it: a route around, when the parent is within a few routes'
                         // reach (a route ends at its area's edge towards a target further out, and the next goes on from
-                        // there; only within one route's reach, 8, a lost baby further out waited for the catch-up).
-                        if (RoutesOn && dHome <= RouteRange * 3f && Time.time >= nextRouteAt)
+                        // there; only within one route's reach, 8, a lost baby further out waited for the catch-up). Not to
+                        // its own slot where it stands already: that route ends where it starts.
+                        if (RoutesOn && dHome <= RouteRange * 3f && Time.time >= nextRouteAt
+                            && FlatDistance(body, SlotNearParent(SiblingIndex())) >= ArriveDist)
                         {
                             followLost = false;
                             wedged = false;
+                            pickFailsInRow = 0;
+                            Rejoins++;
                             followTargetSlot = SiblingIndex();
                             nextTargetPick = Time.time + 0.5f;
                             shufflePhase = ShufflePhase.Following;
@@ -467,8 +496,7 @@ namespace GK2DonkeyAPI
                     // user, 2026-10-01). In view only when it is truly wedged against the world, after 6 s.
                     else if (!l.Moving && still >= 1.5f && (OffScreen(body) || (wedged && still >= 6f)))
                     {
-                        CatchUp("its parent stands again");
-                        return true;
+                        return LostCatchUp(l, body, "its parent stands again");
                     }
                     else
                     {
@@ -482,6 +510,7 @@ namespace GK2DonkeyAPI
                 }
                 if (d > homeRange && !IsStepping) // left its own spot's area (the parent moved away)
                 {
+                    roomlessSaid = false; // somewhere new: a spot without room is said again
                     shufflePhase = ShufflePhase.Following;
                     nextAheadCheck = 0f;
                     nextTargetPick = 0f;
@@ -719,7 +748,8 @@ namespace GK2DonkeyAPI
                 routeSearch = null;
             }
 
-            private void LoseParent(Vector3 body, string why)
+            // log false: lost without a line (a wedge where it was said already to have no room); note: added to the line.
+            private void LoseParent(Vector3 body, string why, bool log = true, string note = null)
             {
                 StopFollowing();
                 if (!followLost && Time.time - rejoinedAt < 1.5f)
@@ -731,8 +761,72 @@ namespace GK2DonkeyAPI
                     followLost = true;
                     lostSince = Time.time;
                     shuffleHome = body;
-                    DiagLog($"[foal] {Describe()} can't follow {LeadNow().Name} ({why}{(groundFail != null ? ": " + groundFail : "")}); it waits, follows again when the parent comes back in reach, or catches up out of sight once it stands.");
+                    if (log)
+                    {
+                        DiagLog($"[foal] {Describe()} can't follow {LeadNow().Name} ({why}{(groundFail != null ? ": " + groundFail : "")}); it waits, follows again when the parent comes back in reach, or catches up out of sight once it stands.{note}");
+                    }
                     groundFail = null;
+                }
+            }
+
+            // The wedge's lines of one baby are few: in a cramped spot it is wedged, trots to another slot, is wedged there,
+            // every 8 s or more for as long as its lead stands (a mount left in the world: all session). False: leave the
+            // line out; note: set on the last one written.
+            private bool WedgeLine(out string note)
+            {
+                note = null;
+                if (wedgeLines >= WedgeLinesMax)
+                {
+                    return false;
+                }
+                wedgeLines++;
+                if (wedgeLines == WedgeLinesMax)
+                {
+                    note = " (The last of this baby's wedge lines: the ones after it are left out.)";
+                }
+                return true;
+            }
+
+            // A catch-up from the lost branch. A wedged baby (wedged only ever happens inside its own area, where it picks
+            // steps) is caught up only when that goes somewhere: put back on the spot it stands on, it was wedged there again
+            // 8 s later, in view, over and over (rehearsal of 2026-11-05; docs/foals-catch-up-loop.md). True when it was
+            // placed (FollowParentTick's "used the frame").
+            private bool LostCatchUp(Lead l, Vector3 body, string why)
+            {
+                if (wedged && l.Here)
+                {
+                    Vector3 to = CatchUpSpot(l, out bool clear, out string fail);
+                    if (FlatDistance(to, body) < MinApart)
+                    {
+                        StandWithoutRoom(body, l);
+                        return false;
+                    }
+                    PlaceBy(l, to, clear, fail, why);
+                    return true;
+                }
+                CatchUp(why);
+                return true;
+            }
+
+            // No way out of a spot where no step fits: no slot to trot to, no route, and the catch-up would put it where it
+            // stands. It stands there as at home: not lost, not wedged, a fresh count. It follows when its lead moves, and
+            // three new world-blocked picks over 8 s look again. Said once for the spot.
+            private void StandWithoutRoom(Vector3 body, Lead l)
+            {
+                followLost = false;
+                wedged = false;
+                pickFailsInRow = 0;
+                StopFollowing();
+                StoodWithoutRoom++;
+                if (roomlessSaid && FlatDistance(body, roomlessAt) < ArriveDist)
+                {
+                    return;
+                }
+                roomlessSaid = true;
+                roomlessAt = body;
+                if (WedgeLine(out string note))
+                {
+                    DiagLog($"[foal] {Describe()} has no room to step where it stands, beside {l.Name}, and no other place to go: it stands there until {(l.Of == null ? "the keeper" : "its parent")} moves.{note}");
                 }
             }
 
@@ -769,7 +863,13 @@ namespace GK2DonkeyAPI
                 if (Parent != null && pickFailsInRow >= 3 && Time.time - firstPickFailAt >= 8f && !followLost)
                 {
                     wedged = true;
-                    LoseParent(BodyAt(Position, riderFacingX), "no step fits where it stands");
+                    Wedges++;
+                    Vector3 body = BodyAt(Position, riderFacingX);
+                    // Where it was said already to have no room (StandWithoutRoom): wedged again without a line.
+                    bool said = roomlessSaid && FlatDistance(body, roomlessAt) < ArriveDist;
+                    string note = null;
+                    bool log = !said && WedgeLine(out note);
+                    LoseParent(body, "no step fits where it stands", log, note);
                 }
             }
 
@@ -782,23 +882,37 @@ namespace GK2DonkeyAPI
             // FreeSlot; a door's placement tries again while the screen is still black, FoalsIndoors.cs).
             private bool CatchUp(string why)
             {
-                CatchUpCount++;
                 Lead p = LeadNow();
+                Vector3 slot = CatchUpSpot(p, out bool clear, out string fail);
+                PlaceBy(p, slot, clear, fail, why);
+                return clear;
+            }
+
+            // Where a catch-up puts it: FreeSlot's spot when its lead is here, else its own slot (placed in the lead's scene).
+            private Vector3 CatchUpSpot(Lead p, out bool clear, out string fail)
+            {
+                clear = true;
+                fail = null;
+                if (!p.Here)
+                {
+                    return SlotNearParent(SiblingIndex());
+                }
+                groundFail = null;
+                Vector3 slot = FreeSlot(p, out clear);
+                if (!clear)
+                {
+                    fail = groundFail ?? "every slot taken";
+                }
+                groundFail = null;
+                return slot;
+            }
+
+            private void PlaceBy(Lead p, Vector3 slot, bool clear, string fail, string why)
+            {
+                CatchUpCount++;
+                CatchUps++;
                 Vector3 away = AwayFromCamera();
                 Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
-                Vector3 slot = SlotNearParent(SiblingIndex());
-                bool clear = true;
-                string fail = null;
-                if (p.Here)
-                {
-                    groundFail = null;
-                    slot = FreeSlot(p, out clear);
-                    if (!clear)
-                    {
-                        fail = groundFail ?? "every slot taken";
-                    }
-                    groundFail = null;
-                }
                 if (SceneId != p.SceneId)
                 {
                     DestroyDonkey(); // spawned again in the parent's (or keeper's) scene by StandTick
@@ -819,7 +933,6 @@ namespace GK2DonkeyAPI
                 shufflePhase = ShufflePhase.Waiting;
                 EndStep(firstPause: true);
                 DiagLog($"[foal] {Describe()} caught up with {p.Name} ({why}) at {root:F2} in {SceneId}{(clear ? "" : "; no slot with a clear line (first failure: " + fail + "), placed on a free one anyway")}.");
-                return clear;
             }
 
             // Two foals' bodies closer than this stand inside each other. Slots are at least 0.62 apart (SlotOffset).
@@ -878,12 +991,23 @@ namespace GK2DonkeyAPI
             private static readonly float[] RingAngles = { 0f, 30f, -30f, 60f, -60f, 90f, -90f, 120f, -120f, 150f, -150f, 180f };
 
             // Another donkey's body (in that scene) stands on this body point.
+            // - BodyAt from its Position: a sibling placed earlier in this frame counts where it now is (its view is drawn
+            //   there only later in the frame; two babies on one slot at a door, 2026-10-03).
+            // - But BodyAt needs the body offset, measured only while the shuffle runs. A parent that doesn't shuffle (the
+            //   game's default) had none, so its body was read at its root: 0.44 from its baby's own slot, which was
+            //   then always "taken" (F11 of 2026-11-06, docs/foals-catch-up-loop.md). Without the offset, its view's body
+            //   point, as the lead's own Body.
             private bool Taken(Vector3 body, string scene)
             {
                 for (int k = 0; k < instances.Count; k++)
                 {
                     Instance o = instances[k];
-                    if (o != this && o.SceneId == scene && FlatDistance(o.BodyAt(o.Position, o.riderFacingX), body) < MinApart)
+                    if (o == this || o.SceneId != scene)
+                    {
+                        continue;
+                    }
+                    Vector3 ob = o.shuffleLateralKnown ? o.BodyAt(o.Position, o.riderFacingX) : o.BodyPoint();
+                    if (FlatDistance(ob, body) < MinApart)
                     {
                         return true;
                     }

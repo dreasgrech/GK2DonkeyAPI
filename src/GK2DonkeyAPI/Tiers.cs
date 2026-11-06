@@ -501,6 +501,10 @@ namespace GK2DonkeyAPI
                 }
             }
 
+            // The only parent an asleep baby goes to (AsleepTick): in its scene, not ridden, with its view. One test for both
+            // AsleepTick and the stuck report, which leaves an asleep baby with any other parent out (FoalHops.cs).
+            internal bool AsleepGoesTo(Instance p) => p.SceneId == SceneId && !p.IsRidden && p.HasView;
+
             // Asleep, once a second: a foal whose parent stands still elsewhere in the scene goes to it (out of sight,
             // so nobody sees the jump), and wakes if that is near the keeper.
             private void AsleepTick()
@@ -511,7 +515,7 @@ namespace GK2DonkeyAPI
                 }
                 nextAsleepTick = Time.unscaledTime + 1f;
                 Instance p = Parent;
-                if (p == null || !IsRegistered(p) || p.SceneId != SceneId || p.IsRidden || !p.HasView)
+                if (p == null || !IsRegistered(p) || !AsleepGoesTo(p))
                 {
                     return;
                 }

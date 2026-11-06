@@ -208,10 +208,50 @@ namespace GK2DonkeyAPI
             // away or going through a door: one line with everything that decides its following, once until it is near
             // again. The user, 2026-10-26: a baby stopped following and walking back to it didn't wake it; this makes
             // the next one a measurement. Once a second, at every level (a frozen or sleeping baby doesn't shuffle).
-            internal const float StuckReportS = 20f;
+            // Not while it is still by design (Resting): it was reported far from the keeper, asleep beside its asleep
+            // parent (docs/foals-catch-up-loop.md section 3). A field so the self-test can shorten it.
+            internal static float StuckReportS = 20f;
             private float watchNextAt, watchBest = float.MaxValue, watchSince;
             private bool watchSaid;
             internal int StuckReports;
+
+            // Still by design: idle (frozen; StandTick returns before the shuffle), or asleep with a parent AsleepTick
+            // doesn't go to (no view: asleep itself). A baby is idle or asleep only while its parent isn't active and it
+            // isn't with the keeper (WantTier). An asleep one whose parent has its view and stands is still watched: there
+            // AsleepTick should have caught it up within a second or two.
+            private bool Resting(Instance p) => tier == Tier.Idle || (tier == Tier.Asleep && !AsleepGoesTo(p));
+
+            internal bool TestResting => Parent != null && Resting(Parent);
+
+            // The lead as it is: the keeper, or the parent's level and view. Lead.Here is "its view or its scene loaded"
+            // since 2026-10-26, and printed as "has its view" it called an asleep parent in the loaded yard one with a view.
+            private static string LeadState(Lead l)
+            {
+                if (l.Of == null)
+                {
+                    return "the lead is the keeper";
+                }
+                Instance p = l.Of;
+                return $"the lead is {p.tier.ToString().ToLowerInvariant()}, {(p.HasView ? "with its view" : "without a view")}" +
+                    (!p.HasView && l.Here ? " (its scene loaded)" : "");
+            }
+
+            // The report's line (also the self-test's, through TestStuckText).
+            private string StuckText(Lead l, float d)
+            {
+                string routeNow = routeSearch != null ? "planning" : route != null ? $"corner {routeIndex + 1} of {route.Count}" : "none";
+                return $"[foal] {Describe()} has not got nearer {l.Name} for {StuckReportS:F0} s ({d:F1} away, at {Position:F2}): {LevelText()} " +
+                    $"Shuffle: {ShuffleStatusText()}. Phase {shufflePhase}, lost {followLost}, wedged {wedged}, with the keeper {withKeeper}, " +
+                    $"picks failed in a row {pickFailsInRow}, quick re-plans {quickReplans}, route {routeNow}, rejoin wait step {rejoinBackoff}, " +
+                    $"idle shuffle {(IdleShuffle.On != null && IdleShuffle.On.Value ? "on" : "off")}, follows on foot {FollowsOnFoot()}; " +
+                    $"{LeadState(l)}, in {l.SceneId}; it in {SceneId}.";
+            }
+
+            internal string TestStuckText()
+            {
+                Lead l = LeadNow();
+                return StuckText(l, l.SceneId == SceneId ? FlatDistance(Position, l.Body) : float.MaxValue);
+            }
 
             internal void WatchFollowing()
             {
@@ -228,7 +268,7 @@ namespace GK2DonkeyAPI
                 Lead l = LeadNow();
                 float near = Mathf.Max(AreaW, AreaD) + 1.6f;
                 float d = l.SceneId == SceneId ? FlatDistance(Position, l.Body) : float.MaxValue;
-                if (d <= near || l.Moving || l.SceneId != SceneId)
+                if (d <= near || l.Moving || l.SceneId != SceneId || Resting(p))
                 {
                     watchBest = float.MaxValue;
                     watchSince = Time.time;
@@ -250,12 +290,7 @@ namespace GK2DonkeyAPI
                 }
                 watchSaid = true;
                 StuckReports++;
-                string routeNow = routeSearch != null ? "planning" : route != null ? $"corner {routeIndex + 1} of {route.Count}" : "none";
-                Plugin.Log.LogInfo($"[foal] {Describe()} has not got nearer {l.Name} for {StuckReportS:F0} s ({d:F1} away, at {Position:F2}): {LevelText()} " +
-                    $"Shuffle: {ShuffleStatusText()}. Phase {shufflePhase}, lost {followLost}, wedged {wedged}, with the keeper {withKeeper}, " +
-                    $"picks failed in a row {pickFailsInRow}, quick re-plans {quickReplans}, route {routeNow}, rejoin wait step {rejoinBackoff}, " +
-                    $"idle shuffle {(IdleShuffle.On != null && IdleShuffle.On.Value ? "on" : "off")}, follows on foot {FollowsOnFoot()}; " +
-                    $"the lead {(l.Here ? "has its view" : "has no view")}, in {l.SceneId}; it in {SceneId}.");
+                Plugin.Log.LogInfo(StuckText(l, d));
             }
         }
     }

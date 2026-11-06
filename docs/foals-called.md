@@ -126,6 +126,8 @@ The step is written with the fix and run once. Without the fix it can't pass: th
 
 ## 7. Seen on the way, not part of this
 
+Both investigated 2026-11-06: docs/foals-catch-up-loop.md (the causes, and the options for the user).
+
 - **A catch-up loop.** #75 outside (lines from 9440 on) is placed by its parent with a clear line ("caught up ... its
   parent stands again", 9 times), then "can't follow ... no step fits where it stands" at the same spot, then caught up
   again, over and over. #62 inside, with the keeper, does the same between "can't follow the keeper ... no step fits"
