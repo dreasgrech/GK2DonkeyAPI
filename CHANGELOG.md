@@ -19,9 +19,20 @@ For players:
 - **Babies placed by their parent get their own spot again** (2026-11-06): coming through a door, called with their
   mount, or caught up, a baby behind a parent that doesn't idle about was always put one spot over. Its own spot
   counted as taken by the parent.
+- **No more hoofsteps in the pause menu** (2026-11-07): opening the pause menu or a table's window while riding, the
+  mount walked on the spot with its hoofsteps until you moved again. It stands now.
+  Babies and standing mounts stand still too while the game is paused, instead of running in place.
 
 Development:
 
+- **The game's stop works through the riding pose** (2026-11-07, `Patches.cs` `PlayerPhysicalBody_StopMoving_Patch`):
+  `PlayerPhysicalBody.StopMoving` asks the keeper's animator whether he walks, and while mounted that shows the riding
+  pose, so it never stopped him: `PlayerData.charState` stayed Walk and the donkey mirroring it walked. Its callers are
+  the controls taken (`PlayerController.HandleControlChange`: every modal window, which also pauses the game), a path's
+  end (`OnPathComplete`) and `Flow_StopGoTo`. Mounted, the stop now reads `charState`. The game's pause stops only its
+  update manager, and Unity's clock runs on, so a standing donkey or a baby whose step was held kept its walk clip:
+  `StandState` is Idle while paused (`IdleShuffle.GamePaused`, shared with the shuffle's and the hops' holds). New
+  self-test "the game paused mid-walk" (Sounds group): it opens the pause menu over a ride with the stick held.
 - **The self-tests hold the game's own story** (2026-11-06, `Dev/GameQuiet.cs`): while a run goes on, no quest trigger
   fires (`GlobalEventsSystem.FireTrigger`) and no zone runs its script (`GDZone.ExecuteEvent`). The world zones its walks
   visit are taken off the visited list again. Patched only for the run. The yard's jump test had slid the keeper into

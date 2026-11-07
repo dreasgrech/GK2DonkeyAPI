@@ -47,7 +47,7 @@ namespace GK2DonkeyAPI
             // Each active frame, before Stand(): the hop in progress, or one due.
             private void HopTick()
             {
-                if (MainGame.UpdateManager != null && !MainGame.UpdateManager.IsActive)
+                if (IdleShuffle.GamePaused)
                 {
                     return; // paused: held where it is
                 }

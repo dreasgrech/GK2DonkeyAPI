@@ -30,6 +30,10 @@ namespace GK2DonkeyAPI
             FoalChainChance, FoalBurstChance, FoalBurstSpeed, FoalHopChance, FoalJumpAlongChance, FoalVariety;
         internal static Tuned<bool> FollowAlways, FollowRoutes, FollowKeeperIndoors, FollowKeeperOnFoot, FoalLively;
 
+        // The game paused (MainGame.PauseGame: a modal window, the pause menu, a table's): its update manager stops, and
+        // so do the steps (ShuffleTick, FoalHops). Unity's clock runs on, and with it any animator left walking.
+        internal static bool GamePaused => MainGame.UpdateManager != null && !MainGame.UpdateManager.IsActive;
+
         internal static void Bind(ConfigFile cfg)
         {
             On = cfg.Bind("General", "IdleShuffle", Defaults.Get("General", "IdleShuffle", false),
@@ -208,7 +212,7 @@ namespace GK2DonkeyAPI
                     StopShuffle();
                     return;
                 }
-                if (MainGame.UpdateManager != null && !MainGame.UpdateManager.IsActive)
+                if (IdleShuffle.GamePaused)
                 {
                     shuffleHold = "holding: the game is paused";
                     return; // the game is paused (its own movement system holds too)
@@ -966,8 +970,11 @@ namespace GK2DonkeyAPI
             private string BodyNowForLog() => bodySprite != null && bodySprite ? bodySprite.position.ToString("F3") : "?";
 
             // The animator state Stand() keeps: Walk during a step, Idle otherwise.
-            // Walk while stepping or trotting; a foal working out a route stands for those frames.
-            private AnimationState StandState => shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Following && !RoutePlanning ? AnimationState.Walk : AnimationState.Idle;
+            // Walk while stepping or trotting; a foal working out a route stands for those frames. The game paused (a menu,
+            // a table's window): the step is held where it is (ShuffleTick), and the donkey stands for it, or it walked on
+            // the spot with its steps (the user, 2026-11-07: "the foals still running in place"); the step goes on after.
+            private AnimationState StandState => !IdleShuffle.GamePaused && (shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Following && !RoutePlanning) ? AnimationState.Walk : AnimationState.Idle;
+            internal AnimationState TestStandState => StandState; // the self-test
 
             // The walk cycle's rate for the speed it moves at: shorter legs (ViewScale) step faster for the same ground,
             // and a mount's own stride (WalkCycleSpeed against the donkey's 1.5: a long mount's longer steps, 2026-10-24)

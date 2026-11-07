@@ -444,6 +444,7 @@ namespace GK2DonkeyAPI
             typeof(AnimationComponentBase_PlaySound_Patch),
             typeof(AnimationComponentBase_SetDirection_Patch),
             typeof(AnimationComponentBase_SetState_Patch),
+            typeof(PlayerPhysicalBody_StopMoving_Patch), // the riding pose hid the walk from the game's stop (Patches.cs)
             typeof(AnimationComponentBase_SetDirectionEnum_Patch),
             typeof(AnimationComponentBase_SetTrigger_Patch),
             typeof(WgoDataScriptsManager_CreateScript_Patch),

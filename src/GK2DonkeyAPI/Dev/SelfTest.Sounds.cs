@@ -625,6 +625,110 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // The game paused mid-walk (the user, 2026-11-07: hoofsteps on and on in the pause menu and at a table, the foals
+        // running in place). The pause menu opened while the keeper rides on, the stick still held: the game's own stop
+        // (StopMoving, from the controls taken) idles him through the riding pose, the ridden donkey stands and its
+        // hoofsteps stop; a foal trotting after it stands where its step is held, silent, and goes on after the pause.
+        internal static IEnumerator SoundsPaused()
+        {
+            if (LazyWindowsStackController.ActiveWindow != null)
+            {
+                Warn($"a game window is open ({LazyWindowsStackController.ActiveWindow.name}): close it and run again; skipped");
+                yield break;
+            }
+            UIGamePauseWindow pause = LazyUI.GetWindow<UIGamePauseWindow>();
+            if (pause == null) { Skip("no pause menu to open"); yield break; }
+            bool standingWas = Plugin.StandingSounds.Value;
+            Harmony stick = null;
+            MountHandle p = null, f = null;
+            try
+            {
+                stick = new Harmony(Plugin.Guid + ".pausestick");
+                stick.Patch(AccessTools.Method(typeof(LazyInput), nameof(LazyInput.GetDirection)),
+                    postfix: new HarmonyMethod(typeof(SelfTest), nameof(SurveyStickPostfix)));
+            }
+            catch (Exception e)
+            {
+                Fail("the stick could not be patched: " + e.Message);
+                try { stick?.UnpatchSelf(); } catch { }
+                yield break;
+            }
+            try
+            {
+                SetStandingSounds(true);
+                p = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (p == null) { Fail("could not spawn the parent"); yield break; }
+                yield return Until(() => p.IsReady, 6f);
+                f = Mounts.SpawnFoal(Owner, p, 0.6f, persist: false);
+                if (f == null) { Fail("could not spawn its foal"); yield break; }
+                f.Tuning.Set(Owner, "ShuffleFollowAlways", true);
+                yield return Until(() => f.IsReady, 6f);
+                MountResult r = p.Ride(showMessage: false);
+                if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
+                yield return Until(() => Mounts.IsMounted, 5f);
+                yield return Frames(5);
+                PlayerData pd = MainGame.PlayerData;
+                Mount.Instance ridden = Mount.Ridden;
+                Sounds.Rig rig = ridden.SoundsRig, frig = f.I.SoundsRig;
+                int Plays(Sounds.Rig g, string e) => g.TestPlays.TryGetValue(e, out int c) ? c : 0;
+                AnimationState Shown(Wgo w) => w?.MainWgoPart?.AnimationComponent != null ? w.MainWgoPart.AnimationComponent.GetState() : (AnimationState)(-1);
+
+                // walking: one way, the other if that one is blocked
+                float way = homeFacing > 0f ? 1f : -1f;
+                surveyStick = new Vector2(way, 0f);
+                yield return Seconds(1.5f);
+                if (pd.charState.Value != AnimationState.Walk)
+                {
+                    surveyStick = new Vector2(-way, 0f);
+                    yield return Seconds(1.5f);
+                }
+                if (pd.charState.Value != AnimationState.Walk)
+                {
+                    Warn("the keeper could not walk either way from here (blocked): skipped");
+                    yield break;
+                }
+                yield return Until(() => f.I.IsStepping, 3f);
+                bool foalStepping = f.I.IsStepping;
+                Check(Shown(ridden.Donkey) == AnimationState.Walk && Plays(rig, "step") > 0, $"riding with the stick held: the donkey walks ({Shown(ridden.Donkey)}), {Plays(rig, "step")} hoofstep(s)");
+
+                // the pause menu over the walk, the stick still held
+                int stopped0 = PlayerPhysicalBody_StopMoving_Patch.Stopped;
+                pause.Open(null);
+                yield return Frames(3);
+                Check(MainGame.IsGamePaused, "the pause menu paused the game");
+                Check(pd.charState.Value == AnimationState.Idle && PlayerPhysicalBody_StopMoving_Patch.Stopped > stopped0, $"the game's stop idled the riding keeper (his state {pd.charState.Value}, {PlayerPhysicalBody_StopMoving_Patch.Stopped - stopped0} stop(s) through the pose)");
+                Check(Shown(ridden.Donkey) == AnimationState.Idle, $"the ridden donkey stands ({Shown(ridden.Donkey)})");
+                if (foalStepping) Check(f.I.TestStandState == AnimationState.Idle && Shown(f.I.Donkey) == AnimationState.Idle && f.I.IsStepping, $"the foal's step held, the foal standing ({Shown(f.I.Donkey)})");
+                else Info("the foal wasn't trotting when the pause opened: only its standing checked");
+                Check(Shown(f.I.Donkey) == AnimationState.Idle, $"the foal stands in the pause ({Shown(f.I.Donkey)})");
+                // counted from half a second in: the walk clip's blend into Idle still runs its time (the clip info is the
+                // source state's during a transition), so a last footfall there is the blend's, not a walk
+                yield return Seconds(0.5f);
+                int steps = Plays(rig, "step"), fsteps = Plays(frig, "step");
+                Vector3 fAt = f.Position;
+                yield return Seconds(1.5f);
+                Check(Plays(rig, "step") == steps && Plays(frig, "step") == fsteps, $"1.5 s paused: no hoofstep ({Plays(rig, "step") - steps} ridden, {Plays(frig, "step") - fsteps} from the foal)");
+                Check(Vector3.Distance(f.Position, fAt) < 0.01f, $"the foal held where it was ({Vector3.Distance(f.Position, fAt):F3} moved)");
+
+                // after: the foal's held step goes on
+                surveyStick = null;
+                pause.Close();
+                yield return Frames(2);
+                Check(!MainGame.IsGamePaused, "the pause menu closed: the game runs");
+                if (foalStepping) Check(f.I.IsStepping || Vector3.Distance(f.Position, p.Position) < 2.5f, $"the foal's step goes on after the pause (stepping {f.I.IsStepping}, {Vector3.Distance(f.Position, p.Position):F1} from its parent)");
+            }
+            finally
+            {
+                surveyStick = null;
+                try { stick?.UnpatchSelf(); } catch { }
+                try { if (LazyWindowsStackController.IsWindowOpened(pause)) pause.Close(); } catch { }
+                SetStandingSounds(standingWas);
+                if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                try { if (f != null && f.Exists) f.Remove(); } catch { }
+                try { if (p != null && p.Exists) p.Remove(); } catch { }
+            }
+        }
+
         // The herd (docs/mount-sounds-design.md 3.3): a standing grown one calls by itself, rarer than ridden and never
         // within the scene's voice gap of another; its babies answer one after another, with [Sounds.Baby]'s sound
         // where the pack gives one; nothing of it with the standing switch off.

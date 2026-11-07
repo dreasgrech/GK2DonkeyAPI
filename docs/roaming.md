@@ -173,7 +173,8 @@ when one is hitched.
     top of a ramp (found 2026-09-30). The first build had 0.12 and 0.3, and
     foals got stuck on a corpse's walkable top, 0.4 above the ground (found 2026-09-30).
 - **Spacing:** no step ends within 1.1 of another donkey or cart, or within `ShuffleKeeperDistance` of the keeper.
-- **Pause:** when the game's update manager is paused (menus), the donkey holds.
+- **Pause:** when the game's update manager is paused (menus, a table's window), the donkey holds and stands (Idle):
+  Unity's clock runs on through the game's pause, and a held step kept its walk clip (2026-11-07).
 - **Being moved:** anything that moves the donkey (`MoveTo`, `ComeToKeeper`, a dismount, a hitch) is noticed because
   its `Position` differs from what the shuffle last wrote. Its home is then taken there again.
 - **Walk speed:** `walk_speed` is set to `ShuffleSpeed × ShuffleAnimSpeed` during a step and back to 1.5 after.
@@ -217,4 +218,4 @@ when one is hitched.
 10. **Several donkeys** (panel: spawn two next to each other) don't step into each other, and don't step in time.
 11. **Per donkey:** with a donkey picked in the panel ("Edit its settings"), switching Idle shuffle off stops just that
     one.
-12. **Pause menu:** a donkey mid-step holds while the game is paused.
+12. **Pause menu:** a donkey mid-step holds and stands while the game is paused, and finishes its step after.

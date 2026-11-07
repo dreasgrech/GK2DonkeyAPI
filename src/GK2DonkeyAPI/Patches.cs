@@ -21,6 +21,7 @@ namespace GK2DonkeyAPI
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetWalkAnimationSpeedMultiplier)), "AnimationComponentBase.SetWalkAnimationSpeedMultiplier");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), new[] { typeof(UnityEngine.Vector2) }), "AnimationComponentBase.SetDirection(Vector2)");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetState), new[] { typeof(AnimationState) }), "AnimationComponentBase.SetState");
+            Require(AccessTools.Method(typeof(PlayerPhysicalBody), nameof(PlayerPhysicalBody.StopMoving)), "PlayerPhysicalBody.StopMoving");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), new[] { typeof(Direction) }), "AnimationComponentBase.SetDirection(Direction)");
             // The chest on the cart (CartChest.cs) reaches three private members by name; gone, the whole mod stays off
             // rather than a chest operation throwing at run time.
@@ -133,6 +134,37 @@ namespace GK2DonkeyAPI
                     animationState = pose;
                 }
             }
+        }
+    }
+
+    // The game stops the keeper's walk in PlayerPhysicalBody.StopMoving, and asks his animator whether he walks
+    // (PlayerAnimation.AnimationState == Walk). While mounted that animator shows the riding pose (the SetState patch
+    // above), so the stop did nothing: PlayerData.charState stayed Walk, and the donkey, which mirrors it, walked on the
+    // spot with its hoofsteps in the pause menu, behind a table's window, and at a work spot he was walked to (the user,
+    // 2026-11-07). Its callers: the controls taken (PlayerController.HandleControlChange: every modal window, which also
+    // pauses the game), a path's end (OnPathComplete), Flow_StopGoTo. Mounted, the stop asks charState instead and does
+    // what the game's own does: Idle into charState and the animator (shown as the pose).
+    [HarmonyPatch(typeof(PlayerPhysicalBody), nameof(PlayerPhysicalBody.StopMoving))]
+    internal static class PlayerPhysicalBody_StopMoving_Patch
+    {
+        internal static int Stopped; // the self-test: walks stopped while mounted
+
+        private static bool Prefix(PlayerPhysicalBody __instance)
+        {
+            if (!Mount.IsMounted)
+            {
+                return true;
+            }
+            PlayerController pc = MainGame.PlayerController;
+            PlayerData pd = pc != null && ReferenceEquals(pc.PhysicalBody, __instance) ? pc.PlayerData : null;
+            if (pd == null || pd.charState.Value != AnimationState.Walk)
+            {
+                return true; // not the keeper, or not walking: the game's own (a no-op then)
+            }
+            pd.charState.Value = AnimationState.Idle;
+            pc.View?.PlayerAnimation?.SetState(AnimationState.Idle);
+            Stopped++;
+            return false;
         }
     }
 
