@@ -1568,6 +1568,11 @@ namespace GK2DonkeyAPI
                 int atGone = rowGone?.ChoiceValues == null ? -1 : Array.IndexOf(rowGone.ChoiceValues, goneId);
                 string goneLabel = atGone >= 0 && rowGone.ChoiceLabels != null && atGone < rowGone.ChoiceLabels.Length ? rowGone.ChoiceLabels[atGone] : "(not listed)";
                 Check(goneLabel == "Gone skin (not installed)" && gone.Value == goneId, $"a skin nothing installed provides is listed by its name from the id, \"(not installed)\", the id kept (\"{goneLabel}\")");
+                // shown by its name alone, dimmed (the user's pick, 2026-11-07: "<name> (не установлено)" didn't fit the Skin
+                // row; the journal's stats card says "Skin: Not installed")
+                string goneShown = atGone >= 0 ? Texts.Choice(rowGone, atGone) : "(not listed)";
+                Check(goneShown == "Gone skin" && Texts.Dimmed(rowGone, atGone) && !Texts.Dimmed(rowGone, atGone == 0 ? 1 : 0),
+                    $"it shows by its name alone (\"{goneShown}\"), dimmed; an installed choice isn't");
                 Check(MountsPanel.NameFromId("donkey/acme-pack.blaze") == "Blaze" && MountsPanel.NameFromId("donkey/frost") == "Frost" && MountsPanel.NameFromId("acme-pack.big-crab") == "Big crab",
                     $"a name from a skin id (after its mount and pack) as from a mount id: {MountsPanel.NameFromId("donkey/acme-pack.blaze")}, {MountsPanel.NameFromId("donkey/frost")}");
 

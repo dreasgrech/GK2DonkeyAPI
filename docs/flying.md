@@ -861,6 +861,13 @@ Downhill the test had put the keeper at the ramp's top x but at the foot's heigh
 physics pushed the body out 0.45 in one step at x 21.37 before it ran down normally: the test's placement, not the
 jump's; both starts now sit on the ground's surface (a ray down onto the ground layers). To run again.
 
+**A hitch, not a cut (F11 2026-11-07).** The uphill run failed on 4.5 px in one 10 ms frame. The trace: the frame before
+took 27 ms (a slow frame, the translations scenario's windows just closed) and ran two physics steps (the body 3.952 to
+4.169); the drawn mount, interpolated, caught up in the next frame. Every other step was 1.0-2.0 px, and the jump landed
+on the ground, never held or sent back. The cap is now 4 px a physics step: times the physics steps the longer of the
+frame and the one before spans, at least one (a steady rate keeps 4 px; after the 27 ms frame 5.4). A jump cut (17, 30,
+51 px) is far past it.
+
 ### The yard, for real (2026-10-24, built)
 
 The user: "the jump tests are done in an empty area instead of the home yard where there are many things to jump and

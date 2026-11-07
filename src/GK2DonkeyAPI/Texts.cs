@@ -227,7 +227,9 @@ namespace GK2DonkeyAPI
         internal static string Desc(MountSettingsPage.Row r) => Of(r.Owner, r.TextKey + ".desc", r.Description);
 
         // A dropdown's choice: a Choice row's words are the page's; a List row's are the API's for "Default" and the notes
-        // FillList marked (not installed, set aside, an empty list), a named skin's its owner's (step 3), the rest as they are.
+        // FillList marked (an empty list), a named skin's its owner's (step 3), the rest as they are. A skin not installed or
+        // set aside shows by its name alone, dimmed (Dimmed); the journal's stats card says why ("Skin: Not installed"):
+        // "<name> (не установлено)" didn't fit the Skin row (the user's pick, 2026-11-07; docs/missing-skin.md section 9).
         internal static string Choice(MountSettingsPage.Row r, int i)
         {
             string english = r.ChoiceLabels[i];
@@ -237,8 +239,8 @@ namespace GK2DonkeyAPI
                 string name = r.ChoiceNames != null && i < r.ChoiceNames.Length ? r.ChoiceNames[i] : english;
                 switch (note)
                 {
-                    case MountSettingsPage.ChoiceNote.NotInstalled: return UiWords.NameNotInstalled.Format(name);
-                    case MountSettingsPage.ChoiceNote.SetAside: return UiWords.NameSetAside.Format(name);
+                    case MountSettingsPage.ChoiceNote.NotInstalled:
+                    case MountSettingsPage.ChoiceNote.SetAside: return name;
                     case MountSettingsPage.ChoiceNote.Empty: return UiWords.NoChoice.Text;
                 }
                 if (english == Looks.DefaultLabel) return UiWords.DefaultSkin.Text;
@@ -247,6 +249,13 @@ namespace GK2DonkeyAPI
             }
             if (r.ChoiceWords != null && i < r.ChoiceWords.Length) return r.ChoiceWords[i].Text; // a tone row's presets: the API's words
             return Of(r.Owner, r.TextKey + ".choice." + i.ToString(CultureInfo.InvariantCulture), english);
+        }
+
+        // A List row's choice that is a skin not installed or set aside: drawn dimmed, by its name alone (Choice).
+        internal static bool Dimmed(MountSettingsPage.Row r, int i)
+        {
+            if (r == null || r.RowKind != MountSettingsPage.RowKind.List || r.ChoiceNotes == null || i < 0 || i >= r.ChoiceNotes.Length) return false;
+            return r.ChoiceNotes[i] == MountSettingsPage.ChoiceNote.NotInstalled || r.ChoiceNotes[i] == MountSettingsPage.ChoiceNote.SetAside;
         }
 
         internal static string Button(MountSettingsPage.Row r) => r.ButtonWord != null ? r.ButtonWord.Text : Of(r.Owner, r.TextKey + ".button", r.ButtonText ?? UiWords.Open.English);

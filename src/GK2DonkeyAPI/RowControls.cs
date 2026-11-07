@@ -421,10 +421,14 @@ namespace GK2DonkeyAPI
             TextMeshProUGUI label = b.GetComponentInChildren<TextMeshProUGUI>(true);
             if (label != null) UiKit.Rect(label.gameObject, 8f, 0f, w - 8f - 22f, CtrlH);
             Chevron(b.transform, w - 16f, CtrlH / 2f);
+            Color normal = label != null ? label.color : Color.white;
             return () =>
             {
                 int at = ChoiceIndex(r);
-                if (label != null) label.text = at >= 0 ? Texts.Choice(r, at) : (r.Entry.BoxedValue?.ToString() ?? "");
+                if (label == null) return;
+                label.text = at >= 0 ? Texts.Choice(r, at) : (r.Entry.BoxedValue?.ToString() ?? "");
+                // a skin not installed (or set aside): its name at half strength, as the journal greys a mount not installed
+                label.color = Texts.Dimmed(r, at) ? new Color(normal.r, normal.g, normal.b, normal.a * 0.5f) : normal;
             };
         }
 
@@ -500,6 +504,7 @@ namespace GK2DonkeyAPI
                 c.GetComponent<Image>().color = on ? UiKit.CardChosen : UiKit.CardBase;
                 TextMeshProUGUI t = c.GetComponentInChildren<TextMeshProUGUI>(true);
                 if (t != null && on) { t.color = ui.ButtonTextColor; t.fontStyle = FontStyles.Bold; }
+                if (t != null && Texts.Dimmed(r, i)) t.color = new Color(t.color.r, t.color.g, t.color.b, t.color.a * 0.5f); // a skin not installed: at half strength
                 UiKit.NavGroup(c, 3); // the list alone while it is open: no way out of group 3 but Select and Back
                 if (on || chosenItem == null) chosenItem = c.GetComponent<GamepadNavigationItem>();
             }

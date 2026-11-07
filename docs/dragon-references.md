@@ -635,3 +635,80 @@ so that we can commit it before continuing."
 - **Gone:** the loose copy in the game (`plugins\gk2mounts\saddleup-dragon.dragon\`, deleted once the game closed)
   and the study folder (the page shows the pack's skin). A save that wore the loose copy shows the Red Dragon until
   the Armored Dragon is picked again (its id changed).
+
+## 14. The polish pass (2026-11-07)
+
+The user, after the commit: "take a good look at the skin and make sure its consistent between frames. we need to
+polish the armored skin as much as possible before releasing. analyze well".
+
+**The method:** an inventory instead of samples. `frame_check.py sweep` takes every frame pair of every clip (the
+loop's seam too), takes the motion out block by block, and lists each group of pixels still changed with the shift
+its block took: moved 0 or 1 px yet changed is SHIMMER (a part changing in place), moved more is a part moving and
+bending. `frame_check.py heat` draws it per clip. Each place it shows was then looked at close up.
+
+**What the inventory showed:**
+
+| Clip | Where the leftover is | Read |
+|---|---|---|
+| lips, chew | nothing | the same picture every frame |
+| ear, turn | the tail's tip and its rings | the rings shimmered as the tail flicked |
+| walk | the legs, the tail | the legs step; the rings and greaves were re-laid every few degrees |
+| graze | the head lowering | a pose change |
+| fly, climb, dive | the wing beat; the tucked legs' small loops | motion |
+| glide | the far and near wings' flex, the tail | the near wing's veins re-laid as its fingers flex |
+| take-off, landing | the wings opening and folding | motion |
+
+The seams of the loops have nothing the middle pairs don't. The near shoulder's light band slides as the upper arm
+swings: a turning limb's shading, left.
+
+**Fixed: plates drawn as stamps.** A thin plate laid along a bone that turns a few degrees was re-laid in other
+pixels every frame. Measured first (each ring's angle per frame): in ear and turn each ring stays within 4 degrees
+(24.7-24.8, 36.6-39.9, 41.5-45.5, 27.9-29.0); in the walk they span 18-49.
+- **The tail's rings:** the tail's direction at each ring snapped to 15-degree steps whose edges (10.5, 25.5, 40.5,
+  ...) no standing frame crosses, the anchor on a whole pixel. The rings of ear and turn are now the same picture,
+  only moved; the walk's change shape twice a cycle, at the tail's fastest frames.
+- **The greaves:** the bone's direction snapped to 22.5-degree steps, the middle on a whole pixel, and lit from above
+  like every other plate (they were lit along their bone: the light row jumped from the plate's end to its side as
+  the forearm swung level). The swing shows a few fixed greaves.
+
+**Measured:** ear and turn's in-place shimmer 8 groups to 6 (what is left is the tail's tip moving); the gold steady
+(the same visible count every frame of walk, ear and glide; in the beat the wing covers more or less of it). The
+other mounts' pictures unchanged: a plain `make_creatures.py` run changes only the Armored Dragon's 141 pictures.
+SkinsScan ALL PASS (44).
+
+**Offered, not changed (the user's motion asks):** the glide's near-wing flex (its veins re-laid as the fingers bend:
+less flex would calm it, the user asked for the sail's bend on 2026-10-23); the tucked legs' small loops in the beat
+(asked for after held legs looked dead); and the standing clips now nearly still (lips and chew identical every
+frame, ear and turn only the tail's tip), a result of the whole-pixel work.
+
+**The independent review** of the pack's pictures (a fresh agent with `frame_check.py`, told the known items, not
+the fixes) then found, and these were fixed:
+- **The helm's crest changed for a frame in the climb** (flyup1 04: its light top turned to its dark edge; flyup2 04
+  one pixel). Measured, not guessed: the head point is a whole pixel in every frame (17,25 then 17,26), and a log of
+  every pixel written there showed only the crest plate itself, with one cell more in that frame. Its top edge runs
+  exactly through a cell's centre (x 1.5 from the head, y -9.5), and in floating point 25 - 9.6 and 26 - 9.6 round
+  differently. Now `plate()` puts its corners on a 1/64 px grid first, so such a tie falls the same way on every row:
+  the helm is the same picture in every frame of all six beat clips.
+- **Grass pockets between the wing and the hip** at the top of the upstroke (fly, flyup1, flydown1 08; land 03;
+  glidein 02; 5 to 35 px): the saw wing's notch on its last span, by the body, opened one; with it gone, the wing's
+  edge still lay across the tail rings' tops and shut pockets in between. The notch is gone, and a pocket of 40 px or
+  less that the near wing borders is the darkest hide behind it, a shadow under the wing. The single-pixel gaps between
+  the legs and claws are left: they are the drawing's.
+- **Not changed:** walk 07's single grass pixel between the forelegs (a gap closing).
+
+**Checks:** a plain `make_creatures.py` run changes only the Armored Dragon's pictures; SkinsScan ALL PASS (44);
+`canonical_cfg.py --check` clean; the visible gold the same in every frame of walk, ear and glide; deployed; the page
+holds all 237 pictures.
+
+**Then the user, on the page:** "how consistent are those three vertical rectangles on the front leg regarding
+shading between the frames? ... are they alternating? also those three white lines on the tail are moving a lot".
+- **The tail's rings:** they were. Snapped to 15-degree steps, the walk's sway carried a ring's angle across a step's
+  edge and back (ring 4: 28, 23, 35, 37, 28, 18, 23, 23 degrees across 25.5), a 15-degree flip several times a
+  cycle. Now on the ground each ring has one fixed angle, the resting tail's at its place (sway 0), in every
+  standing and walking frame, and rides along with the tail; in the air the tail whips through 30 degrees, and the
+  rings follow its own angle there, unsnapped.
+- **The leg's three bands** (light, mid, dark along the bone): not alternating. In every frame the light band is on
+  the lit side and the dark on the far side; they turn with the arm. Measured between neighbouring frames on the
+  upper arm, with each frame's best whole-pixel shift: 14 to 33 of its ~170 blue pixels change where it turns a little
+  and 55 to 94 where it swings. The bones now start and end on whole pixels (the solver's fractions re-laid the
+  bands a little every frame: 04->05 went from 30 to 18).

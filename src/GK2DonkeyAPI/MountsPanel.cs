@@ -80,6 +80,7 @@ namespace GK2DonkeyAPI
         private static List<Entry> entries = new List<Entry>();
         private static string builtFor;            // the mount the right side was built for
         private static string builtForSkin;        // and the skin its Skin row said then (the colours window is that skin's, 0.41.0)
+        private static string builtForMissing;     // and the skin not installed its row held then, if any (the stats card says it)
         private static string journalSignature, coloursSignature; // which rows were built (a preset shows a row: rebuilt)
         private static readonly Dictionary<ConfigEntryBaseKey, object> before = new Dictionary<ConfigEntryBaseKey, object>();
         private static readonly Dictionary<ConfigEntryBaseKey, object> coloursBefore = new Dictionary<ConfigEntryBaseKey, object>();
@@ -598,6 +599,7 @@ namespace GK2DonkeyAPI
             string chosen = page.MountChosen ?? MountCatalog.DonkeyId;
             builtFor = chosen;
             builtForSkin = page.SkinChosen(chosen);
+            builtForMissing = page.SkinNotInstalled(chosen);
             Entry e = entries.Find(x => x.Id.Equals(chosen, StringComparison.OrdinalIgnoreCase));
             Catalog.Entry k = Catalog.Find(chosen);
             MountIcons.Icon icon = MountIcons.Of(k);
@@ -620,6 +622,14 @@ namespace GK2DonkeyAPI
                 (string label, string value) = e != null && i < e.Stats.Count ? e.Stats[i] : ("", "");
                 statLines[i].Label.text = label;
                 statLines[i].Value.text = value;
+            }
+            // its chosen skin not installed (its pack gone): the last line says so in place of the skins' count; the Skin
+            // row shows the skin by its name alone, dimmed (the user's pick, 2026-11-07: "<name> (не установлено)" didn't
+            // fit the row; both words already in every language; docs/missing-skin.md section 9)
+            if (k != null && statLines.Count > 0 && page.SkinNotInstalled(chosen) != null)
+            {
+                statLines[statLines.Count - 1].Label.text = UiWords.SkinRow.Text;
+                statLines[statLines.Count - 1].Value.text = UiWords.NotInstalled.Text;
             }
             ShowAbilities(e, k);
             if (e != null)
@@ -1138,7 +1148,8 @@ namespace GK2DonkeyAPI
                 return;
             }
             string chosen = page?.MountChosen ?? MountCatalog.DonkeyId;
-            if (!chosen.Equals(builtFor ?? "", StringComparison.OrdinalIgnoreCase) || !string.Equals(page?.SkinChosen(chosen) ?? "", builtForSkin ?? "", StringComparison.OrdinalIgnoreCase))
+            if (!chosen.Equals(builtFor ?? "", StringComparison.OrdinalIgnoreCase) || !string.Equals(page?.SkinChosen(chosen) ?? "", builtForSkin ?? "", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(page?.SkinNotInstalled(chosen), builtForMissing, StringComparison.OrdinalIgnoreCase)) // a skin not installed stands in as the default: its own change too
             {
                 BuildRight(); // the mount, or its skin, changed under the panel (the cfg, a key, the Skin row): the right side follows; the colours window is the skin's
                 MarkList();
@@ -1414,6 +1425,7 @@ namespace GK2DonkeyAPI
             statLines.Clear();
             builtFor = null;
             builtForSkin = null;
+            builtForMissing = null;
             journalSignature = coloursSignature = null;
             if (panel != null)
             {

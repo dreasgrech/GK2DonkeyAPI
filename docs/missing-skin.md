@@ -45,7 +45,8 @@ every `Find(` of a skin id and every fallback to the donkey outside `Dev/` found
 
 Right as they are:
 - `FamilyMountOf` (the left mounts' family): the id's own mount part, already the dragon.
-- The Skin row's label "X (not installed)" (MountSettingsPage.cs 706): true, and kept.
+- The Skin row's label "X (not installed)" (MountSettingsPage.cs 706): true, and kept. (Changed 2026-11-07, section 9:
+  the name alone, dimmed, the stats card saying "Skin: Not installed".)
 - The places that take a skin of the catalog (icons, the journal's list and stats, texts, the default skins).
 
 Asked before about the case where the mount itself is gone (the Dragons pack removed: "Dragon (not installed)", the
@@ -183,3 +184,36 @@ The user's own Saddle Up cfg was put back afterwards and the saves compared: ide
 - **Rehearsal B** (01:41) over the 0.15.0 fixture's Saddle Up cfg: the dragon picked with its saved skin `default-x`
   wore its own look ("the dragon's own look 'saddleup-dragon.dragon/default' is worn instead") and the ride went on
   as the dragon; Gerry the same; the choice kept in the cfg; 188 of 189 values kept, 0 missing; no warning or error.
+
+## 9. The Skin row's label didn't fit (2026-11-07)
+
+The F11 translations scenario, run with the player's dragon still set to a test skin that had been deleted
+(`saddleup-dragon.dragon/saddleup-dragon.armored`, the Armored Dragon's loose copy before it went into the Dragons
+pack), failed three times on one text: the journal's Skin row "Armored (not installed)". In Russian ("Armored (не
+установлено)") and Polish ("Armored (nie zainstalowano)") it didn't fit at its smallest size (0.99 and 0.95 of the
+room), and in the test language not at all. A player who removes a pack while a mount wears one of its skins sees it;
+a longer name ("Royal Parade") would be cut in more languages.
+
+Three ways were put to the user: shorter Russian and Polish words (fixes two languages for short names only), the
+name alone with the state said elsewhere, or leaving it. The user picked the second.
+
+**Built:**
+- **The Skin row** (`Texts.Choice`): a skin not installed, or set aside, shows by its name alone; `Texts.Dimmed`
+  marks it, and the dropdown draws it at half strength, closed and in its open list (`RowControls`), as the journal
+  greys a mount not installed. The row only ever holds a name, which fits as every installed skin's does.
+- **Why it is dimmed** (`MountsPanel.BuildRight`): the stats card's last line, in place of the skins' count, says
+  "Skin: Not installed" while the shown mount's Skin row holds an id none of its skins has
+  (`MountSettingsPage.SkinNotInstalled`: the dropdown's own rule). Both words were already translated in all 11
+  languages (`row.skin`, `journal.not_installed`): nothing new to translate. The journal now also rebuilds its right
+  side when that changes (a skin not installed stands in as the default, so picking the default from it changed
+  nothing the journal watched).
+- **Kept:** the English list labels `FillList` writes ("Gone skin (not installed)", its self-test), and a missing
+  *mount*'s "(not installed)" in the mount list and header (sections 2 and 4: meant, and the test didn't flag it).
+
+**Tests:** the translations scenario now makes the state instead of relying on a player's cfg: in every language the
+layout pass gives each mount's Skin row a made-up skin no pack provides (`<mount>/selftest-missing-skin`, "Selftest
+missing skin") and measures the journal again, and the test-language pass does the same for the chosen mount and checks
+the row shows the name alone and the stats card "Skin: Not installed"; the value is put back after each. (The first run failed its own check: the journal watches only the *mount* by itself, and a Skin row value
+set from the test left it showing the state before; the tests now refresh it as a pick in the Skin row does. The
+layout pass had passed without measuring the missing case.) The settings
+self-test checks the shown label ("Gone skin", dimmed; an installed choice not dimmed).

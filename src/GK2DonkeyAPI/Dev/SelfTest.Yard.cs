@@ -260,6 +260,12 @@ namespace GK2DonkeyAPI
                     Mount.Instance.TestGroundProbe = new System.Collections.Generic.List<string>(); // the deep probe: every Follow's ground sampling (Mount.cs)
                     int returns = SafeSpots.TestReturns;
                     float last = float.NaN, worst = 0f, worstDt = 0f, slowest = 0f; // the biggest step, the frame it came in, the slowest frame
+                    // the step cap per frame: 4 px a physics step, times the physics steps the longer of this frame and the one
+                    // before spans (at least one). A hitch runs two physics steps in one frame and the drawn mount, interpolated,
+                    // catches up in the next: 4.5 px in a 10 ms frame after a 27 ms one, the hillside's F11 2026-11-07, every
+                    // other step 1.0-2.0. A steady frame rate keeps the 4 px; a jump cut (17, 30, 51 px) is far past either
+                    float lastDt = 0f, worstAllowed = 4f;
+                    bool over = false;
                     Flight.TestJumpHeld = true;
                     Flight.TestMoveDir = new Vector2(dir.x, dir.z);
                     // the jump's air speed is capped by the ride's measured top (Flight: "the ride's own top, measured"), and a
@@ -275,7 +281,14 @@ namespace GK2DonkeyAPI
                         {
                             float drawn = mi.Position.y - Flight.LiftFor(mi);
                             probe.Add($"f{Time.frameCount} {Time.unscaledDeltaTime * 1000f:0}ms {Flight.Now} m{mi.Position.y:0.000} L{Flight.LiftFor(mi) * 30f:0.0} rb{rb.position.y:0.000} tf{rb.transform.position.y:0.000} {(rb.interpolation == RigidbodyInterpolation.None ? "N" : "I")} s{(float.IsNaN(last) ? 0f : (drawn - last) * 30f):+0.0;-0.0}");
-                            if (!float.IsNaN(last) && Mathf.Abs(drawn - last) > worst) { worst = Mathf.Abs(drawn - last); worstDt = Time.unscaledDeltaTime; }
+                            if (!float.IsNaN(last))
+                            {
+                                float step = Mathf.Abs(drawn - last);
+                                float allowed = 4f * Mathf.Max(1f, Mathf.Max(Time.unscaledDeltaTime, lastDt) / Mathf.Max(0.001f, Time.fixedDeltaTime));
+                                if (step > allowed * px) over = true;
+                                if (step > worst) { worst = step; worstDt = Time.unscaledDeltaTime; worstAllowed = allowed; }
+                            }
+                            lastDt = Time.unscaledDeltaTime;
                             slowest = Mathf.Max(slowest, Time.unscaledDeltaTime);
                             last = drawn;
                             if (Flight.Now != Flight.Phase.Jumping && Time.time - t0 > 0.2f) break;
@@ -298,8 +311,8 @@ namespace GK2DonkeyAPI
                     bool grounded = SurfaceAtFeet(at);
                     // the step cap is the ramp rule's 4 px (docs/flying.md "running downhill"): a 24-degree hillside at the
                     // mover's speed climbs 0.11 a physics step, 3.2 px, by itself; the flat yard's 2 px can't hold here
-                    Check(along > 1.0f && grounded && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground && !Flight.Free && SafeSpots.TestReturns == returns && worst <= 4f * px,
-                        $"a running jump {(uphill ? "up" : "down")} the slope: {along:0.00} along it{(along > 1.0f ? "" : " (HELD in place: over 1 wanted)")}, {at.y - before.y:+0.00;-0.00} in height, on the ground{(grounded ? "" : " NOT")}, the drawn ground stepping at most {worst / px:0.0} px a frame{(worst <= 4f * px ? "" : " (OVER the 4 allowed on a slope)")}, in a frame of {worstDt * 1000f:0} ms (the slowest {slowest * 1000f:0} ms){(Flight.TestJumpWentBack ? ", SENT BACK" : "")}{(Flight.Now == Flight.Phase.Ground ? "" : ", not back on the ground (" + Flight.Now + ")")}{(SafeSpots.TestReturns == returns ? "" : ", the watchdog put him back")}");
+                    Check(along > 1.0f && grounded && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground && !Flight.Free && SafeSpots.TestReturns == returns && !over,
+                        $"a running jump {(uphill ? "up" : "down")} the slope: {along:0.00} along it{(along > 1.0f ? "" : " (HELD in place: over 1 wanted)")}, {at.y - before.y:+0.00;-0.00} in height, on the ground{(grounded ? "" : " NOT")}, the drawn ground stepping at most {worst / px:0.0} px a frame (allowed {worstAllowed:0.0} there: 4 a physics step){(over ? " (OVER what a slope allows)" : "")}, in a frame of {worstDt * 1000f:0} ms (the slowest {slowest * 1000f:0} ms){(Flight.TestJumpWentBack ? ", SENT BACK" : "")}{(Flight.Now == Flight.Phase.Ground ? "" : ", not back on the ground (" + Flight.Now + ")")}{(SafeSpots.TestReturns == returns ? "" : ", the watchdog put him back")}");
                 }
             }
             finally

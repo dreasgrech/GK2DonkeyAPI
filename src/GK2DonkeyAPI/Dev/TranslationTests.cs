@@ -806,6 +806,26 @@ namespace GK2DonkeyAPI
 
         private static string Short(string s) => s == null ? "(null)" : s.Length > 40 ? s.Substring(0, 40) + "..." : s.Replace("\n", "\\n");
 
+        // A made-up skin no pack provides, for a mount's Skin row while its room is measured (as long as a real name:
+        // "Armored Dragon"); its name as the journal makes it from the id (MountsPanel.NameFromId)
+        private const string MissingSkinId = "selftest-missing-skin";
+        private static string MissingSkinName => MountsPanel.NameFromId("x/" + MissingSkinId);
+
+        // A mount's Skin row on the page (its cfg entry: "Skin_<mount>", MountSettingsPage.AddSkinRow), or null
+        private static BepInEx.Configuration.ConfigEntry<string> SkinEntry(MountSettingsPage page, string mount) =>
+            page != null && !string.IsNullOrEmpty(mount) && page.HasSkinRow(mount)
+                ? page.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "Skin_" + mount)?.Entry as BepInEx.Configuration.ConfigEntry<string> : null;
+
+        // The page's lists read again on the next build (a Skin row's stored id that no skin provides is added by FillList),
+        // as the journal does when a skin comes or goes, and the journal refreshed as after a pick in its Skin row (it watches
+        // only the mount by itself: a Skin row's value set from here showed the journal as it was, 2026-11-07)
+        private static void Relist(MountSettingsPage page)
+        {
+            foreach (MountSettingsPage.Row r in page.Rows)
+                if (r.IsLook && r.RowKind == MountSettingsPage.RowKind.List) { r.ChoiceLabels = null; r.ChoiceValues = null; }
+            if (MountsPanel.IsOpen) MountsPanel.Refresh();
+        }
+
         private static MountSettingsPage PageWithOptions()
         {
             foreach (MountSettingsPage live in MountSettingsPage.All) if (live.Shown && OptionsWindow.HasOptions(live)) return live;
@@ -887,6 +907,30 @@ namespace GK2DonkeyAPI
                 SelfTest.Check(plainNames.Count == 0 && mountCount > 0, $"every mount's name, description and abilities are looked up ({mountCount} mount(s){(plainNames.Count > 0 ? "; NOT: " + string.Join(" | ", plainNames) : "")})");
                 Leftovers("journal", journal, keep);
                 RoomHolds("the journal", TextRoom.Measure(MountsPanel.TestRoot(coloursWindow: false), "test language: journal"));
+                // the chosen mount with a skin not installed (its pack gone): the Skin row by the name alone, the stats card's
+                // "Skin: Not installed" (the user's journal, 2026-11-07: "[Armored (not installed)]" didn't fit; made here, as
+                // a player's cfg holds it only by chance)
+                BepInEx.Configuration.ConfigEntry<string> skinRow = SkinEntry(page, page.MountChosen);
+                if (skinRow != null)
+                {
+                    string skinWas = skinRow.Value;
+                    try
+                    {
+                        skinRow.Value = page.MountChosen + "/" + MissingSkinId;
+                        Relist(page);
+                        yield return SelfTest.Frames(3);
+                        List<string> missing = TextsUnder(MountsPanel.TestRoot(coloursWindow: false));
+                        SelfTest.Check(missing.Contains(MissingSkinName) && missing.Contains(Texts.Test(UiWords.NotInstalled.English)) && missing.Contains(Texts.Test(UiWords.SkinRow.English)),
+                            $"a skin not installed: the Skin row shows its name alone (\"{MissingSkinName}\"), the stats card \"Skin: Not installed\" (looked up)");
+                        RoomHolds("the journal (a skin not installed)", TextRoom.Measure(MountsPanel.TestRoot(coloursWindow: false), "test language: journal (a skin not installed)"));
+                    }
+                    finally
+                    {
+                        skinRow.Value = skinWas;
+                        Relist(page);
+                    }
+                    yield return SelfTest.Frames(3);
+                }
                 MountsPanel.TestOpenColours();
                 yield return SelfTest.Frames(3);
                 if (MountsPanel.IsColoursOpen)
@@ -1189,6 +1233,26 @@ namespace GK2DonkeyAPI
                                 MountsPanel.TestSelect(e.Id);
                                 yield return SelfTest.Frames(3);
                                 measured += TextRoom.Measure(MountsPanel.TestRoot(coloursWindow: false), $"{id}: journal: {e.Id}", shortOnes).Count;
+                                // and with a skin not installed (its pack gone): the Skin row by the name alone, the stats
+                                // card's "Skin: Not installed" (2026-11-07: "Armored (не установлено)" didn't fit in ru, pl)
+                                BepInEx.Configuration.ConfigEntry<string> skinRow = SkinEntry(page, e.Id);
+                                if (skinRow != null)
+                                {
+                                    string skinWas = skinRow.Value;
+                                    try
+                                    {
+                                        skinRow.Value = e.Id + "/" + MissingSkinId;
+                                        Relist(page);
+                                        yield return SelfTest.Frames(3);
+                                        measured += TextRoom.Measure(MountsPanel.TestRoot(coloursWindow: false), $"{id}: journal: {e.Id} (a skin not installed)", shortOnes).Count;
+                                    }
+                                    finally
+                                    {
+                                        skinRow.Value = skinWas;
+                                        Relist(page);
+                                    }
+                                    yield return SelfTest.Frames(3);
+                                }
                                 // its colours window (each mount has its own colour rows), when it has one
                                 MountsPanel.TestOpenColours();
                                 yield return SelfTest.Frames(3);

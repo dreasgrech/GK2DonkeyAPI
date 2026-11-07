@@ -24,6 +24,9 @@ For players:
   Babies and standing mounts stand still too while the game is paused, instead of running in place.
 - **Ride and Drive the cart keys work in the Mount Journal** (2026-11-07): pressing H or G (or the keys you set) in the
   journal closes it and calls the mount you picked, as its Ride and Drive the cart buttons do.
+- **A skin that isn't installed fits its row in every language** (2026-11-07): when a mount's skin comes from a pack
+  you removed, the Mount Journal's Skin row shows the skin's name, greyed, and the Stats card says "Skin: Not
+  installed". The row said "<name> (not installed)", which was cut off in Russian and Polish.
 
 For mod authors:
 
@@ -36,6 +39,15 @@ For mod authors:
 
 Development:
 
+- **The hillside jump test allows a hitch's catch-up** (2026-11-07, `Dev/SelfTest.Yard.cs`, docs/flying.md "A hitch,
+  not a cut"): it failed on 4.5 px in a 10 ms frame right after a 27 ms one, the drawn mount catching up the two
+  physics steps that slow frame ran. The cap is 4 px a physics step now: times the steps the longer of the frame and
+  the one before spans (a steady rate keeps 4 px; a jump cut, 17 px and more, still fails).
+- **The translations scenario makes a skin not installed itself** (2026-11-07, `Dev/TranslationTests.cs`,
+  docs/missing-skin.md 9): it measured that row only when the player's cfg happened to hold one (it failed on a deleted
+  test skin). Now every language's layout pass gives each mount's Skin row a made-up skin and measures the journal
+  again, and the test-language pass checks the row shows the name alone and the Stats card "Skin: Not installed"; the
+  value is put back after each. `MountSettingsPage.SkinNotInstalled` (internal) says which id that is.
 - **A new dragon skin or a new dragon mount: the study** (2026-11-07, `docs/dragon-references.md`): the user's nine
   dragon references read close up and at the players' size, what a skin and a mount can each change, the costs, the
   ranked skin candidates and a recommendation. Nothing drawn yet. The user picked an armoured skin; after the first
@@ -59,6 +71,20 @@ Development:
 - **`tools/skins/frame_check.py`** (2026-11-07): frame-by-frame checks of a skin's pictures, read-only. `closeup`
   enlarges a clip's frames with the main and front layers apart, `shift` tells a part that only moved from one that
   changed, `attach` measures a part's move against the body's, and `gold` counts a colour's pixels per frame.
+  Then `sweep` (every frame pair of every clip with the motion taken out, block by block: each group of pixels still
+  changed, with what it moved, a part that moved 0 or 1 px yet changed marked SHIMMER) and `heat` (the same as
+  heatmaps, four clips a row).
+- **The Armored Dragon's polish pass** (2026-11-07, docs/dragon-references.md 14; the user: "make sure its consistent
+  between frames ... polish the armored skin as much as possible before releasing"): the tail's rings and the legs'
+  greaves drawn as stamps (the direction snapped to 15 and 22.5 degree steps, the anchor on a whole pixel, the
+  greaves lit from above like every other plate), so a ring or greave that turns a few degrees keeps its pixels.
+  After an independent review: the plates' corners on a 1/64 px grid (a floating-point tie gave the helm's crest an
+  extra cell for one frame of the climb), no notch in the spread wing by the body, and a grass pocket shut in between
+  the near wing and the body drawn as a shadow. Then (the user: the tail's "white lines ... moving a lot") the
+  rings on the ground at one fixed angle each, the resting tail's (snapped, the walk's sway flipped them between
+  steps), the tail's own angle in the air, and the legs' bones from whole-pixel ends. The pack's other mounts'
+  pictures unchanged (a plain
+  `make_creatures.py` run changes only the Armored Dragon's).
 - **The skins preview page reads a mount's variants as the game does** (2026-11-07, `tools/skins/skin_preview_html.py`):
   a skin built on its mount's default takes the default's canvas, seat and layer when it leaves them out (before,
   the Armored Dragon study showed as a 96 px donkey skin). The study's card is

@@ -570,6 +570,17 @@ namespace GK2DonkeyAPI.Api
         }
 
         internal bool HasSkinRow(string mountId) => skinRows.ContainsKey(mountId);
+
+        // The skin a mount's Skin row holds when it is none of the skins offered for it (its pack gone): that id, the
+        // dropdown's "not installed" choice (FillList); null when the row holds one of them, or there is no row. The
+        // journal's stats card says it (MountsPanel.BuildRight: "Skin: Not installed").
+        internal string SkinNotInstalled(string mountId)
+        {
+            if (mountId == null || !skinRows.TryGetValue(mountId, out ConfigEntry<string> row) || string.IsNullOrEmpty(row.Value)) return null;
+            foreach ((string id, string _) in Looks.SkinChoicesOf(mountId))
+                if (string.Equals(id, row.Value, StringComparison.OrdinalIgnoreCase)) return null;
+            return row.Value;
+        }
         internal Mount.Instance MountPaper => mountCompanion?.Paper; // the panel's picture when the page has no Preview() row
         internal MountResult UseMount(MountStyle style) => mountCompanion != null ? mountCompanion.UseFromPanel(style) : MountResult.Refused("No mount rows on this page."); // the panel's Ride and Drive buttons
         internal bool IsCompanion(MountCompanion c) => c != null && ReferenceEquals(c, mountCompanion); // a ride or cart key works in this page's journal (KeyActions)

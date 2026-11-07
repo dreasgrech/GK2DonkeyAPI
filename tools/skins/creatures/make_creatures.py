@@ -953,6 +953,8 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             # (saw-claw: almost to the wrist, the fingers a hand of talons)
             scal = []
             for ni, (a, b) in enumerate(zip(trail, trail[1:])):
+                if b == root:
+                    continue                                                     # none by the body: it opened a hole by the hip
                 mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
                 vx, vy = wr[0] - mx, wr[1] - my
                 vl = math.hypot(vx, vy) or 1
@@ -1278,6 +1280,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     # then lifts, the knee bending, and swings forward on an arc (the swing); the four in the walk's order (near hind,
     # near fore, far hind, far fore, a quarter of the cycle apart).
     def bone(a, b, r0, r1, ramp, dst=None):
+        if ARM:
+            # whole-pixel ends: from the solver's fractions the light, mid and dark bands along the bone were re-laid
+            # every frame; a joint two bones share stays shared
+            a, b = (float(rnd(a[0])), float(rnd(a[1]))), (float(rnd(b[0])), float(rnd(b[1])))
         ax, ay = a
         bx, by = b
         Lg = math.dist(a, b) or 1e-6
@@ -1704,6 +1710,9 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # its second row, a lit ridge down its middle, or a brass rim on its bottom row.
         ul = math.hypot(*up) or 1.0
         up = (up[0] / ul, up[1] / ul)
+        # the corners on a 1/64 px grid: a cell centre exactly on an edge is then decided the same way on every row
+        # (in floating point 25 - 9.6 and 26 - 9.6 differ, and the crest gained a cell with the head one row lower)
+        poly = [(round(q[0] * 64) / 64.0, round(q[1] * 64) / 64.0) for q in poly]
         xs, ys = [q[0] for q in poly], [q[1] for q in poly]
         cells = {(x, y) for y in range(int(min(ys)) - 1, int(max(ys)) + 2) for x in range(int(min(xs)) - 1, int(max(xs)) + 2)
                  if _in_poly(x + 0.5, y + 0.5, poly)}
@@ -1798,6 +1807,22 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # from its root, each its own size. (Counted while they fitted in three quarters of each frame's tail length
         # and placed at a share of it, a ring came and went in flight and they all slid as the sway changed the length.)
         segs_ = list(zip(tail, tail[1:]))
+        rest_dirs = None
+        if fly is None:
+            # the resting tail (no sway): its direction at each ring's place, for the rings' fixed angles
+            rp = [(70.0, 50.0 + bob), (81.0, 53.0 + bob * 0.7), (91.0, 57.0), (99.0, 59.5), (103.0, 60.5)]
+            rc = catmull([(float(round(x)), float(round(y))) for x, y in rp], 160)
+            rest_dirs, acc_ = {}, 0.0
+            rsegs = list(zip(rc, rc[1:]))
+            for s_ in (8.0, 14.0, 20.0, 26.0):
+                acc_ = 0.0
+                for (ax_, ay_), (bx_, by_) in rsegs:
+                    ln_ = math.dist((ax_, ay_), (bx_, by_))
+                    if acc_ + ln_ >= s_ or (bx_, by_) == rc[-1]:
+                        break
+                    acc_ += ln_
+                ln_ = ln_ or 1e-6
+                rest_dirs[s_] = ((bx_ - ax_) / ln_, (by_ - ay_) / ln_)
         for s in (8.0, 14.0, 20.0, 26.0):
             acc = 0.0
             for (ax, ay), (bx, by) in segs_:
@@ -1808,12 +1833,16 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             ln = ln or 1e-6
             f = min(1.0, max(0.0, (s - acc) / ln))
             T = ((bx - ax) / ln, (by - ay) / ln)
+            if rest_dirs is not None:
+                # on the ground a stamp: the resting tail's direction at this ring, the same in every standing and
+                # walking frame (snapped to steps, the walk's sway flipped a ring between two steps back and forth)
+                T = rest_dirs[s]
             N = (-T[1], T[0])
             if N[1] > 0:
                 N = (-N[0], -N[1])
             u = s / 37.5                                                         # its size by its place on the standing tail
             rr = 6.0 * (1 - u) ** 1.4 + 1.0 + 1.0
-            P = (ax + (bx - ax) * f, ay + (by - ay) * f)
+            P = (float(rnd(ax + (bx - ax) * f)), float(rnd(ay + (by - ay) * f)))   # on a whole pixel
             plate([(P[0] + N[0] * rr, P[1] + N[1] * rr), (P[0] + N[0] * rr + T[0] * 2.6, P[1] + N[1] * rr + T[1] * 2.6),
                    (P[0] - N[0] * rr + T[0] * 2.6, P[1] - N[1] * rr + T[1] * 2.6), (P[0] - N[0] * rr, P[1] - N[1] * rr)], up=(T[0], T[1]))
 
@@ -2079,12 +2108,18 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             if ln < 1.0:
                 T = (0.0, 1.0)
                 N = (-1.0, 0.0)
-            mid_ = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+            # a stamp: the bone's direction snapped to 22.5-degree steps and the middle on a whole pixel, so the swing
+            # shows a few fixed greaves, not one re-laid every frame
+            a_ = math.atan2(T[1], T[0])
+            a_ = math.radians(22.5 * round(math.degrees(a_) / 22.5))
+            T = (math.cos(a_), math.sin(a_))
+            N = (-T[1], T[0])
+            mid_ = (float(rnd((a[0] + b[0]) / 2)), float(rnd((a[1] + b[1]) / 2)))
             half_ = 2.6
             A = (mid_[0] - T[0] * half_, mid_[1] - T[1] * half_)
             B = (mid_[0] + T[0] * half_, mid_[1] + T[1] * half_)
             plate([(A[0] + N[0] * w0, A[1] + N[1] * w0), (B[0] + N[0] * w1, B[1] + N[1] * w1),
-                   (B[0] - N[0] * w1, B[1] - N[1] * w1), (A[0] - N[0] * w0, A[1] - N[1] * w0)], up=(-T[0], -T[1]))
+                   (B[0] - N[0] * w1, B[1] - N[1] * w1), (A[0] - N[0] * w0, A[1] - N[1] * w0)], up=(0.0, -1.0))   # lit from above
             # (no brass rim: on a small plate turning with the leg its bottom row came and went, gold blinking)
 
     if fly is None:
@@ -2147,6 +2182,34 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                     col = (DOUT[0] if dy == 1 else DOUT[1]) + (255,)
                     (front if fpx[ny2 * W + nx2][3] else back)[y * W + x] = col
                     break
+    if ARM:
+        # a pocket of grass shut in between the near wing and the body (its edge across the tail rings' tops at the top
+        # of the upstroke) is a shadow under the wing: the darkest hide, behind. Only one the front layer borders, of
+        # 40 px or less (the gaps between claws and legs are the drawing's own)
+        seen = set()
+        for i0 in range(W * H):
+            if back[i0][3] or front[i0][3] or i0 in seen:
+                continue
+            comp, stack, edge, by_wing = [], [i0], False, False
+            seen.add(i0)
+            while stack:
+                i = stack.pop()
+                comp.append(i)
+                x, y = i % W, i // W
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx2, ny2 = x + dx, y + dy
+                    if not (0 <= nx2 < W and 0 <= ny2 < H):
+                        edge = True
+                        continue
+                    j = ny2 * W + nx2
+                    if back[j][3] or front[j][3]:
+                        by_wing = by_wing or bool(front[j][3])
+                    elif j not in seen:
+                        seen.add(j)
+                        stack.append(j)
+            if not edge and by_wing and len(comp) <= 40:
+                for i in comp:
+                    back[i] = DRG[0] + (255,)
     return back, front
 
 
