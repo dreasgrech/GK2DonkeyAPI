@@ -36,6 +36,33 @@ For mod authors:
 
 Development:
 
+- **A new dragon skin or a new dragon mount: the study** (2026-11-07, `docs/dragon-references.md`): the user's nine
+  dragon references read close up and at the players' size, what a skin and a mount can each change, the costs, the
+  ranked skin candidates and a recommendation. Nothing drawn yet. The user picked an armoured skin; after the first
+  roughs ("not that different from the default") a second direction: `make_creatures.py armored-dragon <folder>`
+  draws an Armored Dragon study from the dragon's own generator (`dragon(style="armored")`: steel plate, leather
+  wings with a steel edge and claws, curled horns, a mace tail). It is in no pack, and the Red Dragon's pictures
+  are unchanged (237 of 237 equal). Since then: the plates as pieces of their own over the scales, the game knight's
+  steel (its 9019_ armour in the MainCharacter atlas), head and wing shapes as switches (`DRAGON_ARM_HEAD`,
+  `DRAGON_ARM_WING`), and the wing's detail; a test version (head greathelm, wing saw-blade) as a loose folder in the
+  game install only, `gk2mounts\saddleup-dragon.dragon\skins\saddleup-dragon.armored\` (docs/dragon-references.md 11).
+  A second frame-by-frame pass (docs/dragon-references.md 12): always four neck plates (the lowest came and went
+  with the walk's bob), the neck one piece with the head in flight too, no gold rim on the greaves, rivets counted
+  from their plate, and half pixels rounded the same way on every row (the helm's breathing holes jumped a row);
+  after an independent review, no rivets on the wing's forearm (gold blinking in flight), always four tail rings at
+  fixed places, and the wing's arm held in the glide (its steel edge crawled). Then, walking, the neck and head
+  ride the body's bob (they slid against the chest: "not attached"), and the blade on the neck with them. Seen in
+  game and **into the Dragons pack** (the user: "works in game", 2026-11-07): `skins\armored\` of
+  `saddleup-dragon.dragon` (the pack's own changelog says it for players), its words in the pack's 11 language files;
+  the generator's head and wing default to the picked ones and a plain run draws it with the others (no longer only
+  when named). The loose game copy and the study folder are gone (the page shows the pack's skin).
+- **`tools/skins/frame_check.py`** (2026-11-07): frame-by-frame checks of a skin's pictures, read-only. `closeup`
+  enlarges a clip's frames with the main and front layers apart, `shift` tells a part that only moved from one that
+  changed, `attach` measures a part's move against the body's, and `gold` counts a colour's pixels per frame.
+- **The skins preview page reads a mount's variants as the game does** (2026-11-07, `tools/skins/skin_preview_html.py`):
+  a skin built on its mount's default takes the default's canvas, seat and layer when it leaves them out (before,
+  the Armored Dragon study showed as a 96 px donkey skin). The study's card is
+  `tools/skins/creatures/out/study/armored-dragon/` (git-ignored), one card with its loose copy in the game.
 - **A self-test for the journal's ride and cart keys** (2026-11-07, `Dev/SelfTest.PanelRide.cs` `PanelRideKeys`, group
   Looks): on a test page of its own over the test companion, so the player's mount is never called. The integration
   test of Saddle Up's keys over the panel now also checks that its ride and cart keys are the journal's buttons.

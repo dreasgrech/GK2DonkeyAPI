@@ -1,6 +1,14 @@
 ﻿key,value,english,note
 mount.saddleup-dragon.dragon.name,Dragon,Dragon,"a mount's name (the Mount Journal; the keeper's bubbles)"
 mount.saddleup-dragon.dragon.description,"Nobody knows where it came from, and it isn't saying. It won't pull a cart, but no fence, river or roof in the village can stop it.","Nobody knows where it came from, and it isn't saying. It won't pull a cart, but no fence, river or roof in the village can stop it.",a mount's description in the Mount Journal
+skin.saddleup-dragon.dragon/armored.name,Armored Dragon,Armored Dragon,"a skin's name (the Skin list, the colours window's title)"
+skin.saddleup-dragon.dragon/armored.tone.armour.name,Armour,Armour,a part of the skin the player colours on its own: its row's label in the colours window
+skin.saddleup-dragon.dragon/armored.tone.gold.name,Gold trim,Gold trim,a part of the skin the player colours on its own: its row's label in the colours window
+skin.saddleup-dragon.dragon/armored.tone.wings.name,Wings,Wings,a part of the skin the player colours on its own: its row's label in the colours window
+skin.saddleup-dragon.dragon/armored.tone.horns.name,Horns and claws,Horns and claws,a part of the skin the player colours on its own: its row's label in the colours window
+skin.saddleup-dragon.dragon/armored.region.coat.name,Scales,Scales,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)
+skin.saddleup-dragon.dragon/armored.region.muzzle.name,Belly,Belly,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)
+skin.saddleup-dragon.dragon/armored.region.eye.name,Eyes,Eyes,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)
 skin.saddleup-dragon.dragon/default.tone.horns.name,Horns and spikes,Horns and spikes,a part of the skin the player colours on its own: its row's label in the colours window
 skin.saddleup-dragon.dragon/default.region.coat.name,Scales and wings,Scales and wings,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)
 skin.saddleup-dragon.dragon/default.region.muzzle.name,Belly,Belly,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)

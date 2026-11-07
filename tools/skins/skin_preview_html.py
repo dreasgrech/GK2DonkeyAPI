@@ -304,9 +304,19 @@ def main(argv):
         if sid in seen:
             return
         seen.add(sid)
-        layer = (cfg.get(("Skin", "layer"), "replace") if cfg else "replace").lower()
-        cw, ch = (int(x) for x in (cfg.get(("Skin", "canvas"), "96 96") if cfg else "96 96").split())
         mount = (mid or (cfg.get(("Skin", "mount"), "donkey") if cfg else "donkey")).lower()
+        # a variant (any skin of a mount but the donkey's, other than its default) takes what it leaves out from its
+        # mount's default, as the game does (docs/skins.md "Variants: built on the default")
+        base_cfg = default_cfg(mount) if (cfg and mount != "donkey" and os.path.basename(os.path.normpath(folder)) != "default") else None
+
+        def setting(key, fallback):
+            if cfg and ("Skin", key) in cfg:
+                return cfg[("Skin", key)]
+            if base_cfg and ("Skin", key) in base_cfg:
+                return base_cfg[("Skin", key)]
+            return fallback
+        layer = setting("layer", "replace").lower()
+        cw, ch = (int(x) for x in setting("canvas", "96 96").split())
         if mcfg and ("Mount", "name") in mcfg:
             mount_names[mount] = mcfg[("Mount", "name")]
         elif cfg and ("Mount", "name") in cfg:
@@ -355,7 +365,7 @@ def main(argv):
         # the skin's facts for the card: its seat row (a picture seat: the standing frame's top row), the rider's own
         # offset, the hitch gap, the mount's babies and the colour regions the player's colours reach
         seat = None
-        seat_text = cfg.get(("Skin", "seat"), "").strip().lower() if cfg else ""
+        seat_text = setting("seat", "").strip().lower() if cfg else ""
         if seat_text.isdigit():
             seat = int(seat_text)
         elif seat_text == "picture":
@@ -390,6 +400,13 @@ def main(argv):
     #    (packs/<Pack>/gk2mounts/<mount>/skins/<skin>), skinroots.py
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import skinroots
+
+    def default_cfg(mount):
+        # the skin.cfg of a mount's default look among the repo's packs (skinroots), or None
+        for q in skinroots.skin_dirs():
+            if os.path.basename(q) == "default" and (skinroots.mount_of(q) or "").lower() == mount:
+                return read_cfg(os.path.join(q, "skin.cfg"))
+        return None
 
     def mount_cfg_of(skin_dir):
         m = os.path.join(os.path.dirname(os.path.dirname(skin_dir)), "mount.cfg")

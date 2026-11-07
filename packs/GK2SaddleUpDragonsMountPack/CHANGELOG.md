@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-(Nothing yet.)
+- **A second look: the Armored Dragon** (2026-11-07): a war dragon in plate, a closed helm, steel down its neck,
+  flanks and legs, a mace on its tail, and leather wings with a saw-toothed edge. It's in the Dragon's Skin row,
+  every picture its own, built on the Red Dragon (its size, seat and sounds). Its colour rows: Armour, Gold trim,
+  Wings, Horns and claws, Scales, Belly and Eyes, in all 11 languages (`skins\armored\`; drawn by
+  `tools/skins/creatures/make_creatures.py`).
 
 ## 1.2.0, 2026-11-05
 

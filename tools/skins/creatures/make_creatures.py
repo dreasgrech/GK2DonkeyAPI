@@ -426,6 +426,45 @@ BLUE_DRAGON = ([(14, 18, 52), (26, 38, 98), (40, 66, 148), (62, 102, 196), (104,
                [(118, 70, 24), (180, 118, 38), (228, 176, 60), (248, 220, 120)],
                [(84, 72, 56), (150, 138, 112), (216, 206, 180)],
                (250, 168, 52), ((14, 18, 52), (8, 10, 34)))
+# The Armored Dragon: a study (2026-11-07).
+# The user wanted it "radically different than the default skin", with new horns and "definitely also the wings".
+# Its look (docs/dragon-references.md section 9):
+# - dark indigo scales under steel plate, the Armored donkey's steel and brass;
+# - leather wings with a steel leading edge, a spike on the wrist and hooked claws at the finger tips;
+# - big black horns curling back over a helm;
+# - blades along the ridge, a banded tail ending in a spiked mace, and greaves on the legs.
+# Our own drawing: the references' war dragon gives the type only. dragon(style="armored") draws it; the Red Dragon is
+# unchanged.
+ARMORED_DRAGON = ([(14, 12, 30), (24, 22, 52), (36, 34, 78), (52, 50, 108), (72, 72, 138), (100, 102, 168)],   # dark hide, so the steel stands off it
+                  [(58, 36, 26), (92, 62, 40), (128, 92, 58), (166, 126, 82)],      # leather, apart from the steel and the scales
+                  [(70, 48, 28), (110, 78, 42), (150, 110, 58), (190, 150, 84)],
+                  [(22, 18, 24), (48, 42, 50), (90, 84, 94)],                       # black horn: the horns and the claws
+                  (240, 96, 48), ((14, 10, 22), (8, 6, 14)))
+# The steel: the game's own knight armour (the keeper's 9019_ helmet in the MainCharacter atlas, its colours by count,
+# 2026-11-07; the user: "make it match the game's art style"): a cool green-teal steel from its dark teal line up to a
+# mint glint. Its gold is the BRASS below, the same four colours (the Armored donkey's brass is the game's gold).
+STEEL = [(30, 55, 55), (50, 68, 63), (86, 91, 78), (106, 112, 98), (122, 135, 120), (154, 181, 166), (193, 230, 217)]   # 1E3737 32443F 565B4E 6A7062 7A8778 9AB5A6 C1E6D9
+STEEL_LINE = (25, 44, 45)                                                            # its line, 192C2D
+BRASS = [(125, 83, 8), (164, 128, 11), (207, 169, 15), (241, 210, 116)]
+CLOTH = [(56, 18, 26), (94, 28, 36), (138, 40, 42), (178, 58, 50)]                 # its skirt and plume: 38121A 5E1C24 8A282A B23A32
+
+
+def _in_poly(x, y, poly):
+    """even-odd: is (x, y) inside the polygon"""
+    hit = False
+    for i in range(len(poly)):
+        (ax, ay), (bx, by) = poly[i], poly[(i + 1) % len(poly)]
+        if (ay > y) != (by > y) and x < ax + (y - ay) * (bx - ax) / (by - ay):
+            hit = not hit
+    return hit
+
+
+def _steel(light):
+    """light 0..1 to a steel tone: metal has hard bands, a bright top and a dark underside."""
+    for lim, k in ((0.25, 2), (0.4, 3), (0.55, 4), (0.7, 5)):
+        if light < lim:
+            return STEEL[k]
+    return STEEL[6]
 
 
 def _seg(x, y, ax, ay, bx, by):
@@ -455,6 +494,10 @@ def _tone(ramp, light):
 
 
 SPAN = 1.35  # the spread wings' size against the raised wing the dragon first had
+# The Armored Dragon's head and wing shapes, studies for the user to pick from (2026-11-07): the head beak | greathelm |
+# wedge, the wing bat | pointed | saw (docs/dragon-references.md section 10). The defaults are the shipped skin's.
+ARM_HEAD = os.environ.get("DRAGON_ARM_HEAD", "greathelm")   # the shipped skin's (the user's pick, 2026-11-07); the others are studies
+ARM_WING = os.environ.get("DRAGON_ARM_WING", "saw-blade")
 RAISE = int(os.environ.get("DRAGON_RAISE", "6"))  # the body 6 px higher on longer legs (the user chose it from the preview page, 2026-10-23); the seat row (68 -> 62) moves with it
 NO_SPREAD_WINGS = os.environ.get("DRAGON_STUDY") == "nowings"  # a study: the flying frames without the spread wings, to measure the body alone
 # The spread near wing over the rider: "all", the whole wing in front of him (docs/front-layer.md section 3's rule; B of
@@ -583,7 +626,7 @@ def body_rise(th):
     return 0.5 * (1.0 - math.cos(2.0 * math.pi * (th % 1.0)))
 
 
-def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="walk", lift=0.0, beat=None, glide=None, mix=None, pitch=0.0):
+def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="walk", lift=0.0, beat=None, glide=None, mix=None, pitch=0.0, style=None):
     # fly: the spread wings' angle about the shoulder (degrees: 0 raised high over the back, 45 level back, 90 swept
     # down past the belly), None = folded (walking, standing). legs_mode: "walk" on the ground, "tuck" (flying: the
     # forelegs bent up under the chest, the hind legs trailing), "reach" (landing: both stretched down for the ground),
@@ -594,6 +637,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     # beat and glide both, with mix = (m, +1 into the glide | -1 out of it): every part m of the way from its beat pose
     # to its glide pose (the wing's joints each at their own share, the arm ahead).
     DRG, DWING, DBELLY, DHORN, DEYE, DOUT = pal
+    ARM = style == "armored"   # the Armored Dragon's parts (ARMORED_DRAGON above); every other dragon draws as before
+    # a half up, always (the Armored Dragon): round() takes a half to the even number, so a detail half a px off its
+    # part moved with the part's row's parity (the helm's breaths jumped a row as the head moved one)
+    rnd = (lambda v: math.floor(v + 0.5)) if ARM else round
     walking = phase != 0.0 and fly is None
     tb = fly if (fly is not None and legs_mode == "tuck") else None   # the beat drives the body (flying only)
     gb = 0.0 if tb is None else tb                                    # 0 wings raised .. 1 swept down
@@ -640,6 +687,11 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     # each and in turn (the body rocks; the back under the seat keeps the bob only)
     heave_f = -WALK_HEAVE * math.cos(4 * math.pi * (phase + 0.25 - 0.31)) if walking else 0.0
     heave_h = -WALK_HEAVE * math.cos(4 * math.pi * (phase - 0.31)) if walking else 0.0
+    if ARM:
+        # whole pixels: a part keeps its pixels as it moves, so its shading and its plates stay put between frames
+        # and the body rigid while it walks: one bob for all of it, no heave of the shoulders against the hips (that
+        # reshaped the body and moved its shading bands between frames); the legs and the tail walk
+        bob, heave_f, heave_h = float(round(bob)), 0.0, 0.0
     px = [(0, 0, 0, 0)] * (W * H)
     fpx = [(0, 0, 0, 0)] * (W * H)   # the front layer: drawn in front of the rider (the near wing)
     L = (-0.6, -0.8)
@@ -649,18 +701,52 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         return y + (round(PITCH_SHEAR * pitch * (xx_world - PITCH_X)) if pitch else 0)
 
     def put(x, y, col, dst=None):
-        cx = int(round(x))
-        xx, yy = cx + OX, int(round(pitched(cx, y))) + OY
+        cx = int(rnd(x))
+        xx, yy = cx + OX, int(rnd(pitched(cx, y))) + OY
         if 0 <= xx < W and 0 <= yy < H:
             (dst if dst is not None else px)[yy * W + xx] = col + (255,)
 
     def get(x, y):
-        cx = int(round(x))
-        xx, yy = cx + OX, int(round(pitched(cx, y))) + OY
+        cx = int(rnd(x))
+        xx, yy = cx + OX, int(rnd(pitched(cx, y))) + OY
         return px[yy * W + xx] if 0 <= xx < W and 0 <= yy < H else (0, 0, 0, 0)
 
     def lp(a, b, t):
         return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+
+    # The Armored Dragon's small parts (ARM).
+    def claw(base, direction, n, dst, toward):
+        # A hooked black claw out of a finger tip: on along the finger, then bent towards `toward` (the trailing edge).
+        base = (rnd(base[0]), rnd(base[1]))                                       # on a whole pixel: the same shape every frame
+        dx, dy = direction
+        ln = math.hypot(dx, dy) or 1.0
+        dx, dy = dx / ln, dy / ln
+        sx, sy = -dy, dx
+        if sx * (toward[0] - base[0]) + sy * (toward[1] - base[1]) < 0:
+            sx, sy = -sx, -sy
+        for k in range(n):
+            bend = 1.4 * (k / max(1, n - 1)) ** 2
+            x_, y_ = base[0] + dx * k + sx * bend, base[1] + dy * k + sy * bend
+            if not (2 <= rnd(x_) + OX < W - 2 and 2 <= rnd(pitched(rnd(x_), y_)) + OY < H - 2):
+                break
+            put(x_, y_, DHORN[2] if k < n - 1 else DHORN[1], dst)
+            if k == 0:
+                put(x_ - sx, y_ - sy, DHORN[1], dst)
+
+    def spike(base, direction, n, dst=None, wide=True):
+        # A steel spike: two px at its root (lit and shade) and one px towards its tip, on a whole pixel.
+        base = (rnd(base[0]), rnd(base[1]))
+        dx, dy = direction
+        ln = math.hypot(dx, dy) or 1.0
+        dx, dy = dx / ln, dy / ln
+        sx, sy = (-dy, dx) if (-dy * L[0] + dx * L[1]) > 0 else (dy, -dx)    # the side towards the light
+        for k in range(n):
+            x, y = base[0] + dx * k, base[1] + dy * k
+            if not (2 <= rnd(x) + OX < W - 2 and 2 <= rnd(pitched(rnd(x), y)) + OY < H - 2):   # where put() will land it
+                break
+            put(x, y, STEEL[6] if k < n - 1 else STEEL[4], dst)
+            if wide and k < n - 2:
+                put(x - sx, y - sy, STEEL[3], dst)
 
     # ---- a wing: the arm from the shoulder up to the wrist (the peak), the first finger carrying the leading edge on
     # back along the top, three more fanning down behind the body, the membrane hanging between them down to the
@@ -781,6 +867,9 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             return fly
         bv = wing_w(beat - WING_LAGS[key]) if beat is not None else None
         gv = GLIDE_T + glide_flex * math.sin(2 * math.pi * (glide - GLIDE_WING_LAGS[key])) if glide is not None else None
+        if ARM and glide is not None and key in ("elbow", "wrist"):
+            gv = GLIDE_T                                                         # the arm held, the fingers flexing on from it: a px of
+            #                                                                      the arm's move re-laid its whole steel edge
         return blend(bv, gv, mshare(GLIDE_MIX_LAGS[key]))
 
     def spread_wing(near, t):
@@ -806,30 +895,72 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             fold = 0.16 * math.sin(math.pi * (th - 0.4) / 0.6) if th >= 0.4 else 0.0
             fold *= 1.0 - mshare(GLIDE_MIX_LAGS["t2"])   # the upstroke's half-closed hand opens as the glide takes it
             tips = [(wr[0] + (q[0] - wr[0]) * (1 - fold), wr[1] + (q[1] - wr[1]) * (1 - fold)) for q in tips]
+        if ARM and ARM_WING in ("saw-long", "saw-blade"):
+            # saw-long: the fingers closed up towards the first and longer, one long narrow wing swept back; saw-blade:
+            # spread wider apart towards the root, a broad square wing (each finger turned about the wrist)
+            a1 = math.atan2(tips[0][1] - wr[1], tips[0][0] - wr[0])
+            turn, grow = ((0.0, 0.38, 0.5), (1.18, 1.16, 1.08)) if ARM_WING == "saw-long" else ((0.0, -0.22, -0.4), (1.0, 1.04, 1.1))
+            nt = []
+            for q, k_, g_ in zip(tips, turn, grow):
+                a_ = math.atan2(q[1] - wr[1], q[0] - wr[0])
+                da = (a1 - a_ + math.pi) % (2 * math.pi) - math.pi
+                a_ += da * k_
+                l_ = math.dist(q, wr) * g_
+                nt.append((wr[0] + l_ * math.cos(a_), wr[1] + l_ * math.sin(a_)))
+            tips = [(min(max(q[0], 2 - OX), W - OX - 5), min(max(q[1], 5 - OY), H - OY - 5)) for q in nt]
+        if ARM and ARM_WING == "pointed":
+            # the first finger far longer and the second a little: one long swept point; the third shorter (kept inside
+            # the picture: 4 px from its top, 4 from its end)
+            tips = [(wr[0] + (q[0] - wr[0]) * f, wr[1] + (q[1] - wr[1]) * f) for q, f in zip(tips, (1.3, 1.1, 0.9))]
+            tips = [(min(q[0], W - OX - 5), max(q[1], 5 - OY)) for q in tips]
+        if ARM:
+            # the joints on whole pixels: the membrane's pockets and stretch lines (measured from the wrist) keep their
+            # pixels while a joint holds, and step with it when it moves
+            sh, el, wr, root = ((float(round(q[0])), float(round(q[1]))) for q in (sh, el, wr, root))
+            tips = [(float(round(q[0])), float(round(q[1]))) for q in tips]
         ring = [sh, el, wr] + tips + [root]
         lerp = lambda a, b, f: (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)
         # The veins end along the trailing edge about 9.5 px apart, as the fold's finger tips meet its hem: every finger,
         # and as many between as the edge's length there takes. Each end is a point of the scalloped edge (the fold's hem
         # is scalloped between every pair of vein ends; three big scallops between the fingers alone read plain).
         trail = []
-        for a_, b_ in zip(tips + [root], tips[1:] + [root]):
-            k_ = max(1, int(round(math.dist(a_, b_) / 9.5)))
+        # the Armored Dragon: a fourth heavy finger from the wrist down to the trailing edge between the last finger and
+        # the root, so the wing's lower half is cut too (a bat's wing, not a sail)
+        wtips = tips + [lerp(tips[-1], root, 0.5)] if ARM else tips
+        if ARM and ARM_WING.startswith("saw"):
+            wtips = tips + [lerp(tips[-1], root, 0.34), lerp(tips[-1], root, 0.67)]   # five fingers
+        for a_, b_ in zip(wtips + [root], wtips[1:] + [root]):
+            k_ = 1 if ARM else max(1, int(round(math.dist(a_, b_) / 9.5)))   # the Armored Dragon: one deep cut between fingers
             trail += [lerp(a_, b_, j / k_) for j in range(k_)]
         trail.append(root)
         # and the inner part of the membrane, from the wing's root on the back to the shoulder, gets veins too (the
         # fold's fan covers its whole membrane down to the shoulder; spread, the triangle between the arm and the back
         # was one flat colour): ends along that line, as far apart, no scallops there (it is the body's edge)
         k_ = max(1, int(round(math.dist(root, sh) / 9.5)))
-        inner = [lerp(root, sh, j / k_) for j in range(1, k_)]
+        inner = ([lerp(root, sh, 0.35), lerp(root, sh, 0.68)] if ARM_WING.startswith("saw") else []) if ARM else [lerp(root, sh, j / k_) for j in range(1, k_)]
         scal = []
         for a, b in zip(trail, trail[1:]):                        # the trailing edge's scallops, bulging into the membrane
             mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
             vx, vy = mx - wr[0], my - wr[1]
             vl = math.hypot(vx, vy) or 1
             half = math.dist(a, b) / 2
-            depth = half * 0.32
+            depth = half * (0.55 if ARM else 0.32)                # the Armored Dragon's cuts between its fingers
             k = (half * half - depth * depth) / (2 * depth)
             scal.append((mx + vx / vl * k, my + vy / vl * k, math.dist((mx + vx / vl * k, my + vy / vl * k), a)))
+        notches = []
+        if ARM and ARM_WING.startswith("saw"):
+            # straight notches, not round scallops: a triangle cut in towards the wrist between each pair of fingers
+            # (saw-claw: almost to the wrist, the fingers a hand of talons)
+            scal = []
+            for ni, (a, b) in enumerate(zip(trail, trail[1:])):
+                mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+                vx, vy = wr[0] - mx, wr[1] - my
+                vl = math.hypot(vx, vy) or 1
+                dep = math.dist(a, b) * (1.25 if ARM_WING == "saw-claw" else 0.55)
+                if ARM_WING == "saw-blade":
+                    dep *= 1.35 if ni % 2 == 0 else 0.7                       # a war-torn edge: deep and shallow cuts in turn
+                dep = min(dep, vl - 3.0)
+                notches.append((a, b, (mx + vx / vl * dep, my + vy / vl * dep)))
 
         def inside(X, Y):
             hit = False
@@ -852,39 +983,139 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             dd = math.dist(wr, q) or 1
             return (wr[0] + (q[0] - wr[0]) * 1.5 / dd, wr[1] + (q[1] - wr[1]) * 1.5 / dd)
         veins = [(from_wrist(q), lerp(wr, q, 0.98)) for q in trail[:-1] + inner]
+        detail = ARM and ARM_WING.startswith("saw")
+        # the Armored Dragon's wing detail: thin veins to the notches' inner points, two tears through the membrane
+        veins2 = [(from_wrist(n_[2]), lerp(wr, n_[2], 0.92)) for n_ in notches] if detail else []
+        tears = []
+        if detail and len(trail) > 3 and abs((ring[0][0] - wr[0]) * (root[1] - wr[1]) - (ring[0][1] - wr[1]) * (root[0] - wr[0])) > 260:   # tears only where the wing shows enough membrane
+            for i_, f_, r_ in ((0, 0.62, 1.3), (2, 0.55, 1.1)):
+                a_, b_ = trail[i_], trail[i_ + 1]
+                mid_ = lerp(a_, b_, 0.5)
+                tears.append((lerp(wr, mid_, f_), r_))
         xs = [q[0] for q in ring]
         ys = [q[1] for q in ring]
         far_d = max(math.dist(wr, q) for q in tips) or 1
         cells = {}
+        lines_ = set()
         for y in range(int(min(ys)) - 1, int(max(ys)) + 2):
             for x in range(int(min(xs)) - 1, int(max(xs)) + 2):
                 X, Y = x + 0.5, y + 0.5
-                if not inside(X, Y) or any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal):
+                if not inside(X, Y) or any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal) or any(_tri(X, Y, *n_) for n_ in notches):
                     continue
                 dv, vl = min((_seg(X, Y, *a, *b), math.dist(a, b)) for a, b in veins)
                 # how far out along its own vein (0 at the wrist, 1 at the edge), as the fold's light runs from its peak
                 # to its hem: the dark bands beside the veins in their outer third, along every vein (measured against
                 # the longest vein, only the farthest tip had them)
                 u = min(1.0, math.dist((X, Y), wr) / max(1.0, vl))
+                if detail:
+                    if any(math.hypot(X - c_[0], Y - c_[1]) < r_ for c_, r_ in tears):
+                        continue                                                 # a tear through it
+                    # pockets: lit along a finger, darker between two, darker out to the edge; fine stretch lines
+                    # across it (rings about the wrist), a step lighter
+                    lt = 0.6 - 0.22 * min(1.0, dv / 5.0) - 0.14 * u
+                    if math.dist((X, Y), wr) % 4.5 < 0.9 and dv > 1.5:
+                        lines_.add((x, y))                                       # a stretch line here (a full step up: below)
+                    cells[(x, y)] = lt
+                    continue
                 cells[(x, y)] = min(0.49, 0.62 - 0.36 * u) + (0.0 if dv > 2.0 else -0.14)   # the fold's light rule, in the fold's tones (its peak's lighter wine has no room on the fold; spread, it filled the wing near the wrist)
+        if detail:
+            # trim the membrane's spurs as the fold's (a sliver one px wide is all outline: a black spike), twice
+            for _ in range(2):
+                spur = [c for c in cells if sum((c[0] + dx, c[1] + dy) in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) < 2]
+                for c in spur:
+                    del cells[c]
+            # the stretch lines only 2 px inside the membrane: on a wing seen nearly edge-on (the glide, the downstroke)
+            # they were noise that re-shuffled with every px of flex
+            for c in lines_:
+                if c in cells and all((c[0] + dx, c[1] + dy) in cells for dx in (-2, 0, 2) for dy in (-2, 0, 2)):
+                    cells[c] += 0.27
         for (x, y), light in cells.items():
             border = any((x + dx, y + dy) not in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
             put(x, y, DOUT[1] if border else _tone(DWING, light), fpx if (near and not in_rider_at(x, y)) else px)
         for (ax, ay), (bx, by) in veins:                         # the veins: 1 px red lines over the membrane, as the fold's
             n = int(math.dist((ax, ay), (bx, by)) * 2) + 1
+            vx_, vy_ = (bx - ax), (by - ay)
+            vl_ = math.hypot(vx_, vy_) or 1.0
+            for i in range(n + 1):
+                x, y = ax + (bx - ax) * i / n, ay + (by - ay) * i / n
+                if (int(round(x)), int(round(y))) in cells:
+                    if ARM:
+                        # a heavy finger: two px, its lit side a step lighter
+                        put(x, y, DRG[3], fpx if (near and not in_rider_at(int(round(x)), int(round(y)))) else px)
+                        q = (x + vy_ / vl_, y - vx_ / vl_)
+                        if (int(round(q[0])), int(round(q[1]))) in cells:
+                            put(q[0], q[1], DRG[1], fpx if (near and not in_rider_at(int(round(q[0])), int(round(q[1])))) else px)
+                    else:
+                        put(x, y, DRG[2], fpx if (near and not in_rider_at(int(round(x)), int(round(y)))) else px)
+        for (ax, ay), (bx, by) in veins2:                        # the thin veins to the notches
+            n = int(math.dist((ax, ay), (bx, by)) * 2) + 1
             for i in range(n + 1):
                 x, y = ax + (bx - ax) * i / n, ay + (by - ay) * i / n
                 if (int(round(x)), int(round(y))) in cells:
                     put(x, y, DRG[2], fpx if (near and not in_rider_at(int(round(x)), int(round(y)))) else px)
+        if False:
+            # (removed 2026-11-07, the user: "weird gray artifacts on the wing") a steel band with a brass rivet round each finger
+            for (ax, ay), (bx, by) in veins:
+                ln_ = math.dist((ax, ay), (bx, by)) or 1.0
+                ux_, uy_ = (bx - ax) / ln_, (by - ay) / ln_
+                cx_, cy_ = ax + (bx - ax) * 0.34, ay + (by - ay) * 0.34
+                for s_ in (-1, 0, 1, 2):
+                    for w_ in (0, 1):
+                        qx, qy = cx_ - uy_ * (s_ - 0.5) + ux_ * w_, cy_ + ux_ * (s_ - 0.5) + uy_ * w_
+                        if (int(round(qx)), int(round(qy))) in cells:
+                            put(qx, qy, STEEL[5] if w_ == 0 else STEEL[3], fpx if (near and not in_rider_at(int(round(qx)), int(round(qy)))) else px)
+                put(cx_, cy_, BRASS[2], fpx if (near and not in_rider_at(int(round(cx_)), int(round(cy_)))) else px)
         for (ax, ay), (bx, by) in ((sh, el), (el, wr)):          # the arm, the leading edge: a thicker bone, the same red
             for y in range(int(min(ay, by)) - 3, int(max(ay, by)) + 4):
                 for x in range(int(min(ax, bx)) - 3, int(max(ax, bx)) + 4):
-                    if _seg(x + 0.5, y + 0.5, ax, ay, bx, by) <= 1.3:
-                        put(x, y, DRG[2], fpx if (near and not in_rider_at(x, y)) else px)
+                    dd = _seg(x + 0.5, y + 0.5, ax, ay, bx, by)
+                    if dd <= (1.9 if ARM else 1.3):
+                        if ARM:
+                            # A steel-clad leading edge: the lit side bright, the far side shaded, a seam at each joint.
+                            ux, uy = bx - ax, by - ay
+                            side = ((x + 0.5 - ax) * -uy + (y + 0.5 - ay) * ux) * (1 if (-uy * L[0] + ux * L[1]) > 0 else -1)
+                            col = STEEL[6] if side > 0.6 else STEEL[4] if side > -0.6 else STEEL[2]
+                            if min(math.dist((x + 0.5, y + 0.5), el), math.dist((x + 0.5, y + 0.5), wr)) < 1.0:
+                                col = STEEL_LINE
+                            # (no rivets along the forearm: picked from cells within half a px of its middle line,
+                            # they showed only at some angles, gold blinking in the beat)
+                        else:
+                            col = DRG[2]
+                        put(x, y, col, fpx if (near and not in_rider_at(x, y)) else px)
         for k in range(4):                                       # the thumb claw at the wrist, hooking forward (behind his face too)
             cx_, cy_ = wr[0] - 1 - k, wr[1] - k * 0.5
             face = WING_OVER_RIDER == "head" and rider_in_view(int(round(cx_)) + OX, int(round(cy_)) + OY)
             put(cx_, cy_, DHORN[2 if k > 1 else 1], fpx if (near and not face) else px)
+        if ARM:
+            dst = fpx if near else px
+            # a steel spike off the wrist, pointing on from the forearm
+            spike((wr[0], wr[1]), (wr[0] - el[0], wr[1] - el[1]), 5, dst)
+            if ARM_WING.startswith("saw"):
+                # a big hooked thumb claw off the wrist, curling forward and down
+                claw((wr[0] - 1, wr[1]), (-1.0, -0.5), 6, dst, (wr[0] - 6, wr[1] + 6))
+            if ARM_WING == "saw-blade":
+                # three blades standing off the forearm's leading side, raked back towards the shoulder
+                ux_, uy_ = wr[0] - el[0], wr[1] - el[1]
+                ul_ = math.hypot(ux_, uy_) or 1.0
+                nx_, ny_ = -uy_ / ul_, ux_ / ul_
+                if (nx_ * (root[0] - el[0]) + ny_ * (root[1] - el[1])) > 0:
+                    nx_, ny_ = -nx_, -ny_                                        # away from the membrane
+                for f_ in (0.3, 0.55, 0.8):
+                    b_ = (el[0] + ux_ * f_, el[1] + uy_ * f_)
+                    spike(b_, (nx_ - ux_ / ul_ * 0.6, ny_ - uy_ / ul_ * 0.6), 4, dst)
+            # each finger ends in a hooked black claw past the membrane, bent towards the trailing edge
+            for q in tips:
+                start = None                                       # no claw where the membrane is cut away round the tip
+                for f in [1.0 - 0.02 * i for i in range(16)]:
+                    p_ = lerp(wr, q, f)
+                    if (int(p_[0]), int(p_[1])) in cells:
+                        start = p_
+                        break
+                if start is not None:
+                    if ARM_WING.startswith("saw"):
+                        spike(start, (q[0] - wr[0], q[1] - wr[1]), 4 if ARM_WING in ("saw-claw", "saw-blade") else 3, dst, wide=False)   # steel caps on the finger tips
+                    else:
+                        claw(start, (q[0] - wr[0], q[1] - wr[1]), 4 if ARM_WING == "pointed" else 3, dst, root)
 
     # ---- the wings, FOLDED, as the user's references draw them (2026-10-20; docs/mount-looks-design.md): the wrist is a
     # tall PEAK above the back, its thumb claw hooking towards the head; the fingers run DOWN from the peak; the membrane
@@ -919,6 +1150,8 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             if WING_ROCK:
                 t = max(0.0, min(1.0, (x - 39.0) / 24.0))
                 rock = WING_ROCK * (heave_f + (heave_h - heave_f) * t)
+                if ARM:
+                    rock = float(round(rock))
             return (x + ox, y + bob + oy + rock)
         sh = at(46.0, 43.0)                                                       # the shoulder, where the wing leaves the back
         peak = at(52.0, 26.0)
@@ -927,7 +1160,17 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         tip = at(99.0, 51.0)
         hem = [at(93.0, 56.0), at(84.0, 58.5), at(74.0, 59.5), at(64.0, 60.5), at(55.0, 60.5), at(48.0, 58.0)]   # the lower edge along the belly line
         ring = [peak, at(66.0, 29.0), at(84.0, 38.0), tip] + hem + [at(47.0, 54.0), sh]
+        if ARM and ARM_WING == "saw-long":
+            peak, tip = at(52.0, 22.0), at(104.0, 42.0)                          # a taller peak, the point long and swept up
+            ring = [peak, at(70.0, 25.0), at(90.0, 32.0), tip] + hem + [at(47.0, 54.0), sh]
+        if ARM and ARM_WING == "pointed":
+            peak, tip = at(52.0, 22.0), at(103.0, 49.0)                          # a taller peak, a longer point back
+            ring = [peak, at(68.0, 26.0), at(88.0, 37.0), tip] + hem + [at(47.0, 54.0), sh]
         tips = [at(84.0, 39.0), tip, at(88.0, 58.0), at(78.0, 59.5), at(68.0, 60.5), at(59.0, 61.0), at(51.0, 59.5)]
+        if ARM:
+            tips = [at(84.0, 39.0), tip, at(77.0, 59.5), at(60.0, 61.0), at(51.0, 59.5)]   # three heavy fingers, deep cuts between
+            if ARM_WING.startswith("saw"):
+                tips = [at(84.0, 39.0), tip, at(86.0, 58.0), at(76.0, 59.5), at(66.0, 60.5), at(57.0, 61.0), at(51.0, 59.5)]
         fingers = [(peak, t) for t in tips] + [(peak, sh)]                      # the last: the membrane's leading edge down to the shoulder
         dst = px if far else fpx
         # the lower edge's scallops between the finger tips: shallow arcs bulging up into the membrane
@@ -935,9 +1178,15 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         for a, b in zip(tips[1:-1], tips[2:]):
             mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
             half = math.dist(a, b) / 2
-            depth = half * 0.3
+            depth = half * (0.4 if ARM else 0.3)
             k = (half * half - depth * depth) / (2 * depth)
             scal.append((mx, my + k, math.dist((mx, my + k), a)))
+        notches = []
+        if ARM and ARM_WING.startswith("saw"):
+            scal = []
+            for a, b in zip(tips[2:-1], tips[3:]):                               # straight notches up into the hem (none beside the tip)
+                mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+                notches.append((a, b, (mx - 1.0, my - math.dist(a, b) * (1.1 if ARM_WING == "saw-claw" else 0.6))))
 
         def inside(X, Y):                                                         # even-odd point in polygon
             hit = False
@@ -954,12 +1203,29 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 X, Y = x + 0.5, y + 0.5
                 if not inside(X, Y):
                     continue
-                if any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal):
+                if any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal) or any(_tri(X, Y, *n_) for n_ in notches):
                     continue
                 df = min(_seg(X, Y, *a, *b) for a, b in fingers)
                 down = (Y - peak[1]) / max(1.0, max(ys) - peak[1])
                 light = 0.62 - 0.36 * down + (0.0 if df > 2.0 else -0.14)       # lit at the peak, dark at the hem, dark by the bones
+                if ARM and ARM_WING.startswith("saw") and False:
+                    pass
+                if ARM and ARM_WING.startswith("saw"):
+                    tear_ = (peak[0] + (tips[2][0] - peak[0]) * 0.6 + (tips[3][0] - tips[2][0]) * 0.25,
+                             peak[1] + (tips[2][1] - peak[1]) * 0.6 + (tips[3][1] - tips[2][1]) * 0.25)
+                    if math.hypot(X - tear_[0], Y - tear_[1]) < 1.2:
+                        continue                                                 # a tear through it
+                    light = 0.6 - 0.2 * down - 0.22 * min(1.0, df / 4.5)
+                    if math.dist((X, Y), peak) % 4.5 < 0.9 and df > 1.5:
+                        light += 0.27
                 cells[(x, y)] = light
+        if ARM and ARM_WING.startswith("saw"):
+            # trim the membrane's spurs: a cell with fewer than two of its four neighbours (a sliver one px wide is all
+            # outline, a black spike), twice
+            for _ in range(2):
+                spur = [c for c in cells if sum((c[0] + dx, c[1] + dy) in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) < 2]
+                for c in spur:
+                    del cells[c]
         for (x, y), light in cells.items():
             border = any((x + dx, y + dy) not in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
             put(x, y, DOUT[1] if border else _tone(DWING, light), dst)
@@ -968,9 +1234,33 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             for i in range(n + 1):
                 x, y = ax + (bx - ax) * i / n, ay + (by - ay) * i / n
                 if (int(round(x)), int(round(y))) in cells:
-                    put(x, y, DRG[2], dst)
+                    put(x, y, DRG[3] if ARM else DRG[2], dst)
+                    if ARM and (int(round(x + 1)), int(round(y))) in cells:
+                        put(x + 1, y, DRG[1], dst)                               # heavy fingers, two px
+            if False:                                                            # (the finger bands: removed, see the spread wing)
+                cx_, cy_ = ax + (bx - ax) * 0.4, ay + (by - ay) * 0.4
+                for dx_ in (-1, 0, 1, 2):
+                    if (int(round(cx_ + dx_)), int(round(cy_))) in cells:
+                        put(cx_ + dx_, cy_, STEEL[5], dst)
+                    if (int(round(cx_ + dx_)), int(round(cy_ + 1))) in cells:
+                        put(cx_ + dx_, cy_ + 1, STEEL[3], dst)
+                put(cx_ + 0.5, cy_, BRASS[2], dst)
         for k in range(5):                                                        # the thumb claw: a hook from the peak towards the head
             put(peak[0] - 1 - k * 0.9, peak[1] - 1 - k * 0.5 + (0.6 * (k - 2) ** 2 if k > 2 else 0), DHORN[2 if k > 1 else 1], dst)
+        if ARM:
+            # the folded arm from the shoulder up to the peak clad in steel, a spike standing up off the peak, and a
+            # hooked black claw at every finger's end along the hem
+            for y in range(int(min(sh[1], peak[1])) - 2, int(max(sh[1], peak[1])) + 3):
+                for x in range(int(min(sh[0], peak[0])) - 2, int(max(sh[0], peak[0])) + 3):
+                    if _seg(x + 0.5, y + 0.5, *sh, *peak) <= 1.6 and (x, y) != (int(peak[0]), int(peak[1])):
+                        lit_ = x + 0.5 < sh[0] + (peak[0] - sh[0]) * ((y + 0.5 - sh[1]) / ((peak[1] - sh[1]) or 1))
+                        # a mid steel, not white: a white line from the shoulder up read the two folds as one wing
+                        put(x, y, (STEEL[4] if lit_ else STEEL[2]) if not far else (STEEL[3] if lit_ else STEEL[1]), dst)
+            spike((peak[0] + 1, peak[1] - 1), (0.35, -1.0), 5, dst)
+            if ARM_WING == "saw-blade":
+                for f_ in (0.35, 0.65):                                          # blades off the folded arm, raked back
+                    b_ = (sh[0] + (peak[0] - sh[0]) * f_, sh[1] + (peak[1] - sh[1]) * f_)
+                    spike(b_, (-0.9, -0.5), 4, dst)
 
     flap = (8.0 * math.sin(2 * math.pi * phase) if walking else 3.0 * idle)
     if fly is None:
@@ -1041,7 +1331,8 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
 
     def paw(at, kind, ramp, dst=None):
         (ox, oy), rows = PAWS[kind]
-        cols = {"r": ramp[2], "R": ramp[1], "g": DBELLY[3], "G": DBELLY[2], "d": DBELLY[1]}
+        claws = DHORN if ARM else DBELLY[1:]                  # the Armored Dragon's claws black horn, the Red Dragon's gold
+        cols = {"r": ramp[2], "R": ramp[1], "g": claws[2], "G": claws[1], "d": claws[0]}
         for j, row in enumerate(rows):
             for i, ch in enumerate(row):
                 if ch in cols:
@@ -1077,12 +1368,16 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             elbow = ik(hip, wrist, (6.5 + RAISE * 0.5) * fl, (6.0 + RAISE * 0.5) * fl, +1)
             bone(hip, elbow, 5.0, 3.4, ramp)
             bone(elbow, wrist, 3.2, 2.4, ramp)
+            if greave[0] is not None:
+                greave_segs.append((elbow, wrist, 3.2, 2.4))
             bone(wrist, foot, 2.2, 1.8, ramp)
             paw(foot, paw_kind, ramp)
             return
         elbow = ik(hip, foot, (6.5 + RAISE * 0.5) * fl, (6.5 + RAISE * 0.5) * fl, +1)
         bone(hip, elbow, 3.6, 2.6, ramp)
         bone(elbow, foot, 2.6, 1.8, ramp)
+        if greave[0] is not None:
+            greave_segs.append((elbow, foot, 2.6, 1.8))
         paw(foot, paw_kind, ramp)
 
     def hindleg(hip, hock, toe, ramp, paw_kind):
@@ -1090,11 +1385,18 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         knee = ik(hip, hock, (7.5 + RAISE * 0.55) * hl, (6.0 + RAISE * 0.45) * hl, -1)
         bone(hip, knee, 5.2, 3.2, ramp)                       # the big thigh
         bone(knee, hock, 3.0, 2.0, ramp)
+        if greave[0] is not None:
+            greave_segs.append((knee, hock, 3.0, 2.0))
         bone(hock, toe, 2.0, 1.6, ramp)                       # the long foot up to the hock
         paw(toe, paw_kind, ramp)
 
+    greave = [None]   # the Armored Dragon: steel greaves on the near forearm and shin (plates over them, after the legs)
+    greave_segs = []
+
     def legs(far):
         ramp = ((DRG[0], DRG[0], DRG[0], DRG[1]) if FAR_DARK else (DRG[0], DRG[0], DRG[1], DRG[2])) if far else (DRG[0], DRG[1], DRG[2], DRG[3])
+        if ARM:
+            greave[0] = None if far else True
         dx, dy = (FAR_DX, FAR_DY) if far else (0, 0)
         fhip, hhip = (39 + dx, 53 + bob + dy + heave_f), (66 + dx, 53 + bob + dy + heave_h)
         fwd = (-1.0, 0.0)
@@ -1147,6 +1449,8 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             bl = loops(beat, LEG_SWAY) if beat is not None else None
             gl = loops(glide, LEG_SWAY * 0.6) if glide is not None else None
             fdx, fdy, hdx, hdy = [blend(None if bl is None else bl[i], None if gl is None else gl[i], M) for i in range(4)]
+            if ARM:
+                fdx, fdy, hdx, hdy = (float(round(v)) for v in (fdx, fdy, hdx, hdy))   # whole pixels
             foreleg(fhip, (34.5 + dx + fdx, 63 + bob + dy + fdy), ramp, "hang")
             hock = lp((74, 62), (70, 63), 0.55)
             toe = lp((81, 66), (66, 67), 0.55)
@@ -1167,6 +1471,8 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     # hole under each (the user's blue box, 2026-10-20). A near-even thickness with a kink up into the spade read as a
     # sausage (the same day).
     sway = (1.5 * math.sin(2 * math.pi * phase) if walking else idle)
+    if ARM:
+        sway = float(round(sway))
     if fly is not None:
         # flying: the tail streams back nearly level behind the hips, a slow wave down its length (the reference). Its
         # last points 1, 1.5 and 3 px shorter than first drawn (91, 98.5, 103): the spike reached column 128-129 of the
@@ -1205,17 +1511,23 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 up = TAIL_WAVE * f * (0.5 + 0.5 * math.sin(4 * math.pi * (phase - 0.1 - lag)))
                 inn = TAIL_IN * f * (0.5 + 0.5 * math.sin(4 * math.pi * (phase - 0.35 - lag)))
                 tpts.append((base[i][0] - inn, base[i][1] - up))
+    if ARM:
+        tpts = [(float(round(x)), float(round(y))) for x, y in tpts]             # whole pixels: the tail's rings stay put
     tail = catmull(tpts, 160)
     tail_top = {}
+    tail_len = sum(math.dist(a, b) for a, b in zip(tail, tail[1:]))
     for i, (x, y) in enumerate(tail):
         u = i / (len(tail) - 1)
         r = 6.0 * (1 - u) ** 1.4 + 1.0
+        band = False
         for yy in range(int(y - r - 1), int(y + r + 2)):
             for xx in range(int(x - r - 1), int(x + r + 2)):
                 d = math.hypot(xx + 0.5 - x, yy + 0.5 - y)
                 if d <= r:
                     up = (y - (yy + 0.5)) / max(r, 0.6)
-                    if up < -0.35 and u < 0.75:
+                    if band:
+                        put(xx, yy, STEEL[6] if up > 0.4 else STEEL[4] if up > -0.3 else STEEL[2])
+                    elif up < -0.35 and u < 0.75:
                         put(xx, yy, DBELLY[1] if int(xx) % 4 else DBELLY[0])     # the plates under the tail
                     else:
                         put(xx, yy, DRG[4] if up > 0.5 else DRG[3] if up > -0.05 else DRG[2])
@@ -1225,17 +1537,32 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         if xx in tail_top and xx + 1 in tail_top:
             h = 3 if xx < 86 else 2
             top = min(tail_top[xx], tail_top[xx + 1])
+            if ARM:
+                continue                                                         # the Armored Dragon's tail: bands, no spines
             for k in range(h):
                 put(xx, top - 1 - k, DHORN[1 if k < h - 1 else 2])
                 put(xx + 1, top - 1 - k, DHORN[0])
     tx, ty = tail[-1]
-    for k, half in enumerate((2, 2, 1, 1, 1, 0, 0, 0)):                         # the tip: a spike, the tail tapering on to a point (a diamond
-        for oy in range(-half, half + 1):                                        # spade read as a hanging lantern: the user, 2026-10-20)
-            put(tx + 1 + k * 0.7, ty - 1 + oy, DRG[2] if abs(oy) >= half else DRG[3])
+    if ARM:
+        # the tail's end a spiked steel mace: a ball, five spikes round it (up, back, down and between)
+        mx_, my_ = tx - 0.5, ty - 0.5
+        for yy in range(int(my_) - 3, int(my_) + 4):
+            for xx in range(int(mx_) - 3, int(mx_) + 4):
+                dd = math.hypot(xx + 0.5 - mx_, yy + 0.5 - my_)
+                if dd <= 2.6:
+                    lit = ((xx + 0.5 - mx_) * L[0] + (yy + 0.5 - my_) * L[1]) / 2.6
+                    put(xx, yy, STEEL[6] if lit > 0.35 else STEEL[4] if lit > -0.3 else STEEL[2])
+        for ddx, ddy in ((-0.2, -1.0), (0.9, -0.45), (0.7, 0.7)):
+            spike((mx_ + ddx * 2.6, my_ + ddy * 2.6), (ddx, ddy), 3, wide=False)
+    else:
+        for k, half in enumerate((2, 2, 1, 1, 1, 0, 0, 0)):                     # the tip: a spike, the tail tapering on to a point (a diamond
+            for oy in range(-half, half + 1):                                    # spade read as a hanging lantern: the user, 2026-10-20)
+                put(tx + 1 + k * 0.7, ty - 1 + oy, DRG[2] if abs(oy) >= half else DRG[3])
 
     # ---- the body, neck and head as one shape: a deep chest, a dipped back on the seat line, big haunches, a thick
     # neck arching up (down when grazing), a big skull with a long jaw
     hd = head_down
+    crinet_ref = None                                                            # (Armored) the neck's resting shape and the head's whole-pixel move from it
     neck = [(34.0, 44.0 + bob), lp((27, 36 + bob), (30, 50), hd), lp((22, 27 + bob), (23, 57), hd), lp((17, 22 + bob), (16, 59), hd)]
     if tb is not None:
         # flying: the neck stretched forward, the head ahead of the chest (the reference), not arched up; the head a
@@ -1268,6 +1595,19 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 back = 0.25 if pitch > 0 else 0.35   # px of x per px of lift: an arch back up, a reach forward down
                 neck = [(x + (back * PITCH_NECK * pitch * f if pitch > 0 else back * PITCH_NECK * pitch * f), y - PITCH_NECK * pitch * f)
                         for (x, y), f in zip(neck, share)]
+            if ARM:
+                # the neck and head as one piece (as walking): the neck's resting shape in this clip (the beat's neck
+                # without its beat terms, pitched as the clip is), every point past the root moved by the head's whole-
+                # pixel move. Each point following the beat at its own lag, rounded on its own, bent the neck by a px
+                # differently every frame and the lames along it shimmered.
+                rest_ = shorter([(34.0, 44.0 + bob), (26.0, 39.0 + bob), (19.0, 34.0 + bob), (12.0, 31.0 + bob)])
+                if pitch:
+                    back = 0.25 if pitch > 0 else 0.35
+                    rest_ = [(x + back * PITCH_NECK * pitch * f, y - PITCH_NECK * pitch * f) for (x, y), f in zip(rest_, (0.0, 0.35, 0.7, 1.0))]
+                rest_ = [(float(round(x)), float(round(y))) for x, y in rest_]
+                d_ = (round(neck[-1][0] - rest_[-1][0]), round(neck[-1][1] - rest_[-1][1]))
+                neck = [neck[0]] + [(x + d_[0], y + d_[1]) for x, y in rest_[1:]]
+                crinet_ref = (rest_, d_)
     if walking and (WALK_NOD or HEAD_STEADY or HEAD_FOLLOW or HEAD_FWD):
         # the head dips with each step, the neck's base least (twice a cycle, a little after the body's bob); HEAD_STEADY
         # takes the body's bob off it the same way (a heavy head carried level)
@@ -1280,27 +1620,240 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         shares = (0.0, 0.35, 0.7, 1.0)
         lags = [HEAD_LAG * f if NECK_WAVE else HEAD_LAG for f in shares]
         neck = [(x - fwd_at(l) * f, y + nod_at(l) * f) for (x, y), f, l in zip(neck, shares, lags)]
+        if ARM:
+            # the neck and head as one piece: every point past the root takes the head's own move, rounded (only the
+            # root's first span stretches), so the crinet's lames keep their pixels
+            base_ = [(x + fwd_at(l) * f, y - nod_at(l) * f) for (x, y), f, l in zip(neck, shares, lags)]
+            # the neck and head ride the body's bob, no move of their own: holding its height while the body bobbed under
+            # it, the head and its one-piece neck slid against the chest (the user, 2026-11-07: "not attached")
+            mx_, my_ = 0, 0
+            neck = [base_[0]] + [(bx_ + mx_, by_ + my_) for (bx_, by_) in base_[1:]]
+            crinet_ref = ([(float(round(x)), float(round(y))) for x, y in base_], (mx_, my_))
+    if ARM:
+        neck = [(float(round(x)), float(round(y))) for x, y in neck]             # whole pixels: the helm and the lames stay put
     hx, hy = neck[-1]
 
-    def sdf(x, y):
+    def sdf(x, y, parts=None):
         hb = gb if (beat is None and glide is None) else gw(0.06) * 0.45            # in the beat the hump is the stroke's muscle: smaller, just after it
-        chest = _ell(x, y, 39, 48.5 + bob + heave_f - (1.0 - gw(0.0)) * (1.0 if tb is not None else 0.0), 11.5, 9.0)
+        lift_ = (1.0 - gw(0.0)) * (1.0 if tb is not None else 0.0)
+        if ARM:
+            lift_, hb = float(round(lift_)), round(hb * 4) / 4.0                  # whole pixels (the hump in quarter steps)
+        chest = _ell(x, y, 39, 48.5 + bob + heave_f - lift_, 11.5, 9.0)
         back = _ell(x, y, 52, 50.0 + bob, 11.0, 8.6)
         hips = _ell(x, y, 63, 49.0 + bob + heave_h * HIPS_ROCK - 3.5 * hb, 11.0, 9.2 + 2.2 * hb)   # flying: humped behind the saddle on the downstroke
-        haunch = _ell(x, y, 66 - 2.0 * (gb if (beat is None and glide is None) else gw(0.12) * 0.5), 54.0 + bob + heave_h, 8.0, 6.0)
+        hshift_ = 2.0 * (gb if (beat is None and glide is None) else gw(0.12) * 0.5)
+        if ARM:
+            hshift_ = float(round(hshift_))
+        haunch = _ell(x, y, 66 - hshift_, 54.0 + bob + heave_h, 8.0, 6.0)
         if FORE_HEAVY and legs_mode == "walk":
             # the shoulder: a muscle mass over the foreleg as the haunch is over the hind (the reference's big shoulders)
             haunch = _smin(haunch, _ell(x, y, 39.5, 54.0 + bob + heave_f, 6.5, 5.5), 3.0)
         d = _smin(chest, back, 5.0)
         d = _smin(d, hips, 5.0)
         d = _smin(d, haunch, 4.0)
+        nk = 1e9
         for (ax, ay), (bx, by), r in zip(neck, neck[1:], (6.2, 5.0, 4.2)):
-            d = _smin(d, _seg(x, y, ax, ay, bx, by) - r, 3.5)
+            sg = _seg(x, y, ax, ay, bx, by) - r
+            nk = min(nk, sg)
+            d = _smin(d, sg, 3.5)
         skull = _ell(x, y, hx + 1, hy - 1, 6.5, 5.0)
         jaw = _ell(x, y, hx - 5, hy + 1.8, 7.0, 2.8)
+        if ARM and ARM_HEAD.startswith("wedge"):                                 # long and flat: a brute's head
+            skull = _ell(x, y, hx + 1, hy - 0.5, 7.0, 4.2)
+            jaw = _ell(x, y, hx - 6.5, hy + (2.6 if ARM_HEAD == "wedge-snarl" else 1.6), 8.5, 2.5)   # snarl: the jaw dropped
+        elif ARM and ARM_HEAD.startswith("greathelm"):                           # a taller skull under a closed helm
+            skull = _ell(x, y, hx + 0.5, hy - 1.5, 7.0, 5.8)
+            jaw = _ell(x, y, hx - 5, hy + 1.5, 7.0, 3.2)
         d = _smin(d, skull, 3.0)
         d = _smin(d, jaw, 2.5)
+        if parts is not None:
+            parts.update(chest=chest, back=back, hips=min(hips, haunch), neck=nk, skull=min(skull, jaw))
         return d
+
+    plate_of = {}
+    neck_len = sum(math.dist(a, b) for a, b in zip(neck, neck[1:]))
+
+    def neck_s(x, y):
+        # how far along the neck from the head a point lies (its nearest point on the neck's line)
+        best, acc, s_ = None, 0.0, 0.0
+        for (ax, ay), (bx, by) in zip(neck, neck[1:]):
+            ln = math.dist((ax, ay), (bx, by)) or 1e-6
+            tt = max(0.0, min(1.0, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / (ln * ln)))
+            dd = math.hypot(x - ax - (bx - ax) * tt, y - ay - (by - ay) * tt)
+            if best is None or dd < best:
+                best, s_ = dd, acc + tt * ln
+            acc += ln
+        return neck_len - s_
+
+    part_top = {}
+
+    def armour_at(x, y, nx, ny, light, scales):
+        # The Armored Dragon at a body pixel. The fill runs top to bottom, so the first pixel of a part in a column is
+        # that part's top there. The parts:
+        # - a helm over the skull and the snout (the jaw left in scales);
+        # - a crinet of lames down the neck, dark hide between them, the throat left in scales;
+        # - on the body, banded plates over its upper rows, a brass rim, a red skirt and hide below (armour_seams).
+        return scales                                                            # the plates are pieces over it (armour_pieces)
+
+    armour_px = set()
+
+    def plate(poly, up=(0.0, -1.0), rivets=False, ridge=False, rim=False):
+        # One piece of plate over the scales: its own flat metal shading by its row from its top edge (along up): a
+        # lit edge, a light row, the flat face, a darker band and a dark bevel; its own steel line where it meets the
+        # hide (where it meets the air the dragon's outline does it); a shadow on the hide under it; brass rivets on
+        # its second row, a lit ridge down its middle, or a brass rim on its bottom row.
+        ul = math.hypot(*up) or 1.0
+        up = (up[0] / ul, up[1] / ul)
+        xs, ys = [q[0] for q in poly], [q[1] for q in poly]
+        cells = {(x, y) for y in range(int(min(ys)) - 1, int(max(ys)) + 2) for x in range(int(min(xs)) - 1, int(max(xs)) + 2)
+                 if _in_poly(x + 0.5, y + 0.5, poly)}
+        if not cells:
+            return
+        v = {c: -(c[0] * up[0] + c[1] * up[1]) for c in cells}                  # how far down the piece a cell is
+        top, bot = min(v.values()), max(v.values())
+        span = max(1.0, bot - top)
+        cx_ = sum(c[0] for c in cells) / len(cells)
+        cy_ = sum(c[1] for c in cells) / len(cells)
+        ox_, oy_ = min(c[0] for c in cells), min(c[1] for c in cells)          # the plate's own corner: its rivets ride with it
+        for (x, y) in cells:                                                     # the shadow it casts on the hide below it
+            q = (int(round(x - up[0])), int(round(y - up[1])))
+            if q not in cells and q not in armour_px and get(*q)[3]:
+                put(q[0], q[1], DRG[0])
+        for (x, y) in cells:
+            r = v[(x, y)] - top
+            nb = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+            meets = any(q not in cells and get(*q)[3] for q in nb)
+            if meets and r > 0.6:
+                col = STEEL_LINE
+            elif r < 1.0:
+                col = STEEL[6]
+            elif r < 2.0:
+                col = STEEL[5]
+            elif r > span - 1.0:
+                col = BRASS[2] if rim else STEEL[2]                              # one gold: an alternating rim shimmered as the plate moved
+            elif r > span - 2.2:
+                col = STEEL[3]
+            else:
+                col = STEEL[4]
+            if rivets and 2.0 <= r < 3.0 and (x - ox_ + y - oy_) % 3 == 0:
+                col = BRASS[2]
+            if ridge and abs((x + 0.5 - cx_) * up[1] - (y + 0.5 - cy_) * up[0]) < 0.6 and 1.0 <= r <= span - 1.5:
+                col = STEEL[6]
+            put(x, y, col)
+        armour_px.update(cells)
+
+    def armour_pieces():
+        # The Armored Dragon's plate, on the skeleton the body was drawn from: the crupper and the flank's two lames
+        # (the lower first, the upper over it), the chest plate, the neck's lames (from its base up, each nearer the
+        # head over the one behind it). The helm is drawn with the head; the tail's rings first (the tail is drawn).
+        tail_rings()
+        hb_ = gb if (beat is None and glide is None) else gw(0.06) * 0.45
+        hipy = 49.0 + bob + heave_h * HIPS_ROCK - round(3.5 * round(hb_ * 4) / 4.0)
+        chx, chy = 39.0, 48.5 + bob + heave_f - round((1.0 - gw(0.0)) * (1.0 if tb is not None else 0.0))
+        plate([(65, hipy - 9.4), (72, hipy - 8.6), (76.5, hipy - 4), (77, hipy + 2.5), (73, hipy + 6.5), (66, hipy + 5.5)],
+              up=(0.3, -1.0), rivets=True, rim=True)                             # the crupper over the hips
+        plate([(44, 47.5 + bob), (66, 47 + bob), (68, 53.5 + bob), (45, 54 + bob)], up=(0, -1), rim=True)   # the flank's lower lame
+        plate([(43, 42.5 + bob), (55, 41.6 + bob), (67, 42 + bob), (67.5, 48 + bob), (44, 48.5 + bob)], up=(0, -1), rivets=True)
+        plate([(chx - 12.6, chy - 4), (chx - 7, chy - 8.8), (chx + 2, chy - 8.2), (chx + 3.5, chy + 1), (chx - 2, chy + 6.6),
+               (chx - 9, chy + 5.2), (chx - 12.6, chy + 1.2)], up=(-0.35, -1.0), ridge=True, rim=True)   # the chest plate
+        # the crinet: lames down the neck from behind the skull, a px proud of its back, across to its middle. Always
+        # four, 5.5 px apart on the ground and 4.4 in the air (the flying neck is shorter), closer only on a neck too
+        # short for them (takeoff's and landing's in-between frames): counted
+        # from each frame's neck length the lowest came and went as the walk's bob stretched the neck's root (the user,
+        # 2026-11-07: "the flashing armor part between frames"). Walking they are laid out on the neck before the head's
+        # move and then moved with it, one piece with the head, by its whole pixels.
+        ref_, off_ = crinet_ref if crinet_ref is not None else (neck, (0, 0))
+        segs = list(zip(ref_, ref_[1:]))
+        radii = (6.2, 5.0, 4.2)
+        total = sum(math.dist(a, b) for a, b in segs)
+        n_lames = 4
+        step = min(4.4 if tb is not None else 5.5, (total - 6.0) / (n_lames - 1))
+        lames = []
+        for k in range(n_lames):
+            s = 3.0 + step * k
+            acc = 0.0
+            for i in range(len(segs) - 1, -1, -1):                               # from the head end down
+                a, b = segs[i]
+                ln = math.dist(a, b) or 1e-6
+                if acc + ln >= s:
+                    f = 1.0 - (s - acc) / ln
+                    P = (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)
+                    T = ((a[0] - b[0]) / ln, (a[1] - b[1]) / ln)                  # down the neck, towards the body
+                    rr = radii[i]
+                    break
+                acc += ln
+            P = (P[0] + off_[0], P[1] + off_[1])                                 # walking: with the head's move
+            Nb = (T[1], -T[0])                                                   # the neck's back (away from the throat)
+            if Nb[1] > 0 or (Nb[1] == 0 and Nb[0] < 0):
+                Nb = (-Nb[0], -Nb[1])
+            out_, in_ = rr + 1.0, rr * 0.15
+            q0 = (P[0] + Nb[0] * out_, P[1] + Nb[1] * out_)
+            q3 = (P[0] - Nb[0] * in_, P[1] - Nb[1] * in_)
+            lames.append(([q0, (q0[0] + T[0] * 6.5, q0[1] + T[1] * 6.5), (q3[0] + T[0] * 6.5, q3[1] + T[1] * 6.5), q3], (-T[0], -T[1])))
+        for poly, up_ in reversed(lames):                                        # the base first: each nearer the head lies over
+            plate(poly, up=up_)
+
+    def tail_rings():
+        # steel rings round the tail, a px proud of it above and below: always four, 8, 14, 20 and 26 px along the tail
+        # from its root, each its own size. (Counted while they fitted in three quarters of each frame's tail length
+        # and placed at a share of it, a ring came and went in flight and they all slid as the sway changed the length.)
+        segs_ = list(zip(tail, tail[1:]))
+        for s in (8.0, 14.0, 20.0, 26.0):
+            acc = 0.0
+            for (ax, ay), (bx, by) in segs_:
+                ln = math.dist((ax, ay), (bx, by))
+                if acc + ln >= s or (bx, by) == tail[-1]:
+                    break
+                acc += ln
+            ln = ln or 1e-6
+            f = min(1.0, max(0.0, (s - acc) / ln))
+            T = ((bx - ax) / ln, (by - ay) / ln)
+            N = (-T[1], T[0])
+            if N[1] > 0:
+                N = (-N[0], -N[1])
+            u = s / 37.5                                                         # its size by its place on the standing tail
+            rr = 6.0 * (1 - u) ** 1.4 + 1.0 + 1.0
+            P = (ax + (bx - ax) * f, ay + (by - ay) * f)
+            plate([(P[0] + N[0] * rr, P[1] + N[1] * rr), (P[0] + N[0] * rr + T[0] * 2.6, P[1] + N[1] * rr + T[1] * 2.6),
+                   (P[0] - N[0] * rr + T[0] * 2.6, P[1] - N[1] * rr + T[1] * 2.6), (P[0] - N[0] * rr, P[1] - N[1] * rr)], up=(T[0], T[1]))
+
+    def armour_seams(tops):
+        # The body plates by their row from the part's top, as the Armored donkey's: a lit top row, a light row, a row
+        # of rivets, the plate a step darker below, its last row the steel line; then a brass rim, the red skirt with
+        # folds and a dagged hem, and the hide below. The chest plate is deeper (no skirt over the forelegs). Where two
+        # body plates meet, a px of dark hide between them.
+        for (x, y), (part, light) in list(plate_of.items()):
+            if part in ("helm", "neck"):
+                continue
+            r = y - part_top[(part, x)]
+            plate_rows = 9 if part == "chest" else 5
+            if r == 0:
+                col = STEEL[6]
+            elif r == 1:
+                col = STEEL[5]
+            elif r == 2:
+                col = STEEL[6] if x % 3 == 0 else STEEL[4]                       # the rivets
+            elif r < plate_rows - 1:
+                col = STEEL[4] if light > 0.45 else STEEL[3]
+            elif r == plate_rows - 1:
+                col = STEEL_LINE
+            elif part != "chest" and r == plate_rows:
+                col = BRASS[2] if x % 2 else BRASS[1]
+            elif part != "chest" and r <= plate_rows + 4:
+                col = CLOTH[1] if x % 3 == 0 else CLOTH[3] if r == plate_rows + 1 else CLOTH[2]
+            elif part != "chest" and r == plate_rows + 5 and x % 4 in (0, 1):
+                col = CLOTH[0]                                                   # the dagged hem
+            else:
+                continue                                                         # the hide (the scales as drawn)
+            put(x, y, col)
+        for (x, y), (part, light) in list(plate_of.items()):
+            if part in ("helm", "neck"):
+                continue
+            r = y - part_top[(part, x)]
+            if r < (9 if part == "chest" else 5):
+                other = plate_of.get((x + 1, y))
+                if other is not None and other[0] != part and other[0] not in ("helm", "neck"):
+                    put(x, y, DRG[1])                                            # hide between two plates
 
     tops = {}
     for y in range(-OY, H - OY):
@@ -1322,20 +1875,166 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                     col = DBELLY[max(0, DBELLY.index(col) - 1)]                 # the plates' seams (every 3 rows read as planks)
             else:
                 col = _tone(DRG, light)
+                if ARM:
+                    col = armour_at(x, y, nx, ny, light, col)
             put(x, y, col)
             if x not in tops or y < tops[x]:
                 tops[x] = y
+    if ARM:
+        armour_pieces()
 
     # ---- the ridge of spines from behind the skull to the hips (none under the saddle)
     for x in range(int(hx) + 5, 72, 4):
         if x in tops and not (45 <= x <= 66):
             h = 3 if x < 36 else 2
+            if ARM:
+                continue                                                         # the Armored Dragon's blades: at fixed columns, below
             for k in range(h):
                 put(x, tops[x] - 1 - k, DHORN[1 if k < h - 1 else 2])
                 put(x + 1, tops[x] - 1 - k, DHORN[0])
 
+    if ARM:
+        # the ridge's blades at fixed columns of the body (two on the neck's root, one behind the saddle), each on the
+        # column's drawn top: they ride with the body and never jump along it
+        for x in (30, 38, 70):
+            if x in tops:
+                spike((x, tops[x] - 1), (0.5, -1.0), 5 if x < 45 else 4)
+
     # ---- the head: two long horns swept back, a brow, the eye, a nostril, teeth along the jaw
-    for dx0, dy0, dx1, dy1 in ((4, -4, 16, -11), (2, -5, 12, -14)):
+    def horn(points, r0, far_):
+        # a black horn along a curve, thick at its root, ridged, its lit side a step lighter (the far one darker)
+        curve = catmull(points, 60)
+        for i, (cx_, cy_) in enumerate(curve):
+            u = i / (len(curve) - 1)
+            rr = r0 * (1 - u) + 0.4
+            ring_ = (u * 26) % 3.2 < 0.8
+            for yy in range(int(cy_ - rr) - 1, int(cy_ + rr) + 2):
+                for xx in range(int(cx_ - rr) - 1, int(cx_ + rr) + 2):
+                    if math.hypot(xx + 0.5 - cx_, yy + 0.5 - cy_) <= rr:
+                        lit = ((xx + 0.5 - cx_) * L[0] + (yy + 0.5 - cy_) * L[1]) / max(rr, 0.5)
+                        put(xx, yy, DHORN[1] if (far_ or ring_) else (DHORN[2] if lit > 0.15 else DHORN[1]))
+
+    if ARM and ARM_HEAD == "beak":
+        # the war helm's skull face: a beak hooked down past the snout's tip, a dark socket round the eye, a crown of
+        # three blades fanning back off the helm, a black horn curling back under them (the far one behind)
+        HP = lambda dx, dy: (hx + dx, hy + dy)
+        horn([HP(4, -3), HP(10, -3.5), HP(14, -1), HP(13.5, 3), HP(10.5, 4.5)], 1.5, False)
+        plate([HP(-14.8, 3.6), HP(-13.6, -0.6), HP(-8, -5.2), HP(0.5, -7.8), HP(6.5, -7.2), HP(8.6, -3.2), HP(5.5, 0.6), HP(-3, 0.4),
+               HP(-9, 1.0), HP(-12.2, 1.6)], up=(0.15, -1.0), rivets=True)
+        for dx in (-2, -1, 0):
+            put(hx + dx - 1, hy - 3, STEEL_LINE)
+            put(hx + dx - 1, hy - 2, STEEL_LINE)
+        for d_, n_ in (((0.7, -1.0), 6), ((1.0, -0.45), 7), ((1.0, 0.05), 5)):
+            spike(HP(7.5, -4.5), d_, n_)
+    elif ARM and ARM_HEAD == "greathelm":
+        # a closed knight's helm over the whole head: a flat front, the visor's slit across it with breaths under it, a
+        # crest along its top, a brass rim; two black horns out of its sides, up and back
+        HP = lambda dx, dy: (hx + dx, hy + dy)
+        horn([HP(3, -5), HP(6, -9), HP(11, -12), HP(16, -12.5)], 1.4, True)
+        plate([HP(-12.6, -2.6), HP(-12.6, 3.0), HP(-7, 3.6), HP(5, 3.0), HP(8.4, -0.8), HP(7.4, -6.2), HP(1, -8.4), HP(-6, -7.4),
+               HP(-11, -5.2)], up=(0.0, -1.0))                                   # no brass rim: its bottom row flickered with the head
+        for dx in range(-12, -1):                                                # the slit
+            put(hx + dx, hy - 2, STEEL_LINE)
+        for dx in (-10, -8, -6):                                                 # the breaths
+            put(hx + dx, hy + 0.5, STEEL_LINE)
+        plate([HP(-8, -7.2), HP(1, -9.6), HP(6, -8.6), HP(6, -7.4), HP(1, -8.2), HP(-8, -6.4)], up=(0.0, -1.0))   # the crest
+        horn([HP(2, -5), HP(5, -9.5), HP(10, -12.5), HP(15, -13.5)], 1.4, False)
+    elif ARM and ARM_HEAD == "greathelm-cross":
+        # the game knight's helm (9019_hed_static_left): a rounded dome over the whole head, a gold band down its front
+        # and one across the brow above the slit, a mint glint on the dome, two black horns out of its sides
+        HP = lambda dx, dy: (hx + dx, hy + dy)
+        horn([HP(4, -5), HP(7, -9), HP(12, -11), HP(17, -11)], 1.4, True)
+        plate([HP(-12.6, -2.0), HP(-12.6, 3.0), HP(-7, 3.6), HP(5, 3.0), HP(8.4, -0.8), HP(8.0, -5.4), HP(3, -8.8), HP(-4, -9.0),
+               HP(-9.5, -6.8), HP(-12.0, -4.4)], up=(0.0, -1.0), rim=True)
+        for dy in range(-4, 4):                                                  # the gold band down the front
+            put(hx - 11.5, hy + dy, BRASS[2] if dy < 0 else BRASS[1])
+        for dx in range(-11, 7):                                                 # and across the brow
+            if (int(round(hx + dx)), int(round(hy - 3.5))) in armour_px:
+                put(hx + dx, hy - 3.5, BRASS[3] if dx < -4 else BRASS[2])
+        for dx in range(-11, -1):                                                # the slit under it
+            put(hx + dx, hy - 2, STEEL_LINE)
+        put(hx - 3, hy - 7, STEEL[6])                                            # the glint
+        put(hx - 2, hy - 7, STEEL[6])
+        put(hx - 3, hy - 6, STEEL[5])
+        horn([HP(3, -5), HP(6, -9.5), HP(11, -11.5), HP(16, -12)], 1.4, False)
+    elif ARM and ARM_HEAD == "greathelm-bull":
+        # a boxy bucket helm, flat-topped, a grille of slots in its face, rivets; big black bull horns out of its sides,
+        # curving up and forward
+        HP = lambda dx, dy: (hx + dx, hy + dy)
+        horn([HP(4, -5), HP(5, -10), HP(2, -13.5), HP(-2, -15)], 1.5, True)
+        plate([HP(-12.8, -6.0), HP(-12.8, 3.2), HP(6, 3.4), HP(8.4, -0.6), HP(7.6, -6.6), HP(1, -7.4)], up=(0.0, -1.0), rivets=True, rim=True)
+        for dx in (-11, -9, -7, -5):                                             # the grille
+            for dy in (-3, -2, -1, 0, 1):
+                put(hx + dx, hy + dy, STEEL_LINE)
+        put(hx - 9, hy - 2, DEYE)                                                # the ember eye behind it
+        horn([HP(3, -5), HP(3.5, -10.5), HP(0, -14), HP(-4.5, -15.5)], 1.6, False)
+    elif ARM and ARM_HEAD == "greathelm-sallet":
+        # a rounded sallet whose tail flares back over the neck, the visor's slit, a gold band, a blade standing off
+        # its crown and raked back; the jaw under it in scales
+        HP = lambda dx, dy: (hx + dx, hy + dy)
+        plate([HP(-12.8, -1.4), HP(-11, -5.6), HP(-5, -8.6), HP(2, -8.8), HP(8, -6.6), HP(14, -3.0), HP(12.5, -1.4), HP(8, -1.2),
+               HP(4, 1.2), HP(-3, 1.0), HP(-9, 1.6), HP(-12.8, 1.6)], up=(0.1, -1.0), rim=True)
+        for dx in range(-12, -2):
+            put(hx + dx, hy - 2, STEEL_LINE)
+        for dx in range(-10, 10):
+            if (int(round(hx + dx)), int(round(hy - 4.2))) in armour_px:
+                put(hx + dx, hy - 4.2, BRASS[2])
+        spike(HP(1, -9), (0.55, -1.0), 6)
+        put(hx - 4, hy - 7, STEEL[6])
+    elif ARM and ARM_HEAD.startswith("wedge"):
+        # a long flat head: a narrow plate down the snout and over the brow with a ridge of spikes along it, fangs out
+        # of the jaw, two long black horns swept back almost flat (and per variant: a jaw guard and a crest, the jaw
+        # dropped in a snarl with horns curling down, or a horn on the nose)
+        HP = lambda dx, dy: (hx + dx, hy + dy)
+        V = ARM_HEAD
+        if V == "wedge-snarl":
+            horn([HP(4, -3), HP(10, -4.5), HP(13.5, -1.5), HP(12, 3), HP(8.5, 4.5)], 1.6, False)   # curling down and forward
+            plate([HP(-15, -0.4), HP(-8, -3.6), HP(1, -5.2), HP(7, -4.6), HP(8.6, -1.6), HP(3, -0.6), HP(-15, 0.8)], up=(0.1, -1.0), ridge=True)
+            for dx in range(-14, -1):                                            # the open mouth
+                if get(hx + dx, hy + 2.5)[3]:
+                    put(hx + dx, hy + 2.5, DOUT[0])
+            for dx in (-14, -11, -8, -5):                                        # fangs down from the top
+                put(hx + dx, hy + 2.5, (212, 198, 168))
+            for dx in (-12.5, -9.5, -6.5):                                       # and up from the jaw
+                put(hx + dx, hy + 3.5, (212, 198, 168))
+        else:
+            if V == "wedge-jaw":
+                horn([HP(3, -5), HP(8, -6.5), HP(13, -7.5)], 1.3, True)
+            else:
+                horn([HP(3, -5), HP(9, -8), HP(15, -10.5), HP(20, -12)], 1.3, True)
+            plate([HP(-15, -0.4), HP(-8, -3.6), HP(1, -5.2), HP(7, -4.6), HP(8.6, -1.6), HP(3, -0.6), HP(-15, 0.8)], up=(0.1, -1.0), ridge=True)
+            if V == "wedge-jaw":
+                plate([HP(-14, 2.2), HP(-6, 2.0), HP(2, 2.6), HP(3.6, 4.2), HP(-6, 4.6), HP(-13, 3.8)], up=(0.0, -1.0), rim=True)   # the jaw guard
+                for dx in (-6, -2, 2, 6):                                        # a crest of spikes along the skull
+                    spike(HP(dx, -5.2 + abs(dx) * 0.05), (0.3, -1.0), 4)
+                horn([HP(4, -3), HP(9, -4.5), HP(14, -5.5)], 1.5, False)
+            else:
+                for dx in (-9, -4, 1):
+                    spike(HP(dx, -4.6 + dx * 0.05), (0.35, -1.0), 3, wide=False)
+                if V == "wedge-rhino":
+                    horn([HP(-11.5, -1.0), HP(-13, -4.5), HP(-12.5, -8), HP(-10.5, -10)], 1.4, False)   # the nose horn, curving back
+                horn([HP(4, -3), HP(10, -5), HP(16, -6.5), HP(22, -7)], 1.5, False)
+    elif False:
+        HP = lambda dx, dy: (hx + dx, hy + dy)
+        horn([HP(3, -5), HP(9, -8), HP(15, -10.5), HP(20, -12)], 1.3, True)
+        plate([HP(-15, -0.4), HP(-8, -3.6), HP(1, -5.2), HP(7, -4.6), HP(8.6, -1.6), HP(3, -0.6), HP(-15, 0.8)], up=(0.1, -1.0), ridge=True)
+        for dx in (-9, -4, 1):
+            spike(HP(dx, -4.6 + dx * 0.05), (0.35, -1.0), 3, wide=False)
+        horn([HP(4, -3), HP(10, -5), HP(16, -6.5), HP(22, -7)], 1.5, False)
+    if False:
+        for (ox_, oy_), far_ in ():
+            hp = []
+            curve = catmull(hp, 60)
+            for i, (cx_, cy_) in enumerate(curve):
+                u = i / (len(curve) - 1)
+                rr = 1.3 * (1 - u) + 0.4
+                ring_ = (u * 26) % 3.2 < 0.8                                    # the horn's ridges
+                for yy in range(int(cy_ - rr) - 1, int(cy_ + rr) + 2):
+                    for xx in range(int(cx_ - rr) - 1, int(cx_ + rr) + 2):
+                        if math.hypot(xx + 0.5 - cx_, yy + 0.5 - cy_) <= rr:
+                            lit = ((xx + 0.5 - cx_) * L[0] + (yy + 0.5 - cy_) * L[1]) / max(rr, 0.5)
+                            put(xx, yy, DHORN[1] if far_ else DHORN[1] if ring_ else (DHORN[2] if lit > 0.15 else DHORN[1]))
+    for dx0, dy0, dx1, dy1 in (() if ARM else ((4, -4, 16, -11), (2, -5, 12, -14))):
         ax, ay, bx, by = hx + dx0, hy + dy0 - hd * 2, hx + dx1, hy + dy1 - hd * 2
         for t in range(16):
             u = t / 15
@@ -1344,14 +2043,49 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             if u < 0.7:
                 put(x, y + 1, DHORN[0])
     ex, ey = hx - 1, hy - 2
-    for dx, dy, c in ((-1, 0, DEYE), (0, 0, DEYE), (-1, -1, DRG[0]), (0, -1, DRG[0]), (1, -1, DRG[0]), (0, 1, (30, 10, 10))):
-        put(ex + dx, ey + dy, c)
-    put(hx - 11, hy + 1, DRG[0])                                                 # the nostril
-    for dx in range(-11, 3):                                                     # the mouth line
+    if ARM:
+        closed = ARM_HEAD in ("greathelm", "greathelm-cross", "greathelm-bull", "greathelm-sallet")
+        if not closed:
+            for dx in range(-2, 2):                                             # the plate's eye hole, the ember eye in it
+                put(ex + dx, ey, STEEL_LINE)
+        if ARM_HEAD != "greathelm-bull":
+            put(ex - 1, ey, DEYE)
+            put(ex, ey, DEYE)
+        if ARM_HEAD in ("wedge", "wedge-jaw", "wedge-rhino"):
+            for dx in (-13, -10, -7):                                           # fangs out of the jaw
+                put(hx + dx, hy + 3, DHORN[2])
+                put(hx + dx, hy + 4, (212, 198, 168))
+    else:
+        for dx, dy, c in ((-1, 0, DEYE), (0, 0, DEYE), (-1, -1, DRG[0]), (0, -1, DRG[0]), (1, -1, DRG[0]), (0, 1, (30, 10, 10))):
+            put(ex + dx, ey + dy, c)
+    helmed = ARM and ARM_HEAD in ("greathelm", "greathelm-cross", "greathelm-bull")   # a closed helm hides the nostril and the mouth
+    if not helmed:
+        put(hx - 11, hy + 1, DRG[0])                                             # the nostril
+    for dx in (range(-11, 3) if not helmed and ARM_HEAD != "wedge-snarl" else ()):  # the mouth line
         if get(hx + dx, hy + 3)[3] and get(hx + dx, hy + 2)[3]:
             put(hx + dx, hy + 3, DRG[0])
 
     legs(far=False)
+    if ARM:
+        # the greaves: a plate over each near forearm and shin, from just under the joint to above the paw, a px wider
+        # than the leg
+        for a, b, r0, r1 in greave_segs:
+            ln = math.dist(a, b) or 1e-6
+            T = ((b[0] - a[0]) / ln, (b[1] - a[1]) / ln)
+            N = (-T[1], T[0])
+            w0, w1 = r0 * LEG_BULK + 0.6, (r1 + (r0 - r1) * LEG_WRIST) * LEG_BULK + 0.6
+            # a fixed length centred on the bone, so a foreshortened forearm (the swing) keeps its greave (it was the
+            # bone less 2 px: nothing on a short one, the panel the user saw vanish in walk 06)
+            if ln < 1.0:
+                T = (0.0, 1.0)
+                N = (-1.0, 0.0)
+            mid_ = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+            half_ = 2.6
+            A = (mid_[0] - T[0] * half_, mid_[1] - T[1] * half_)
+            B = (mid_[0] + T[0] * half_, mid_[1] + T[1] * half_)
+            plate([(A[0] + N[0] * w0, A[1] + N[1] * w0), (B[0] + N[0] * w1, B[1] + N[1] * w1),
+                   (B[0] - N[0] * w1, B[1] - N[1] * w1), (A[0] - N[0] * w0, A[1] - N[1] * w0)], up=(-T[0], -T[1]))
+            # (no brass rim: on a small plate turning with the leg its bottom row came and went, gold blinking)
 
     if fly is None:
         folded_wing(flap, far=False)
@@ -1375,6 +2109,31 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         for i in lone:
             px[i] = fpx[i] = (0, 0, 0, 0)
 
+    # ---- the Armored Dragon: a scrap of picture not joined to the dragon (a sliver a notch or a cut leaves at a tip) is
+    # dropped, under 12 px; a part of its own (a far horn's tip, a blade) is bigger and joined anyway
+    if ARM:
+        filled = {i for i in range(W * H) if px[i][3] or fpx[i][3]}
+        seen = set()
+        for i0 in filled:
+            if i0 in seen:
+                continue
+            comp, stack = [], [i0]
+            seen.add(i0)
+            while stack:
+                i = stack.pop()
+                comp.append(i)
+                x, y = i % W, i // W
+                for dx in (-1, 0, 1):
+                    for dy in (-1, 0, 1):
+                        if 0 <= x + dx < W and 0 <= y + dy < H:
+                            j = (y + dy) * W + x + dx
+                            if j in filled and j not in seen:
+                                seen.add(j)
+                                stack.append(j)
+            if len(comp) < 12:
+                for i in comp:
+                    px[i] = fpx[i] = (0, 0, 0, 0)
+
     # ---- the outline, dark, round the union of both layers (no line along the cut between them); an outline pixel
     # goes to the front layer when it borders a front pixel, else to the back
     back, front = list(px), list(fpx)
@@ -1396,6 +2155,13 @@ dragon.flies = True  # its frames include flying, taking off and landing (frames
 
 def dragon_blue(phase, head_down=0.0, idle=0.0):
     return dragon(phase, head_down, idle, BLUE_DRAGON)
+
+
+def dragon_armored(phase, head_down=0.0, idle=0.0, **kw):
+    return dragon(phase, head_down, idle, ARMORED_DRAGON, style="armored", **kw)
+
+
+dragon_armored.flies = True
 
 
 # ---------------------------------------------------------------- the frames
@@ -1486,7 +2252,13 @@ def frames_for(fn):
 # "cart readout" self-test says what it is))
 CREATURES = (("worm", worm, "Worm", 96, ("worm", "Worm"), 52, None), ("snail", snail, "Snail", 96, ("snail", "Snail"), 55, None),
              ("rat", rat, "Rat", 96, ("rat", "Rat"), 52, 9),
-             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 68 - RAISE, None))  # seat rows: the donkey's 52 (+16 on 128), the snail 3 lower
+             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 68 - RAISE, None),  # seat rows: the donkey's 52 (+16 on 128), the snail 3 lower
+             ("armored-dragon", dragon_armored, "Armored Dragon", 128, ("dragon", "Dragon"), 68 - RAISE, None))
+# Creatures drawn only when named (python -I make_creatures.py <name> <folder>): none now (the Armored Dragon ships in
+# the Dragons pack since 2026-11-07). A creature that is a variant of a mount is written to the mount's skins folder
+# SKIN_DIR names (never its default).
+ONLY_WHEN_ASKED = set()
+SKIN_DIR = {"armored-dragon": "armored"}
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # tools/skins/creatures/make_creatures.py -> the repo
 only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to redraw just that one
@@ -1504,12 +2276,14 @@ NO_CART = {"dragon"}  # the mounts whose [Mount] block says cart = false (the dr
 for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES:
     if only and name != only:
         continue
+    if not only and name in ONLY_WHEN_ASKED:
+        continue
     W = H = size
     OX = OY = (size - 96) // 2
     fr = frames_for(fn)
     pack, mid = HOMES[mount]  # GK2SaddleUpDragonsMountPack, saddleup-dragon.dragon
     assets = sys.argv[2] if custom else skinroots.pack_root(pack)
-    outs = [os.path.join(assets, name) if custom else os.path.join(assets, mid, "skins", "default")]  # each mount's own look: skins\default\
+    outs = [os.path.join(assets, name) if custom else os.path.join(assets, mid, "skins", SKIN_DIR.get(name, "default"))]  # each mount's own look: skins\default\
     if not custom and not os.path.isfile(os.path.join(assets, mid, "mount.cfg")):
         # the mount, written once (the Mounts tab saves its values here afterwards)
         mcfg = os.path.join(assets, mid, "mount.cfg")
