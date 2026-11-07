@@ -30,6 +30,8 @@ namespace GK2DonkeyAPI
             internal volatile bool Changed;
             internal bool WaitRelease;   // the binding just changed: the key that set it is still down, not a press of it
             internal bool OverPanel;     // the Mounts panel's own key: it still works while the panel is open (it closes it)
+            internal MountStyle? Journal; // a companion's ride or cart key (MountCompanion.Ride / Drive): in its journal, the Ride or Drive button
+            internal MountCompanion JournalOf;
         }
 
         private static readonly List<Entry> entries = new List<Entry>();
@@ -42,8 +44,31 @@ namespace GK2DonkeyAPI
         {
             Track(owner);
             var e = new Entry { Owner = owner, Key = key, Pressed = pressed, OverPanel = overPanel };
+            e.Journal = JournalStyleOf(pressed, out e.JournalOf);
             key.SettingChanged += (s, a) => e.Changed = true;
             entries.Add(e);
+        }
+
+        // A key whose action is a companion's Ride or Drive, given as it is (pressed: me.Ride): the style its journal button
+        // has, and the companion. A lambda round Use(...) is not recognised: that key waits in the journal as the rest do.
+        internal static MountStyle? JournalStyleOf(Action pressed, out MountCompanion of)
+        {
+            of = pressed?.Target as MountCompanion;
+            if (of != null)
+            {
+                if (pressed == (Action)of.Ride) return MountStyle.Ride;
+                if (pressed == (Action)of.Drive) return MountStyle.Cart;
+            }
+            of = null;
+            return null;
+        }
+
+        // For the self-test: the keys of an owner that work in a journal, with their style and companion.
+        internal static List<(string Key, MountStyle Style, MountCompanion Of)> TestJournalKeys(string owner)
+        {
+            var found = new List<(string, MountStyle, MountCompanion)>();
+            foreach (Entry e in entries) if (e.Owner == owner && e.Journal != null) found.Add((e.Key.Definition.Key, e.Journal.Value, e.JournalOf));
+            return found;
         }
 
         // For the self-test: whether a mod's key still works while the Mounts panel is open (null: not a polled key).
@@ -74,7 +99,8 @@ namespace GK2DonkeyAPI
             }
             // The Mounts panel, its colours window or the options window open: the mods' keys wait, as the game's own do
             // (the user, 2026-10-22: H in the panel got him on and off). Only the panel's own key works, to close it,
-            // while the panel is the one shown.
+            // while the panel is the one shown, and a companion's ride and cart keys work in its journal as the journal's
+            // Ride and Drive the cart buttons (the user, 2026-11-07: the journal closes and the mount picked comes).
             bool windowOpen = MountsPanel.IsOpen || OptionsWindow.IsOpen;
             bool panelShown = MountsPanel.IsShownOnTop && !OptionsWindow.IsShown;
             for (int i = 0; i < entries.Count; i++)
@@ -99,6 +125,17 @@ namespace GK2DonkeyAPI
                 }
                 if (windowOpen && !(e.OverPanel && panelShown))
                 {
+                    if (e.Journal != null)
+                    {
+                        try
+                        {
+                            MountsPanel.CallFromKey(e.JournalOf, e.Journal.Value); // false: not its journal, or not on top: the key waits
+                        }
+                        catch (Exception ex)
+                        {
+                            Plugin.Log.LogError($"{e.Owner}: its key {e.Key.Definition.Key} in the Mounts panel failed. {ex}");
+                        }
+                    }
                     continue;
                 }
                 try

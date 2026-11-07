@@ -572,6 +572,7 @@ namespace GK2DonkeyAPI.Api
         internal bool HasSkinRow(string mountId) => skinRows.ContainsKey(mountId);
         internal Mount.Instance MountPaper => mountCompanion?.Paper; // the panel's picture when the page has no Preview() row
         internal MountResult UseMount(MountStyle style) => mountCompanion != null ? mountCompanion.UseFromPanel(style) : MountResult.Refused("No mount rows on this page."); // the panel's Ride and Drive buttons
+        internal bool IsCompanion(MountCompanion c) => c != null && ReferenceEquals(c, mountCompanion); // a ride or cart key works in this page's journal (KeyActions)
         internal bool IsMountRow(Row r) => r != null && r.Entry != null && ReferenceEquals(r.Entry, mountRow); // the Mount dropdown: the panel's list is the picker, the row stays out of its rows
 
         // Whether a row is the options window's (OptionsWindow) or the Mounts panel's: a look row is the panel's; a

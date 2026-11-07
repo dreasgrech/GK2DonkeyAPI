@@ -44,7 +44,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             new Scenario { Group = GroupLooks, Name = "layering: the Donkey Skins pack's two skins have no default, nothing resolved, as before", Body = DonkeySkinsUnlayered },
             new Scenario { Group = GroupLooks, Name = "freeplay: Saddle Up's Freeplay rows (the last section, the API's words, shown with the switch on, each driving its key)", Body = SaddleUpFreeplayRows },
             new Scenario { Group = GroupLooks, Name = "options: Saddle Up's five tabs (Mount Behaviour and Sound under their headings in Mount, which fits without a scrollbar; the journal button named as the window; Send your mount away after the keys that call it)", Body = SaddleUpTabs },
-            new Scenario { Group = GroupLooks, Name = "settings: with the Mounts panel open Saddle Up's ride and cart keys wait, its panel key works", Body = SaddleUpKeysOverPanel },
+            new Scenario { Group = GroupLooks, Name = "settings: with the Mounts panel open Saddle Up's ride and cart keys work only as its Ride and Drive buttons, its panel key works", Body = SaddleUpKeysOverPanel },
             new Scenario { Group = GroupSafety, Name = "safe spots: Saddle Up's rows (the toggle drives FallGuard, the button brings him back, the key reaches ReturnKey)", Body = SaddleUpSafeSpotRows },
             new Scenario { Group = GroupSounds, Name = "a standing snail: no voice and no lips by its [Sounds] and the rule, its step its own squelch", Body = SnailStandingSounds },
             new Scenario { Group = GroupSounds, Name = "Saddle Up's \"Standing mounts and babies sound\" row drives the Behaviour key", Body = SaddleUpStandingSoundsRow },

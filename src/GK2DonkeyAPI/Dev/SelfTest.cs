@@ -199,6 +199,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's way back (from the game; over the pause menu through the colours window; over the Character window on the Tech Tree)", Body = PanelWayBack },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's Ride and Drive buttons while riding keep the ride", Body = PanelRideButtons },
+            new Scenario { Group = GroupLooks, Name = "settings: the Mount Journal's ride and cart keys work as its Ride and Drive buttons", Body = PanelRideKeys },
             new Scenario { Group = GroupLooks, Name = "settings: the options window (every option our own control in its section; a switch; a key set, in words, a clash; the line at the bottom; Defaults asked)", Body = OptionsTests.Smoke },
             new Scenario { Group = GroupLooks, Name = "settings: the options window's way back (the Settings window's button; the Mounts button and back; the journal's Options button and back; Ride from the journal over them)", Body = OptionsTests.WayBack },
             new Scenario { Group = GroupLooks, Name = "settings: the options window among other mods (the window's own OK copied, another mod's part left off it, our button added again when taken away; another mod's key and the game's named; a game window over the options)", Body = OptionsTests.AmongOtherMods },

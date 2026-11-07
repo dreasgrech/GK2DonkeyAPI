@@ -17,7 +17,7 @@ namespace SaddleUp
     // "Built in or external"). The API is the backend; a mount is a pack; the API draws it, seats the rider, colours it,
     // hitches its cart.
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
-    [BepInDependency("dreas.gk2.donkeyapi", "0.44.0")] // at least the API it was written against (NeedsApi below)
+    [BepInDependency("dreas.gk2.donkeyapi", "0.45.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup";
@@ -25,7 +25,8 @@ namespace SaddleUp
         // mod was written against.
         public const string Version = "0.16.0";
 
-        // The API this mod is written against: 0.44 the mounts left in the world (MountCompanion.LeaveMountsInWorld,
+        // The API this mod is written against: 0.45 the ride and cart keys in the Mount Journal (MountCompanion.Ride and
+        // Drive); 0.44 the mounts left in the world (MountCompanion.LeaveMountsInWorld,
         // LeftMounts, SendLeftAway), a button's visible, and the looks' named parts and the skins' tones
         // (MountSettingsPage.RegionRows, ToneRows; with this minimum the out-of-line calls that caught an older API's
         // missing methods went, as the release checklist says); 0.41 the looks per skin (MountSettingsPage.PerSkin, SkinHasRegion,
@@ -38,7 +39,7 @@ namespace SaddleUp
         // 0.28 CartSlots, 0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22 CargoZombies). Checked before anything of the API
         // is used, so an older API gets a clear message instead of a missing-method error. Keep it the same as the
         // BepInDependency minimum above.
-        private static readonly Version NeedsApi = new Version(0, 44, 0);
+        private static readonly Version NeedsApi = new Version(0, 45, 0);
 
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
 
@@ -69,9 +70,9 @@ namespace SaddleUp
             p.Key("Keys", "MountsKey", new KeyboardShortcut(KeyCode.L), "Mount Journal", "Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.",
                 pressed: p.OpenPanel);
             ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride your mount", "Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on.",
-                pressed: () => me.Use(MountStyle.Ride));
+                pressed: me.Ride); // as it is, not a lambda: it also works in the Mount Journal (API 0.45)
             ConfigEntry<KeyboardShortcut> cartKey = p.Key("Keys", "CartKey", new KeyboardShortcut(KeyCode.G), "Drive the cart", "Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart.",
-                pressed: () => me.Use(MountStyle.Cart));
+                pressed: me.Drive);
             // after the two that call it (the user, 2026-11-05: call, call with the cart, send away; then the riding keys)
             p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send your mount away", "Sends your mount, its cart and its babies away. The cart's load is put down first.",
                 pressed: me.SendAway);

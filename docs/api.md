@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.44.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.45.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -559,14 +559,15 @@ and settings a player can find. The API does all of that; your mod lists its set
 MountCompanion me = Mounts.Companion("you.gk2.mymod");               // one per mod
 MountSettingsPage p = Mounts.SettingsPage("you.gk2.mymod", Config, "My Donkey Mod", "you", "What it does.");
 p.Status("Keys");                                                    // "Active", or why the API is off
-p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride", "...", pressed: () => me.Use(MountStyle.Ride));
+p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride", "...", pressed: me.Ride);
 p.Choice("Donkey", "Coat", CoatColor.Game, "Coat", "", v => me.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" });
 p.Steps("Donkey", "Foals", me.FoalCount, 0, MountCompanion.MaxFoals, 1, "Foals", "...", v => me.FoalCount = v);   // defaults: the companion's own values
 p.Publish();
 ```
 
 - **Keys:** the API polls a `Key` row's key while it's on and calls `pressed`. A key counts with its own modifiers
-  held, whatever else is held (walking): `KeyboardShortcut.IsDown()` never fires while a movement key is down.
+  held, whatever else is held (walking): `KeyboardShortcut.IsDown()` never fires while a movement key is down. While
+  the Mount Journal or the options are open the keys wait, except a companion's `Ride` and `Drive` (0.45.0, below).
 - **Unloaded:** when your plugin is destroyed (a script reloader), the API clears your tuning
   (`Mounts.ClearTuning`) and drops your keys.
 
@@ -575,6 +576,7 @@ p.Publish();
 | Member | Does |
 |---|---|
 | `Use(MountStyle)` | The ride key (Ride) or the cart key (Cart). On foot: the donkey (spawned the first time) comes and the keeper gets on; for Cart its cart is brought and hitched, for Ride a cart the donkey stands hitched to is left where it was parked and the donkey comes alone (`CartStaysParked`, 0.25.0; off, or before: both come and the cart is left standing by the keeper). Mounted in that style: off (the donkey stays). Mounted in the other style: the cart is left standing, or brought and hitched. Refusals come back as `MountResult` (indoors, busy, ...) and are written to the log with their reason. |
+| `Ride()`, `Drive()` | (0.45.0) `Use(Ride)` and `Use(Cart)`, for a page's ride and cart keys: `pressed: me.Ride`. Given as they are, the key also works in the Mount Journal of this companion's page: it does what the journal's Ride or Drive the cart button does (the journal closes, keeping the mount picked, and that mount is called). Not with the colours window on top, and the cart key not for a mount that pulls no cart. |
 | `RingBell()` | The bell, while mounted; else nothing. |
 | `SendAway()` | The donkey, cart and foal go; the cart's load is set down first. |
 | `Donkey`, `Cart`, `Foals` | The handles (`Cart` while it stands on its own; hitched, it's part of `Donkey`; `Foals` a slot per foal, null when that one isn't there). Found again after a load by the keys `"donkey"`, `"cart"`, `"foal"`, `"foal2"` ... `"foal5"`. A cart the donkey hitches in the world that this companion did not summon is not `Cart`: it keeps its own look while pulled and stays a cart of its own when left again (the companion's own cart waits where it was parked). |
@@ -1164,6 +1166,10 @@ History:
   starts it at 0 unless its line says `start` (it inherited the base's `MountSoundStart` before; docs/mount-sounds.md),
   and `Sounds.PlayId` drops a start offset at or past the clip's end with one warning instead of seeking past it.
   The `DismountIndoors` setting's text says the cart has no collider indoors.
+- 0.45.0 (unreleased; additions only, so a minor; `tests/ApiSurface`): `MountCompanion.Ride()` and `Drive()`, the ride and
+  cart keys' actions (`Use(Ride)`, `Use(Cart)`). Given to a page's `Key` as they are (`pressed: me.Ride`), the key also
+  works in the Mount Journal of that companion's page, as the journal's Ride and Drive the cart buttons (section "A player
+  mod in a few lines"). A lambda round `Use` still works everywhere else and waits in the journal.
 - 0.44.0 (2026-11-05; additions only, so a minor; `tests/ApiSurface`):
   - **A skin's own tones** (section "A skin's own tones"): `MountSkinTone`, `MountSkinDef.Tones`,
     `MountSkinInfo.Tones`, `ToneColor`, `MountTone`, `MountLook.Tone(id)`, `MountSettingsPage.ToneRows`,

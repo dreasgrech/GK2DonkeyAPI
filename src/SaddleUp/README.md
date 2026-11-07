@@ -79,8 +79,8 @@ All of these apply at once:
 | Section (in the cfg) | Setting | Default | |
 |---|---|---|---|
 | 1. Keys | Mount Journal | L | Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours. |
-| | Ride your mount | H | Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on. |
-| | Drive the cart | G | Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart. |
+| | Ride your mount | H | Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on. In the Mount Journal, it calls the mount you picked. |
+| | Drive the cart | G | Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart. In the Mount Journal, it calls the mount you picked with its cart. |
 | | Send your mount away | none | Sends your mount, its cart and its babies away. The cart's load is put down first. |
 | | Ring the bell | B | Rings the bell while you drive the cart. |
 | | Call out | V | Your mount calls out while you ride, and its babies answer. |

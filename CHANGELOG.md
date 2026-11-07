@@ -22,9 +22,23 @@ For players:
 - **No more hoofsteps in the pause menu** (2026-11-07): opening the pause menu or a table's window while riding, the
   mount walked on the spot with its hoofsteps until you moved again. It stands now.
   Babies and standing mounts stand still too while the game is paused, instead of running in place.
+- **Ride and Drive the cart keys work in the Mount Journal** (2026-11-07): pressing H or G (or the keys you set) in the
+  journal closes it and calls the mount you picked, as its Ride and Drive the cart buttons do.
+
+For mod authors:
+
+- **API 0.45.0: `MountCompanion.Ride()` and `Drive()`** (2026-11-07): the ride and cart keys' actions (`Use(Ride)`,
+  `Use(Cart)`). Given to a page's `Key` as they are (`pressed: me.Ride`), the key also works in the Mount Journal of that
+  companion's page, as the journal's Ride and Drive the cart buttons (`KeyActions` recognises the delegate;
+  `MountsPanel.CallFromKey`). Not with the colours window or the options on top, and the cart key not for a mount with
+  no Drive button. Every other key still waits while the journal is open. Saddle Up's two keys use them, so it needs
+  API 0.45.0.
 
 Development:
 
+- **A self-test for the journal's ride and cart keys** (2026-11-07, `Dev/SelfTest.PanelRide.cs` `PanelRideKeys`, group
+  Looks): on a test page of its own over the test companion, so the player's mount is never called. The integration
+  test of Saddle Up's keys over the panel now also checks that its ride and cart keys are the journal's buttons.
 - **The game's stop works through the riding pose** (2026-11-07, `Patches.cs` `PlayerPhysicalBody_StopMoving_Patch`):
   `PlayerPhysicalBody.StopMoving` asks the keeper's animator whether he walks, and while mounted that shows the riding
   pose, so it never stopped him: `PlayerData.charState` stayed Walk and the donkey mirroring it walked. Its callers are

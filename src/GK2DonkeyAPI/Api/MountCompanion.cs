@@ -621,6 +621,13 @@ namespace GK2DonkeyAPI.Api
             return r;
         }
 
+        // The ride key's and the cart key's actions (0.45.0): Use(Ride) and Use(Cart). Given to a settings page's key as
+        // they are (pressed: me.Ride), they also work in the Mount Journal of this companion's page: there the key does what
+        // the journal's Ride or Drive the cart button does (the journal closes, keeping the mount picked, and that mount is
+        // called; the user, 2026-11-07). Every other key waits while the journal is open.
+        public void Ride() => Use(MountStyle.Ride);
+        public void Drive() => Use(MountStyle.Cart);
+
         // The Mounts panel's Ride and Drive the cart buttons (the user, 2026-10-22: pressed while riding, they got him off,
         // as the keys do for the style he is in). Unlike the keys they never end the ride: already on this companion's
         // mount in that style, he stays on (the mount picked in the panel is already on it, changed in place); in the

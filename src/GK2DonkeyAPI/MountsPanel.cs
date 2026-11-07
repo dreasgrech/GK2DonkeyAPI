@@ -973,6 +973,20 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // A companion's ride or cart key pressed while the journal is open (KeyActions; the user, 2026-11-07): what the
+        // journal's Ride or Drive the cart button does (Call), when the key is its page's companion's (MountCompanion.Ride
+        // / Drive), the journal itself is on top (not its colours window, not the options over it) and that button is
+        // shown (a mount that pulls no cart has no Drive). False: nothing done, the key waits as the others do.
+        internal static bool CallFromKey(MountCompanion companion, MountStyle style)
+        {
+            if (panel == null || !panel.activeSelf || colours != null || OptionsWindow.IsShown || page == null || !page.IsCompanion(companion)) return false;
+            GameObject button = style == MountStyle.Cart ? driveButton : rideButton;
+            if (button == null || !button.activeSelf) return false;
+            Plugin.Log.LogInfo($"Settings: the {(style == MountStyle.Cart ? "cart" : "ride")} key in the Mounts panel: as its {(style == MountStyle.Cart ? "Drive the cart" : "Ride")} button.");
+            Call(style);
+            return true;
+        }
+
         // A search box: typing filters the list by name; the mods' keys wait while it has focus (KeyActions).
         private static TMP_InputField SearchBox(Transform parent, float x, float y, float w, float h)
         {
