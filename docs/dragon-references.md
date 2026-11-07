@@ -712,3 +712,68 @@ shading between the frames? ... are they alternating? also those three white lin
   upper arm, with each frame's best whole-pixel shift: 14 to 33 of its ~170 blue pixels change where it turns a little
   and 55 to 94 where it swings. The bones now start and end on whole pixels (the solver's fractions re-laid the
   bands a little every frame: 04->05 went from 30 to 18).
+
+## 15. Metal wings, pierced, and the gold trim (2026-11-07)
+
+**The ask.** "Can we add some more holes to the wings ... make it look like they're pierced metal instead of like a
+tear in a cloth", then "isnt its wings made of metal? we need to make that more clear". The wings were leather (browns)
+edged in steel, so a hole in them read as a cut in leather.
+
+**Built as studies first** (`DRAGON_ARM_WINGMAT`, `DRAGON_ARM_HOLES`, `DRAGON_ARM_SEE`), shown as cards on the page:
+- **The surface:** the wing in the armour's own steels (mid: steel; darkest: blackened), its leather pockets replaced
+  by a smooth light from the wrist (the fold: its peak) out, each stretch line a dark seam with a lit row past it:
+  overlapping plates. A separate dark iron of its own was tried on paper and left: every free dark shade sits within a
+  step of the horns' near-black or the hide's indigo, which SkinsScan refuses for a row of its own. So the wings
+  recolour with Armour, and the Wings row is gone.
+- **The holes:** a stamp on a whole pixel, a 2x2 hole with a steel rim (its lit corner upper left, the line colour
+  lower right). On the fold, at fixed places along two gaps between its fingers (the fold is rigid). On the spread
+  wing, the first try (only where a whole stamp fitted) made holes come and go with the beat (1, 2, 3, 0, 1, 0, 0, 0);
+  the user: "so we're not gonna be able to have the holes while in flight? because then its pointless". Measured:
+  the fixed spots midway between two fingers sat in the saw-blade's notches, which cut in along that very line. Now
+  each hole is at its panel's roomiest point that frame (its surface cells whose two nearest fingers are that pair,
+  farthest from both and from the edge, a tie to the one nearest the old spot), a pin for the frame where the panel is
+  too narrow for the 2x2: three on the near wing in every frame of the beat and the glide (logged from the generator:
+  4, 4, 4 per wing; one pin in the frame the wing turns edge-on).
+- **See-through** (the user: "are the holes visible through? ... so its actually a hole"): the holes' cells are left
+  out of the wing's surface before it is drawn (and of its veins and seams), the rim drawn after, and the frame's last
+  passes leave those pixels empty (the outline would have filled them, and the pocket fill shut a small one). Through
+  them shows the sky, the body or, where the wings overlap, the other wing.
+
+**The pick:** "lets settle with the armored darkened version": blackened wings, eyelets, see-through. Seen in game as
+a loose test copy first, then drawn into the pack (byte for byte the copy the user saw).
+
+**The gold trim.** On the colours window: "what is that gold trim item?" Its row held 12 rivets, 1 of them in view on
+the ground (the folded wing covers the flank). The user: "make the gold trim visible". On rigid parts only (they keep
+their pixels between frames; the greaves' and helm's old rims blinked as they turned): a plate's rim is gold even
+where it meets the hide (the line colour won there, so the chest and hip plates' rims never showed), the neck's
+plates have one, and the helm's crest is gold. In view: about 45 px on the ground, 60 to 70 in flight; the crest's
+two outer golds 5 px in every frame. The row takes the three golds (A4800B CFA90F F1D274).
+
+**The pack's cfg:** no `[Tone.wings]`; Armour takes 1E3737 (the blackened wings' darkest, which fell to Scales
+otherwise: `check_skin.py` listed it as Coat); Gold trim the three golds; the description "blackened steel wings pierced
+through". The Wings row's line removed from the 11 language files (the dev run's English matches the repo's but for
+that line, which the next run drops).
+
+**Checks:** the other mounts' pictures unchanged (a plain run changes only the Armored Dragon's); SkinsScan ALL PASS
+(44); canonical clean; the sweep as before (walk 43 groups in place, lips and chew still identical every frame); the
+gold steady; translations 13 of 13 in every language; deployed. **The preview page** showed the game's export of the
+skin (written by an F11 run with the leather pack) over the repo's pictures: the page prefers an export when one
+exists. That stale folder (`GK2-asset-probe\game-skins\saddleup-dragon.dragon\armored`) removed; the next F11 run
+writes it again.
+
+**The fresh review of the pack's pictures** found, and these were fixed:
+- **In the glide the holes slid on a still wing** (84,60 / 84,59 / 85,60 with the plates round them pixel-identical;
+  one zigzagged up to 2 px), and one went pin, pin, pin, pin, 2x2, 2x2, 2x2, 2x2. The roomiest point moved with the
+  fingertips' small flex, and a spot picked by its centre's room fell back to a pin where the 2x2 didn't fit. Now each
+  hole aims at a fixed point of its panel (out from the wrist along its middle, the fingers' mean direction snapped to 6
+  degrees, a whole even number of px: six tenths of the shorter finger) and takes the cell nearest that aim where a
+  whole 2x2 fits; a pin only where none fits anywhere in the panel. Logged over every spread wing drawn: the near
+  wing has three 2x2 holes in all 42 (no pin), none closer than 3 px; the far wing two where it is edge-on, behind the
+  body. The glide's leftover change 1539 px to 1442.
+- **Two holes merged into one slot for a frame** (glideout1 01, glideout4 01-02, fly 03): each hole now keeps 4 px
+  from the ones placed before it.
+
+Left, and said: the far wing's spar standing up alone in fly 02 (the upstroke's peak: the same in the committed
+pictures, before the metal wings), single grass pixels between the chin and the chest in graze 03-05 and at a neck
+spine's base in flydown1 08 (also there before), and the climb's and dive's column shear turning a 2x2 hole into a
+three-row step (the whole picture is sheared there; the rim stays whole).

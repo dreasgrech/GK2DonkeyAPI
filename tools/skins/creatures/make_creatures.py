@@ -498,6 +498,11 @@ SPAN = 1.35  # the spread wings' size against the raised wing the dragon first h
 # wedge, the wing bat | pointed | saw (docs/dragon-references.md section 10). The defaults are the shipped skin's.
 ARM_HEAD = os.environ.get("DRAGON_ARM_HEAD", "greathelm")   # the shipped skin's (the user's pick, 2026-11-07); the others are studies
 ARM_WING = os.environ.get("DRAGON_ARM_WING", "saw-blade")
+# the wings' surface and holes (2026-11-07, studies, then the user's pick: blackened with see-through eyelets): leather |
+# steel | blackened, and tears (cut in the leather) | eyelets | punched (pierced metal: a hole in a bevelled steel ring)
+ARM_WINGMAT = os.environ.get("DRAGON_ARM_WINGMAT", "blackened")   # the shipped skin's (the user's pick, 2026-11-07)
+ARM_HOLES = os.environ.get("DRAGON_ARM_HOLES", "eyelets")
+ARM_SEE = os.environ.get("DRAGON_ARM_SEE", "1") == "1"   # the holes see-through: the wing left out there, a steel rim round
 RAISE = int(os.environ.get("DRAGON_RAISE", "6"))  # the body 6 px higher on longer legs (the user chose it from the preview page, 2026-10-23); the seat row (68 -> 62) moves with it
 NO_SPREAD_WINGS = os.environ.get("DRAGON_STUDY") == "nowings"  # a study: the flying frames without the spread wings, to measure the body alone
 # The spread near wing over the rider: "all", the whole wing in front of him (docs/front-layer.md section 3's rule; B of
@@ -637,6 +642,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     # beat and glide both, with mix = (m, +1 into the glide | -1 out of it): every part m of the way from its beat pose
     # to its glide pose (the wing's joints each at their own share, the arm ahead).
     DRG, DWING, DBELLY, DHORN, DEYE, DOUT = pal
+    if style == "armored" and ARM_WINGMAT == "steel":
+        DWING = (STEEL[1], STEEL[2], STEEL[3], STEEL[4])                        # metal wings: the armour's mid steels
+    elif style == "armored" and ARM_WINGMAT == "blackened":
+        DWING = (STEEL[0], STEEL[1], STEEL[2], STEEL[3])                        # its darkest: blackened plates
     ARM = style == "armored"   # the Armored Dragon's parts (ARMORED_DRAGON above); every other dragon draws as before
     # a half up, always (the Armored Dragon): round() takes a half to the even number, so a detail half a px off its
     # part moved with the part's row's parity (the helm's breaths jumped a row as the head moved one)
@@ -694,6 +703,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         bob, heave_f, heave_h = float(round(bob)), 0.0, 0.0
     px = [(0, 0, 0, 0)] * (W * H)
     fpx = [(0, 0, 0, 0)] * (W * H)   # the front layer: drawn in front of the rider (the near wing)
+    see_through = set()              # (ARM_SEE) a hole's pixels: the last passes leave them empty
     L = (-0.6, -0.8)
 
     def pitched(xx_world, y):
@@ -732,6 +742,86 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             put(x_, y_, DHORN[2] if k < n - 1 else DHORN[1], dst)
             if k == 0:
                 put(x_ - sx, y_ - sy, DHORN[1], dst)
+
+    def at_index(x, y):
+        # the picture's index of a drawing point, as put() places it
+        cx = int(rnd(x))
+        return (int(rnd(pitched(cx, y))) + OY) * W + cx + OX
+
+    def rim_of(hole_cells):
+        # a see-through hole's rim: every cell beside it, lit on its upper left, the line colour on its lower right
+        hs_ = set(hole_cells)
+        mx2 = sum(h[0] for h in hole_cells) / len(hole_cells)
+        my2 = sum(h[1] for h in hole_cells) / len(hole_cells)
+        out_ = []
+        for c_ in sorted({(h[0] + dx, h[1] + dy) for h in hole_cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))} - hs_):
+            side = (c_[0] - mx2) + (c_[1] - my2)
+            out_.append((c_, STEEL[6] if side < -0.75 else STEEL_LINE if side > 0.75 else STEEL[4]))
+        return out_
+
+    def pierce(centres, cells, bones, dst_of, small=False, plan=None):
+        # Pierced holes (ARM_HOLES eyelets | punched): each a stamp on a whole pixel, a dark hole in a steel ring lit on its
+        # upper left; drawn only where the whole stamp lies in the wing's cells, clear of every bone
+        if small:
+            hole = [(0, 0), (1, 0), (0, 1), (1, 1)]                              # the spread wing: the eyelet's hole, a glint and a shadow (its full ring rarely fits between the fingers)
+        elif ARM_HOLES == "eyelets":
+            hole = [(0, 0), (1, 0), (0, 1), (1, 1)]
+        else:
+            hole = [(0, -1), (-1, 0), (0, 0), (1, 0), (0, 1)]                    # round: a plus, three across
+        hs = set(hole)
+        ring = sorted({(h[0] + dx, h[1] + dy) for h in hole for dx in (-1, 0, 1) for dy in (-1, 0, 1)} - hs)
+        if small:
+            ring = [(-1, -1), (0, -1), (-1, 0), (2, 2), (1, 2), (2, 1)]          # its glint on the upper left, its shadow on the lower right
+        elif ARM_HOLES == "eyelets":
+            ring = [r for r in ring if not (r[0] in (-1, 2) and r[1] in (-1, 2))]   # its corners left out: a round ring
+        mx_ = sum(h[0] for h in hole) / len(hole)
+        my_ = sum(h[1] for h in hole) / len(hole)
+        drew = 0
+        def clear(s, d_):
+            return not bones or min(_seg(s[0] + 0.5, s[1] + 0.5, *a, *b) for a, b in bones) >= d_
+        for c in centres:
+            ox_, oy_ = rnd(c[0]), rnd(c[1])
+            if small:
+                # part of the wing (the spread wing in the beat): drawn wherever its spot is on the surface, off a finger;
+                # its glint and shadow only where they fall on the surface too (a whole stamp that had to fit came and went)
+                hole_, ring_ = hole, ring
+                if not all((ox_ + h[0], oy_ + h[1]) in cells and clear((ox_ + h[0], oy_ + h[1]), 0.9) for h in hole_):
+                    # no room for the 2x2 this frame (the panel narrowed as the wing turned): a pin at its middle, so the
+                    # hole shrinks for a frame instead of going
+                    ox_, oy_ = rnd(c[0] + 0.5), rnd(c[1] + 0.5)
+                    hole_, ring_ = [(0, 0)], [(-1, -1), (1, 1)]
+                    if not ((ox_, oy_) in cells and clear((ox_, oy_), 0.9)):
+                        continue
+                if plan is not None:
+                    hc_ = [(ox_ + h[0], oy_ + h[1]) for h in hole_]
+                    plan.append((hc_, rim_of(hc_)))
+                    drew += 1
+                    continue
+                for h in hole_:
+                    put(ox_ + h[0], oy_ + h[1], DOUT[1], dst_of(ox_ + h[0], oy_ + h[1]))
+                for r in ring_:
+                    q = (ox_ + r[0], oy_ + r[1])
+                    if q in cells and clear(q, 0.6):
+                        put(q[0], q[1], STEEL[6] if r[0] + r[1] < 0 else STEEL_LINE, dst_of(q[0], q[1]))
+                drew += 1
+                continue
+            stamp = [(ox_ + h[0], oy_ + h[1]) for h in hole] + [(ox_ + r[0], oy_ + r[1]) for r in ring]
+            if not all(s in cells for s in stamp):
+                continue
+            if bones and any(min(_seg(s[0] + 0.5, s[1] + 0.5, *a, *b) for a, b in bones) < 0.9 for s in stamp):
+                continue
+            if plan is not None:
+                hc_ = [(ox_ + h[0], oy_ + h[1]) for h in hole]
+                plan.append((hc_, rim_of(hc_)))
+                drew += 1
+                continue
+            for h in hole:
+                put(ox_ + h[0], oy_ + h[1], DOUT[1], dst_of(ox_ + h[0], oy_ + h[1]))
+            for r in ring:
+                side = (r[0] - mx_) + (r[1] - my_)                               # < 0 upper left (lit), > 0 lower right
+                put(ox_ + r[0], oy_ + r[1], STEEL[6] if side < -0.25 else STEEL_LINE if side > 0.25 else STEEL[4], dst_of(ox_ + r[0], oy_ + r[1]))
+            drew += 1
+        return drew
 
     def spike(base, direction, n, dst=None, wide=True):
         # A steel spike: two px at its root (lit and shade) and one px towards its tip, on a whole pixel.
@@ -989,7 +1079,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # the Armored Dragon's wing detail: thin veins to the notches' inner points, two tears through the membrane
         veins2 = [(from_wrist(n_[2]), lerp(wr, n_[2], 0.92)) for n_ in notches] if detail else []
         tears = []
-        if detail and len(trail) > 3 and abs((ring[0][0] - wr[0]) * (root[1] - wr[1]) - (ring[0][1] - wr[1]) * (root[0] - wr[0])) > 260:   # tears only where the wing shows enough membrane
+        if detail and ARM_HOLES == "tears" and len(trail) > 3 and abs((ring[0][0] - wr[0]) * (root[1] - wr[1]) - (ring[0][1] - wr[1]) * (root[0] - wr[0])) > 260:   # tears only where the wing shows enough membrane
             for i_, f_, r_ in ((0, 0.62, 1.3), (2, 0.55, 1.1)):
                 a_, b_ = trail[i_], trail[i_ + 1]
                 mid_ = lerp(a_, b_, 0.5)
@@ -1015,6 +1105,16 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                     # pockets: lit along a finger, darker between two, darker out to the edge; fine stretch lines
                     # across it (rings about the wrist), a step lighter
                     lt = 0.6 - 0.22 * min(1.0, dv / 5.0) - 0.14 * u
+                    if ARM_WINGMAT != "leather":
+                        # metal: lit smoothly out from the wrist, a step darker by a finger; the stretch lines are seams
+                        lt = 0.66 - 0.2 * u - (0.14 if dv < 1.5 else 0.0)
+                        ring_ = math.dist((X, Y), wr) % 4.5
+                        if dv > 1.5 and ring_ < 0.9:
+                            lt -= 0.3                                            # the seam: the plate's edge
+                        elif dv > 1.5 and ring_ < 1.9:
+                            lt += 0.2                                            # the next plate's lit edge
+                        cells[(x, y)] = lt
+                        continue
                     if math.dist((X, Y), wr) % 4.5 < 0.9 and dv > 1.5:
                         lines_.add((x, y))                                       # a stretch line here (a full step up: below)
                     cells[(x, y)] = lt
@@ -1031,6 +1131,52 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             for c in lines_:
                 if c in cells and all((c[0] + dx, c[1] + dy) in cells for dx in (-2, 0, 2) for dy in (-2, 0, 2)):
                     cells[c] += 0.27
+        hole_spots, see_plan = [], []
+        if detail and ARM_HOLES != "tears" and len(trail) > 3:
+            # pierced holes between the fingers: each at its panel's roomiest point this frame (part of the wing)
+            def edge_room(c_):
+                # how far a cell is from the wing's edge (a cell not on the surface), up to 3
+                for r_ in (1, 2, 3):
+                    for dx_ in range(-r_, r_ + 1):
+                        for dy_ in range(-r_, r_ + 1):
+                            if max(abs(dx_), abs(dy_)) == r_ and (c_[0] + dx_, c_[1] + dy_) not in cells:
+                                return r_ - 0.5
+                return 3.0
+            for i_ in ((0, 2, 3) if ARM_HOLES == "eyelets" else (1, 3)):
+                if i_ + 1 >= len(veins):
+                    continue
+                # a fixed aim in the panel: out from the wrist along its middle (the fingers' mean direction snapped to
+                # 6 degrees), a whole even number of px; it holds while the wing holds
+                (a0, b0), (a1, b1) = veins[i_], veins[i_ + 1]
+                l0, l1 = math.dist(wr, b0) or 1.0, math.dist(wr, b1) or 1.0
+                mdx, mdy = (b0[0] - wr[0]) / l0 + (b1[0] - wr[0]) / l1, (b0[1] - wr[1]) / l0 + (b1[1] - wr[1]) / l1
+                ang = math.radians(6.0 * round(math.degrees(math.atan2(mdy, mdx)) / 6.0))
+                dist_ = 2.0 * round(0.3 * min(l0, l1))
+                aim = (wr[0] + math.cos(ang) * dist_, wr[1] + math.sin(ang) * dist_)
+                best, best_pin = None, None
+                for c_ in cells:
+                    if any(max(abs(c_[0] + 0.5 - s_[0] - 1.0), abs(c_[1] + 0.5 - s_[1] - 1.0)) < 4.0 for s_ in hole_spots):
+                        continue                                                 # a hole placed already: 4 px apart
+                    ds_ = [_seg(c_[0] + 0.5, c_[1] + 0.5, *a, *b) for a, b in veins]
+                    if min(ds_) < min(ds_[i_], ds_[i_ + 1]) - 1e-6:
+                        continue                                                 # nearer another finger: another panel's
+                    key = (math.dist((c_[0] + 1.0, c_[1] + 1.0), aim), c_[1], c_[0])   # the nearest to the aim (a tie: the same each frame)
+                    quad = [(c_[0] + dx_, c_[1] + dy_) for dx_ in (0, 1) for dy_ in (0, 1)]
+                    if all(q_ in cells and min(_seg(q_[0] + 0.5, q_[1] + 0.5, *a, *b) for a, b in veins) >= 0.9 for q_ in quad):
+                        if best is None or key < best[0]:
+                            best = (key, c_)                                     # a 2x2 fits here, as pierce draws it
+                    elif ds_[i_] >= 0.9 and ds_[i_ + 1] >= 0.9 and (best_pin is None or key < best_pin[0]):
+                        best_pin = (key, c_)                                     # a pin fits here
+                if best is not None:
+                    hole_spots.append((float(best[1][0]), float(best[1][1])))  # its top-left cell (pierce rounds it as is)
+                elif best_pin is not None:
+                    hole_spots.append((best_pin[1][0] - 0.5, best_pin[1][1] - 0.5))   # no 2x2 anywhere in the panel: a pin
+            if ARM_SEE:
+                # see-through: the holes' cells left out of the surface (and its veins and seams), their rims drawn after
+                pierce(hole_spots, cells, veins, None, small=True, plan=see_plan)
+                for hc_, _ in see_plan:
+                    for c_ in hc_:
+                        cells.pop(c_, None)
         for (x, y), light in cells.items():
             border = any((x + dx, y + dy) not in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
             put(x, y, DOUT[1] if border else _tone(DWING, light), fpx if (near and not in_rider_at(x, y)) else px)
@@ -1055,6 +1201,15 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 x, y = ax + (bx - ax) * i / n, ay + (by - ay) * i / n
                 if (int(round(x)), int(round(y))) in cells:
                     put(x, y, DRG[2], fpx if (near and not in_rider_at(int(round(x)), int(round(y)))) else px)
+        if see_plan:
+            for hc_, rim_ in see_plan:                                           # the see-through holes' steel rims
+                for c_, col_ in rim_:
+                    if c_ in cells:
+                        put(c_[0], c_[1], col_, fpx if (near and not in_rider_at(c_[0], c_[1])) else px)
+                for c_ in hc_:
+                    see_through.add(at_index(c_[0], c_[1]))
+        elif hole_spots:
+            pierce(hole_spots, cells, veins, lambda x_, y_: fpx if (near and not in_rider_at(x_, y_)) else px, small=True)
         if False:
             # (removed 2026-11-07, the user: "weird gray artifacts on the wing") a steel band with a brass rivet round each finger
             for (ax, ay), (bx, by) in veins:
@@ -1215,10 +1370,18 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 if ARM and ARM_WING.startswith("saw"):
                     tear_ = (peak[0] + (tips[2][0] - peak[0]) * 0.6 + (tips[3][0] - tips[2][0]) * 0.25,
                              peak[1] + (tips[2][1] - peak[1]) * 0.6 + (tips[3][1] - tips[2][1]) * 0.25)
-                    if math.hypot(X - tear_[0], Y - tear_[1]) < 1.2:
+                    if ARM_HOLES == "tears" and math.hypot(X - tear_[0], Y - tear_[1]) < 1.2:
                         continue                                                 # a tear through it
                     light = 0.6 - 0.2 * down - 0.22 * min(1.0, df / 4.5)
-                    if math.dist((X, Y), peak) % 4.5 < 0.9 and df > 1.5:
+                    if ARM_WINGMAT != "leather":
+                        # metal: lit from the peak down, a step darker by a finger; the stretch lines are seams
+                        light = 0.66 - 0.24 * down - (0.14 if df < 1.5 else 0.0)
+                        ring_ = math.dist((X, Y), peak) % 4.5
+                        if df > 1.5 and ring_ < 0.9:
+                            light -= 0.3
+                        elif df > 1.5 and ring_ < 1.9:
+                            light += 0.2
+                    elif math.dist((X, Y), peak) % 4.5 < 0.9 and df > 1.5:
                         light += 0.27
                 cells[(x, y)] = light
         if ARM and ARM_WING.startswith("saw"):
@@ -1228,6 +1391,18 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 spur = [c for c in cells if sum((c[0] + dx, c[1] + dy) in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) < 2]
                 for c in spur:
                     del cells[c]
+        fold_plan = []
+        if ARM and ARM_WING.startswith("saw") and ARM_HOLES != "tears" and ARM_SEE:
+            # see-through: the fold's holes found now (the first place along each gap that fits), left out of its surface
+            for i_ in ((1, 3) if ARM_HOLES == "eyelets" else (2,)):
+                if i_ + 1 >= len(tips):
+                    continue
+                for f_ in (0.55, 0.45, 0.65, 0.35, 0.75):
+                    if pierce([lp(peak, lp(tips[i_], tips[i_ + 1], 0.5), f_)], cells, fingers, None, plan=fold_plan):
+                        break
+            for hc_, _ in fold_plan:
+                for c_ in hc_:
+                    cells.pop(c_, None)
         for (x, y), light in cells.items():
             border = any((x + dx, y + dy) not in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
             put(x, y, DOUT[1] if border else _tone(DWING, light), dst)
@@ -1247,6 +1422,21 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                     if (int(round(cx_ + dx_)), int(round(cy_ + 1))) in cells:
                         put(cx_ + dx_, cy_ + 1, STEEL[3], dst)
                 put(cx_ + 0.5, cy_, BRASS[2], dst)
+        if fold_plan:
+            for hc_, rim_ in fold_plan:                                          # the see-through holes' steel rims
+                for c_, col_ in rim_:
+                    if c_ in cells:
+                        put(c_[0], c_[1], col_, dst)
+                for c_ in hc_:
+                    see_through.add(at_index(c_[0], c_[1]))
+        elif ARM and ARM_WING.startswith("saw") and ARM_HOLES != "tears":
+            # pierced holes in the fold, between its fingers, part way down from the peak (eyelets two, punched one)
+            for i_ in ((1, 3) if ARM_HOLES == "eyelets" else (2,)):
+                if i_ + 1 >= len(tips):
+                    continue
+                for f_ in (0.55, 0.45, 0.65, 0.35, 0.75):                         # the first that fits (the fold is the same every frame)
+                    if pierce([lp(peak, lp(tips[i_], tips[i_ + 1], 0.5), f_)], cells, fingers, lambda x_, y_: dst):
+                        break
         for k in range(5):                                                        # the thumb claw: a hook from the peak towards the head
             put(peak[0] - 1 - k * 0.9, peak[1] - 1 - k * 0.5 + (0.6 * (k - 2) ** 2 if k > 2 else 0), DHORN[2 if k > 1 else 1], dst)
         if ARM:
@@ -1703,7 +1893,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
 
     armour_px = set()
 
-    def plate(poly, up=(0.0, -1.0), rivets=False, ridge=False, rim=False):
+    def plate(poly, up=(0.0, -1.0), rivets=False, ridge=False, rim=False, gold=False):
         # One piece of plate over the scales: its own flat metal shading by its row from its top edge (along up): a
         # lit edge, a light row, the flat face, a darker band and a dark bevel; its own steel line where it meets the
         # hide (where it meets the air the dragon's outline does it); a shadow on the hide under it; brass rivets on
@@ -1732,7 +1922,12 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             r = v[(x, y)] - top
             nb = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
             meets = any(q not in cells and get(*q)[3] for q in nb)
-            if meets and r > 0.6:
+            if gold:
+                # a gold piece (the helm's crest): its lit top, mid gold, the dark gold where it meets the helm
+                col = BRASS[3] if r < 1.0 else BRASS[1] if meets else BRASS[2]
+            elif rim and r > span - 1.0:
+                col = BRASS[2]                                                   # its gold rim, even where it meets the hide (2026-11-07)
+            elif meets and r > 0.6:
                 col = STEEL_LINE
             elif r < 1.0:
                 col = STEEL[6]
@@ -1800,7 +1995,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             q3 = (P[0] - Nb[0] * in_, P[1] - Nb[1] * in_)
             lames.append(([q0, (q0[0] + T[0] * 6.5, q0[1] + T[1] * 6.5), (q3[0] + T[0] * 6.5, q3[1] + T[1] * 6.5), q3], (-T[0], -T[1])))
         for poly, up_ in reversed(lames):                                        # the base first: each nearer the head lies over
-            plate(poly, up=up_)
+            plate(poly, up=up_, rim=True)                                       # a gold rim on each (2026-11-07)
 
     def tail_rings():
         # steel rings round the tail, a px proud of it above and below: always four, 8, 14, 20 and 26 px along the tail
@@ -1966,7 +2161,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             put(hx + dx, hy - 2, STEEL_LINE)
         for dx in (-10, -8, -6):                                                 # the breaths
             put(hx + dx, hy + 0.5, STEEL_LINE)
-        plate([HP(-8, -7.2), HP(1, -9.6), HP(6, -8.6), HP(6, -7.4), HP(1, -8.2), HP(-8, -6.4)], up=(0.0, -1.0))   # the crest
+        plate([HP(-8, -7.2), HP(1, -9.6), HP(6, -8.6), HP(6, -7.4), HP(1, -8.2), HP(-8, -6.4)], up=(0.0, -1.0), gold=True)   # the crest, gold
         horn([HP(2, -5), HP(5, -9.5), HP(10, -12.5), HP(15, -13.5)], 1.4, False)
     elif ARM and ARM_HEAD == "greathelm-cross":
         # the game knight's helm (9019_hed_static_left): a rounded dome over the whole head, a gold band down its front
@@ -2174,7 +2369,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     back, front = list(px), list(fpx)
     for y in range(H):
         for x in range(W):
-            if px[y * W + x][3] or fpx[y * W + x][3]:
+            if px[y * W + x][3] or fpx[y * W + x][3] or (y * W + x) in see_through:
                 continue
             for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                 nx2, ny2 = x + dx, y + dy
@@ -2188,7 +2383,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # 40 px or less (the gaps between claws and legs are the drawing's own)
         seen = set()
         for i0 in range(W * H):
-            if back[i0][3] or front[i0][3] or i0 in seen:
+            if back[i0][3] or front[i0][3] or i0 in seen or i0 in see_through:
                 continue
             comp, stack, edge, by_wing = [], [i0], False, False
             seen.add(i0)
@@ -2209,7 +2404,8 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                         stack.append(j)
             if not edge and by_wing and len(comp) <= 40:
                 for i in comp:
-                    back[i] = DRG[0] + (255,)
+                    if i not in see_through:                                     # a see-through hole stays a hole
+                        back[i] = DRG[0] + (255,)
     return back, front
 
 

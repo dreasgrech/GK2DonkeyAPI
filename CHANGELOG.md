@@ -39,6 +39,29 @@ For mod authors:
 
 Development:
 
+- **The Armored Dragon's gold trim shows** (2026-11-07, `make_creatures.py`; the user, on the colours window: "what is
+  that gold trim item?" then "make the gold trim visible"): its Gold trim row had 12 rivets, 1 in view on the ground.
+  A plate's rim is now gold even where it meets the hide (the line colour took it, so the chest and hip plates' rims
+  never showed), the neck's plates have one, and the helm's crest is gold; the row takes the three golds (A4800B
+  CFA90F F1D274). Rigid parts only (the old greave and helm rims blinked as they turned).
+- **Metal wings for the Armored Dragon** (2026-11-07, `make_creatures.py`; the user: "pierced metal instead of like a
+  tear in a cloth ... isnt its wings made of metal?"; picked: "lets settle with the armored darkened version"):
+  `DRAGON_ARM_WINGMAT` leather | steel | blackened (the shipped default: the wing's surface in the armour's darkest
+  steels, its stretch lines plate seams) and `DRAGON_ARM_HOLES` tears | eyelets (the default) | punched (a hole in a
+  bevelled steel ring, a stamp on a whole
+  pixel, clear of the fingers). On the spread wing (the user: "then its pointless to have them when walking") each hole
+  sits at its panel's roomiest point that frame (between two fingers, farthest from both and from the edge: a fixed
+  spot fell into the saw-blade's notches), a 2x2 with its glint and shadow, a pin for a frame where the panel narrows:
+  three holes on the near wing in every frame of the beat and the glide (one a pin in the frame the wing turns
+  edge-on). `DRAGON_ARM_SEE` (on by default) makes the holes see-through (the user: "so its actually a hole"): their
+  pixels left out of the wing (the sky, the body or the other wing shows), a steel rim round them, and the frame's
+  outline pass and pocket fill leave them empty. The pack's Armored Dragon is this version (with the gold trim): its
+  Wings row is gone (the wings are Armour), Armour takes the darkest steel, and the row's line is out of the 11
+  language files. After a fresh review, each spread-wing hole aims at a fixed point of its panel and takes the nearest
+  cell where a whole 2x2 fits (they slid on the glide's still wing and changed size), 4 px from the others (two had
+  merged into one slot). The studies and the game's test copy are gone. The preview page showed the game's export of the
+  skin (an F11 run with the leather pack) over the repo's pictures: that stale export folder removed; the next F11
+  run writes it again.
 - **The hillside jump test allows a hitch's catch-up** (2026-11-07, `Dev/SelfTest.Yard.cs`, docs/flying.md "A hitch,
   not a cut"): it failed on 4.5 px in a 10 ms frame right after a 27 ms one, the drawn mount catching up the two
   physics steps that slow frame ran. The cap is 4 px a physics step now: times the steps the longer of the frame and
