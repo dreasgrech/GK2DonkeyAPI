@@ -806,8 +806,8 @@ namespace GK2DonkeyAPI
 
         private static string Short(string s) => s == null ? "(null)" : s.Length > 40 ? s.Substring(0, 40) + "..." : s.Replace("\n", "\\n");
 
-        // A made-up skin no pack provides, for a mount's Skin row while its room is measured (as long as a real name:
-        // "Armored Dragon"); its name as the journal makes it from the id (MountsPanel.NameFromId)
+        // A made-up skin no pack provides, for a mount's Skin row while its room is measured (as long as a real skin's
+        // two-word name); its name as the journal makes it from the id (MountsPanel.NameFromId)
         private const string MissingSkinId = "selftest-missing-skin";
         private static string MissingSkinName => MountsPanel.NameFromId("x/" + MissingSkinId);
 

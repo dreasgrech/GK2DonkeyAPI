@@ -205,7 +205,7 @@ While mounted the keeper always faces only left or right, like the donkey. That 
 | Group | Keys (type) |
 |---|---|
 | Speed and seat | `SpeedMultiplier` (float 0.5–4), `Depth`, `CenterOffset`, `SeatOffset` (float); `RiderOffsetPx`, `TorsoOffsetPx`, `SeatAdjustPx` (int); `AutoSeat`, `Bob`, `SnapToGround` (bool) |
-| Rider motion | `BobScale`, `HandsSteady`, `HandsSwayPx` (float); `BobLagFrames`, `HeadLagFrames` (int); `HeadSettle` (float) |
+| Rider motion | `BobScale`, `HandsSteady`, `HandsSwayPx` (float); `BobLagFrames`, `HeadLagFrames` (int); `HeadSettle` (float); `BobInFlight` (bool, false: the rider still on the mount's own flying pictures; 0.45.0). A mount's, as `MountDef.TuningRide` or `mount.cfg` `[Tuning.Ride]`: how the creature carries him |
 | Stride | `WalkCycleSpeed` (float, 1.5: the walk clip's rate per unit of walking speed; a mount key) |
 | Pose | `Pose` (`RiderPose`: Walk, Idle, FishingIdle, FocusedWalk); `FreezePoseWhenIdle`, `PoseSpeedFollowsDonkey` (bool); `PoseSpeed`, `IdleFidgetEverySeconds`, `IdleFidgetSpeed`, `IdleCrawlSpeed` (float) |
 | Legs | `NearLeg` (bool), `LegSource` (`LegSource`: Body, Drawn), `LegHeightPx`, `LegAdjustXPx`, `LegAdjustYPx` (int) |
@@ -1170,6 +1170,10 @@ History:
   cart keys' actions (`Use(Ride)`, `Use(Cart)`). Given to a page's `Key` as they are (`pressed: me.Ride`), the key also
   works in the Mount Journal of that companion's page, as the journal's Ride and Drive the cart buttons (section "A player
   mod in a few lines"). A lambda round `Use` still works everywhere else and waits in the journal.
+  The tuning key `BobInFlight` (bool, false): while the mount shows its skin's own flying pictures the rider's walk
+  motion (bob, hands, head) stops, so he sits still on a flying mount; true keeps it. Per mount as every rider motion
+  key (`MountDef.TuningRide`, `mount.cfg` `[Tuning.Ride]`), or `Mounts.Tuning(MountStyle.Ride)` for the session
+  ([rider-motion.md](rider-motion.md) "In flight").
 - 0.44.0 (2026-11-05; additions only, so a minor; `tests/ApiSurface`):
   - **A skin's own tones** (section "A skin's own tones"): `MountSkinTone`, `MountSkinDef.Tones`,
     `MountSkinInfo.Tones`, `ToneColor`, `MountTone`, `MountLook.Tone(id)`, `MountSettingsPage.ToneRows`,

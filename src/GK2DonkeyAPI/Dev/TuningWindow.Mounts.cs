@@ -42,6 +42,25 @@ namespace GK2DonkeyAPI
             ("WalkCycleSpeed", "Stride (walk clip rate per unit of speed)", "How fast the walk animation plays for each unit of walking speed: the donkey's is 1.5. Less for a longer stride, more for a scurry, so the legs match the speed (docs/mounts-foundation-2.md 2.4).", 0.5f, 4f, false, false),
         };
 
+        // The rider's motion on this mount (docs/rider-motion.md): how the creature carries him, so the mount's (its
+        // mount.cfg [Tuning.Ride] / [Tuning.Cart], MountDef.TuningRide in code), the Riding tab's ranges. The on/off keys
+        // (Bob, BobInFlight) are MotionBools.
+        private static readonly (string Key, string Label, string Tip, float Min, float Max, bool Int, bool CartOnly)[] MotionKeys =
+        {
+            ("BobScale", "Bob amount (x the donkey's back, 1 px)", "With the bob on: how far the rider bobs through the walk, times the donkey's back (which moves 1 art px either way).", 0f, 3f, false, false),
+            ("BobLagFrames", "Bob trails the back by (walk frames)", "With the bob on: how many walk frames his bob comes after the back, so his weight follows the step.", 0, 3, true, false),
+            ("HeadLagFrames", "Head settles after the body by (walk frames)", "With the bob on: head, hair, beard and eyes settle this many walk frames after the body (0 = with it).", 0, 2, true, false),
+            ("HeadSettle", "How much the head settles (1 = a bobble head)", "With a head lag: the share of that late movement the head shows.", 0f, 1f, false, false),
+            ("HandsSteady", "Hands steadier than the body (0 = with it)", "While walking: the share of the body's bob the hands don't follow (1 = level).", 0f, 1f, false, false),
+            ("HandsSwayPx", "Hands forward and back with each stride (px)", "While walking: how far the hands move forward and back with each stride (0 = off).", 0f, 2f, false, false),
+        };
+
+        private static readonly (string Key, string Label, string Tip)[] MotionBools =
+        {
+            ("Bob", "Rider bobs with the mount's walk", "His torso moves up and down with the mount's back through the walk (the rows below say how)."),
+            ("BobInFlight", "Walk motion on its flying pictures (off: sits still)", "While the mount shows its skin's own flying pictures (take-off, beat, glide, landing, a jump on its wings), the game's walk goes on under them when a direction is held. Off: the rider's bob, hands and head stop there, and he sits still, rising and sinking with the mount. On: he moves as when walking."),
+        };
+
         private static void DrawMounts()
         {
             Looks.SkinDef skin = PickMount();
@@ -181,6 +200,16 @@ namespace GK2DonkeyAPI
                 MountValueRow(mount, ride, k.Key, k.Label, k.Tip, k.Min, k.Max, k.Int);
             }
             MountBoolRow(mount, ride, "NearLeg", "Rider's legs drawn in front of the mount", "His own baked-in legs hidden, a leg overlay drawn in front (the Riding tab's NearLeg).");
+            Header("Rider motion on this mount: " + (ride ? "riding" : "with the cart") + "  (" + (ride ? "mount.cfg [Tuning.Ride]" : "mount.cfg [Tuning.Cart]") + ")");
+            GUILayout.Label("How this creature carries the rider: set here, for every skin of the mount; not set (plain), the Riding tab's value applies.", small);
+            foreach (var b in MotionBools)
+            {
+                MountBoolRow(mount, ride, b.Key, b.Label, b.Tip); // BobInFlight too on a mount that doesn't fly: a value set stays in view
+            }
+            foreach (var k in MotionKeys)
+            {
+                MountValueRow(mount, ride, k.Key, k.Label, k.Tip, k.Min, k.Max, k.Int);
+            }
             OtherMountKeys(mount, ride);
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(Tip(ride ? "Copy these to the cart style" : "Copy these to riding", "The rows set for this style become the other style's too."), Wd(LabelW)))
@@ -381,6 +410,8 @@ namespace GK2DonkeyAPI
         {
             var shown = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "NearLeg" };
             foreach (var k in MountKeys) shown.Add(k.Key);
+            foreach (var k in MotionKeys) shown.Add(k.Key);
+            foreach (var b in MotionBools) shown.Add(b.Key);
             // a pixel key still on a mount (an older pack): listed here, since the scan refuses it for a built-in
             var parts = new List<string>();
             void Add(Dictionary<string, object> d, string where)

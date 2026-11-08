@@ -66,10 +66,25 @@ namespace GK2DonkeyAPI
                 return 0f;
             }
 
+            // The walk frame the rider's motion follows: 0 (none) while the mount shows its own flying pictures, unless
+            // BobInFlight. The game's sprite under a skin's picture goes on walking in the air: the game sets the keeper's
+            // Walk whenever a direction is held (FreePlayerState -> MoveByDirection), the ridden mount mirrors it, and
+            // the rider bobbed ±1.5 px against the mount's wing beat (the [rider] readout, 2026-11-07; docs/rider-motion.md
+            // "In flight"). A mount without flying pictures walks in the air on its walk frames, and its rider with it.
+            // Every motion reads this: the body's bob (RiderBobPx: the seat, the legs, the head) and the hands' sway.
             private int CurrentWalkFrame()
             {
-                return donkeyBodyRenderer != null && donkeyBodyRenderer.sprite != null ? WalkFrameIndex(donkeyBodyRenderer.sprite) : 0;
+                if (donkeyBodyRenderer == null || donkeyBodyRenderer.sprite == null) return 0;
+                if (OnFlyingPicture) return 0;
+                return WalkFrameIndex(donkeyBodyRenderer.sprite);
             }
+
+            // On its own flying picture with the rider held still there (BobInFlight off): his walk motion is off.
+            private bool OnFlyingPicture => !S.BobInFlight.Value && Flight.ShowsOwnFrame(this);
+
+            // The self-tests: the game's walk frame under the pictures (whatever the rider does), and the rider's bob now.
+            internal int TestHiddenWalkFrame => donkeyBodyRenderer != null && donkeyBodyRenderer.sprite != null ? WalkFrameIndex(donkeyBodyRenderer.sprite) : 0;
+            internal float TestRiderBobPx => RiderBobPx(0);
 
             // The rider's bob this frame, in art pixels: the back's, BobLagFrames (+ extraLag) frames late, times BobScale.
             // 0 without Bob or outside the walk.
@@ -218,6 +233,46 @@ namespace GK2DonkeyAPI
                     p.T.localPosition = p.Written - p.Offset;
                 }
                 p.Applied = false;
+            }
+
+            // The rider readout (RiderReadout.cs, dev, off by default): which LateUpdate ran first this frame, the
+            // mount's placing (the plugin's) or the seat (the keeper's), and at the pre-cull the rider against the seat row.
+            private int readoutPlaced = -1, readoutSeated = -1;
+            private bool readoutPlacedFirst;
+
+            internal void ReadoutPlaced() => readoutPlaced = Time.frameCount;
+
+            internal void ReadoutSeated()
+            {
+                readoutSeated = Time.frameCount;
+                readoutPlacedFirst = readoutPlaced == Time.frameCount;
+            }
+
+            internal void ReadoutDrawn()
+            {
+                if (this != Ridden || !mounted || keeperBodyRenderer == null || keeperBodyRenderer.sprite == null || LooksRig == null) return;
+                if (!LooksRig.TrySeatTop(out Vector3 top, out _)) return; // a skin without its own seat (the readout is for a skin with a seat row)
+                try
+                {
+                    Sprite k = keeperBodyRenderer.sprite;
+                    Vector3 hip = keeperBodyRenderer.transform.TransformPoint(new Vector3(0f, (k.textureRectOffset.y + 2f + 7f - k.pivot.y) / 50f, 0f));
+                    Camera cam = Camera.main;
+                    Vector3 up = cam != null ? cam.transform.up : Vector3.up;
+                    if (Mathf.Abs(up.y) < 0.1f) up = Vector3.up;
+                    float gap = Vector3.Dot(hip - top, up) / up.y / PxWorldY;
+                    string fly = Flight.FrameFor(this);
+                    bool shownFly = fly != null && LooksRig.HasFrame(fly);
+                    Sprite under = donkeyBodyRenderer != null ? donkeyBodyRenderer.sprite : null;
+                    PlayerController pc = MainGame.PlayerController;
+                    string state = pc?.PlayerData != null ? pc.PlayerData.charState.Value.ToString() : "-";
+                    RiderReadout.Frame(Flight.Now.ToString(), Flight.InAirFor(this), shownFly ? fly : "(the walk/idle)", under != null ? under.name : "-", state,
+                        CurrentWalkFrame(), RiderBobPx(0), seatApplied / PxWorldY, Flight.LiftFor(this) / PxWorldY, readoutSeated == Time.frameCount, readoutPlacedFirst, gap);
+                }
+                catch (Exception e)
+                {
+                    RiderReadout.On = false;
+                    Plugin.Log.LogWarning("[rider] the readout failed, off: " + e.Message);
+                }
             }
         }
     }

@@ -2530,6 +2530,7 @@ namespace GK2DonkeyAPI
                 target.y += liftDrawn;
                 donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(target, PixelSize());
                 Position = donkey.Data.Position;
+                if (RiderReadout.On && this == Ridden) ReadoutPlaced(); // dev: which LateUpdate ran first (RiderReadout.cs)
                 if (TestGroundProbe != null && this == Ridden)
                 {
                     TestGroundProbe.Add($"f{Time.frameCount} t{Time.time:0.0000} fx{Time.fixedTime:0.0000} dt{Time.unscaledDeltaTime * 1000f:0.0} rb{(rb != null ? rb.position.y.ToString("0.0000") : "-")} tf{basePos.y:0.0000} {(rb != null ? rb.interpolation.ToString().Substring(0, 1) : "-")} bx{basePos.x:0.000} off{pOff.x:0.000},{pOff.z:0.000} tx{target.x:0.000} sD{pSD:0.0000} sK{pSK:0.0000} gd{pGd:0.0000} gk{pGk:0.0000} {pBr} delta{groundDelta:0.0000} lift{liftDrawn:0.0000} ty{target.y:0.0000} P{Position.y:0.0000} px{PixelSize():0.0000}");
@@ -3139,13 +3140,14 @@ namespace GK2DonkeyAPI
                         Vector3? legSeat = LooksRig != null && LooksRig.TrySeatTop(out Vector3 legTop, out bool legFixedRow)
                             ? (Vector3?)(legTop + (legFixedRow ? Vector3.up * (RiderBobPx(0) * PxWorldY) : Vector3.zero))
                             : null;
-                        RiderLeg.Update(donkeyBodyRenderer, keeperBodyRenderer, riderFacingX > 0f, legSeat);
+                        RiderLeg.Update(donkeyBodyRenderer, keeperBodyRenderer, riderFacingX > 0f, legSeat, still: legSeat == null && OnFlyingPicture);
                     }
                     if (!seatPending)
                     {
                         // Facing up in armour: legs hidden, the seat lifted (RiderBack.cs; before TickSeat, which reads it).
                         RiderBack.Update(seatRoot, drawnVertical && drawnUp && InArmour(pc));
                         TickSeat(pc);
+                        if (RiderReadout.On) ReadoutSeated();
                         HoldWeapons(pc);
                         TickRiderParts(pc);
                     }

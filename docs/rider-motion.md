@@ -93,3 +93,71 @@ body. Each donkey frame lasted 4 video frames (about 0.067 s), slower than the 0
 
 The game draws fractional pixels: 1.5 art px showed as 9 to 10 screen px, so it doesn't snap to whole pixels.
 
+## In flight (2026-11-07, built; to see in game)
+
+The user: flying the dragon, the keeper "is doing the normal up/down rocking motion which is used for when the mounts
+are on the ground but it doesnt make sense when flying since the dragon will feel more stable". The gap was noted in
+docs/flying.md ("the rider's bob and hands still follow the game's walk frames") and never fixed.
+
+**The cause, from the code (ours and the game's, build 26404424):**
+- All of the motion above reads the game's own donkey body sprite (`CurrentWalkFrame`, by its name). A skin is an
+  overlay: the game's sprite stays under it, hidden, as the game animates it (Looks.cs). The dragon's flying
+  pictures are put on the overlay by the flight (`Flight.FrameFor`); the game's sprite under them plays on.
+- The game's `FreePlayerState` calls `PlayerPhysicalBody.MoveByDirection(LazyInput.GetDirection())` every update.
+  With a direction held it sets `charState` to Walk; with none it sets Idle. In free flight the body is kinematic and
+  moved by the flight (`Flight.FixedStep`), so the game's push does nothing, but the Walk state stands.
+- The ridden mount mirrors `charState` (Mount.cs, `SetStateToAnimator`), so the hidden donkey walks under the
+  flying pictures whenever a direction is held. The rider then bobs ±1.5 px (`BobScale`), sways his hands
+  (`HandsSwayPx` 0.5) and lags his head (`HeadSettle` 0.3) as on the ground. With the dragon's seat row the bob is
+  added to the seat (`TickSeat`, fixed row) and to the legs (`OnKeeperLateUpdate`).
+- Hovering with no direction, or climbing on the climb key alone, the state is Idle and the bob stops; every
+  press and release of a direction starts or stops it at once.
+- The self-tests never saw it: `Flight.TestMoveDir` feeds only the flight's own step, never the game's
+  `MoveByDirection`, so no test flight had the keeper in Walk.
+
+**Ruled out:**
+- The skin's sub-pixel trim: `Follow` moves the overlay by the fraction of the game frame's trim offset, and the
+  donkey's walk frames' offsets are whole pixels (the sprite dump: 17-19, 29), so the dragon's picture doesn't move
+  with the walk under it.
+- The keeper's own pose: the SetState patch keeps him on the riding pose (`fishing_idle`, which keys no position) in
+  Walk and Idle, so the walk clip's head keys never play.
+- The flying pictures: the seat is a fixed row (62) and no lift is drawn into a frame (docs/flying.md).
+
+**The order of the two LateUpdates.** The seat is worked out in the keeper's `AnimationComponent.LateUpdate`
+(`OnLateUpdate`), from the skin's seat row on the mount's picture. The mount is placed, with the flight's lift and
+beat, in the plugin's LateUpdate (`donkey.Data.Position`, which moves the view at once: `Wgo.HandleChangedPos`).
+Unity doesn't fix which of the two runs first; seated first, the rider would follow the mount a frame late.
+
+**Measured** (the `[rider]` readout, RiderReadout.cs, the Flying tab, off by default; the user's run 2026-11-07 22:08:
+walk, take-off, flying along, hover, climb, landing; 2871 frames, 1917 in the air):
+- The order: the mount was placed before the seat in all 2871 frames. Not a cause.
+- In the air the rider sits exactly where the seat puts him: his hip against the seat row less the walk bob stayed
+  within 0.06 px every frame, through the take-off's climb of 4-6 px a frame. So the walk bob is the whole movement.
+- The game's sprite under the flying pictures walks: `bdy_takeoff`, `bdy_fly`, `bdy_flyup1/2` shown over
+  `0301_bdy_walk_left_01..08`, the keeper in Walk. 418 air frames had a walk bob of ±1.5 px, the rider's hip that
+  far above or below the seat row (gap +1.50 on walk frame 8, 0 on 1, -1.50 on 2: 3 px top to bottom, every half
+  stride). With no direction held (the hover) the keeper was Idle and the bob 0.
+- On the ground, walking, his hip strayed up to 0.6 px from the seat row less the bob (the 2 s summaries; the
+  per-frame lines had run out on the standing start). Standing it held within 0.01. Not the flight's; not measured
+  further.
+
+**Built** (the user's yes, 2026-11-07: "make sure that from the api and from our f11 debug panel, these settings can be
+set PER mount"):
+- `CurrentWalkFrame()` (RiderMotion.cs) is 0 while the mount shows a picture of its skin's own for the flight
+  (`Flight.ShowsOwnFrame`: `Flight.FrameFor` names one and the skin has it, the same test `Looks.Rig.ApplyPart` draws
+  by): take-off, beat, climb and dive, glide, landing, the 0.18 s fold after touching down, and a jump on its wings.
+  Every motion reads it (the bob in the seat, the legs and the head; the hands' sway), so the rider sits still on
+  the mount and rises and sinks with it (the beat's rise, `Flight.BeatBobPx`, lifts both). A skin without its own
+  seat row hangs the legs from the game's back line: on those pictures they hang from its resting height (25 px).
+- `BobInFlight` (a ride/cart tuning key, false): true keeps the walk motion there, as before. A mount without
+  flying pictures walks in the air and its rider moves with its walk, whatever the key.
+- Per mount: every rider motion key (`Bob`, `BobScale`, `BobLagFrames`, `HeadLagFrames`, `HeadSettle`,
+  `HandsSteady`, `HandsSwayPx`, `BobInFlight`) is the mount's to set, as `ApplyTuning` takes "the rider's motion and
+  pose" from a mount: `mount.cfg` `[Tuning.Ride]`, `MountDef.TuningRide` in code. Never a skin's (`SkinTuningKeys`
+  are the drawing's geometry). The F11 panel: the Riding tab has the player's value; the Mounts tab a "Rider motion on
+  this mount" section with all eight (yellow when the mount sets one, right-click or x to unset; saved into its
+  `mount.cfg`).
+- Test: "rider: still on the dragon's flying pictures ..." (integration tests, group Flying; docs/self-tests.md).
+- To see in game: the `[rider]` readout again (the Flying tab), the same flight. In the air the lines should read
+  `walk N bob +0.00` with the keeper in Walk, and the summaries "the walk bob on in 0"; on the ground the bob as before.
+

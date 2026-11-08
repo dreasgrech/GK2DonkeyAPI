@@ -3478,6 +3478,7 @@ namespace GK2DonkeyAPI
                     // breaking the same way every frame). A replacing skin's part isn't drawn at all.
                     bool over = skin.Def.Over;
                     Follow(ov, part, game, part.sortingLayerID, part.sortingOrder + (over ? 1 : 0), over ? OverLift : 0f);
+                    if (RiderReadout.On && s.Body && owner != null) owner.ReadoutDrawn(); // dev: the rider against the seat row, as drawn
                 }
                 // the front layer: the same picture rules, sorted above the keeper while he rides (as the leg overlay,
                 // RiderLeg: his layer, one above his body; the legs are +1, this is +2), else just above the part

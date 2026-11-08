@@ -717,6 +717,8 @@ namespace GK2DonkeyAPI
             Header("Rider hands (while walking)");
             FloatSlider("Hands steadier than the body (0 = with it, 1 = level)", s.HandsSteady, 0f, 1f, 2, null);
             FloatSlider("Hands forward and back with each stride (px)", s.HandsSwayPx, 0f, 2f, 2, null);
+            Toggle("Walk motion on the mount's flying pictures (off: sits still)", s.BobInFlight, Mount.RefreshSeat);
+            GUILayout.Label("In the air the game's walk goes on under a skin's flying pictures while a direction is held. Off (the default), the rider's bob, hands and head stop on those pictures: he sits still and rises and sinks with the mount. A mount can set its own value (the Mounts tab).", small);
 
             Header("Rider pose and animation");
             EnumCycler("Body pose", s.Pose, Mount.ApplyPoseNow);

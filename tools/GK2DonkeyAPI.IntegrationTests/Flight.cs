@@ -1,4 +1,6 @@
 using GK2DonkeyAPI.Api;
+using HarmonyLib;
+using LazyBearTechnology;
 using System.Collections.Generic;
 using System.Collections;
 using System;
@@ -129,6 +131,136 @@ namespace GK2DonkeyAPI.IntegrationTests
             {
                 Flight.TestJumpHeld = null;
                 Flight.TestMoveDir = null;
+                if (Flight.Now != Flight.Phase.Ground && Mount.Ridden != null) Flight.Release(Mount.Ridden, "self-test");
+                if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                try { if (h != null && h.Exists) h.Remove(); } catch { }
+            }
+        }
+
+        // What the rider did over a while (DragonRiderSteady): frames with the game's walk under the mount's pictures,
+        // frames on its own flying pictures, frames his walk motion moved him on them, and the largest bob.
+        private sealed class RiderSamples
+        {
+            internal int N, Hidden, Own, Moved;
+            internal float Most;
+
+            internal IEnumerator Take(Mount.Instance i, float seconds)
+            {
+                N = Hidden = Own = Moved = 0;
+                Most = 0f;
+                float t0 = Time.time;
+                while (Time.time - t0 < seconds)
+                {
+                    N++;
+                    if (i.TestHiddenWalkFrame != 0) Hidden++;
+                    bool pictures = Flight.ShowsOwnFrame(i);
+                    if (pictures) Own++;
+                    float b = Mathf.Abs(i.TestRiderBobPx);
+                    if (pictures && b > 0.001f) Moved++;
+                    Most = Mathf.Max(Most, b);
+                    yield return null;
+                }
+            }
+        }
+
+        // The rider still on the dragon's flying pictures (the user, 2026-11-07: "the keeper is doing the normal up/down
+        // rocking motion ... it doesnt make sense when flying"; docs/rider-motion.md "In flight"). The game's walk goes on
+        // under the pictures while a direction is held, and the rider's bob read it. A test flight moved by
+        // Flight.TestMoveDir alone never had the keeper walking, so this one holds the game's stick (LazyInput, patched for
+        // the run) while the flight keeps the body in place: first that the hidden walk really runs (else the rest proves
+        // nothing), then that the rider's walk motion is 0 on the pictures, back with the dragon's own BobInFlight (its
+        // [Tuning.Ride], as mount.cfg or MountDef.TuningRide sets it), and on the ground after the landing.
+        internal static IEnumerator DragonRiderSteady()
+        {
+            string noPack = MissingPack("dragon");
+            if (noPack != null) { Skip(noPack); yield break; }
+            if (!Flight.Active) { Info("wants the flying experiment on: skipped"); yield break; }
+            if (Mount.Instance.IsIndoors()) { Info("indoors: wants open ground"); yield break; }
+            Catalog.Entry dragon = Catalog.Find(M("dragon"));
+            if (dragon == null) { Fail("no dragon in the catalog"); yield break; }
+            Dictionary<string, object> rideWas = dragon.TuningRide != null ? new Dictionary<string, object>(dragon.TuningRide, StringComparer.OrdinalIgnoreCase) : null;
+            bool mountTouched = false;
+            Harmony stick = null;
+            MountHandle h = null;
+            try
+            {
+                stick = new Harmony(Plugin.Guid + ".riderstick");
+                stick.Patch(AccessTools.Method(typeof(LazyInput), nameof(LazyInput.GetDirection)),
+                    postfix: new HarmonyMethod(typeof(SelfTest), nameof(SurveyStickPostfix)));
+            }
+            catch (Exception e)
+            {
+                Fail("the stick could not be patched: " + e.Message);
+                try { stick?.UnpatchSelf(); } catch { }
+                yield break;
+            }
+            try
+            {
+                h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (h == null) { Fail("could not spawn"); yield break; }
+                yield return Until(() => h.IsReady, 6f);
+                MountResult r = h.Ride(showMessage: false);
+                if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
+                yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
+                yield return Frames(10);
+                h.Tuning.Set(Owner, "Skin", M("dragon") + "/default");
+                yield return Until(() => h.Mount == M("dragon"), 8f);
+                yield return Until(() => h.I.TestSkinWearing() == M("dragon") + "/default" && !h.I.LooksRig.Building, 15f);
+                yield return Frames(10);
+                Mount.Instance i = Mount.Ridden;
+                if (i == null) { Fail("not ridden after the skin"); yield break; }
+                if (!i.S.Bob.Value || i.S.BobScale.Value < 0.5f) { Info($"the rider's bob is off or small in this cfg (Bob {i.S.Bob.Value}, BobScale {i.S.BobScale.Value}): nothing to see"); yield break; }
+                var s = new RiderSamples();
+                float way = homeFacing > 0f ? 1f : -1f;
+
+                // up, the body held where it is by the flight; then the game's stick held: the keeper walks
+                Flight.TestMoveDir = Vector2.zero;
+                Flight.TakeOffOrLand(i);
+                yield return Until(() => Flight.Now == Flight.Phase.Airborne, 12f);
+                if (Flight.Now != Flight.Phase.Airborne) { Fail($"never airborne ({Flight.Now}: {Flight.Why})"); yield break; }
+                surveyStick = new Vector2(way, 0f);
+                yield return Seconds(0.5f);
+                yield return s.Take(i, 1.5f);
+                Check(MainGame.PlayerData.charState.Value == AnimationState.Walk && s.Hidden > s.N / 2,
+                    $"in the air with a direction held, the game's walk runs under the dragon's pictures (the keeper {MainGame.PlayerData.charState.Value}; a walk frame under them in {s.Hidden} of {s.N} frames)");
+                Check(s.Own > s.N / 2 && s.Moved == 0, $"and the rider sits still on them: his walk motion moved him in {s.Moved} of {s.Own} frames on the flying pictures (most {s.Most:0.00} px)");
+
+                // the dragon's own value: BobInFlight on, as its mount.cfg [Tuning.Ride] or MountDef.TuningRide sets it
+                mountTouched = true;
+                (dragon.TuningRide ?? (dragon.TuningRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))["BobInFlight"] = true;
+                Catalog.Touch(dragon);
+                yield return Frames(5);
+                yield return s.Take(i, 1.5f);
+                Check(i.S.BobInFlight.Value && s.Moved > 0, $"with the dragon's own BobInFlight on, the walk motion is back on its flying pictures ({s.Moved} of {s.Own} frames, most {s.Most:0.00} px)");
+                dragon.TuningRide = rideWas != null ? new Dictionary<string, object>(rideWas, StringComparer.OrdinalIgnoreCase) : null;
+                Catalog.Touch(dragon);
+                mountTouched = false;
+                yield return Frames(5);
+                Check(!i.S.BobInFlight.Value, $"and off again with the mount's value taken away (the rider reads {i.S.BobInFlight.Value})");
+
+                // down, then walking on the ground: the bob as before
+                surveyStick = null;
+                Flight.TakeOffOrLand(i);
+                yield return Until(() => Flight.Now == Flight.Phase.Ground, 15f);
+                Flight.TestMoveDir = null;
+                if (Flight.Now != Flight.Phase.Ground) { Fail($"never landed ({Flight.Now}: {Flight.Why})"); yield break; }
+                yield return Seconds(0.5f);
+                surveyStick = new Vector2(-way, 0f); // back the way the take-off faced: the ground it rose from
+                yield return Seconds(0.3f);
+                yield return s.Take(i, 1.2f);
+                surveyStick = null;
+                Check(s.Most > 0.5f, $"on the ground the rider bobs with the walk again (most {s.Most:0.00} px; the walk under him in {s.Hidden} of {s.N} frames)");
+            }
+            finally
+            {
+                surveyStick = null;
+                try { stick?.UnpatchSelf(); } catch { }
+                Flight.TestMoveDir = null;
+                if (mountTouched)
+                {
+                    dragon.TuningRide = rideWas != null ? new Dictionary<string, object>(rideWas, StringComparer.OrdinalIgnoreCase) : null;
+                    Catalog.Touch(dragon);
+                }
                 if (Flight.Now != Flight.Phase.Ground && Mount.Ridden != null) Flight.Release(Mount.Ridden, "self-test");
                 if (Mounts.IsMounted) Mounts.Dismount("self-test");
                 try { if (h != null && h.Exists) h.Remove(); } catch { }

@@ -28,6 +28,7 @@ namespace GK2DonkeyAPI
         public readonly Tuned<int> SeatAdjustPx;
         public readonly Tuned<float> SeatOffset;
         public readonly Tuned<bool> Bob;
+        public readonly Tuned<bool> BobInFlight; // the walk motion kept on the mount's own flying pictures (off: he sits still; docs/rider-motion.md "In flight")
         public readonly Tuned<RiderPose> Pose;
         public readonly Tuned<bool> FreezePoseWhenIdle;
         public readonly Tuned<float> PoseSpeed;
@@ -214,6 +215,8 @@ namespace GK2DonkeyAPI
                 new ConfigDescription("With Bob: the head (with hair, beard and eyes) settles this many walk frames after the body. 0 = the head moves with the body.", new AcceptableValueRange<int>(0, 2)));
             HeadSettle = cfg.Bind(section, "HeadSettle", Defaults.Get(section, "HeadSettle", riding ? 0.3f : 0f),
                 new ConfigDescription("With HeadLagFrames: how much of that late movement the head shows. 1 = all of it (the head then moves against the body by up to two bobs at each step: a bobble head); 0 = the head moves with the body.", new AcceptableValueRange<float>(0f, 1f)));
+            BobInFlight = cfg.Bind(section, "BobInFlight", Defaults.Get(section, "BobInFlight", false),
+                "While the mount shows its own flying pictures (take-off, wing beat, glide, landing, a jump on its wings): the rider keeps the walk's motion (the bob, the hands' sway, the head's lag). Off: he sits still on it and rises and sinks with it. A mount without flying pictures walks in the air, and the rider moves with its walk there.");
 
             bool cart = section == "Cart";
             SoundsOn = B(cfg, section, "SoundsOn", true, "Master switch for all mount sounds added by the mod " + who + ".");
@@ -339,7 +342,7 @@ namespace GK2DonkeyAPI
                     CargoDrawCorpse, CargoSwaysWithCart, CargoSetDownBehindCart, CargoSetDownGap, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle, CargoLayerShift,
                     LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean, LanternFlip, LanternHangs,
                     LanternSwayDegrees, LanternSwaySeconds, IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed,
-                    BobScale, BobLagFrames, HandsSteady, HandsSwayPx, HeadLagFrames, HeadSettle,
+                    BobScale, BobLagFrames, HandsSteady, HandsSwayPx, HeadLagFrames, HeadSettle, BobInFlight,
                     LanternShow, LanternScale, LanternLightOn, LanternLightIntensity, LanternLightRange, LanternLightColor, LanternLightShadows, LanternLightDayDim,
                     LanternSelfLightOn, LanternSelfLightIntensity, LanternSelfLightRange, LanternGlowOn, LanternGlowAlpha, LanternGlowScale, LanternGlassOn,
                 };

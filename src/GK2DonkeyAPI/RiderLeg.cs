@@ -80,7 +80,9 @@ namespace GK2DonkeyAPI
         // centre). Horizontally the slice keeps the offset it has in the keeper's frame.
         // seatTop: the point the rider's hip sits on when the worn skin declares its seat (a row of its picture, or
         // the picture top; docs/mounts-parity-matrix.md 2.1): the legs hang from it instead of the donkey's back line.
-        public static void Update(SpriteRenderer donkeyBody, SpriteRenderer keeperBody, bool facingRight, Vector3? seatTop = null)
+        // still: the back line held at its resting height (25 px), not this walk frame's: the mount shows its own flying
+        // picture, and the game's walk under it would bob the legs alone (RiderMotion.cs, BobInFlight).
+        public static void Update(SpriteRenderer donkeyBody, SpriteRenderer keeperBody, bool facingRight, Vector3? seatTop = null, bool still = false)
         {
             if (!IsAttached || donkeyBody == null || donkeyBody.sprite == null || keeperBody == null || keeperBody.sprite == null)
             {
@@ -128,7 +130,7 @@ namespace GK2DonkeyAPI
             Vector3 anchor = keeperBody.transform.position - Mount.TorsoShiftWorld + worldRight * (rearSign * Mount.S.LegAdjustXPx.Value * Px);
             Vector3 local = donkeyBody.transform.InverseTransformPoint(anchor);
             float groundPx = d.textureRectOffset.y + 2f;
-            float topYPx = groundPx + Mount.BackHeightPx(d) + Mount.S.LegAdjustYPx.Value;
+            float topYPx = groundPx + (still ? 25f : Mount.BackHeightPx(d)) + Mount.S.LegAdjustYPx.Value;
             float localY = seatTop.HasValue
                 ? donkeyBody.transform.InverseTransformPoint(seatTop.Value).y + Mount.S.LegAdjustYPx.Value * Px
                 : (topYPx - d.pivot.y) * Px;

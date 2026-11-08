@@ -82,6 +82,8 @@ Legs = 8
 
 [Tuning]               # the mount's own values; a mount may pin its sounds, seat, cart geometry and shuffle
 BrayVolume = 0
+[Tuning.Ride]          # and how it carries the rider (docs/rider-motion.md): BobScale, HandsSwayPx, ... and
+BobScale = 1           # BobInFlight (false: he sits still on its flying pictures)
 
 [Jump]                 # its own jump, ridden plain (optional; a key left out is the default jump's, the donkey's)
 height = 12            # a low scuttle-hop, px (the donkey: 28)

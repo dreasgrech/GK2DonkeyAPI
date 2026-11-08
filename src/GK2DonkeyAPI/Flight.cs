@@ -301,6 +301,10 @@ namespace GK2DonkeyAPI
         // the hover stays for a skin without the beat (the mount walks in the air on its own frames, the hover moving it);
         // a skin with the beat keeps its rise through every flight frame, the ones it lacks too (shown as the game's)
         private static bool HasFlightFrame(Mount.Instance i) => i.LooksRig != null && i.LooksRig.HasFrame(FlyNames[0]);
+        // The mount shows a picture of its skin's own for the flight now (a take-off, the beat, the glide, a landing, a
+        // jump on its wings): what Looks.Rig.ApplyPart draws in place of the game's walk or idle frame. The rider's
+        // walk motion stops on it (RiderMotion.cs, BobInFlight).
+        internal static bool ShowsOwnFrame(Mount.Instance i) => i != null && i.LooksRig != null && FrameFor(i) is string k && i.LooksRig.HasFrame(k);
 
         // The skin frame to show for this mount now (Looks.Rig.ApplyPart), or null: the game's own. The take-off frames
         // through the crouch and the launch's first part, then the wing beat; landing, the beat until the flare, the

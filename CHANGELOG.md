@@ -27,6 +27,8 @@ For players:
 - **A skin that isn't installed fits its row in every language** (2026-11-07): when a mount's skin comes from a pack
   you removed, the Mount Journal's Skin row shows the skin's name, greyed, and the Stats card says "Skin: Not
   installed". The row said "<name> (not installed)", which was cut off in Russian and Polish.
+- **The keeper sits still on a flying mount** (2026-11-07): flying along on the dragon, he bobbed up and down as if it
+  were walking. He now rides steady and rises and sinks with its wing beats. On the ground nothing changes.
 
 For mod authors:
 
@@ -36,9 +38,28 @@ For mod authors:
   `MountsPanel.CallFromKey`). Not with the colours window or the options on top, and the cart key not for a mount with
   no Drive button. Every other key still waits while the journal is open. Saddle Up's two keys use them, so it needs
   API 0.45.0.
+- **API 0.45.0: the tuning key `BobInFlight`** (2026-11-07; docs/rider-motion.md "In flight"): false (the default),
+  the rider's walk motion (bob, hands, head) stops while the mount shows its skin's own flying pictures; true keeps it.
+  The game's walk went on under those pictures whenever a direction was held, and the rider bobbed with it. Like every
+  rider motion key it is the mount's to set (`mount.cfg` `[Tuning.Ride]`, `MountDef.TuningRide`).
 
 Development:
 
+- **The rider readout, `[rider]` lines** (2026-11-07, `RiderReadout.cs`; dev, off by default, the Flying tab): flying
+  the dragon, the keeper rocks as he does walking (the user). Per frame, at the camera's pre-cull: the picture shown
+  and the game's sprite under it, the keeper's state, the walk bob, the seat, the lift, which LateUpdate ran first (the
+  mount's placing or the seat), and the rider's hip against the skin's seat row as drawn; a summary every 2 s. For the
+  investigation in docs/rider-motion.md "In flight", before a fix. The user's run (22:08): the mount was always placed
+  before the seat; in the air the rider's only movement on the mount was the walk bob (±1.5 px) from the game's walk
+  under the flying pictures.
+- **Rider motion per mount in the F11 panel** (2026-11-07, `Dev/TuningWindow.Mounts.cs`): the Mounts tab has a "Rider
+  motion on this mount" section (Bob, BobInFlight on a flying mount, BobScale, BobLagFrames, HeadLagFrames,
+  HeadSettle, HandsSteady, HandsSwayPx), saved into the mount's `mount.cfg`; the Riding tab has the player's
+  BobInFlight. The legs of a skin without its own seat row hang from the back's resting height on its flying pictures
+  (`RiderLeg.Update`'s `still`).
+- **Integration test "rider: still on the dragon's flying pictures ..."** (2026-11-07, group Flying): the first test
+  flight with the keeper walking (the game's stick held, the body held by the flight): the hidden walk runs, the
+  rider's walk motion is 0 on the pictures, back with the dragon's own BobInFlight, and the bob on the ground.
 - **The Armored Dragon's gold trim shows** (2026-11-07, `make_creatures.py`; the user, on the colours window: "what is
   that gold trim item?" then "make the gold trim visible"): its Gold trim row had 12 rivets, 1 in view on the ground.
   A plate's rim is now gold even where it meets the hide (the line colour took it, so the chest and hip plates' rims

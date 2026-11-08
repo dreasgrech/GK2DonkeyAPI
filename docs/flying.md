@@ -388,6 +388,8 @@ wing poses per direction). Our own drawing in `tools/skins/creatures/make_creatu
   The walk first went backwards (the user): the planted foot slid towards the head; now it slides back towards the
   tail while it carries and swings forward to the head (`step_at`; the dragon faces left).
 - Known for the next pass: the rider's bob and hands still follow the game's walk frames (they read the game's sprite, RiderMotion).
+  Fixed 2026-11-07 (the user: the keeper rocking as on the ground while flying): on the skin's own flying pictures the
+  rider's walk motion stops (`BobInFlight`, off by default, per mount); docs/rider-motion.md "In flight".
 - **The rider behind the spread wing (2026-10-23).** The user: the occlusion on the ground "looks great (and took us
   a long time to get right) ... can we get that working during the flying animation too".
   - The cause: the folded wing is all front layer and simply doesn't reach his head. The spread wings sent every near
