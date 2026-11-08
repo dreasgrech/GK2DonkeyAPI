@@ -60,9 +60,9 @@ Development:
   donkey's outline colour, and the donkey's own strap is hidden in every frame (drawn over as the neck and chest), so
   none of it shows (16 px did standing, up to 59 turning). Drawing the strap over in the harness colours instead read
   as the donkey's harness, broken at the chest under the bell (the user).
-  The front view's collar points are Collar points (burgundy, the middle one) and Collar points, second colour
-  (navy, its outer two). `check_skin.py`: a region all covered whose row colours the skin's own listed colours is no
-  longer a warning.
+  The collar's points are all the harness's now, the front view's three too (their two rows, Collar points and
+  Collar points, second colour, coloured only the turn, which the colours window doesn't show).
+  `check_skin.py`: a region all covered whose row colours the skin's own listed colours is no longer a warning.
 - **F11 "skins: no leaks over spawn and remove" no longer depends on luck** (2026-11-08): a skin is put on by an
   active donkey only (within 15 of the keeper or on screen), and the test scattered its 40 over 30 m; in one run all
   14 snail wearers of cycle 2 fell outside, the snail skin never loaded and the check failed. The first snail and rat

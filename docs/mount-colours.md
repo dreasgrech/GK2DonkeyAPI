@@ -411,8 +411,9 @@ bell under it, edged in the donkey's outline colour (a light harness colour turn
 on (each pixel the nearest coat, mane or muzzle colour, the outline's at the edge), so the Harness row colours the
 Jester's harness and none of the donkey's shows (16 px of it did standing, up to 39 in the walk, 59 in turn 04-06).
 A first try drew the strap over in the band's colours: the strap's shape in the harness colour read as "the original
-harness ... shown instead of our custom one", broken at the chest under the bell. The collar's points are two tones: `collar-points` (burgundy: the point over the chest, the
-front view's middle one; shades from `part_palette.py`) and `collar-points-second` (navy: the front view's outer two).
+harness ... shown instead of our custom one", broken at the chest under the bell. The collar's points are the harness's own too, the front view's three as well: their two tones (`collar-points`,
+`collar-points-second`) coloured only turn 04-06, which the colours window doesn't show ("what are collar points? i
+changed them and nothing changed", the user).
 `[Base.Harness]` stays for a pixel a frame might leave. `check_skin.py` no longer warns that a covered region's row
 colours nothing when the skin lists colours of its own under it.
 

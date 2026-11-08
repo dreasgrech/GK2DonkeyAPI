@@ -48,8 +48,6 @@ CLOTH_NAVY = [hexc(h) for h in ("141A3A", "243266", "34488A", "4E66A8", "6E86C8"
 CAP_BURG = [hexc(h) for h in ("3E0A14", "641A2A", "862633", "A03444", "C14859")]      # the tone cap-front: its front point and half
 CAP_NAVY = [hexc(h) for h in ("131A39", "263266", "36488A", "4F66A7", "7086C8")]      # the tone cap-back
 COLLAR_BURG = [hexc(h) for h in ("1E190E", "671A28", "882534", "A23644", "C1485B")]   # the harness (the Harness row): the collar band, edged in the donkey's outline colour (the Outline row's)
-POINT_BURG = [hexc(h) for h in ("3A0A10", "671A2A", "882633", "A23441", "C3485B")]    # the tone collar-points: the front view's middle point (part_palette.py; the side view's is the band's own end)
-COLLAR_NAVY = [hexc(h) for h in ("151A39", "243262", "34488C", "4D67A8", "6E88C8")]   # the tone collar-points-second: the front view's outer two
 GOLD = [hexc(h) for h in ("5A3A0A", "966414", "E2A830", "FFD652")]             # edge, shade, base, light: the tone bells
 BAND = [hexc(h) for h in ("5A3A08", "996414", "E3A82F", "FED653")]             # the tone cap-band (its edge unused): a step off the bells'
 #   (tools/skins/part_palette.py), the cap's band and the bells two parts of their own
@@ -404,8 +402,8 @@ FRONT_COLLAR = {"line": [(31, 51.5), (36.5, 56.5), (42, 51.5)], "band": 2.5,   #
 def collar(c, key, tf=None, swings=None, report=None):
     """The collar from 'c' on frame 'key', its line's points taken through tf (a pose) first: a burgundy band along
     the curve, shaded like a tube and cut to inside the donkey's outline there, a point hanging from it at each (t
-    along the band, angle: 90 straight down, each point's tip moved by its own of 'swings'), navy and burgundy in turn,
-    edged in their own dark, a small bell at each tip. The band was navy: under the cap's navy back point it read as
+    along the band, angle: 90 straight down, each point's tip moved by its own of 'swings'), the band's own shape and
+    colours (the harness, since 2026-11-08; navy and burgundy points before), a small bell at each tip. The band was navy: under the cap's navy back point it read as
     the cap running on down the neck, one blue shape about 25 rows tall ("the cap still looks huge, extending the
     back", the user, 2026-11-03); burgundy, it is the strap's own colour (the skin tints the strap burgundy).
     Where a pose turns the band (the graze) the points turn with it: hanging the same way from a band turned near
@@ -427,8 +425,8 @@ def collar(c, key, tf=None, swings=None, report=None):
     lens = [0.0]
     for (ax, ay), (bx, by) in zip(line, line[1:]):
         lens.append(lens[-1] + math.hypot(bx - ax, by - ay))
-    parts, tips = [], []
-    joined = set()   # c["joined"]: the points are the band's own end, tapering on along its last stretch (below)
+    tips = []
+    joined = set()   # the points, the band's own (c["joined"]: its end tapering on along its last stretch, below)
     for n, (t, ang) in enumerate(c["points"]):
         if c.get("joined"):
             # the band's end drawn to a point: from the band's end, along its last stretch, as wide as the band, in its
@@ -447,21 +445,18 @@ def collar(c, key, tf=None, swings=None, report=None):
         reach = c["len"]   # the swing's lift not used: it shortened the point and its bell hopped (walk 04)
         tip = (hx + ux * reach + uy * sw[0], hy + uy * reach - ux * sw[0])   # across: (1, 0) for a point straight down
         part = polygon([(hx - uy * w, hy + ux * w), tip, (hx + uy * w, hy - ux * w)]) - band
-        if c.get("joined"):
-            joined |= part
-        else:
-            parts.append((part, (COLLAR_NAVY, POINT_BURG)[(n + c.get("first", 0)) % 2]))
+        # every point the harness's own (its colours, no line between): since 2026-11-08 the front view's three too,
+        # navy and burgundy before, each colour a row of its own that coloured only turn 04-06 ("what are collar points?
+        # i changed them and nothing changed", the user: the window shows the side view)
+        joined |= part
         end = max(part, key=lambda q: (q[0] * ux + q[1] * uy, q[1])) if part else None
         tips.append(end)
         if report is not None:
             report.append((n, len(part), end))
     px = {}
     band |= joined
-    tube(band, COLLAR_BURG, px, band.union(*[part for part, _ in parts]))
-    for part, ramp in parts:
-        for (x, y) in part:   # a point lit on its left, shaded on its right
-            px[(x, y)] = ramp[3] if (x - 1, y) not in part else ramp[1] if (x + 1, y) not in part else ramp[2]
-    edge([(band, COLLAR_BURG)] + parts, px)
+    tube(band, COLLAR_BURG, px)
+    edge([(band, COLLAR_BURG)], px)
     for end in tips:
         if end:
             small_bell(end[0], end[1] + 1, px)
