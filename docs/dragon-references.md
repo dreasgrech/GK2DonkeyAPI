@@ -777,3 +777,12 @@ Left, and said: the far wing's spar standing up alone in fly 02 (the upstroke's 
 pictures, before the metal wings), single grass pixels between the chin and the chest in graze 03-05 and at a neck
 spine's base in flydown1 08 (also there before), and the climb's and dive's column shear turning a 2x2 hole into a
 three-row step (the whole picture is sheared there; the rim stays whole).
+
+## 16. Named Mecha (2026-11-08)
+
+The F11 translations test failed on the Mount Journal's Skin row: in the test language (every text about 1.6 times
+longer) "[Armored Dragon Armored]" didn't fit even at its smallest size, and German ("Gepanzerter Drache") and Russian
+("Дракон в доспехах") fitted with no room to spare. The user: "Rename the skins to Mecha". The skin's name is Mecha
+in `skin.cfg` and in its name row of the 11 language files (Mecha in the Latin-script languages, Меха, メカ, 메카,
+机甲; every character one the game's own text draws, `tools/l10n-glyphs.py`), and in the generator's creature table.
+Its id stays `saddleup-dragon.dragon/armored` (the folder `skins\armored\`), so a save that picked it keeps it.

@@ -1,7 +1,7 @@
 # GK2 Saddle Up: Dragon
 
 A mount pack for GK2 Saddle Up: a dragon to ride, 128 pixels tall, that flies, has young and pulls no cart. Two
-looks: the Red Dragon and the Armored Dragon.
+looks: the Red Dragon and Mecha.
 
 - **Needs:** GK2 Donkey API 0.40.0 or newer and GK2 Saddle Up (it offers the mounts to ride).
 - **Install:** put the folder `GK2SaddleUpDragonsMountPack` into `BepInEx\plugins\` (the zip has it so; a Workshop item, where there is one, installs it instead):
@@ -11,5 +11,5 @@ looks: the Red Dragon and the Armored Dragon.
 - **Remove:** delete the folder `GK2SaddleUpDragonsMountPack`. A saved dragon waits as "not installed" and comes back when the pack does.
 
 The mount: `saddleup-dragon.dragon` (its `mount.cfg`: the facts, its jump with its wings, its sounds), its looks
-`saddleup-dragon.dragon/default` (the Red Dragon) and `saddleup-dragon.dragon/armored` (the Armored Dragon, built
+`saddleup-dragon.dragon/default` (the Red Dragon) and `saddleup-dragon.dragon/armored` (Mecha, built
 on the default). Its files in the repo: `packs/GK2SaddleUpDragonsMountPack/gk2mounts/`; the pack format: docs/skins.md and docs/making-a-mount.md.

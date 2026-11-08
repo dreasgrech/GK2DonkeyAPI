@@ -2512,7 +2512,7 @@ def frames_for(fn):
 CREATURES = (("worm", worm, "Worm", 96, ("worm", "Worm"), 52, None), ("snail", snail, "Snail", 96, ("snail", "Snail"), 55, None),
              ("rat", rat, "Rat", 96, ("rat", "Rat"), 52, 9),
              ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 68 - RAISE, None),  # seat rows: the donkey's 52 (+16 on 128), the snail 3 lower
-             ("armored-dragon", dragon_armored, "Armored Dragon", 128, ("dragon", "Dragon"), 68 - RAISE, None))
+             ("armored-dragon", dragon_armored, "Mecha", 128, ("dragon", "Dragon"), 68 - RAISE, None))
 # Creatures drawn only when named (python -I make_creatures.py <name> <folder>): none now (the Armored Dragon ships in
 # the Dragons pack since 2026-11-07). A creature that is a variant of a mount is written to the mount's skins folder
 # SKIN_DIR names (never its default).

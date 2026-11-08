@@ -1,7 +1,7 @@
 ﻿key,value,english,note
 mount.saddleup-dragon.dragon.name,Dragon,Dragon,a mount's name (the Mount Journal; the keeper's bubbles)
 mount.saddleup-dragon.dragon.description,"Personne ne sait d'où il vient, et il ne le dira pas. Il ne tire pas de charrette, mais aucune clôture, aucune rivière, aucun toit du Village ne peut l'arrêter.","Nobody knows where it came from, and it isn't saying. It won't pull a cart, but no fence, river or roof in the village can stop it.",a mount's description in the Mount Journal
-skin.saddleup-dragon.dragon/armored.name,Dragon en armure,Armored Dragon,"a skin's name (the Skin list, the colours window's title)"
+skin.saddleup-dragon.dragon/armored.name,Mecha,Mecha,"a skin's name (the Skin list, the colours window's title)"
 skin.saddleup-dragon.dragon/armored.tone.armour.name,Armure,Armour,a part of the skin the player colours on its own: its row's label in the colours window
 skin.saddleup-dragon.dragon/armored.tone.gold.name,Liseré doré,Gold trim,a part of the skin the player colours on its own: its row's label in the colours window
 skin.saddleup-dragon.dragon/armored.tone.horns.name,Cornes et griffes,Horns and claws,a part of the skin the player colours on its own: its row's label in the colours window

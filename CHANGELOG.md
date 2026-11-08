@@ -45,6 +45,11 @@ For mod authors:
 
 Development:
 
+- **The Armored Dragon is named Mecha** (2026-11-08, the Dragons pack; docs/dragon-references.md 16): its long name
+  didn't fit the Mount Journal's Skin row in the F11 test language, and fitted German and Russian with no room to
+  spare. `skin.cfg`, the 11 language files (Mecha, Меха, メカ, 메카, 机甲) and the generator's creature table; the id stays
+  `saddleup-dragon.dragon/armored`.
+
 - **The rider readout, `[rider]` lines** (2026-11-07, `RiderReadout.cs`; dev, off by default, the Flying tab): flying
   the dragon, the keeper rocks as he does walking (the user). Per frame, at the camera's pre-cull: the picture shown
   and the game's sprite under it, the keeper's state, the walk bob, the seat, the lift, which LateUpdate ran first (the
