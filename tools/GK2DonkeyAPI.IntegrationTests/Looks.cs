@@ -69,8 +69,12 @@ namespace GK2DonkeyAPI.IntegrationTests
                 var made = new List<MountHandle>();
                 for (int k = 0; k < 40; k++)
                 {
+                    // the first snail (k 0) and rat (k 1) near the keeper: a skin is put on by an active donkey only
+                    // (within Lod.ActiveRadius or on screen; idle and asleep ones wait), and all 14 snails scattered
+                    // over 30 m once fell outside it (2026-11-08: cycle 2 loaded the rat alone)
                     Vector2 r = UnityEngine.Random.insideUnitCircle * 30f;
-                    MountHandle h = Spawn(home + new Vector3(r.x, 0f, r.y), k % 2 == 0, withCart: k % 10 == 0);
+                    Vector3 at = k < 2 ? Spot(home, 3f + 3f * k) ?? home + new Vector3(3f + 3f * k, 0f, 0f) : home + new Vector3(r.x, 0f, r.y);
+                    MountHandle h = Spawn(at, k % 2 == 0, withCart: k % 10 == 0);
                     if (h != null)
                     {
                         h.Tuning.Set(Owner, "Skin", k % 3 == 0 ? Sk("snail") : Sk("rat"));
@@ -78,7 +82,16 @@ namespace GK2DonkeyAPI.IntegrationTests
                     }
                 }
                 yield return Seconds(4f);
-                Check(Looks.LoadedCount == loaded0 + newSkins, $"cycle {cycle}: {newSkins} skin(s) loaded for {made.Count} donkeys ({Looks.LoadedCount - loaded0} new; {2 - newSkins} of the two were loaded already)");
+                // each skin's wearers that are active (they put it on), for the line: a skin with an active wearer
+                // and no sheet is a fault; one with none is the placement
+                int snailsActive = 0, ratsActive = 0;
+                foreach (MountHandle h in made)
+                {
+                    if (!h.Exists || h.I == null || h.I.tier != Mount.Tier.Active) continue;
+                    if (string.Equals(h.Tuning.Get<string>("Skin"), Sk("snail"), StringComparison.OrdinalIgnoreCase)) snailsActive++;
+                    else ratsActive++;
+                }
+                Check(Looks.LoadedCount == loaded0 + newSkins, $"cycle {cycle}: {newSkins} skin(s) loaded for {made.Count} donkeys ({Looks.LoadedCount - loaded0} new; {2 - newSkins} of the two were loaded already; active wearers: {snailsActive} snail, {ratsActive} rat)");
                 foreach (MountHandle h in made)
                 {
                     if (h.Exists) h.Remove();

@@ -485,11 +485,13 @@ def collar_posed(key, swings=None):
 # Since 2026-11-08 chequered in three columns: the part carried forward to the strap (tucked()) is a check column of
 # its own, its colours swapped (navy over burgundy), the line at FRONT_FOLDS' 47 its seam; carried on in the middle
 # column's colours, the cloth repeated burgundy and navy beside the strap ("the marked regions have repeated colours",
-# the user). A point under each column, the other colour of the check above it (they had matched it: the points
-# counterchanged against the top row only), centred under it: 50 (the middle column, 48-56) and 59 (the rear, 57-66);
-# the front one at FRONT_POINT. Four points 5 apart had one straddling the split at 57.
-CLOTH = {"x0": 48, "x1": 66, "hem": 56, "split": 58, "quarter": 48, "folds": (54, 62), "points": (52, 60),
-         "bells": (52, 60)}
+# the user). Four points along the hem, evenly spaced (42 at FRONT_POINT, then 49, 55, 62: bells 7, 6, 7 apart) and
+# alternating navy, burgundy, navy, burgundy from the front ("four bells would fit perfectly there ... their colours
+# alternate correctly", the user, 2026-11-08: three had a gap between the front two). The bottom row has three checks
+# for four points, so the third and fourth share their check's colour: the user's pick, alternating over matching.
+CLOTH = {"x0": 48, "x1": 66, "hem": 56, "split": 58, "quarter": 48, "folds": (54, 62), "points": (49, 55, 62),
+         "bells": (49, 55, 62)}
+POINT_RAMPS = (CLOTH_BURG, CLOTH_NAVY)   # the caparison's points in turn (the front one, tucked()'s, navy before them)
 
 
 SWING_FROM = 50   # the cloth's rows from this one down swing with the stride; above, it lies on the back
@@ -536,9 +538,9 @@ def caparison(sway=0, ripple=None):
         if (x == c["split"] or y == c["quarter"] + 1) and depth > 0 and level > 1:
             level -= 1   # the seams
         px[(x, y)] = r[level]
-    for p0, p in zip(c["points"], points):
-        r = ramp_of(p0 + 2, c["hem"] + 1)   # one colour a point, by its middle: the point over the split changed colour
-        for q, v in p.items():               # as it swung across it (a fresh review)
+    for n, (p0, p) in enumerate(zip(c["points"], points)):
+        r = POINT_RAMPS[n % 2]   # one colour a point, in turn: by the pixel, a point over the split changed colour as it
+        for q, v in p.items():   # swung across it (a fresh review)
             px[q] = r[v]
     # each bell hangs from its point's lowest pixel: placed by the swing's numbers, a bell hung a row under the tip
     # where the swing lifted the point (a fresh review, 2026-11-03)

@@ -45,15 +45,19 @@ For mod authors:
 
 Development:
 
+- **F11 "skins: no leaks over spawn and remove" no longer depends on luck** (2026-11-08): a skin is put on by an
+  active donkey only (within 15 of the keeper or on screen), and the test scattered its 40 over 30 m; in one run all
+  14 snail wearers of cycle 2 fell outside, the snail skin never loaded and the check failed. The first snail and rat
+  of each cycle now stand 3 and 6 from the keeper, and the line says each skin's active wearers.
 - **The Jester's cloth chequered** (2026-11-08, `tools/skins/jester/draw_jester.py`, no pack; the user's boxes and
   marks on walk 02: "the marked regions have repeated colours"): the cloth's part carried forward to the strap had
   the middle column's colours, so burgundy and navy repeated beside the harness. Now, from the front: under the
   collar's burgundy band (the top row's first check) the bottom row is navy (strap to 41); then a check of navy over
   burgundy (to 49, reaching 2 columns into the cloth so its top shows in the standing frames too); then burgundy over
   navy, and navy over burgundy at the rear. The collar's rear point (navy, over the front check) is gone; its front
-  point stays burgundy (navy, it ran into the navy under the band). The hem's points matched the check above them
-  (counterchanged against the top row only); now each is the other colour, one centred under each column (42, 52,
-  60; the split moved 57 -> 58, the folds 54 and 62). The front check has a fold down its middle (46) through both
+  point stays burgundy (navy, it ran into the navy under the band). The hem has four points, evenly spaced (42, 49, 55,
+  62), alternating navy and burgundy, each with its bell (there were three, with a gap at the front). The split moved
+  57 -> 58, the folds to 54 and 62. The front check has a fold down its middle (46) through both
   rows, as the others ("arent they missing a split in the middle"), and one at 42. `skin.cfg`: "chequered".
 - **Mecha's tail tip steady while walking** (2026-11-08, `make_creatures.py`; docs/dragon-references.md 17; the user:
   "black spots ... flicker while walking", walk 04 and 08): the tail rings' fixed angles came from a resting tail built
