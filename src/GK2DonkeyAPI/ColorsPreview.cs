@@ -56,10 +56,10 @@ namespace GK2DonkeyAPI
                 }
             }
             // a skin over the donkey that names colours of its own under the region ([Colors] Harness = ...): those, the
-            // part of it the row is for. The Jester draws its own harness and hides the donkey's (2026-11-08); against
-            // the donkey's dark harness (0.35) a picked pink lifted its shades (0.58) all to white, one flat colour. A
-            // following tone's colours have left the region's list (SkinTones.Add: Royal Parade's cloth), so such a skin
-            // keeps the donkey's average.
+            // part of it the row is for. A skin drawing its own harness and hiding the donkey's (2026-11-08): against the
+            // donkey's dark harness (0.35) a picked pink lifted its shades (0.58) all to white, one flat colour. A
+            // following tone's colours have left the region's list (SkinTones.Add: a cloth that follows Harness), so such
+            // a skin keeps the donkey's average.
             else if (look != null && look.ColoursByRegion.TryGetValue(regionKey, out List<Color32> named) && named.Count > 0)
             {
                 ValueRange(named, out average, out top);

@@ -61,6 +61,9 @@ namespace GK2DonkeyAPI.Api
             // for the custom rows), its choices the API's words; the page has nothing of either to translate.
             internal Func<string> LabelOf;
             internal Word[] ChoiceWords;
+            // A row of a skin's own part (ToneRows: its choice, custom colour and lightness): the Mounts panel's colours
+            // window shows them on a tab of their own, named by the skin (2026-11-08).
+            internal bool SkinPart;
             // A region's row (RegionRows): labelled by the look's name for the part where it has one, its own label where
             // the look names none (a pack from before names, another mod's mount): that label stays the page's to translate.
             internal bool OwnLabelToo;
@@ -1303,9 +1306,18 @@ namespace GK2DonkeyAPI.Api
                 {
                     choiceRow.LabelOf = () => name.Text;
                     choiceRow.ChoiceWords = words;
+                    choiceRow.SkinPart = true;
                 }
-                if (customRow != null) customRow.LabelOf = () => UiWords.ToneCustom.Format(name);
-                if (lightRow != null) lightRow.LabelOf = () => UiWords.ToneLightness.Format(name);
+                if (customRow != null)
+                {
+                    customRow.LabelOf = () => UiWords.ToneCustom.Format(name);
+                    customRow.SkinPart = true;
+                }
+                if (lightRow != null)
+                {
+                    lightRow.LabelOf = () => UiWords.ToneLightness.Format(name);
+                    lightRow.SkinPart = true;
+                }
                 // greyed once the skin, loaded, turns out to draw none of the tone's colours (a variant drawing every
                 // frame of its own over its default's tone: the choice would colour nothing; the tenth code review), live
                 // until then (nothing is known before it loads); a row's own condition stays

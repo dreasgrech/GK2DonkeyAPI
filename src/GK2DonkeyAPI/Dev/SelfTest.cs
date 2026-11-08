@@ -1897,7 +1897,7 @@ namespace GK2DonkeyAPI
                 Check(Has(red), "the skin's red, named Harness, follows the harness");
                 Check(!Has(gold), "the skin's gold, named nothing, is kept as drawn");
                 // a custom colour's lightness against the colours the row reaches on it: the skin's own Harness red (its
-                // value 0.77), not the donkey's dark harness (the Jester's pink harness all one flat colour, 2026-11-08);
+                // value 0.77), not the donkey's dark harness (a skin's own harness in pink all one flat colour, 2026-11-08);
                 // the coat, which it names nothing under, still against the donkey's
                 Color.RGBToHSV(red, out _, out _, out float redValue);
                 float harnessArt = Colors.ArtLightness("Harness", "donkey/selftest.over-test");
@@ -3403,6 +3403,20 @@ namespace GK2DonkeyAPI
                 TextRoom.Measure(MountsPanel.TestRoot(coloursWindow: true), "colours window: " + (page.MountChosen ?? "donkey"));
                 string narrowColours = MountsPanel.TestNarrowLabel(coloursWindow: true);
                 Check(narrowColours == null, $"the colours window: every label has room (100 or more){(narrowColours != null ? " (NOT: " + narrowColours + ")" : "")}");
+                // its tabs (2026-11-08): one per heading, the skin's own parts on one of their own; each chosen in turn
+                // builds its rows whole and only its rows, a button for each when there are two or more
+                int tabCount = MountsPanel.TestColourTabCount;
+                Check(tabCount >= 1 && MountsPanel.TestColourTabWhole() && (tabCount < 2 || MountsPanel.TestColourTabButtons == tabCount),
+                    $"the colours window's tabs: {MountsPanel.TestColourTabs()}; the first tab's rows built whole ({MountsPanel.TestColourRows}), {MountsPanel.TestColourTabButtons} button(s)");
+                for (int ti = 1; ti < tabCount; ti++)
+                {
+                    bool shownTab = MountsPanel.TestShowColourTab(ti);
+                    yield return Frames(2);
+                    Check(shownTab && MountsPanel.TestColourTabWhole() && MountsPanel.TestColourRows > 0, $"... tab {ti + 1} chosen: {MountsPanel.TestColourTabs()}, its {MountsPanel.TestColourRows} rows built whole");
+                    string narrowTab = MountsPanel.TestNarrowLabel(coloursWindow: true);
+                    Check(narrowTab == null, $"... and every label on it has room{(narrowTab != null ? " (NOT: " + narrowTab + ")" : "")}");
+                }
+                if (tabCount > 1) MountsPanel.TestShowColourTab(0);
                 MountsPanel.TestCloseColours(keep: true);
                 yield return Frames(2);
                 Check(!MountsPanel.IsColoursOpen && MountsPanel.IsOpen, "closed: the journal is back");

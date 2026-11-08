@@ -234,6 +234,17 @@ namespace GK2DonkeyAPI
                             MountsPanel.TestScrollColours(1f);
                             shots++;
                         }
+                        // its other tabs (2026-11-08: a skin's own parts on a tab of their own, the cart's on its own), a
+                        // picture of each
+                        for (int ti = 1; ti < MountsPanel.TestColourTabCount; ti++)
+                        {
+                            if (!MountsPanel.TestShowColourTab(ti)) continue;
+                            yield return SelfTest.Frames(3);
+                            yield return SelfTest.PanelShot("colours-skin-" + name + "-tab" + (ti + 1));
+                            shots++;
+                        }
+                        if (MountsPanel.TestColourTabCount > 1) MountsPanel.TestShowColourTab(0);
+                        SelfTest.Info($"colours window: {mount}, {label}: tabs {MountsPanel.TestColourTabs()}");
                         Plugin.TuningWindowHidden = panelWasHidden;
                         looks++;
                         SelfTest.Info($"colours window: {mount}, {label}: {MountsPanel.TestColourRows} rows; of its {rows} colour choices {shown} shown{(scrolls ? "; they scroll (a second picture at their end)" : "")}{(PreviewStage.TestShownSettling ? "; its picture still settling" : "")}");

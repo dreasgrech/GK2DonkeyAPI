@@ -12,6 +12,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The colours window has tabs** (2026-11-08): Mount colours, the worn skin's own parts on a tab named after the
+  skin, and Cart colours. Each tab's rows fill both columns, so a skin with many parts no longer makes one long list.
+  A skin without parts of its own shows the two tabs.
 - **A baby with no room beside its parent stands still instead of jumping** (2026-11-06): beside a parent standing
   against a wall or a fence (the house door), a baby that couldn't take a step was put back on its own spot every few
   seconds, in view, and the log filled with its lines. It stands there now until its parent moves, and still trots off

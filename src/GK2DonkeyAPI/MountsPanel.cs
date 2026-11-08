@@ -77,6 +77,16 @@ namespace GK2DonkeyAPI
         private static readonly List<(string Group, List<MountSettingsPage.Row> Rows)> journalGroups = new List<(string, List<MountSettingsPage.Row>)>();
         private static readonly List<(string Group, List<MountSettingsPage.Row> Rows)> colourGroups = new List<(string, List<MountSettingsPage.Row>)>();
         private static readonly Dictionary<string, string> groupShown = new Dictionary<string, string>(StringComparer.Ordinal); // a colours group's heading in the player's language (Texts), by its English
+        // The colours window's tabs (2026-11-08, the user: a skin's many colours apart from the mount's): a tab per heading's
+        // rows, named by the heading, and a skin's own parts (Row.SkinPart) on a tab of their own after the rows they came
+        // with, named by the skin; the chosen tab's rows in the two columns. Tabs: (key, name drawn, rows).
+        private static readonly List<(string Key, string Name, List<MountSettingsPage.Row> Rows)> colourTabs = new List<(string, string, List<MountSettingsPage.Row>)>();
+        private static readonly List<(string Key, Image Face, TextMeshProUGUI Label)> tabButtons = new List<(string, Image, TextMeshProUGUI)>();
+        private static string colourTab;            // the chosen tab's key
+        private static string tabsBuilt;            // the tabs the strip was built for (their keys and names)
+        private static RectTransform coloursTabs;   // the strip
+        private const float TabH = 34f, TabGap = 6f, TabMinW = 120f, TabMaxW = 260f;
+        private const string PartsTab = "\u0001parts"; // the skin's parts' tab (no heading is named so)
         private static List<Entry> entries = new List<Entry>();
         private static string builtFor;            // the mount the right side was built for
         private static string builtForSkin;        // and the skin its Skin row said then (the colours window is that skin's, 0.41.0)
@@ -677,11 +687,150 @@ namespace GK2DonkeyAPI
             }
             foreach (var g in journalGroups) JournalOrder(g.Rows, chosen); // the name, the Skin, then the rest: the same on every mount
             journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, journalW - ScrollbarW, rows, out _);
+            MakeColourTabs();
             if (colours != null)
             {
                 coloursTitle.text = ColoursTitle();
-                coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, colourRows, out _);
+                BuildColourTabStrip();
+                BuildColourTab();
             }
+            Refresh();
+        }
+
+        // The colours window's tabs from its groups (colourTabs): a group's own rows a tab named by its heading; its skin's
+        // parts, if any, a tab after it named by the skin. The chosen tab stays if it is still there (the parts' tab from
+        // one skin to the next), else the first.
+        private static void MakeColourTabs()
+        {
+            colourTabs.Clear();
+            foreach (var g in colourGroups)
+            {
+                var own = new List<MountSettingsPage.Row>();
+                var parts = new List<MountSettingsPage.Row>();
+                foreach (MountSettingsPage.Row r in g.Rows) (r.SkinPart ? parts : own).Add(r);
+                string name = g.Group != null && groupShown.TryGetValue(g.Group, out string shown) ? shown : g.Group ?? "";
+                if (own.Count > 0) colourTabs.Add((g.Group ?? "", name, own));
+                if (parts.Count > 0)
+                {
+                    Looks.SkinDef sd = Looks.Find(parts[0].SkinId);
+                    colourTabs.Add((PartsTab, sd != null ? Looks.NameTerm(sd).Text : parts[0].SkinId ?? "", parts));
+                }
+            }
+            if (colourTab == null || colourTabs.FindIndex(t => t.Key == colourTab) < 0) colourTab = colourTabs.Count > 0 ? colourTabs[0].Key : null;
+        }
+
+        // The chosen tab's rows (none: no tabs).
+        private static List<MountSettingsPage.Row> ColourTabRows()
+        {
+            int i = colourTabs.FindIndex(t => t.Key == colourTab);
+            return i >= 0 ? colourTabs[i].Rows : null;
+        }
+
+        // A tab's rows in two columns, the order kept (down the left, then down the right), split where the two come out
+        // nearest in height: a row with the rows shown under it with a preset (its custom colour, its lightness) stays
+        // whole, in one column. Heights by what shows now (a swatch row two rows' worth). One column for one such unit.
+        private static List<(string Group, List<MountSettingsPage.Row> Rows)> TabColumns(List<MountSettingsPage.Row> tabRows)
+        {
+            var units = new List<List<MountSettingsPage.Row>>();
+            var weights = new List<int>();
+            foreach (MountSettingsPage.Row r in tabRows)
+            {
+                if (r.Visible == null || units.Count == 0)
+                {
+                    units.Add(new List<MountSettingsPage.Row>());
+                    weights.Add(0);
+                }
+                units[units.Count - 1].Add(r);
+                if (r.Visible == null || r.Visible()) weights[weights.Count - 1] += IsPalette(r) ? 2 : 1;
+            }
+            var cols = new List<(string Group, List<MountSettingsPage.Row> Rows)>();
+            if (units.Count == 0) return cols;
+            int total = 0;
+            foreach (int w in weights) total += w;
+            int split = units.Count, best = int.MaxValue, left = 0;
+            for (int k = 1; k < units.Count; k++)
+            {
+                left += weights[k - 1];
+                int worst = Math.Max(left, total - left);
+                if (worst < best || (worst == best && left >= total - left)) { best = worst; split = k; } // a tie: the longer side on the left
+            }
+            var a = new List<MountSettingsPage.Row>();
+            var b = new List<MountSettingsPage.Row>();
+            for (int k = 0; k < units.Count; k++) (k < split ? a : b).AddRange(units[k]);
+            cols.Add((null, a));
+            if (b.Count > 0) cols.Add((null, b));
+            return cols;
+        }
+
+        // The chosen tab's rows built into the colours window (its signature kept: a preset showing a row builds it again).
+        private static void BuildColourTab()
+        {
+            if (colours == null) return;
+            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            var cols = tabRows != null ? TabColumns(tabRows) : new List<(string Group, List<MountSettingsPage.Row> Rows)>();
+            coloursSignature = BuildRows(cols, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, colourRows, out _);
+            MarkColourTabs();
+        }
+
+        // What the chosen tab shows now, as BuildRows writes it (each row shown or not, in order).
+        private static string ColourTabSignature()
+        {
+            var sig = new StringBuilder();
+            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            if (tabRows != null) foreach (MountSettingsPage.Row r in tabRows) sig.Append(r.Visible == null || r.Visible() ? '1' : '0');
+            return sig.ToString();
+        }
+
+        // The strip of tabs over the colours rows, as the options window's section cards (flat, the chosen one in the
+        // game's red, its name bold), each as wide as its name; none for a single tab. Built again when the tabs change.
+        private static void BuildColourTabStrip()
+        {
+            if (coloursTabs == null) return;
+            var sig = new StringBuilder();
+            foreach (var t in colourTabs) sig.Append(t.Key).Append('\u0002').Append(t.Name).Append('\u0003');
+            if (tabsBuilt == sig.ToString()) return;
+            tabsBuilt = sig.ToString();
+            foreach (Transform c in coloursTabs) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
+            tabButtons.Clear();
+            coloursTabs.gameObject.SetActive(colourTabs.Count > 1);
+            if (colourTabs.Count < 2) return;
+            float x = 0f;
+            foreach (var t in colourTabs)
+            {
+                string key = t.Key;
+                GameObject go = ui.OwnButton(coloursTabs, "tab " + t.Name, t.Name, TabMaxW, TabH, () => ShowColourTab(key), flat: true);
+                TextMeshProUGUI label = go.GetComponentInChildren<TextMeshProUGUI>(true);
+                float w = Mathf.Clamp(Mathf.Ceil(label.GetPreferredValues(t.Name).x) + 36f, TabMinW, TabMaxW);
+                UiKit.Rect(go, x, 0f, w, TabH);
+                UiKit.Rect(label.gameObject, 3f, 0f, w - 6f, TabH);
+                UiKit.NavGroup(go, 2);
+                tabButtons.Add((key, go.GetComponent<Image>(), label));
+                x += w + TabGap;
+            }
+            controls.NavDirty = true;
+        }
+
+        // The chosen tab marked as the options window marks its section.
+        private static void MarkColourTabs()
+        {
+            foreach ((string key, Image face, TextMeshProUGUI label) in tabButtons)
+            {
+                bool on = key == colourTab;
+                if (face != null) face.color = on ? UiKit.CardChosen : UiKit.CardBase;
+                if (label != null)
+                {
+                    label.color = on ? ui.ButtonTextColor : ui.FontColor;
+                    label.fontStyle = on ? FontStyles.Bold : FontStyles.Normal;
+                }
+            }
+        }
+
+        private static void ShowColourTab(string key)
+        {
+            if (colours == null || key == null || key == colourTab) return;
+            colourTab = key;
+            BuildColourTab();
+            if (coloursScroll != null) coloursScroll.verticalNormalizedPosition = 1f;
             Refresh();
         }
 
@@ -891,6 +1040,17 @@ namespace GK2DonkeyAPI
                 cprt.pivot = new Vector2(0.5f, 0.5f);
                 coloursPicture.gameObject.SetActive(false);
                 top += CStageH + Gap;
+                // the tabs across the window, a rule under them (the place of the two headings before, 2026-11-08)
+                coloursTabs = (RectTransform)ui.Node("colours tabs", colours.transform).transform;
+                UiKit.Rect(coloursTabs.gameObject, Pad, top, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, TabH);
+                GameObject tabRule = ui.Node("colours tabs rule", colours.transform, typeof(Image));
+                UiKit.Rect(tabRule, Pad, top + TabH + 3f, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, 1f);
+                tabRule.GetComponent<Image>().color = UiKit.EdgeColor;
+                tabRule.GetComponent<Image>().raycastTarget = false;
+                top += TabH + 8f;
+                colourTab = colourTabs.Count > 0 ? colourTabs[0].Key : null; // each opening on the first tab
+                tabsBuilt = null;
+                BuildColourTabStrip();
                 coloursScroll = ui.ScrollView(colours.transform, "colours content", Pad, top, CW - 2f * Pad, CH - top - Gap - ButtonsH - Pad, out coloursRoot, 2f, manual: true);
                 ui.AddScrollbar(coloursScroll);
                 GameObject done = ui.OwnButton(colours.transform, "colours done", UiWords.Done.Text, ButtonW, ButtonH, () => CloseColours(keep: true));
@@ -898,9 +1058,10 @@ namespace GK2DonkeyAPI
                 UiKit.NavGroup(done, 1);
                 var cnav = colours.GetComponent<GamepadNavigationController>();
                 UiKit.Hand(cnav, 0, GUIDirection.Down, 1); UiKit.Hand(cnav, 1, GUIDirection.Up, 0); // the rows and swatches <-> Done
+                UiKit.Hand(cnav, 0, GUIDirection.Up, 2); UiKit.Hand(cnav, 2, GUIDirection.Down, 0); // the tabs over the rows
                 coloursBefore.Clear();
                 foreach (var g in colourGroups) foreach (MountSettingsPage.Row r in g.Rows) if (r.Entry != null) coloursBefore[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
-                coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, colourRows, out _);
+                BuildColourTab();
                 panel.SetActive(false); // the journal waits underneath
                 controls.NavDirty = true;
                 colours.SetActive(true);
@@ -909,7 +1070,7 @@ namespace GK2DonkeyAPI
                 // its picture at the next frame, not at the picture timer's next turn (up to 0.2 s of an empty box: the
                 // colours-window shots of 2026-11-04, the box empty for each mount's first look, its picture already built)
                 nextPicture = 0f;
-                Plugin.Log.LogInfo($"Settings: the colours window is open for {builtFor} ({colourRows.Count} rows).");
+                Plugin.Log.LogInfo($"Settings: the colours window is open for {builtFor} ({colourRows.Count} rows on its first tab of {colourTabs.Count}).");
             }
             catch (Exception e)
             {
@@ -936,6 +1097,9 @@ namespace GK2DonkeyAPI
             }
             coloursBefore.Clear();
             colourRows.Clear();
+            tabButtons.Clear();
+            tabsBuilt = null;
+            coloursTabs = null;
             controls.CloseDropdown(refocus: false);
             if (colours != null)
             {
@@ -1106,6 +1270,33 @@ namespace GK2DonkeyAPI
             foreach (var g in colourGroups) names.Add((g.Group ?? "(none)") + " " + g.Rows.Count);
             return names.Count == 0 ? "none" : string.Join(", ", names);
         }
+        // the colours window's tabs: their names as drawn with their rows' count, the chosen one marked with a star
+        internal static string TestColourTabs()
+        {
+            var names = new List<string>();
+            foreach (var t in colourTabs) names.Add((t.Key == colourTab ? "*" : "") + t.Name + " " + t.Rows.Count);
+            return names.Count == 0 ? "none" : string.Join(", ", names);
+        }
+        internal static int TestColourTabCount => colourTabs.Count;
+        internal static int TestColourTabButtons => tabButtons.Count;
+        internal static bool TestColourTabIsParts(int i) => i >= 0 && i < colourTabs.Count && colourTabs[i].Key == PartsTab;
+        // the i-th tab chosen as its button would (false: no such tab or no window)
+        internal static bool TestShowColourTab(int i)
+        {
+            if (colours == null || i < 0 || i >= colourTabs.Count) return false;
+            ShowColourTab(colourTabs[i].Key);
+            return colourTab == colourTabs[i].Key;
+        }
+        // whether every row of the chosen tab that shows was built, and only those (the two columns hold the tab whole)
+        internal static bool TestColourTabWhole()
+        {
+            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            if (tabRows == null) return colourRows.Count == 0;
+            int shown = 0;
+            foreach (MountSettingsPage.Row r in tabRows) if (r.Visible == null || r.Visible()) shown++;
+            foreach (var x in colourRows) if (!tabRows.Contains(x.Row)) return false;
+            return colourRows.Count == shown;
+        }
         internal static void TestClose(bool keep, bool commit = false, bool back = true)
         {
             committing = commit; // commit: as Ride and Drive the cart close it (they close with back: false)
@@ -1159,9 +1350,9 @@ namespace GK2DonkeyAPI
             {
                 journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, journalW - ScrollbarW, rows, out _); // a preset chosen or left: its rows come or go
             }
-            if (colours != null && Signature(colourGroups) != coloursSignature)
+            if (colours != null && ColourTabSignature() != coloursSignature)
             {
-                coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, colourRows, out _);
+                BuildColourTab(); // the chosen tab's rows, a preset having shown or hidden one
             }
             RefreshRows(rows);
             if (colours != null) RefreshRows(colourRows);
@@ -1422,6 +1613,8 @@ namespace GK2DonkeyAPI
             cards.Clear();
             journalGroups.Clear();
             colourGroups.Clear();
+            colourTabs.Clear();
+            colourTab = null;
             statLines.Clear();
             builtFor = null;
             builtForSkin = null;
