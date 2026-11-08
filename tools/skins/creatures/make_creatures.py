@@ -568,6 +568,7 @@ ARM_FLY_NECK = os.environ.get("DRAGON_ARM_FLY_NECK", "chest")  # flying: move = 
 # notch = as first drawn (the chest plate's upright edge and the lame's flat top leave a square of hide); slope = the
 # lame's front end rises to the chest plate's top corner (one sloping line); pauldron = a gold-rimmed plate over the joint
 ARM_SHOULDER = os.environ.get("DRAGON_ARM_SHOULDER", "wide")
+ARM_PLATE_DETAIL = os.environ.get("DRAGON_ARM_PLATE_DETAIL", "1") == "1"  # the big plates (chest, crupper) in facets and lames, not one flat face
 FORE_HEAVY = os.environ.get("DRAGON_FORE_HEAVY", "1") == "1"     # the forelegs built like the hind: a shoulder mass over a thick upper arm, a thick forearm, a short wrist to the paw
 WALK_HEAVE = float(os.environ.get("DRAGON_WALK_HEAVE", "1"))    # walking: shoulders and haunch rise over the planted legs, in turn (the seat holds)
 LEG_SWAY = float(os.environ.get("DRAGON_LEG_SWAY", "1.5"))  # flying: each leg's own small loop, px (2026-10-23; the preview page shows 1 and 2 next to it)
@@ -1995,7 +1996,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
 
     armour_px = set()
 
-    def plate(poly, up=(0.0, -1.0), rivets=False, ridge=False, rim=False, gold=False):
+    def plate(poly, up=(0.0, -1.0), rivets=False, ridge=False, rim=False, gold=False, detail=False):
         # One piece of plate over the scales: its own flat metal shading by its row from its top edge (along up): a
         # lit edge, a light row, the flat face, a darker band and a dark bevel; its own steel line where it meets the
         # hide (where it meets the air the dragon's outline does it); a shadow on the hide under it; brass rivets on
@@ -2016,6 +2017,16 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         cx_ = sum(c[0] for c in cells) / len(cells)
         cy_ = sum(c[1] for c in cells) / len(cells)
         ox_, oy_ = min(c[0] for c in cells), min(c[1] for c in cells)          # the plate's own corner: its rivets ride with it
+        detail = detail and ARM_PLATE_DETAIL and span >= 8.0
+        seams_, seam_ends_ = [], set()
+        if detail:
+            # two lame seams across the lower part, and a rivet one cell in from each end of each
+            seams_ = [math.floor(span * 0.5), math.floor(span * 0.5) + 3.0]
+            perp_ = (-up[1], up[0])
+            for s_ in seams_:
+                row_ = sorted((c for c in cells if s_ <= v[c] - top < s_ + 1.0), key=lambda c: (c[0] * perp_[0] + c[1] * perp_[1], c[1], c[0]))
+                if len(row_) >= 5:
+                    seam_ends_.update((row_[1], row_[-2]))
         for (x, y) in cells:                                                     # the shadow it casts on the hide below it
             q = (int(round(x - up[0])), int(round(y - up[1])))
             if q not in cells and q not in armour_px and get(*q)[3]:
@@ -2043,7 +2054,23 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 col = STEEL[4]
             if rivets and 2.0 <= r < 3.0 and (x - ox_ + y - oy_) % 3 == 0:
                 col = BRASS[2]
-            if ridge and abs((x + 0.5 - cx_) * up[1] - (y + 0.5 - cy_) * up[0]) < 0.6 and 1.0 <= r <= span - 1.5:
+            side = (x + 0.5 - cx_) * up[1] - (y + 0.5 - cy_) * up[0]          # across the piece: > 0 the side towards the head (the lit side)
+            if detail and col in (STEEL[4], STEEL[5]) and r >= 2.0:
+                # (ARM_PLATE_DETAIL) the face of a big piece in facets and lames, not one flat grey (the user, 2026-11-08:
+                # "very flat looking armor parts ... it looks lazy"; the Armored donkey's barding, the bar: each lame its
+                # light strip and its dark seam): the ridge a keel, the side towards the light lit near it, the far side
+                # in shade; across the lower part two lames, each seam a dark line with the next lame's lit edge under it
+                if any(s_ <= r < s_ + 1.0 for s_ in seams_):
+                    col = STEEL_LINE
+                elif any(s_ + 1.0 <= r < s_ + 2.0 for s_ in seams_):
+                    col = STEEL[5]
+                elif side > 0.6:
+                    col = STEEL[5] if side < 2.6 else STEEL[4]
+                elif side < -0.6:
+                    col = STEEL[3]
+            if detail and any(s_ <= r < s_ + 1.0 for s_ in seams_) and (x, y) in seam_ends_:
+                col = BRASS[2]                                                   # a rivet at each end of a seam
+            if ridge and abs(side) < 0.6 and 1.0 <= r <= span - 1.5:
                 col = STEEL[6]
             put(x, y, col)
         armour_px.update(cells)
@@ -2057,7 +2084,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         hipy = 49.0 + bob + heave_h * HIPS_ROCK - round(3.5 * round(hb_ * 4) / 4.0)
         chx, chy = 39.0, 48.5 + bob + heave_f - round((1.0 - gw(0.0)) * (1.0 if tb is not None else 0.0))
         plate([(65, hipy - 9.4), (72, hipy - 8.6), (76.5, hipy - 4), (77, hipy + 2.5), (73, hipy + 6.5), (66, hipy + 5.5)],
-              up=(0.3, -1.0), rivets=True, rim=True)                             # the crupper over the hips
+              up=(0.3, -1.0), rivets=True, rim=True, detail=True)                # the crupper over the hips
         plate([(44, 47.5 + bob), (66, 47 + bob), (68, 53.5 + bob), (45, 54 + bob)], up=(0, -1), rim=True)   # the flank's lower lame
         if ARM_SHOULDER == "slope":
             # the lame's front end rising to the chest plate's top corner: no square of hide between them
@@ -2069,10 +2096,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             # the wing, no pieces of the flank's lames, the hide and a corner in a strip a few px wide
             plate([(chx - 12.6, chy - 4), (chx - 7, chy - 8.8), (chx + 2, chy - 8.2), (chx + 9.5, chy - 7.2), (chx + 10.5, chy + 1.5),
                    (chx + 4.0, chy + 6.0), (chx - 2, chy + 6.6), (chx - 9, chy + 5.2), (chx - 12.6, chy + 1.2)],
-                  up=(-0.35, -1.0), ridge=True, rim=True)
+                  up=(-0.35, -1.0), ridge=True, rim=True, detail=True)
         else:
             plate([(chx - 12.6, chy - 4), (chx - 7, chy - 8.8), (chx + 2, chy - 8.2), (chx + 3.5, chy + 1), (chx - 2, chy + 6.6),
-                   (chx - 9, chy + 5.2), (chx - 12.6, chy + 1.2)], up=(-0.35, -1.0), ridge=True, rim=True)   # the chest plate
+                   (chx - 9, chy + 5.2), (chx - 12.6, chy + 1.2)], up=(-0.35, -1.0), ridge=True, rim=True, detail=True)   # the chest plate
         if ARM_SHOULDER == "pauldron":
             # a rounded plate over the shoulder's joint, from the chest plate's top corner over the lame's front, its rim gold
             plate([(chx + 0.5, chy - 8.6), (chx + 5.0, chy - 10.4), (chx + 10.5, chy - 9.6), (chx + 13.5, chy - 6.8),
