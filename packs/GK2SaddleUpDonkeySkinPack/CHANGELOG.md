@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-(Nothing yet.)
+- **Each skin's colour rows start with its biggest part** (2026-11-08): Royal Parade: Saddle cloth, Trim and fringe,
+  Emblem, Crown, Jewels. Armored: Body armour, Skirt, Helmet, Plume, Brass. Hellfire: Horns, Lava cracks, Tail, Tail
+  tip, Glowing eyes. Only the order changed; every saved colour stays.
 
 ## 1.2.0, 2026-11-05
 

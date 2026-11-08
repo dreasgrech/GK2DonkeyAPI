@@ -52,6 +52,19 @@ For mod authors:
 
 Development:
 
+- **The other skins' colour rows biggest part first too** (2026-11-08; the Donkey Skin Pack's CHANGELOG): judged on
+  the pictures, a part that sits on another right after it. Royal Parade: Saddle cloth, Trim and fringe, Emblem,
+  Crown, Jewels. Armored: Body armour, Skirt, Helmet, Plume, Brass (trim over both helmet and armour, last).
+  Hellfire: Horns, Lava cracks, Tail, Tail tip, Glowing eyes. Mecha was in order already (Armour, Gold trim, Horns and
+  claws); the Red Dragon has one part. `make_armored.py` and `make_hellfire.py` write the new order (`--cfg` equal to
+  the pack's); `row_sizes.py` gives a part its own colours over a `[Colors]` listing of them.
+- **The Jester's colour rows largest part first** (2026-11-08, the user: "descending order of the largest, most
+  visible part", the donkey's rows first): its parts' rows are Caparison, Caparison second colour, Cap front half,
+  Cap back half, Cap band, Bells (a skin's part rows follow its `[Tone.*]` sections' order in skin.cfg), by each
+  part's largest single piece, not its pixels added up (eight bells outnumbered a cap half's pixels, each a speck:
+  "the bells should be after the cap since they are smaller on screen"), one thing's rows together (the cap band
+  under the cap's halves). New `tools/skins/row_sizes.py <skin
+  folder>` measures it and says the order.
 - **The Jester's harness is its own and the Harness row colours it** (2026-11-08, `tools/skins/jester/`, no pack;
   docs/mount-colours.md 7.6; the user: the collar "stayed red and the original harness underneath, which should be
   invisible ... is getting the actual cream colour"): the collar band's shades are under `[Colors] Harness` (the
