@@ -952,7 +952,7 @@ Where skins come from, in order of how little they need:
   `GK2SaddleUp.mounts.saddleup.dragon\skins\default\bdy_walk_left_03.png`; the csproj line `<EmbeddedResource
   Include="assets\mounts\**\*" LogicalName="<Prefix>.mounts.%(RecursiveDir)%(Filename)%(Extension)" />`), then
   `Mounts.Looks.RegisterEmbedded(owner, assembly, "<Prefix>.mounts.")`. The worked example is Saddle Up itself
-  (prefix `GK2SaddleUp.mounts.`; its built-in Gerry: the csproj's embed line, one call in its Awake, nothing else;
+  (prefix `GK2SaddleUp.mounts.`; its built-in Larry: the csproj's embed line, one call in its Awake, nothing else;
   docs/mounts-as-mods.md), and each of its packs in the same way (`packs/<Pack>/`: the Dragon, the Critters, and the
   Donkey Skins, a skins-only pack: `gk2mounts\donkey\skins\<skin>\` with no `mount.cfg`; docs/making-a-mount.md). A dev build may record the packs' source folder as the assembly
   metadata `GK2MountsSourceDir` (`$(MSBuildProjectDirectory)\assets\mounts`); the F11 Mounts tab then writes a
@@ -1268,9 +1268,9 @@ History:
   `[Mount] cargo` is no longer a stat only: a cart holds the smaller of the player's `CartSlots` and the cargo of the
   mount pulling it, re-applied when the mount under a hitched cart changes. A mount that pulls fewer items than a cart
   holds leaves it standing with its load (a hitched cart, when the mount under it changes) and is refused it (the cart
-  key, `Mounts.Hitch`, mounting in Cart style): "Gerry pulls 4 items at most. Take 2 off the cart first." (since the
+  key, `Mounts.Hitch`, mounting in Cart style): "Larry pulls 4 items at most. Take 2 off the cart first." (since the
   translations, 2026-11-01: "Too much on the cart (6 of at most 4). Take some off first.") A mod's
-  session `CartSlots` only lowers the slots, never refuses (the size follows as items come off). The shipped mounts: the giant rat 2, Gerry and the giant
+  session `CartSlots` only lowers the slots, never refuses (the size follows as items come off). The shipped mounts: the giant rat 2, Larry and the giant
   worm 4, the donkey and the giant snail 6. No change to the public surface.
 - 0.39.0: `MountSettingsPage.CartRow(section, key)` and `MountSettingsPage.MountPullsCart(mountId)` (the user,
   2026-10-25: "for mounts that cant pull the cart, the drive the cart button still appears in teh journal and there's

@@ -3,13 +3,13 @@
 **2026-10-27: the donkey's skins are a pack too, and the API keeps no old ids.** Hellfire and Royal Parade left
 Saddle Up for the external pack GK2 Saddle Up: Donkey Skins (`packs/GK2SaddleUpDonkeySkinPack/`, ids
 `donkey/saddleup-donkey-skins.hellfire` and `.royal-parade`, Hellfire's effect `saddleup-donkey-skins.hellfire`);
-Saddle Up's built-in content is Gerry alone. The API's rename tables are gone (it knows nothing of Saddle Up): the old
+Saddle Up's built-in content is Larry alone. The API's rename tables are gone (it knows nothing of Saddle Up): the old
 names below (`hellfire`, `saddleup.dragon`, `red-dragon` ...) no longer find anything. docs/making-a-mount.md "Built
 in or external" is current.
 
 **2026-10-26, later: built in or external.** The dragon, rat, snail and worm left Saddle Up's DLL for external packs
 of their own in the repo's `packs/` (`GK2SaddleUpDragonsMountPack`, `GK2SaddleUpCrittersMountPack`), their ids by the pack
-(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins. The earlier
+(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Larry and the donkey's two skins. The earlier
 plans for moving the mounts out (sections 3, 7, 9 here) are superseded by that: docs/making-a-mount.md "Built in or
 external".
 
@@ -57,8 +57,8 @@ use: one folder with `skin.cfg` and a PNG per frame (`front\` for the layer draw
 declared in that file's `[Mount]` block (since 2026-10-24: a mount folder with `mount.cfg`, its skins under
 `skins\<skin>\`). The API's shipped code (everything outside `Dev/SelfTest.cs`) names no
 mount or skin id anywhere: the only built-in id in code is the `hellfire` effect (`Effects.cs:186`), which is an
-effect, not a mount. There is no dragon code, no rat code, no Gerry code: the dragon's 128 canvas, its front layer,
-its hitch gap, its belly colour, Gerry's game frames and his picture seat are all keys of their files, read by one
+effect, not a mount. There is no dragon code, no rat code, no Larry code: the dragon's 128 canvas, its front layer,
+its hitch gap, its belly colour, Larry's game frames and his picture seat are all keys of their files, read by one
 loader. So a "Saddle Up Dragon" mod is the dragon's folder moved out of `src/GK2DonkeyAPI/assets/skins/` into a mod
 of its own, and nothing in the game would know the difference (today: `src/SaddleUp/assets/mounts/saddleup.dragon/`,
 the mount's `mount.cfg` and `sounds\` with the red dragon's look under `skins\default\`).
@@ -209,7 +209,7 @@ suite, it hollows it: the dragon's front layer, the cart readout's six lines, th
 the creatures become separate mods, those tests follow them in one of two ways: the dev build deploys the mount
 mods next to the API (`-p:Deploy=true` as the example mod does) so the suite finds them, or the scenarios take their
 subjects from `Mounts.Catalog.All` instead of a fixed list (the readouts already loop; the targeted ones, the dragon's
-wing and Gerry's frames, need the creature present). The first keeps every assert as it is.
+wing and Larry's frames, need the creature present). The first keeps every assert as it is.
 
 ## 7. If the creatures leave the API: what moves and what it costs
 
@@ -220,12 +220,12 @@ The API cannot carry a built-in `dragon` *and* a mod ship one: a second skin wit
 `assets/mounts/<mount>/` since 2026-10-24):
 
 - **The folders**: `assets/skins/{dragon,rat,snail,worm,gerry}` (the five creatures: 86, 45, 45, 45 files and
-  Gerry's one cfg) into `mods/<Name>/assets/skins/<id>/` with a csproj each (or one `GK2SaddleUpCreatures` carrying all five, one
+  Larry's one cfg) into `mods/<Name>/assets/skins/<id>/` with a csproj each (or one `GK2SaddleUpCreatures` carrying all five, one
   download, which is the simpler first step). The csproj embed line (`GK2DonkeyAPI.csproj:31`) stays for the donkey's
   own skins.
 - **The donkey's two skins stay**: Hellfire and Royal Parade are skins of the donkey (`mount = donkey`), and Hellfire
   is the worked example of erase and `[Base.*]`; they are what a player with "only the API and Saddle Up" gets.
-  Gerry is a cfg alone (no art) and could stay as the game-creature example; it is listed above because it is a mount.
+  Larry is a cfg alone (no art) and could stay as the game-creature example; it is listed above because it is a mount.
 - **The tooling of section 5** (five scripts, two scans, the loop in `release-scans.sh`): a root per mod.
 - **The tests of section 6**: deploy the mods for the suite, or loop over the installed mounts.
 - **The release**: `tools/build-dist.sh`, `check-dist.py`, `make-release-zip.py` build two DLLs (`FILES` in
@@ -255,7 +255,7 @@ for a built-in and a mod; that was the point of the parity work.
    sections are ignored with a log line (docs/skins.md: "a newer pack still loads in an older mod"), so an old API
    draws a new dragon without its front layer or its `[Tuning.Cart]` rather than refusing it; the dependency line
    is what tells the player. The format has no version of its own beyond `format = 1`; a mount mod pins the API.
-5. **One download or one per creature.** One `GK2SaddleUpCreatures` (rat, snail, worm, dragon, Gerry) is one zip, one
+5. **One download or one per creature.** One `GK2SaddleUpCreatures` (rat, snail, worm, dragon, Larry) is one zip, one
    csproj, one test deploy and one Nexus page; five mods are five of each. The runtime is indifferent. A first
    release as one, split later if a creature grows abilities of its own, loses nothing (ids never change).
 6. **Where the mods live.** This repo (`mods/<Name>/`, sharing `DeployToGame.targets`, the scans, the generators and
@@ -301,7 +301,7 @@ between; gone.)
   `GK2MountsSourceDir` = `assets\mounts`; the Mounts tab saves into the repo as before: `Looks.CfgPathFor` reads it
   off the skin's `SourceAssembly`, and a mount's rows go to its `mount.cfg`); Saddle Up's Awake calls
   `Mounts.Looks.RegisterEmbedded` (prefix `GK2SaddleUp.mounts.`) before it builds its page; Saddle Up needs API
-  0.34.0. The API keeps Hellfire and Royal Parade. The Gerry test expects
+  0.34.0. The API keeps Hellfire and Royal Parade. The Larry test expects
   its mount from a pack, not built into the API; the readout and Coat scenarios say "every shipped mount"; the
   temp packs' sample picture is Royal Parade's.
 - **One rule that changed with the move** (before the mount folders, 2026-10-24): the API's own folder scan runs in

@@ -1,7 +1,7 @@
 """Where the mounts and skins live in this repo, in two kinds (the user, 2026-10-26: "make a distinction in the
 directories between inbuilt mounts/skins in saddle up vs ones which are 'external'"):
 
-- built in: src/<project>/assets/mounts/<mount>/, embedded in the project's DLL (Saddle Up's: Gerry, and the donkey's
+- built in: src/<project>/assets/mounts/<mount>/, embedded in the project's DLL (Saddle Up's: Larry, and the donkey's
   Hellfire and Royal Parade under mounts/donkey/skins/; the API ships none);
 - external: packs/<Pack>/gk2mounts/<mount>/, each pack its own download, laid out as BepInEx/plugins/<Pack>/ (the
   Dragon: packs/GK2SaddleUpDragonsMountPack/; the rat, snail and worm: packs/GK2SaddleUpCrittersMountPack/). A pack's ids carry its own

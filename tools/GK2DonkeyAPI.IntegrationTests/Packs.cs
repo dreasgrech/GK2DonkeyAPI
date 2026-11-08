@@ -41,17 +41,17 @@ namespace GK2DonkeyAPI.IntegrationTests
                 $"a missing mount's name from its id: {MountsPanel.NameFromId("saddleup-dragon.dragon")}, {MountsPanel.NameFromId("my-mod.big-crab")}");
             Catalog.Entry gerry = Catalog.Find(M("gerry"));
             Check(gerry != null && gerry.Pack?.Source == null && gerry.Pack?.SourceAssembly?.GetName().Name == "GK2SaddleUp",
-                $"Gerry: built into Saddle Up's DLL ({gerry?.Pack?.SourceAssembly?.GetName().Name ?? "none"})");
+                $"Larry: built into Saddle Up's DLL ({gerry?.Pack?.SourceAssembly?.GetName().Name ?? "none"})");
             // a mount with a voice and no answer of its own: its babies answer with its voice, pitched up (the user, 2026-10-27:
-            // Gerry's babies never answered him)
+            // Larry's babies never answered him)
             var gerrySounds = Sounds.Coverage(Looks.Find(Sk("gerry")), gerry, baby: true);
             var answer = gerrySounds.Find(x => x.Event == "answer");
-            Check(answer.What != null && answer.What.Contains("its voice") && answer.From != "missing", $"Gerry's babies answer with his voice ({answer.From}: {answer.What})");
-            // the Mounts panel's abilities card (2026-10-27): Gerry's cart with his cargo; the dragon flies and pulls none
+            Check(answer.What != null && answer.What.Contains("its voice") && answer.From != "missing", $"Larry's babies answer with his voice ({answer.From}: {answer.What})");
+            // the Mounts panel's abilities card (2026-10-27): Larry's cart with his cargo; the dragon flies and pulls none
             List<MountsPanel.Entry> panelEntries = MountsPanel.Entries();
             MountsPanel.Entry gerryEntry = panelEntries.Find(x => x.Id == M("gerry")), dragonEntry = panelEntries.Find(x => x.Id == M("dragon"));
             Check(gerryEntry != null && gerryEntry.Abilities.Exists(x => x.Name == "Cargo cart" && x.Line.Contains("cargo 4")) && !gerryEntry.Abilities.Exists(x => x.Name == "Flying"),
-                $"Gerry's abilities: a cargo cart of 4 ({(gerryEntry == null ? "no entry" : string.Join(", ", gerryEntry.Abilities.ConvertAll(x => x.Name)))})");
+                $"Larry's abilities: a cargo cart of 4 ({(gerryEntry == null ? "no entry" : string.Join(", ", gerryEntry.Abilities.ConvertAll(x => x.Name)))})");
             if (dragonEntry != null) Check(dragonEntry.Abilities.Exists(x => x.Name == "Flying") != !Flight.Active && !dragonEntry.Abilities.Exists(x => x.Name == "Cargo cart"),
                 $"the dragon's abilities: flying, no cargo cart ({string.Join(", ", dragonEntry.Abilities.ConvertAll(x => x.Name))})");
             // the donkey's two skins are a pack of their own since 2026-10-27 (packs/GK2SaddleUpDonkeySkinPack): Saddle Up's DLL

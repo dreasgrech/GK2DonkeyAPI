@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- The playable mount built on the GK2 Donkey API. Ships in one zip
-       with GK2DonkeyAPI.dll, which it needs (hard dependency). Its built-in content (Gerry) is a mount pack in
+       with GK2DonkeyAPI.dll, which it needs (hard dependency). Its built-in content (Larry) is a mount pack in
        assets\mounts\ (mount.cfg, sounds\, skins\<skin>\ with skin.cfg and its pictures), embedded here and registered
        with the API at start (Plugin.cs). Every other mount and skin is a mod or a pack of its own, registered with the
        API (the repo's packs\<Pack>\ are such packs), each a small plugin of its own

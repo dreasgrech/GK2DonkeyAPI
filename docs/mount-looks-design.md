@@ -2,7 +2,7 @@
 
 **2026-10-26 (built in or external):** the dragon, rat, snail and worm are no longer in Saddle Up's DLL but external
 packs of their own in the repo's `packs/` (`GK2SaddleUpDragonsMountPack`, `GK2SaddleUpCrittersMountPack`), ids by the pack
-(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins (2026-10-27: the skins too are a pack now, GK2 Saddle Up: Donkey Skins, ids `donkey/saddleup-donkey-skins.<skin>`; Saddle Up keeps Gerry alone). Paths and ids
+(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Larry and the donkey's two skins (2026-10-27: the skins too are a pack now, GK2 Saddle Up: Donkey Skins, ids `donkey/saddleup-donkey-skins.<skin>`; Saddle Up keeps Larry alone). Paths and ids
 below are of their day; docs/making-a-mount.md "Built in or external" is current.
 
 **The skinning system's full specification is [skins-design.md](skins-design.md)** (2026-10-17, designed against the
@@ -404,7 +404,7 @@ section, `MountDef` / `MountSkinDef` / `MountCompanion.Effect`, the pack keys `e
 Skins got the same treatment the same evening (skins-design.md status): one sheet texture per skin, a base record so
 nothing of the donkey is assumed by the loader or the rig, sheet packs, and sprite sources for code.
 
-## The dragon, Gerry and Royal Parade (built 2026-10-18 to 21)
+## The dragon, Larry and Royal Parade (built 2026-10-18 to 21)
 
 **Red Dragon** (`tools/skins/creatures/make_creatures.py`, `assets/skins/dragon/`; since 2026-10-24 the mount
 `assets/mounts/saddleup.dragon/` with its look in `skins/default/`): the one mount on a bigger canvas
@@ -433,7 +433,7 @@ that far further back, or the body is drawn inside it), colours Coat = scales an
 Dark = bone, Eye = yellow. One dragon: a blue one is the red one with a custom coat (the colour rows do it). Cart and
 babies allowed; the effect ring scales by its drawn width (108 px over the donkey's 46).
 
-**Gerry** (`assets/skins/gerry/skin.cfg`, since 2026-10-24 `assets/mounts/saddleup.gerry/mount.cfg` and `skins/default/skin.cfg`;
+**Larry** (`assets/skins/gerry/skin.cfg`, since 2026-10-24 `assets/mounts/saddleup.gerry/mount.cfg` and `skins/default/skin.cfg`;
 docs/gerry-mount.md): the game's talking skull as a mount with no pictures
 of our own (`source = game`: his `0901_` frames read out of the character atlas at run time, 3x on a 160 canvas, the
 hop kept at a quarter under a rider), `seat = picture` (the rider on the skull's own top, per frame), `noun = skull`,

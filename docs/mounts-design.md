@@ -2,7 +2,7 @@
 
 **2026-10-26 (built in or external):** the dragon, rat, snail and worm are no longer in Saddle Up's DLL but external
 packs of their own in the repo's `packs/` (`GK2SaddleUpDragonsMountPack`, `GK2SaddleUpCrittersMountPack`), ids by the pack
-(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins (2026-10-27: the skins too are a pack now, GK2 Saddle Up: Donkey Skins, ids `donkey/saddleup-donkey-skins.<skin>`; Saddle Up keeps Gerry alone). Paths and ids
+(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Larry and the donkey's two skins (2026-10-27: the skins too are a pack now, GK2 Saddle Up: Donkey Skins, ids `donkey/saddleup-donkey-skins.<skin>`; Saddle Up keeps Larry alone). Paths and ids
 below are of their day; docs/making-a-mount.md "Built in or external" is current.
 
 **Amended 2026-10-25 (API 0.37.0):** a mount no longer has a default effect (`MountDef.Effect` / `EffectWhen`,
@@ -27,7 +27,7 @@ in one section; `tools/skins/canonical_cfg.py`, enforced by `tests/SkinsScan`); 
 reload; the Mounts tab's Save keeps the comments of the mount sections; `effect_when` takes `Off`, `Night`, `Always`
 ("Never" is only the menu's word). Corrections to the text below: a skin has no `foals =` key (§3: the mount's
 `Foals` and the player's FoalsWearSkin decide); a withdrawn skin leaves its mount listed (§8, as the Status says);
-Gerry (a game-creature skin) declares its mount like the four drawn creatures; the recipes and the blue dragon of
+Larry (a game-creature skin) declares its mount like the four drawn creatures; the recipes and the blue dragon of
 the §1 table are gone, Royal Parade and Hellfire are the donkey's two skins. A mount's seat is its skin's `seat = <row>` since API 0.32.0 (the same for every player whatever their
 AutoSeat; docs/seat-investigation.md §8), the skin's own `SeatAdjustPx` (its `[Tuning]`) nudging from it.
 
@@ -176,7 +176,7 @@ legs, the idle shuffle, sounds volume), which is most of "mount-specific values"
   BrayVolume = 0           # for one); never a picture key (the seat, the legs, the hitch gap are the skin's [Tuning])
   ```
   Owned by the pack's owner; a later pack naming the same id with its own `[Mount]` is told the mount exists and its
-  skin joins it. The five mounts (rat, snail, worm, dragon, Gerry; Saddle Up's packs since 2026-10-20) declare
+  skin joins it. The five mounts (rat, snail, worm, dragon, Larry; Saddle Up's packs since 2026-10-20) declare
   their mounts exactly this way, in one layout (docs/skins.md "Worked examples"), so the pack path is exercised by
   the shipped skins every start.
 - **The donkey mount** is registered by the API (no tuning, no abilities): the base the game gives us.

@@ -142,7 +142,7 @@ only the game's frames stay outside it (the asset probe's `donkey-frames\` in `B
 
 Every skin we ship is a **built-in pack** and goes the same way (the user: "we need to make them the same since
 they will both be included", "once we set up this pipeline we can keep following it to create more skins for
-other mounts too"). Hellfire and Royal Parade (over the donkey), the four creatures and Gerry (a game character)
+other mounts too"). Hellfire and Royal Parade (over the donkey), the four creatures and Larry (a game character)
 are the worked examples; the next skin or mount is **scaffold, generate or draw, check, look, build, export**:
 
 1. **Scaffold**: `python -I tools/skins/new_skin.py <skin> [--mount <mount id> --name "..."] [--canvas 128] [--seat 62]
@@ -192,14 +192,14 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    the layout `tools/skins/canonical_cfg.py` writes: `layer = over` for a skin drawn over the base, `erase` when it
    takes parts off, `[Base.<Region>]` to recolour the base under it, `[Colors]` for the regions the player's colours
    reach (written from the pixels by `tools/skins/skin_colors.py`, whose rules are data in
-   `tools/skins/creatures/colors.json`: a block per skin, hue, saturation and value thresholds per region, Gerry's from
+   `tools/skins/creatures/colors.json`: a block per skin, hue, saturation and value thresholds per region, Larry's from
    the game's export), `seat = <row>` for the canvas row the rider's hip sits on (52 on the 96 canvas is the donkey's
    own seat; `+16` on 128), the skin's own geometry in `[Tuning]` / `[Tuning.Ride]` / `[Tuning.Cart]` (`HitchGapPx`,
    `RiderOffsetPx`); no `id =` line (the folder's name is the skin's) and no `[Mount]` section: a creature of its own
    has its `mount.cfg` with id, name, author, version, cart, foals, the creature's facts and its sounds) and **a PNG per frame key**
    (`bdy_static_left.png` ... `hed_static_down_03.png`, `front\` for the layer drawn in front of the rider), only our
    pixels, nothing of the game's art. A built-in one: the DLL build embeds the folder (the project's csproj,
-   `assets\mounts\**`: `SaddleUp.csproj` for Gerry). An external one (the dragon, the critters, the donkey's two skins
+   `assets\mounts\**`: `SaddleUp.csproj` for Larry). An external one (the dragon, the critters, the donkey's two skins
    in `packs/GK2SaddleUpDonkeySkinPack/gk2mounts/donkey/skins/`): its own small DLL embeds
    it (`packs/<Pack>/<Pack>.csproj`, `gk2mounts\**`); no file of the pack is copied into the game either way, the DLL
    carries them.
@@ -249,7 +249,7 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    Mounts tab) and rebuild the page: it shows the game's
    own export and counts where its composite would differ (0 = the page shows what the game shows).
 
-Another game character as a mount (Gerry) is the by-hand path: `tools/skins/gerry/gerry_probe.py <game folder> <out>
+Another game character as a mount (Larry) is the by-hand path: `tools/skins/gerry/gerry_probe.py <game folder> <out>
 [<prefix>]` finds the addressables bundle holding `<prefix>bdy_walk_left_01` and exports the character's sprites,
 `gerry_sheet.py <frames> [<prefix>]` lays them out for measuring, and the skin is a `skin.cfg` alone (`source = game`,
 `[Game]` with the prefix, scale, lift and the frame map; docs/gerry-mount.md). A skin drawn **over** one of our own
@@ -345,7 +345,7 @@ after), and writes each as the game draws it (the sheet after the erase compose)
 reads them to `BepInEx\GK2-asset-probe\game-skins\`; every F11 run does the same in its Measurements group ("measure:
 every skin of every mount exported as built"). Until then the button wrote the skins worn at that moment only. The page
 takes the frames the game built whole from the export's `manifest.txt` (its own guess, for an older export, took
-Armored's overlays for whole frames), and shows a skin with no pictures of its own (Gerry: the game's frames) from the
+Armored's overlays for whole frames), and shows a skin with no pictures of its own (Larry: the game's frames) from the
 export with nothing to compare. The first export of all nine (2026-11-05 00:22): every skin 0 px differ, the donkey's
 frames the same as the probe's. the page prefers that, says "as the game built it" on the card and
 counts the pixels where its own composite would differ (0 expected). The "all 44 frames" view lists every picture, named.

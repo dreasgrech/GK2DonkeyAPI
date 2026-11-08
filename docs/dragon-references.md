@@ -156,7 +156,7 @@ Today's ladder (docs/next-update.md):
 | Mount | Speed | Cart | Cargo |
 |---|---|---|---|
 | Donkey | Normal | yes | 6 |
-| Gerry | Fast | yes | 4 |
+| Larry | Fast | yes | 4 |
 | Giant Rat | Very fast | yes | 2 |
 | Giant Worm | Slow | yes | 4 |
 | Giant Snail | Very slow | yes | 6 |
@@ -167,7 +167,7 @@ every open slot either duplicates a mount or beats one:
 
 - Normal with 6 is the donkey;
 - Fast with 6 beats the donkey;
-- Fast with 4 is Gerry;
+- Fast with 4 is Larry;
 - Slow with 6 beats the snail and the worm.
 
 **The niche is the user's decision.** Without a new ability, the drake is a look with a speed. With one (say a

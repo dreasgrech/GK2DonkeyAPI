@@ -145,6 +145,6 @@ Speed.choice.1,Lente,Slow,"Freeplay, a choice: a choice"
 Speed.choice.2,Normale,Normal,"Freeplay, a choice: a choice"
 Speed.choice.3,Rapide,Fast,"Freeplay, a choice: a choice"
 Speed.choice.4,Très rapide,Very fast,"Freeplay, a choice: a choice"
-mount.saddleup.gerry.name,Gerry,Gerry,a mount's name (the Mount Journal; the keeper's bubbles)
+mount.saddleup.gerry.name,Larry,Larry,a mount's name (the Mount Journal; the keeper's bubbles)
 mount.saddleup.gerry.description,"Le crâne parlant se rend enfin utile. Il avance en sautillant à la seule force de ses opinions, et il en a plein à partager en chemin.","The talking skull finally makes himself useful. He hops along on pure opinion, and he has plenty of it to share on the way.",a mount's description in the Mount Journal
 skin.saddleup.gerry/default.region.coat.name,Os,Bone,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)

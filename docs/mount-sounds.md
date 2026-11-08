@@ -132,7 +132,7 @@ step = thud.ogg
 lips = none
 ```
 
-The snail's, the worm's and Gerry's older volume pins in the mount's tuning are gone: the rule above silences the
+The snail's, the worm's and Larry's older volume pins in the mount's tuning are gone: the rule above silences the
 donkey's own sounds on them by itself, and their `mount.cfg`'s `[Sounds]` lines say `none` where that is meant. (A pin
 still works: those keys, in a `mount.cfg`'s `[Tuning]`, are the base layer.)
 

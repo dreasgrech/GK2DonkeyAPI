@@ -27,7 +27,7 @@
 
 
 [size=4][b]A cart that carries six[/b][/size]
-[size=3]Everything you pick up while driving goes on the cart, stacked in three layers. Piles, tables, graves and quest hand-ins take from it as if you held the item. Each mount pulls its own load: the donkey six, Gerry four.[/size]
+[size=3]Everything you pick up while driving goes on the cart, stacked in three layers. Piles, tables, graves and quest hand-ins take from it as if you held the item. Each mount pulls its own load: the donkey six, Larry four.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/cargo-sixitems-cycle.gif?v=2[/img][/center]
 
@@ -57,8 +57,8 @@
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/fight-b.gif?v=2[/img][/center]
 
 
-[size=4][b]Ride Gerry![/b][/size]
-[size=3]The donkey is not your only mount. Gerry comes with the mod: the talking skull, three times his usual size, hopping along on pure opinion and sharing it on the way in his own voice. Fast, with a cart that holds four, and little skulls of his own trailing him. Press [b]L[/b] to open the Mount Journal, pick Gerry and ride; the journal is also where you name your mount, pick its skin, set its babies and open its colours.[/size]
+[size=4][b]Ride Larry![/b][/size]
+[size=3]The donkey is not your only mount. Larry comes with the mod: the talking skull, three times his usual size, hopping along on pure opinion and sharing it on the way in his own voice. Fast, with a cart that holds four, and little skulls of his own trailing him. Press [b]L[/b] to open the Mount Journal, pick Larry and ride; the journal is also where you name your mount, pick its skin, set its babies and open its colours.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/gerry-riding.gif?v=2[/img][/center]
 
@@ -94,7 +94,7 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [*][size=3][b]H[/b] — your donkey comes and you ride. Riding: get off. Driving: leave the cart standing and ride on.[/size][/*]
 [*][size=3][b]G[/b] — your donkey comes with its cart and you drive. Riding: the cart comes and is hitched. Driving: get off.[/size][/*]
 [*][size=3][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item. Driving with nothing in front: set the top item down behind the cart (a chest too).[/size][/*]
-[*][size=3][b]L[/b] — the Mount Journal: pick your mount (the donkey, Gerry, or a pack's), name it, choose its skin and babies, open its colours.[/size][/*]
+[*][size=3][b]L[/b] — the Mount Journal: pick your mount (the donkey, Larry, or a pack's), name it, choose its skin and babies, open its colours.[/size][/*]
 [*][size=3][b]B[/b] — ring the bell.[/size][/*]
 [*][size=3][b]V[/b] — your mount calls out, and its babies answer.[/size][/*]
 [*][size=3][b]Space[/b] — your mount jumps. On a mount that flies, Space again in the air takes off.[/size][/*]
@@ -141,7 +141,7 @@ The game's own [b]Mods[/b] window (main menu) lists only the mods the game insta
 [line]
 [size=5][b][color=#f0b45a]Mount and Skin Packs for Saddle Up[/color][/b][/size]
 
-[size=3]Saddle Up comes with the donkey and Gerry the skull. More mounts and skins are packs of their own: one download each, extracted into the game folder like this mod, and the Mount Journal ([b]L[/b]) lists what you have installed.[/size]
+[size=3]Saddle Up comes with the donkey and Larry the skull. More mounts and skins are packs of their own: one download each, extracted into the game folder like this mod, and the Mount Journal ([b]L[/b]) lists what you have installed.[/size]
 
 [size=4][b]Dragons Mount Pack[/b][/size]
 [size=3][b]The Dragon[/b]: a mount that flies. Slow on its feet and it pulls no cart, but no fence, river or roof in the village can stop it, and its babies follow it around.[/size]

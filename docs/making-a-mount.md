@@ -303,7 +303,7 @@ packs/                                 external: each folder is one download, a 
                                                                          GK2SaddleUpDonkeySkinPack.csproj, Plugin.cs, README.md, CHANGELOG.md
 ```
 
-Saddle Up's built-in content is Gerry alone (the user, 2026-10-27): a skin for a mount Saddle Up doesn't own, such as
+Saddle Up's built-in content is Larry alone (the user, 2026-10-27): a skin for a mount Saddle Up doesn't own, such as
 the donkey, belongs in a skins pack. `GK2SaddleUpDonkeySkinPack` is the worked example of one: a mount folder with no
 `mount.cfg` (`gk2mounts\donkey\skins\<skin>\`, skins added to the game's donkey), and in its `Plugin.cs` Hellfire's
 particle effect (`saddleup-donkey-skins.hellfire`), which moved with the skin.
@@ -313,7 +313,7 @@ particle effect (`saddleup-donkey-skins.hellfire`), which moved with the skin.
   `dreas.gk2.saddleup.donkeyskins`: the skin `donkey/saddleup-donkey-skins.hellfire` and the effect
   `saddleup-donkey-skins.hellfire`). The pack's folder and DLL name (`GK2SaddleUpDragonsMountPack`, the user, 2026-10-28)
   say nothing about its ids: the prefix is the GUID's, as Saddle Up's own `saddleup.` is (its DLL is `GK2SaddleUp`). A mount or skin lives in
-  exactly one pack for good: saves keep the full id. Built-in ones (Gerry) keep `saddleup.`. SkinsScan checks both, and that a pack's `mount.cfg` says
+  exactly one pack for good: saves keep the full id. Built-in ones (Larry) keep `saddleup.`. SkinsScan checks both, and that a pack's `mount.cfg` says
   `needs =` and `version =`.
 - **A pack is one DLL** (the user, 2026-10-26: a folder unzipped over an older one keeps the files the new version
   dropped, and the loader would use them; one file is replaced whole). `packs/<Pack>/<Pack>.csproj` embeds

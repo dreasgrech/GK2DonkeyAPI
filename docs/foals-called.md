@@ -13,7 +13,7 @@ code was read in `MountInstance.cs` (`ComeTo`), `Foals.cs`, `FoalsIndoors.cs`, `
 The house and the yard are one scene (RuinedTemple). The inside is round (-96, 0, -80), and the yard by the door round
 (4, 6, 18), about 140 to 145 apart.
 
-The families: the donkey #1 (babies #61, #62), the dragon #74 (#75, #76), Gerry #77 (#78 to #82), the rat #83 (#84 to
+The families: the donkey #1 (babies #61, #62), the dragon #74 (#75, #76), Larry #77 (#78 to #82), the rat #83 (#84 to
 #88), the snail #89 (#90 to #94), the worm #95 (two). All were called inside, so every other one was left inside with its
 babies.
 

@@ -152,7 +152,7 @@ that differ only in their placeholders once.
 |---|---:|---|
 | Saddle Up, `Plugin.cs` only | **102** (134 rows) | 48 row labels and 28 descriptions; 43 choice words, 16 different (e.g. "Game default", "Custom"); 7 section names; 2 headings; the page's title and description |
 | Donkey API, 22 files | **126** (142 rows; 177 different counting rare and other-mod paths) | 36 different bubbles (79 with rare paths); the journal (21); the options window (18); 23 key texts (key names and the "Same key as" lines); 9 prompts; 7 stat words; 5 speed words; the colours window (5); the crossroads notification |
-| Released packs | **6** | Gerry's and the Dragon's name and description; Hellfire and Royal Parade. Also 2 plugin names in the game's Mods window |
+| Released packs | **6** | Larry's and the Dragon's name and description; Hellfire and Royal Parade. Also 2 plugin names in the game's Mods window |
 
 **Where the API's text sits:** `MountsPanel.cs` 33 rows, `KeyCapture.cs` 32, `CartChest.cs` 23, `Mount.cs` 13, `Cargo.cs`
 13, `OptionsWindow.cs` 12, `MountSettingsPage.cs` 11, `MountInstance.cs` 11, `InstanceControls.cs` 10, and 13 more files
@@ -167,7 +167,7 @@ with 8 rows or fewer each.
 - the journal entry's `Lines`: "Pulls the cart", "Has small babies (0.6 of its size)", "Speed: …", "Cargo: …" and the
   `[Stats]` lines. Only self-tests read them;
 - every skin description;
-- a default skin's own name. "Red Dragon" and Gerry's skin "Gerry" show as "Default".
+- a default skin's own name. "Red Dragon" and Larry's skin "Larry" show as "Default".
 
 **Never on screen (the cfg only):**
 
@@ -190,7 +190,7 @@ with 8 rows or fewer each.
 | **Saddle Up's code changes** | the `v + "%"` on three sliders; the max-cargo number; the speed words in Freeplay; the page description's "Press H …" names default keys | **Four places**, all small. |
 | **The cfg stays English** | `ConfigFile.Save` rewrites the file from each entry's description, given at `Bind` | **Confirmed, and automatic.** `Bind` runs in `Awake`, before any language, so as long as `Bind` gets the English the cfg never changes language. |
 | **The Workshop copier carries the files** | `WorkshopSyncCore.SyncTree` copies every file, except `core/`, `cache/`, `patchers/` and `*.log`. `config/` files are copied once and never over a player's. | **Confirmed.** A `.csv` in our item reaches the player. |
-| **The game's words we could reuse** | Our words looked up in the English table | **Few.** Cancel (`btn_cancel`), OK, Options (`ui_menu_options`), Name (`ui_name`), On/Off, Yes/No. Not Done, Defaults, Ride, Speed, Cargo, Skin or the colours. Gerry and Donkey have no entries of their own. |
+| **The game's words we could reuse** | Our words looked up in the English table | **Few.** Cancel (`btn_cancel`), OK, Options (`ui_menu_options`), Name (`ui_name`), On/Off, Yes/No. Not Done, Defaults, Ride, Speed, Cargo, Skin or the colours. Larry and Donkey have no entries of their own. |
 | **Self-tests read English** | `SelfTest.Order.cs` 67, `SelfTest.cs` 1511 and the panel checks | **Confirmed.** They would run in English or compare keys. |
 
 **Still to measure in the game** (the third round, 2026-10-31):
@@ -227,7 +227,7 @@ a proposal each, and nothing is changed.
     - the stat "1 items" (`MountsPanel.cs` 173);
     - the ability line "Pulls a cart that holds 1 items." (192);
     - the bubble "… pulls 1 items at most." (`Looks.cs` 1571).
-  - No released mount has cargo 1: the Critters' are 2, 4 and 6, and Gerry's is 4. So only another mod's mount shows it.
+  - No released mount has cargo 1: the Critters' are 2, 4 and 6, and Larry's is 4. So only another mod's mount shows it.
   - **Proposal**, worded without a plural (D7):
     - the stat as a number ("Cargo 4", "2 of 4"), as Skins already is;
     - the ability line "Pulls a cart (cargo {0}).";
@@ -517,7 +517,7 @@ translators ask.
 - the log;
 - dev tools.
 
-**To decide:** mount names. "Donkey" and "Dragon" are words; "Gerry" is a name. The recommendation is that they are
+**To decide:** mount names. "Donkey" and "Dragon" are words; "Larry" is a name. The recommendation is that they are
 translatable lines like any other, and a translator keeps a name as it is.
 
 ## 6. A first step, if B is chosen
@@ -693,7 +693,7 @@ the prompts, the notice; a pack's mount and a skin pack's skin read from German 
 the journal and the Skin list.
 
 **The English files of that start, synced the same night:** the API 147 lines (88 added, the two old cargo words
-gone), Saddle Up 144 (Gerry), Critters 6, Donkey Skins 3, Dragons 2, in `packs/<Pack>/Languages/` for the first time
+gone), Saddle Up 144 (Larry), Critters 6, Donkey Skins 3, Dragons 2, in `packs/<Pack>/Languages/` for the first time
 and deployed with each pack. The start's dump also listed 8 skin descriptions no window draws (a skin's description
 shows only as its mount's, for a mount with none of its own, and every shipped mount has one): `Texts.EnglishOf` lists
 a skin's description only where it is drawn now, and the repository's files were trimmed to match. The next dev start
@@ -776,7 +776,7 @@ the chest's two.
 the names of a skin's own tones (`[Tone.<id>] name =`, the labels of their dropdowns in the colours window;
 docs/mount-colours.md section 7), whose choice words are the API's.
 
-- Saddle Up's built-in Gerry is Saddle Up's.
+- Saddle Up's built-in Larry is Saddle Up's.
 - The Dragon, Red Dragon, Hellfire, Royal Parade and Armored are their packs'.
 
 **Owner:** the plugin that registered the mount or skin. The API already keeps it (`Looks.SkinDef.Owner`; the

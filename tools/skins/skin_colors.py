@@ -2,7 +2,7 @@
 colours are Dark, Muzzle, Eye or Harness; everything else is Coat. The rules are DATA, tools/skins/creatures/colors.json
 (per skin, per region, in order: a colour's hue, saturation and value against thresholds; the first match wins; the
 rest is Coat), so a new creature adds a block there, never code here. The hex lists come from the PNGs (front/ too),
-so they are exact; a skin with "source": "game-export" (Gerry) reads the in-game export folder instead. Re-runnable
+so they are exact; a skin with "source": "game-export" (Larry) reads the in-game export folder instead. Re-runnable
 (replaces the section, then the canonical layout): run it after the art changes, then tests/SkinsScan. colors.json is
 keyed by the skin's full name (saddleup-dragon.dragon/default); a skin on the command line is any name skinroots.find
 takes (saddleup-dragon.dragon/default, dragon, donkey/saddleup.hellfire, hellfire).

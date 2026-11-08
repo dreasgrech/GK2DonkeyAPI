@@ -8,7 +8,7 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 installs them instead, and the game's Mods window lists it). Version 0.16.0, for GK2 Donkey API 0.44.0 or newer, and Steam game build 26404424 (game
 1.011.1).
 
-**Mounts and skins.** Saddle Up itself brings the donkey (the game's own look) and Gerry, the game's talking skull
+**Mounts and skins.** Saddle Up itself brings the donkey (the game's own look) and Larry, the game's talking skull
 (a pack in `assets/mounts/saddleup.gerry/`, registered with the API at start the way any mod ships a mount). More
 mounts and skins are downloads of their own, each a folder for `BepInEx\plugins\`:
 - **GK2 Saddle Up: Dragon** (`GK2SaddleUpDragonsMountPack\GK2SaddleUpDragonsMountPack.dll`): the dragon, which flies;
@@ -19,7 +19,7 @@ mounts and skins are downloads of their own, each a folder for `BepInEx\plugins\
 | Mount | Download | Riding | Cart |
 |---|---|---|---|
 | Donkey | GK2 Saddle Up | Normal | 6 items |
-| Gerry | GK2 Saddle Up | Fast | 4 items |
+| Larry | GK2 Saddle Up | Fast | 4 items |
 | Rat | GK2 Saddle Up: Critters | Very fast | 2 items |
 | Worm | GK2 Saddle Up: Critters | Slow | 4 items |
 | Snail | GK2 Saddle Up: Critters | Very slow | 6 items |
@@ -37,7 +37,7 @@ of fire comes in a later update) and Royal Parade (a saddle cloth and a crown; t
 | **G** | your donkey comes with its cart and you drive (the dragon: it says it can't pull the cart) | the cart comes and is hitched | get off |
 | **E** (the game's interact key) | at your donkey: ride or drive it; at the cart holding something: put it on the cart; at the cart's back with empty hands: take the top item | next to a free cart: take it | with nothing in front: set the top item down behind the cart |
 | Bell key (B) | – | – | ring the bell (the bell is the cart's) |
-| Call out key (V) | – | your mount calls out (the donkey brays, the dragon roars, the rat squeaks, Gerry talks); its babies answer | the same |
+| Call out key (V) | – | your mount calls out (the donkey brays, the dragon roars, the rat squeaks, Larry talks); its babies answer | the same |
 | Send-away key (none by default) | your mount, its cart and its babies go (the load is set down first) | the same | the same |
 | Back to the last safe spot (none by default) | puts you back on the last ground you stood on in this scene | the same | the same |
 
@@ -90,7 +90,7 @@ All of these apply at once:
 | | Descend (hold) | Left Ctrl | Hold it while flying to go down. You land when you reach the ground. |
 | 2. Mount | Your mount (the picture) | | Your mount, drawn in its colours. |
 | | Mount Journal | | A button. Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours. Done keeps your choices and Cancel puts them back. |
-| | Mount | Donkey | (in the Mounts panel) The mount you ride. Saddle Up has the donkey and Gerry. Packs and other mods add more. |
+| | Mount | Donkey | (in the Mounts panel) The mount you ride. Saddle Up has the donkey and Larry. Packs and other mods add more. |
 | | Skin | Default | (in the Mounts panel) How your mount looks. With the Donkey Skin Pack the donkey also has Hellfire, Royal Parade and Armored. |
 | | Name | none | (in the Mounts panel) Shown when you walk up to your mount, as in "Ride Bella". |
 | | Keep your mount with the save | on | After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs. |

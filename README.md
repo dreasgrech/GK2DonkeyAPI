@@ -4,12 +4,12 @@ BepInEx mods for Graveyard Keeper 2 that give the game a rideable donkey and its
 
 | Mod | Version | For | What it is |
 |---|---|---|---|
-| [GK2 Saddle Up](src/SaddleUp/README.md) | 0.16.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. Gerry the skull comes with it; the Dragon (GK2 Saddle Up: Dragon), the Rat, Snail and Worm (GK2 Saddle Up: Critters) and the donkey's skins Hellfire and Royal Parade (GK2 Saddle Up: Donkey Skins) are downloads of their own. |
+| [GK2 Saddle Up](src/SaddleUp/README.md) | 0.16.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. Larry the skull comes with it; the Dragon (GK2 Saddle Up: Dragon), the Rat, Snail and Worm (GK2 Saddle Up: Critters) and the donkey's skins Hellfire and Royal Parade (GK2 Saddle Up: Donkey Skins) are downloads of their own. |
 | [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.44.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
 
 Both are built and audited against Steam game build 26297960 (game 1.011; `docs/game-update-26297960.md`).
 
-What you ride and how it is drawn (the donkey in the API; Gerry built into Saddle Up; the dragon, rat, snail and
+What you ride and how it is drawn (the donkey in the API; Larry built into Saddle Up; the dragon, rat, snail and
 worm and the donkey's two skins as Saddle Up's external packs, each its own download, in `packs/`; the mounts and skins are on for players since Saddle Up 0.12.0, [`docs/skins.md`](docs/skins.md); a mod shipping a mount of its own: [`docs/making-a-mount.md`](docs/making-a-mount.md)):
 
 | Mount | Skins | Notes |
@@ -17,7 +17,7 @@ worm and the donkey's two skins as Saddle Up's external packs, each its own down
 | Donkey (the game's own) | the game's own look; in GK2 Saddle Up: Donkey Skins, **Hellfire** (horns, a devil's tail, glowing eyes, lava cracks; its ring of fire is registered but not shown since API 0.37.0), **Royal Parade** (a saddle cloth and a crown; the cloth follows the harness colour), **Armored** (plate barding: a plumed chanfron, a chest plate, flank lames and a crupper; the steel follows the second tone, the plume and padding the harness colour; unreleased) | Normal speed, cart of 6, babies |
 | Rat, Snail, Worm (GK2 Saddle Up: Critters) | their own look (our own art) | the rat Very fast, cart of 2; the worm Slow, cart of 4; the snail Very slow, cart of 6; babies; the snail and the worm have no voice |
 | Dragon (GK2 Saddle Up: Dragon) | its own look (our own art, called Red Dragon) | Slow, babies, no cart, **flies** (Space jumps and takes off, Left Shift and Left Ctrl climb and descend, docs/flying.md); its near wing is drawn in front of the rider |
-| Gerry (the game's talking skull) | the game's own frames, read at run time | Fast, cart of 4, babies his own size; the keeper calls him a skull |
+| Larry (the game's talking skull) | the game's own frames, read at run time | Fast, cart of 4, babies his own size; the keeper calls him a skull |
 
 Packs from anyone join the list: a skin is a folder with a `skin.cfg` and a PNG per frame, and a pack can bring a
 mount of its own (a mount folder with a `mount.cfg`, its skins under `skins\`; [`docs/skins.md`](docs/skins.md)); a mod can
@@ -61,7 +61,7 @@ not yet read by native speakers: corrections are welcome (a corrected file, or t
 **To translate:**
 
 1. **Find the English.** Each mod's English is a spreadsheet file, `en.csv`, in its folder:
-   - `BepInEx\plugins\GK2SaddleUp\Languages\en.csv`: Saddle Up's options and Gerry;
+   - `BepInEx\plugins\GK2SaddleUp\Languages\en.csv`: Saddle Up's options and Larry;
    - `BepInEx\plugins\GK2DonkeyAPI\Languages\en.csv`: the windows' own words, the bubbles, the prompts, the donkey;
    - each pack's own, such as `BepInEx\plugins\GK2SaddleUpDragonsMountPack\Languages\en.csv`: its mounts' and skins'
      names.
@@ -115,7 +115,7 @@ a second mod keeping its own donkeys with the save.
 | Where | What |
 |---|---|
 | `src/GK2DonkeyAPI` | The API mod. Its README lists every feature; the settings and internals are in [`docs/reference.md`](docs/reference.md). |
-| `src/SaddleUp` | The player mod. What it offers and why: [`docs/saddleup-scope.md`](docs/saddleup-scope.md). Its built-in Gerry is a pack in `assets/mounts/<mount>/` (`mount.cfg`, `sounds/`, `skins/default/` and any other `skins/<skin>/`), embedded and registered with the API: how any mod ships a mount, [`docs/mounts-as-mods.md`](docs/mounts-as-mods.md). |
+| `src/SaddleUp` | The player mod. What it offers and why: [`docs/saddleup-scope.md`](docs/saddleup-scope.md). Its built-in Larry is a pack in `assets/mounts/<mount>/` (`mount.cfg`, `sounds/`, `skins/default/` and any other `skins/<skin>/`), embedded and registered with the API: how any mod ships a mount, [`docs/mounts-as-mods.md`](docs/mounts-as-mods.md). |
 | `packs` | Saddle Up's external packs, each its own download laid out as `BepInEx\plugins\<Pack>\`: `GK2SaddleUpDragonsMountPack` (`saddleup-dragon.dragon`), `GK2SaddleUpCrittersMountPack` (`saddleup-critters.rat`, `.snail`, `.worm`), `GK2SaddleUpDonkeySkinPack` (skins only: `donkey/saddleup-donkey-skins.hellfire`, `.royal-parade`, and Hellfire's effect); each a small plugin (`<Pack>.csproj`, `Plugin.cs`) with its `gk2mounts\` embedded, deployed by its build like any plugin. [`docs/making-a-mount.md`](docs/making-a-mount.md) "Built in or external". |
 | `examples/` | `GK2DonkeyTechGate` (the cart and the lamp's light need techs) and `GK2DonkeyHerd` (a second mod with its own kept donkeys). Not shipped. |
 | `tools/` | `GK2DonkeyProbe` (the investigation plugin and its archived reports), `GK2DonkeyAPIProbe` (every API call on F-keys), `colors` (the shader and texture tools behind the colours), `GK2PerfRunner` (scripted profiling, [`docs/performance-hog.md`](docs/performance-hog.md)), `GK2AssetProbe` (art from outside the game, [`docs/external-assets.md`](docs/external-assets.md)), `GK2DonkeyAPI.IntegrationTests` (the in-game tests of Saddle Up and its packs, joining the API's self-tests, [`docs/self-tests.md`](docs/self-tests.md)), `layering-scan.py` (the API names no mod, Saddle Up no pack). Not shipped. |

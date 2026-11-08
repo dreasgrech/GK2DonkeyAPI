@@ -9,7 +9,7 @@ The pictures are the game's art: they are never written inside this repository (
     python tools/skins/game_sprites.py palette <out folder> <sprite name> ...  # colours (count, hex, HSV) + a 12x crop
 
 Presets worth knowing: 0301 the donkey; 0341, 0622, 0626, 0627, 0641 armoured guards (helmets, breastplates: the
-steel Armored uses); 0901 Gerry. The game is Unity 6000.3.9f1 and its bundles carry no version string, so UnityPy needs
+steel Armored uses); 0901 Larry. The game is Unity 6000.3.9f1 and its bundles carry no version string, so UnityPy needs
 the fallback set below.
 """
 import colorsys, glob, os, re, sys

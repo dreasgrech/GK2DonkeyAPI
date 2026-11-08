@@ -26,7 +26,7 @@ zip; until 2026-10-29 the pack's README.md and CHANGELOG.md rode beside it): `GK
 `GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip` (`BepInEx\plugins\GK2SaddleUpDonkeySkinPack\`). There is no combined zip: each
 pack ships on its own (the user, 2026-10-27).
 
-Players download GK2 Saddle Up (the donkey and Gerry) and, if they want more, the packs: GK2 Saddle Up: Dragon (the
+Players download GK2 Saddle Up (the donkey and Larry) and, if they want more, the packs: GK2 Saddle Up: Dragon (the
 dragon), GK2 Saddle Up: Critters (the rat, snail and worm), GK2 Saddle Up: Donkey Skins (the donkey's Hellfire and
 Royal Parade).
 

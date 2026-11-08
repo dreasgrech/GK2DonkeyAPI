@@ -26,7 +26,7 @@ carries one already. A skin of your own mod's mount takes any name.
               mod doesn't own (the donkey, another project's) --prefix goes in front (saddleup.giant-crab), or give it
               whole
   --mod       the project under src/ whose assets/mounts gets the pack (default: SaddleUp, whose built-in mount is
-              Gerry; the API ships none; docs/mounts-as-mods.md). A skin for a mount Saddle Up doesn't own (the donkey)
+              Larry; the API ships none; docs/mounts-as-mods.md). A skin for a mount Saddle Up doesn't own (the donkey)
               goes to a skins pack instead (--pack; 2026-10-27: Hellfire and Royal Parade are the GK2SaddleUpDonkeySkinPack pack). A mount mod of its own: a project whose
               csproj embeds assets\\mounts\\** and whose Awake calls Mounts.Looks.RegisterEmbedded (Saddle Up's are the
               lines to copy), then --mod <its folder> and --prefix
@@ -265,7 +265,7 @@ def main():
     # (Looks.AddsToOthers; docs/skins.md); on the mod's own mount any name
     added = not new_mount and not os.path.isfile(os.path.join(mount_dir, "mount.cfg"))
     if added and not pack and project == skinroots.MOUNTS_PROJECT:
-        # Saddle Up ships its own mount (Gerry) only; a skin for a mount it doesn't own is a skins pack's (2026-10-27)
+        # Saddle Up ships its own mount (Larry) only; a skin for a mount it doesn't own is a skins pack's (2026-10-27)
         print(f"a skin for {mount_id}, a mount Saddle Up doesn't own, goes into a skins pack: --pack GK2SaddleUpDonkeySkinPack (ours) or --pack <a new one>"); return 2
     if added:
         if "." not in sid:

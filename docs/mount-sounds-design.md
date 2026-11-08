@@ -51,7 +51,7 @@ the first probe (section 5).
 skin's", and [mounts-parity-matrix.md](mounts-parity-matrix.md) 2.6 closed the subject with "phase 2 (a sounds API)
 not planned". Both change: a mount declares its sound set (the creature's voice, shared by its skins) **and a skin
 may override any event of it** (a red dragon and a blue dragon may roar differently). The order is the one tuning
-already has (section 2). The snail's, the worm's and Gerry's `[Mount.Tuning]` sound pins keep working as mount-level
+already has (section 2). The snail's, the worm's and Larry's `[Mount.Tuning]` sound pins keep working as mount-level
 data.
 
 ## 1. What exists
@@ -161,7 +161,7 @@ the player's row scales it.)
 **Amended 2026-10-24 evening (the user: "if someone creates a new mount, by default the mount is silent?"):** the
 donkey's own events (`voice`, `answer`, `lips`, `graze`, the ride-style `mount` and `dismount`; `SoundEvents.Def.DonkeyOwn`)
 never reach another mount through the base layer: silent there unless a layer gives a sound. The neutral events
-stay everyone's. The snail's, worm's and Gerry's pins are gone. `Sounds.Coverage` / `CoverageLine` say what a skin
+stay everyone's. The snail's, worm's and Larry's pins are gone. `Sounds.Coverage` / `CoverageLine` say what a skin
 is missing (the log once a session, the Mounts tab, the skins scan).
 
 Why a skin may override: the user's requirement, and the one case that needs it (two drawings of one creature with

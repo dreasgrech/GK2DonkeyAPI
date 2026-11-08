@@ -12,7 +12,7 @@ namespace GK2DonkeyAPI.IntegrationTests
     internal static partial class Tests
     {
         // Cargo per mount (docs/next-update.md section 3, the user's go of 2026-10-27): the cart holds the smaller of the
-        // player's Cart capacity and its mount's [Mount] cargo (the rat 2, Gerry 4, the donkey 6), re-applied when the
+        // player's Cart capacity and its mount's [Mount] cargo (the rat 2, Larry 4, the donkey 6), re-applied when the
         // mount changes under a hitched cart; a lighter mount with more aboard leaves the cart standing (2026-10-27).
         internal static IEnumerator CargoPerMount()
         {
@@ -21,10 +21,10 @@ namespace GK2DonkeyAPI.IntegrationTests
             Catalog.Entry rat = Catalog.Find(M("rat")), gerry = Catalog.Find(M("gerry"));
             if (rat == null || gerry == null || Looks.Find(Sk("rat")) == null || Looks.Find(Sk("gerry")) == null)
             {
-                Warn("the built-in rat or Gerry isn't registered: skipped");
+                Warn("the built-in rat or Larry isn't registered: skipped");
                 yield break;
             }
-            Check(Catalog.CargoOf(rat) == 2 && Catalog.CargoOf(gerry) == 4 && Catalog.CargoOf(Catalog.Donkey) == 6, $"the shipped cargo: rat {Catalog.CargoOf(rat)}, Gerry {Catalog.CargoOf(gerry)}, donkey {Catalog.CargoOf(Catalog.Donkey)} (2, 4, 6)");
+            Check(Catalog.CargoOf(rat) == 2 && Catalog.CargoOf(gerry) == 4 && Catalog.CargoOf(Catalog.Donkey) == 6, $"the shipped cargo: rat {Catalog.CargoOf(rat)}, Larry {Catalog.CargoOf(gerry)}, donkey {Catalog.CargoOf(Catalog.Donkey)} (2, 4, 6)");
             MountHandle h = Spawn(Spot(home, 4f) ?? home, true, withCart: true);
             if (h == null) { Fail("could not spawn a donkey with a cart"); yield break; }
             yield return Until(() => h.IsReady && h.I.CargoRig.Inv != null, 6f);
@@ -70,9 +70,9 @@ namespace GK2DonkeyAPI.IntegrationTests
 
                 h.Tuning.Set(Owner, "Skin", Sk("gerry"));
                 yield return Until(() => Looks.MountWanted(h.I) == gerry && Size() == 4, 10f);
-                Check(Looks.MountWanted(h.I) == gerry && Size() == 4, $"Gerry: four ({Size()} slots)");
+                Check(Looks.MountWanted(h.I) == gerry && Size() == 4, $"Larry: four ({Size()} slots)");
                 Mounts.Behaviour.Set(Owner, "CartSlots", 2);
-                Check(Size() == 2, $"Cart capacity 2 on Gerry: the player's smaller number wins ({Size()} slots)");
+                Check(Size() == 2, $"Cart capacity 2 on Larry: the player's smaller number wins ({Size()} slots)");
                 Mounts.Behaviour.Set(Owner, "CartSlots", 6);
 
                 h.Tuning.Set(Owner, "Skin", "");

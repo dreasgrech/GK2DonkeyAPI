@@ -145,6 +145,6 @@ Speed.choice.1,느림,Slow,"Freeplay, a choice: a choice"
 Speed.choice.2,보통,Normal,"Freeplay, a choice: a choice"
 Speed.choice.3,빠름,Fast,"Freeplay, a choice: a choice"
 Speed.choice.4,매우 빠름,Very fast,"Freeplay, a choice: a choice"
-mount.saddleup.gerry.name,게리,Gerry,a mount's name (the Mount Journal; the keeper's bubbles)
+mount.saddleup.gerry.name,래리,Larry,a mount's name (the Mount Journal; the keeper's bubbles)
 mount.saddleup.gerry.description,"말하는 해골이 드디어 쓸모가 생겼습니다. 오로지 자기 의견의 힘만으로 통통 튀어 다니는데, 가는 길에 늘어놓을 의견도 차고 넘치죠.","The talking skull finally makes himself useful. He hops along on pure opinion, and he has plenty of it to share on the way.",a mount's description in the Mount Journal
 skin.saddleup.gerry/default.region.coat.name,뼈,Bone,a part of the mount the player colours: its row's label in the colours window (the skin's name for it)

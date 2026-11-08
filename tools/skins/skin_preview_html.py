@@ -16,7 +16,7 @@ A skin drawn over the donkey (layer = over) is composited over the donkey's fram
 the player's colours: the page shows the art as drawn). The front layer (the front folder) is drawn in front of the rider, in
 the animated view and in the strips; "Rider" puts the probe's rider on the skin's seat row (seat = <row>, the donkey's
 52, a picture seat's top row) shifted by its RiderOffsetPx, with the seat row drawn as a line. A card says the seat,
-the hitch gap, the babies' size and the colour regions the player's colours reach. A skin with source = game (Gerry)
+the hitch gap, the babies' size and the colour regions the player's colours reach. A skin with source = game (Larry)
 shows the game's export when there is one. The captures of the probe's Capture tab go on top as before.
 
 LOCAL ONLY: the frames are the game's art (and ours); the page embeds them and stays on this machine.

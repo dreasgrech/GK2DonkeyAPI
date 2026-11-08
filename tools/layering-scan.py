@@ -7,7 +7,7 @@ its packs. Fails on any name of a higher layer in a lower one: code, strings and
   assembly, its mounts and skins, its packs' ids). The API's in-game tests of those live in
   tools/GK2DonkeyAPI.IntegrationTests, a dev plugin the API knows only by that name (Dev/AssemblyInfo.cs).
 - src/SaddleUp (every .cs and .csproj): no name of its packs (the Dragon, the Critters, the Donkey Skins, their mounts,
-  skins and ids). Gerry is Saddle Up's own.
+  skins and ids). Larry is Saddle Up's own.
 - the built API DLL (src/GK2DonkeyAPI/bin/Release, or dist/ when given --dist): none of the API's names in its strings
   (UTF-16, as .NET stores them).
 An exception is a line in ALLOWED: the file, the text, and why.
@@ -23,7 +23,7 @@ ALLOWED = [
     # (path relative to the repo, a text the line contains, why)
     ("src/GK2DonkeyAPI/LooksGame.cs", "docs/gerry-mount.md", "a doc's file name (the investigation of mounts drawn from the game's own characters)"),
 ]
-DLL_TERMS = ["Saddle Up", "saddleup", "Hellfire", "hellfire", "Gerry", "dragon", "critters", "royal-parade"]
+DLL_TERMS = ["Saddle Up", "saddleup", "Hellfire", "hellfire", "Larry", "Gerry", "dragon", "critters", "royal-parade"]
 
 
 def allowed(rel, line):

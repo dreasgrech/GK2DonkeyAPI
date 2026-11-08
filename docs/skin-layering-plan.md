@@ -237,5 +237,5 @@ check_skin.py, canonical_cfg.py, docs.
 - Edits to the default reach variants only through Catalog.Touch → RefreshInherited.
 - Colour provenance on over variants.
 - Memory: a variant's sheet holds every default frame (dragon about 11.5 MB); build time 173 frames / 6 a tick.
-- Game-source defaults (Gerry): a parent producer throwing must set the variant aside.
+- Game-source defaults (Larry): a parent producer throwing must set the variant aside.
 - Code skins: SeatRow -1 now means "inherit" (said in XML docs and the release notes).

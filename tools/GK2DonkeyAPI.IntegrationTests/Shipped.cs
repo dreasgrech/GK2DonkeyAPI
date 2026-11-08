@@ -8,7 +8,7 @@ namespace GK2DonkeyAPI.IntegrationTests
     // SelfTest.cs, 2026-10-27: the API knows none of them).
     internal static partial class Tests
     {
-        // Our shipped mounts by the name after their prefix: Saddle Up's built-in Gerry, and its external packs' (packs/,
+        // Our shipped mounts by the name after their prefix: Saddle Up's built-in Larry, and its external packs' (packs/,
         // the ids by the pack since 2026-10-26: saddleup-dragon.dragon, saddleup-critters.rat ...).
         internal static readonly Dictionary<string, string> ShippedMounts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -26,7 +26,7 @@ namespace GK2DonkeyAPI.IntegrationTests
         internal const float DragonRaisePx = 6f;
 
         // Which of our packs a scenario needs is not installed (the user, 2026-10-27: "have we done tests without loading
-        // the extra mounts dlls"): a player may have Saddle Up alone, or one pack. Names: our mounts' short names (Gerry is
+        // the extra mounts dlls"): a player may have Saddle Up alone, or one pack. Names: our mounts' short names (Larry is
         // Saddle Up's own) and the donkey skins'. Null: all there; else the skip line naming the pack.
         internal static string MissingPack(params string[] names)
         {
@@ -48,7 +48,7 @@ namespace GK2DonkeyAPI.IntegrationTests
         }
 
         // A shipped skin's full name: "dragon" -> "saddleup-dragon.dragon/default" (every mount's own look is its
-        // skins\default\), the same for the rat, snail, worm and Gerry; "hellfire" -> "donkey/saddleup-donkey-skins.hellfire",
+        // skins\default\), the same for the rat, snail, worm and Larry; "hellfire" -> "donkey/saddleup-donkey-skins.hellfire",
         // "royal-parade" the same; "" and a full name as they are. A plain string map: it holds with nothing registered.
         internal static string Sk(string name)
         {

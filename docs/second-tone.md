@@ -27,7 +27,7 @@ Players have rows for three of the five: Coat colour, Harness colour, Second ton
 | Dragon | the golden belly |
 | Rat | the pink ears, nose and tail |
 | Snail | the shell |
-| Worm, Gerry | nothing: the row is greyed |
+| Worm, Larry | nothing: the row is greyed |
 
 ## 3. Where it lives
 
@@ -53,7 +53,7 @@ Players have rows for three of the five: Coat colour, Harness colour, Second ton
 3. **"As the second tone", "As the dark parts", "As the eyes"** are the first choice of a part that follows a region.
    The first is vague, and the other two point at rows that don't exist: a player can't set the dark parts or the eyes,
    so on Hellfire "As the dark parts" means "as drawn" in practice.
-4. **Greyed rows** on the worm and Gerry: a row for a part the mount doesn't have.
+4. **Greyed rows** on the worm and Larry: a row for a part the mount doesn't have.
 
 ## 5. Options
 
@@ -117,10 +117,10 @@ colour; the donkey's from its region table over its 44 frames):
 | Rat | the grey fur | the outline | the ears, nose, paws and tail | the eye |
 | Snail | its body | the outline and the eye stalks' stripes | the shell | none |
 | Worm | its skin | the outline and the eyes | none | none |
-| Gerry | everything (his cfg names no region: the game's export of his frames isn't on this machine) | none | none | none |
+| Larry | everything (his cfg names no region: the game's export of his frames isn't on this machine) | none | none | none |
 
 So "Coat colour" fits the furry mounts (the donkey, the rat, every skin over the donkey) and not the others: the
-dragon's scales and wings, the snail's body, the worm's skin, Gerry's bone. With the regions named per look the
+dragon's scales and wings, the snail's body, the worm's skin, Larry's bone. With the regions named per look the
 Coat row takes the look's word too.
 
 ## 8. Decided: every row a named part, by named regions (the user, 2026-11-04: "ok lets begin")
@@ -176,7 +176,7 @@ mane, ears, legs and hooves, not its outline (on every skin over it too); the dr
 their own ("Horns and spikes"), its outline its Dark with no row. Later (7.12): the donkey's Muzzle row is its nose,
 "Muzzle", the face's dots and the belly's line its Coat. Later still (7.15): the donkey's outline is a part of its own,
 "Outline" (its line, the belly's line with it), on the donkey and every skin over it; the other mounts' outlines no row.
-| Gerry | Bone | - | - | - | - |
+| Larry | Bone | - | - | - | - |
 
 ## 9. Built (2026-11-04, the evening)
 

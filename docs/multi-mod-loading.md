@@ -249,7 +249,7 @@ contain.
   (`SoundBank.cs:316-317`): an updated `.ogg` of the same length plays the old one. It is never cleaned when a mod
   leaves. Fix: compare a hash or the source's time; prune owners not loaded for N starts.
 - `framings.txt` grows one line per content hash, never pruned (`PreviewStage.cs:116-140`).
-- Set-aside game-source skins (Gerry style, a wrong `prefix =`) are re-checked in one frame once a minute, each one a
+- Set-aside game-source skins (Larry style, a wrong `prefix =`) are re-checked in one frame once a minute, each one a
   full `Resources.FindObjectsOfTypeAll<Sprite>()` (`LooksGame.cs:135-155, 258-300`). N bad packs means N full scans per
   minute. Fix: re-check on scene load only.
 - `PackStamp` stats every file of every pack at start (`Looks.cs:620`, `MountPacks.cs:171`), and only the dev

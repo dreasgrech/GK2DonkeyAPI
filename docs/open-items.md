@@ -94,7 +94,7 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
   - The whole F11 green 23:20 (2000 passed, 0 failed, 0 warnings) with the twelfth place fixed; seen by hand ~23:03 (the
     user: "ok seems fixed now").
   - Rehearsal B again, PASSED 2026-11-06 01:41 with the rebuilt release zip: the dragon with `default-x` wore its own
-    look and was ridden as the dragon, Gerry the same, no warning (docs/missing-skin.md section 8). Asked for: the
+    look and was ridden as the dragon, Larry the same, no warning (docs/missing-skin.md section 8). Asked for: the
     journal's picture and the ride are the
     dragon in its own look, and the Skin row still says "Default x (not installed)").
 
@@ -156,7 +156,7 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
   (`under` is a `LazyWidgetBase`, closed through its `LazyWindow<T>.Close`, MountsPanel.CloseWindow). To see: L on
   the Tech Tree, Escape: the Tech Tree back as it was (the search box too); L, Ride: the window gone, riding.
 
-- **Built in or external** (2026-10-26, docs/making-a-mount.md): the Mounts panel lists the donkey, Gerry, the
+- **Built in or external** (2026-10-26, docs/making-a-mount.md): the Mounts panel lists the donkey, Larry, the
   dragon, rat, snail and worm; the dev world's dragon and colours came back through `Catalog.renamedMounts` (gone
   since 2026-10-27: an old id finds nothing now) and a save writes the new ids; an F11 Mounts tab edit lands in the repo's `packs/` (GK2MountsSourceDir); a pack's DLL moved out of
   `plugins\` -> its mounts "(not installed)", the choice kept, no warning; back -> back; a pack's plugin folder renamed
@@ -419,8 +419,8 @@ closed):
   - the 55 ms frame at game load when the companion's mount spawns (Prepare 11.6, the session's first web request
     10 ms);
   - waiting on the above: trimmed sheet cells, non-blocking read-backs (lower priority since round 1).
-- **Babies of the ridden mount through a door** (fixed 2026-10-24, the user: Gerry's babies stayed in the house when
-  he was ridden out): ride Gerry with his babies out of the house and back in; they come along each time (the log:
+- **Babies of the ridden mount through a door** (fixed 2026-10-24, the user: Larry's babies stayed in the house when
+  he was ridden out): ride Larry with his babies out of the house and back in; they come along each time (the log:
   "[indoors] N foal(s) came through the door with the mount he rides").
 - **Skins built on their default, by eye** (built 2026-10-24, docs/skin-layering-plan.md; F11 green): no shipped
   mount has a second skin yet, so only the self-tests' temp packs have worn one. Make a variant of the dragon with a
@@ -433,7 +433,7 @@ closed):
   under it (the Effect rows are gone since 2026-10-25); pick the dragon: the picture follows and the rows change; Done keeps, Cancel after switching puts
   the first mount back; the Mods menu has no Mount, Skin, Effect (nor its toggles) or colour rows any more, and
   the Colours and Effect sections each say where they went; the Mounts button while the panel is open brings it
-  forward with the menus closed, the key closes it; Gerry's portrait (if its pack names one) under its name; the
+  forward with the menus closed, the key closes it; Larry's portrait (if its pack names one) under its name; the
   description lines one line each, not spilling past the rows column (else: Ellipsis, or a shorter WrapAt). The **F11 set**: the five new scenarios
   (tuning ownership, ids, format, the sheet through a hitch and sleep, the settings rows' panel checks) and
   everything under the new rules; the mount-pack scenario now expects the mount to go with its withdrawn skin.
@@ -444,7 +444,7 @@ closed):
   the Speed rows out of the Mods menu for it (none of ours does; the self-test covers it). **Esc with the panel
   open**: the pause menu opens under the centred panel (the look bar sat at the bottom); if it covers the pause
   menu's buttons, close the panel on the pause menu opening. **Paging** (more than ten mounts: register temp
-  mounts from the F11 Mounts tab): Up and Down page without a log line. **Gerry at game-ready**: the log's
+  mounts from the F11 Mounts tab): Up and Down page without a log line. **Larry at game-ready**: the log's
   "named game frame(s) are there" line, not "set aside" (an unannounced warning that would fail four scenarios).
   **A stale loose copy** of a Saddle Up pack under `BepInEx\plugins` (rat, snail, worm, dragon, gerry from when
   the API shipped them) would log "replaces the one from" at start: delete it.

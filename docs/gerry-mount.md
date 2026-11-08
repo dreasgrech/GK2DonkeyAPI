@@ -1,8 +1,16 @@
-# Gerry as a mount: what the game has, and how to make him one
+# Larry as a mount: what the game has, and how to make him one
 
-The idea (2026-10-18): a giant Gerry, the talking skull, as a mount, with baby skulls as his foals. This is the
-investigation: what sprites the game ships for Gerry, what a mount skin needs, and the ways to get from one to
+The idea (2026-10-18): a giant Larry, the talking skull, as a mount, with baby skulls as his foals. This is the
+investigation: what sprites the game ships for Larry, what a mount skin needs, and the ways to get from one to
 the other. Nothing is built yet.
+
+**His name is Larry** (corrected 2026-11-08). In GK2 the skull is Larry: the dialogue's speaker (595 lines from the
+prison intro on), the quest "Persuade Larry the skull to impersonate Robert the skeleton", the keeper's
+`larryInPocket` and `LarryBubblePoint`, the `larry_steps` sound. Gerry was GK1's skull. The game's files kept GK1's
+name inside: `npc_gerry`, the `0901_gerry` pictures, the `garry` voice clips. Saddle Up first called the mount Gerry
+from those names and shipped him so up to 0.16.0. Only the name players see changed. The mount's id
+`saddleup.gerry`, its folder and these file names stay, so saved mounts, colours and settings carry on. The
+translations take the game's own name for him: Larry in the Latin-script languages, Ларри, ラリー, 래리, 拉里.
 
 ## 1. What the game ships
 
@@ -26,7 +34,7 @@ The 73 frames:
 | `hed` | `static_left`, `static_down`, `static_up` | 1 each | 14 to 15 wide, 16 to 18 tall | The resting skull, three facings. |
 | `hed` | `speak_left`, `speak_down`, `speak_up` | 3 each | as the statics | Mouth frames for talking. |
 
-So Gerry is a small skull, about 15 pixels wide and 17 tall at rest (the donkey's body is 50 wide and 47 tall), drawn
+So Larry is a small skull, about 15 pixels wide and 17 tall at rest (the donkey's body is 50 wide and 47 tall), drawn
 in warm bone colours with dark sockets. He has no legs; walking is hopping with the jaw chattering. He faces three
 ways (the donkey only faces left, flipped for right).
 
@@ -41,22 +49,22 @@ for the repository.
 A skin on the donkey base is 44 pictures (docs/skins-design.md): `bdy_static_left`, `bdy_walk_left_01..08`, the idle
 animations (`ear` 5, `graze` 5, `chew` 3, `lips` 13, `turn` 6) and `hed_static_down` ×3, all left-facing on a 96 (or
 larger) canvas, drawn so the rider's seat lands on the back line. The game plays the donkey's clips and the skin
-re-points the pictures per frame key, so a Gerry skin needs a picture for each of those keys, with Gerry's hop
+re-points the pictures per frame key, so a Larry skin needs a picture for each of those keys, with Larry's hop
 spread over the donkey's 8-frame walk and something sensible for the idles.
 
 ## 3. Three ways to make him
 
 **A. Scale the game's frames (quick, chunky).** A new skin source that reads the game's `0901_` frames from the atlas
 at run time (the recipe machinery already reads the donkey's `0301_` frames back from the atlas: `LooksRecipes.
-FindGameFrames(base, prefix)` takes any prefix), maps the donkey's keys onto Gerry's (walk 1..8 ← hop frames 1, 3,
+FindGameFrames(base, prefix)` takes any prefix), maps the donkey's keys onto Larry's (walk 1..8 ← hop frames 1, 3,
 5, 7, 9, 11, 13, 15; static ← `hed_static_left`; the idles ← the somersault and the speak frames; `hed_*` ← empty) and
 blows them up ×3 with nearest-neighbour onto the 96 canvas (45 wide, 50 to 87 tall: fits). Zero drawing. The cost:
 his pixels would be three times the size of everything else's, which pixel art shows at once. Worth building first
 because it is a day's work less than the others and shows at once whether the hop reads as a mount; the rider sits
 on top of the cranium.
 
-**B. Own art, Gerry as reference (consistent, more work).** Draw a big skull in `tools/skins/creatures/make_creatures.py` like the
-rat, snail, worm and dragon: Gerry's palette and features (the sockets, the nose hole, the teeth, the cracks, the
+**B. Own art, Larry as reference (consistent, more work).** Draw a big skull in `tools/skins/creatures/make_creatures.py` like the
+rat, snail, worm and dragon: Larry's palette and features (the sockets, the nose hole, the teeth, the cracks, the
 hinge), the hop as the walk cycle with the jaw as a separate layer (the `hed` part: the donkey's head part is free
 for it, so the jaw can animate on its own keys and the rider's near-wing trick isn't needed), the somersault as the
 `turn` idle. Pixels at the world's size, so he fits the game. The rider sits on the cranium with the hitch gap and
@@ -68,11 +76,11 @@ unchanged; only the pictures change.
 ## 4. The babies
 
 Foals are the same skin scaled by the view (0.6): with B, baby skulls come free, ~27 px wide; with A, 0.6 of a ×3
-blow-up is ×1.8, closer to Gerry's own size. A mount file says `foals = true`. Their sounds are the donkey's for now
-(skin sounds are phase 2). *As built: a mount says its babies' size (`foal_scale`, Gerry 0.33 = his own size), and a
+blow-up is ×1.8, closer to Larry's own size. A mount file says `foals = true`. Their sounds are the donkey's for now
+(skin sounds are phase 2). *As built: a mount says its babies' size (`foal_scale`, Larry 0.33 = his own size), and a
 baby spawned without a size is its parent mount's; plain baby donkeys stay 0.6 whatever the parent (the plan's M4).*
 
-## 5. What else Gerry could do (abilities, phase 2)
+## 5. What else Larry could do (abilities, phase 2)
 
 - **Somersault** as an idle or on a key (`MountAbility.Tick`), with `gerry_somersault.ogg`.
 - **Talk**: the speak frames on the jaw layer while the keeper stands next to him.
@@ -88,22 +96,22 @@ candidate mount the same way, which is the open, scalable path the skin system w
 **Built 2026-10-18 (A):** `source = game` skins (`LooksGame.cs`, docs/skins.md): the character's frames found in
 memory or through a loaded sprite atlas asked by name, mapped by the `[Game]` lines and the rules, scaled by whole
 pixels with the feet on the donkey's ground row (`SkinBase.GroundRow`, 28) and the centre on the pivot, into the
-skin's sheet like any other picture. Self-test "game creature: Gerry's frames found, scaled and worn".
+skin's sheet like any other picture. Self-test "game creature: Larry's frames found, scaled and worn".
 
 **As it stands (2026-10-20, after the parity plan):** `src/SaddleUp/assets/skins/gerry/skin.cfg` (Saddle Up's
 since the evening, docs/mounts-as-mods.md; `src/GK2DonkeyAPI/assets/skins/gerry/` before) in the canonical
-layout: Gerry at 3x on a **160** canvas (a 29-pixel hop at 3x is 87 above the ground row; 128 cut it), `lift = 0.25`
+layout: Larry at 3x on a **160** canvas (a 29-pixel hop at 3x is 87 above the ground row; 128 cut it), `lift = 0.25`
 (a quarter of his own hop under a rider), walk 1..8 spread over his 15, the somersault as the turn idle, the speak
 frames as lips and chew, the head keys empty; **`seat = picture`** (the rider sits on the skull's own top, per frame:
 the seat readout reads 25.5 px in both AutoSeat modes) with the skin's own `[Tuning] SeatAdjustPx = -16` (the skin
-owns its drawing's geometry; the mount file's "seat lifted 10 px" is gone); the Gerry mount (`[Mount]`) with cart
+owns its drawing's geometry; the mount file's "seat lifted 10 px" is gone); the Larry mount (`[Mount]`) with cart
 and babies, **`foal_scale = 0.33`** (baby skulls his own size), **`noun = skull`** ("a skull can't pull the cart"),
 and `[Mount.Tuning] LipsVolume = 0` (a skull does not smack lips; the bray and the hoofsteps stay; since the sound
 system his `[Sounds]` says `lips = none`, and since the mount folders, 2026-10-24, the mount's facts and sounds are
 `src/SaddleUp/assets/mounts/saddleup.gerry/mount.cfg` (the mount `saddleup.gerry`) and the skin, his default look,
 `skins/default/skin.cfg` beside it). **Seen in game**
 on 2026-10-18 (the first run: the skin failed to register at first, the babies were huge and the hop too big; the
-fixes above came from it) and in the seat readout of 2026-10-20 (25.5 px in both AutoSeat modes, the Gerry scenario
+fixes above came from it) and in the seat readout of 2026-10-20 (25.5 px in both AutoSeat modes, the Larry scenario
 green). Not recorded as settled from that first run: a clipping at the top of the canvas and a dark square behind
 the ridden skull (the Instances tab's "Log drawing" probe was added for them); whether the 3x pixels read next to the
 world is the user's judgement (B, own art, stays open and is not planned). His `[Colors]` (Dark =
@@ -112,7 +120,7 @@ gerry\`, the Mounts tab's "Export every skin as built", or any F11 run) when one
 
 **Another game character, by hand** (docs/sprite-tools.md "Making a skin"): `python -I tools/skins/gerry/gerry_probe.py
 <game folder> <out> <prefix>` finds the addressables bundle holding `<prefix>bdy_walk_left_01` and exports the
-sprites; `gerry_sheet.py <out> <prefix>` lays them out to measure the hop and the sizes; copy Gerry's mount folder
+sprites; `gerry_sheet.py <out> <prefix>` lays them out to measure the hop and the sizes; copy Larry's mount folder
 (`assets/mounts/saddleup.gerry/`: its `mount.cfg` and `skins/default/skin.cfg`) under the new mount's id
 (`<mod>.<name>`), set the prefix, scale, lift, the frame map and the seat in the skin.cfg and the mount's facts (`id`,
 `name`, ...) in the mount.cfg; `python -I tools/skins/canonical_cfg.py`, the scan, build, look. No pictures of our own, nothing of the game's art in the repo.

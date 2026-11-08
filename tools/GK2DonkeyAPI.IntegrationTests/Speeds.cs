@@ -30,7 +30,7 @@ namespace GK2DonkeyAPI.IntegrationTests
                 allOwn &= k.Speed == word[id] && Mathf.Approximately(Catalog.SpeedOf(k, MountStyle.Ride), Catalog.SpeedOfBand(word[id], MountStyle.Ride)) && (k.Cart ? Catalog.CargoOf(k) : 0) == cargo[id];
                 said.Add($"{id} {(k.Speed.HasValue ? Catalog.WordOf(k.Speed.Value) : "-")} {Catalog.SpeedOf(k, MountStyle.Ride):0.##}, cart {Catalog.SpeedOf(k, MountStyle.Cart):0.##}, cargo {Catalog.CargoOf(k)}");
             }
-            Check(allOwn, "every built-in mount names its word and has its cargo (rat Very fast 2, snail Very slow 6, worm Slow 4, dragon Slow no cart, Gerry Fast 4), at the API's speed for it (" + string.Join(", ", said) + ")");
+            Check(allOwn, "every built-in mount names its word and has its cargo (rat Very fast 2, snail Very slow 6, worm Slow 4, dragon Slow no cart, Larry Fast 4), at the API's speed for it (" + string.Join(", ", said) + ")");
             Check(!Catalog.Donkey.Speed.HasValue && Catalog.CargoOf(Catalog.Donkey) == Catalog.CargoMax, "the donkey says none: it rides at the API cfg's speeds, as it always did");
 
             // Saddle Up: the two rows are gone, their lines retired (out of the file)

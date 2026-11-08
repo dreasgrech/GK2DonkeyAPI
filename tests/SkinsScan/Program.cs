@@ -1,5 +1,5 @@
 // The mounts and skins this repo ships, sorted by mount (every src/*/assets/mounts/<mount>/: its mount.cfg and sounds\,
-// and skins/<skin>/ with each skin.cfg; Saddle Up's Gerry, and every packs/<Pack>/gk2mounts/ (the Dragon, the Critters,
+// and skins/<skin>/ with each skin.cfg; Saddle Up's Larry, and every packs/<Pack>/gk2mounts/ (the Dragon, the Critters,
 // the Donkey Skins), each embedded into its DLL;
 // docs/skins.md "What a pack is", docs/mounts-as-mods.md): every mount.cfg and skin.cfg must parse the way the loader
 // reads them (MountPacks.cs, Looks.cs), every picture the donkey base needs must be there at the canvas size, a

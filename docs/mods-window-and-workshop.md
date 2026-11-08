@@ -280,7 +280,7 @@ the preview picture, and whether `[img]` renders in the description.
 **Run 2026-10-30 (the 0.13.1 content, the user at the keyboard).** Launch 1: the patcher's `Found new BepInEx mod
 local:dreas.gk2.saddleup` and two `Copied` lines before the plugins, the tile "GK2 Saddle Up  v0.13.1 · Enabled ·
 BepInEx" with Disable and no Workshop button, Player.log `[Mods] Enabled new code mod 'GK2 Saddle Up'`; API 0.41.1
-and Saddle Up 0.13.1 loaded from the game's copies with Gerry and the three packs; a save loaded with its donkey and
+and Saddle Up 0.13.1 loaded from the game's copies with Larry and the three packs; a save loaded with its donkey and
 cart restored, the snail ridden and its cart left; 0 warnings or errors in 853 lines. (Player.log had one Unity
 "invalid seek position" line at the snail's mount sound: the 0.41.1 bytes predate the sound fix of the same day,
 which ships in 0.41.2; it proved the game's copy was the one running.) **Disable** while the game ran: both DLLs

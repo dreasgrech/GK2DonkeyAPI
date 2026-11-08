@@ -301,30 +301,30 @@ Mount section, off by default, and reaches the companion both ways (put back); t
 while no mount is left. The player's own mounts are not
 switched by the tests.
 
-**By hand, in the morning** (turn the option on first; three mounts: the donkey, Gerry and the dragon):
+**By hand, in the morning** (turn the option on first; three mounts: the donkey, Larry and the dragon):
 
-1. Ride the donkey, open the journal, pick Gerry, Ride. Gerry comes under you. The donkey stands a step ahead, with its
+1. Ride the donkey, open the journal, pick Larry, Ride. Larry comes under you. The donkey stands a step ahead, with its
    babies, and doesn't walk after you.
-2. Pick the donkey again and Ride: the same donkey comes back to you (its babies with it), and Gerry stays a step aside
+2. Pick the donkey again and Ride: the same donkey comes back to you (its babies with it), and Larry stays a step aside
    from where you left him.
-3. Drive the cart with the donkey, pick Gerry and Drive the cart. The cart is left by the donkey, then comes to Gerry.
+3. Drive the cart with the donkey, pick Larry and Drive the cart. The cart is left by the donkey, then comes to Larry.
 4. Save, load. Every mount left is where it was, with its babies.
 5. Change a left mount's babies, name or colours in the journal: the one in the world follows (the colours of the skin
    it wears: leave its Skin row as it is, a left mount keeps its skin until it is chosen again). Its sound volumes
    don't follow (section 3).
-6. Turn the option off (Options, Mount): within a moment the donkey left in 3 goes home with its babies; Gerry, under
+6. Turn the option off (Options, Mount): within a moment the donkey left in 3 goes home with its babies; Larry, under
    you, stays with the cart. Turn it back on.
-7. Pick the donkey and Ride, so Gerry is left (the cart standing beside him). Get off the donkey (the ride key), walk
-   up to Gerry and press E: you ride him. The ride key gets you off him; pressed again, it calls the journal's mount
-   (the donkey), which comes beside him (Gerry steps aside, in view: no journal covers it here).
-8. Press E on Gerry again and, riding him, turn the option off: he stays under you. Get off: he goes home with his
+7. Pick the donkey and Ride, so Larry is left (the cart standing beside him). Get off the donkey (the ride key), walk
+   up to Larry and press E: you ride him. The ride key gets you off him; pressed again, it calls the journal's mount
+   (the donkey), which comes beside him (Larry steps aside, in view: no journal covers it here).
+8. Press E on Larry again and, riding him, turn the option off: he stays under you. Get off: he goes home with his
    babies, the cart stays standing. Turn the option back on.
 9. Pick the dragon and Ride, fly, open the journal, pick the donkey and Ride: the dragon lands first (a "land first"
    bubble, once or twice), then the donkey comes and you are on it, the dragon left where it landed (a step aside, in
    view).
 10. Options, Mount, "Send your other mounts home": the dragon goes, its babies with it.
-11. Pick Gerry and Ride, so the donkey is left, and save. Turn the option off (the donkey goes home), then load that
-    save: the donkey comes back with it and goes home again at once; Gerry stays yours.
+11. Pick Larry and Ride, so the donkey is left, and save. Turn the option off (the donkey goes home), then load that
+    save: the donkey comes back with it and goes home again at once; Larry stays yours.
 
 ## 6. Review passes
 
@@ -352,7 +352,7 @@ or doubled, a stuck state, a wrong skin); nits are logged, not counted.
 | 15 | none, both readers (9 and 8 nits logged; one as an adversarial player: doors, fights, sleep, saves, the menu, options mid-ride) | clean: 2 of 5 |
 | 16 | none, both readers (11 and 6 nits logged; one on robustness: exceptions, re-entrancy, cost with 20 families of 5 babies, Saddle Up on an older API) | clean: 3 of 5 |
 | 17 | none, both readers (9 and 9 nits logged; one on the side file and the game's lifecycle: slots, new game, the title, packs away, saves mid-switch) | clean: 4 of 5. The Drive paragraph in section 2 says what a refusal once the cart is on its way does |
-| 18 | none, both readers (6 and 10 nits logged; one against the mod's other features: cargo, chest, corpses, zombies, babies indoors, flying, speeds, looks, KeepWithSaves off, other companions; one as the player through the hand list and the texts) | clean: 5 of 5. Hand items 5 and 7 reworded (the worn skin's colours; get off Gerry before E), the volumes in section 3 |
+| 18 | none, both readers (6 and 10 nits logged; one against the mod's other features: cargo, chest, corpses, zombies, babies indoors, flying, speeds, looks, KeepWithSaves off, other companions; one as the player through the hand list and the texts) | clean: 5 of 5. Hand items 5 and 7 reworded (the worn skin's colours; get off Larry before E), the volumes in section 3 |
 
 ## 7. Nits from passes 16 to 18
 
@@ -366,7 +366,7 @@ doubles a mount, baby or cart in normal play; each is yours to call.
 3. His cart hitched to a left mount ridden by hand keeps its old paint until it is unhitched.
 4. "Send your other mounts home" also sends home a left mount whose pack is away (drawn as a donkey, no journal row).
 5. With the option off, choosing a left one sends the mount out home, and its babies come with new sizes and shades
-   at its next call (the babies' variety goes with it). The same for Gerry in hand item 7 (a new Gerry after item 6).
+   at its next call (the babies' variety goes with it). The same for Larry in hand item 7 (a new Larry after item 6).
 6. In the air: the "land first" bubble is said twice in one frame (once or twice on screen, by the game's bubble queue); a landing the game refuses keeps the
    choice waiting for a later landing, possibly somewhere else; each journal close during the wait says the bubble
    again and re-arms the landing.

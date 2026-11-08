@@ -2,7 +2,7 @@
 
 **2026-10-27 (built):** the pack exists as **GK2 Saddle Up: Donkey Skins** (`GK2SaddleUpDonkeySkinPack.dll` in
 `BepInEx\plugins\GK2SaddleUpDonkeySkinPack\`, `dreas.gk2.saddleup.donkeyskins`, 1.0.0, needs the API 0.40.0; its zip
-`GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip`), and Saddle Up's built-in content is Gerry alone. Where it differs from the
+`GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip`), and Saddle Up's built-in content is Larry alone. Where it differs from the
 investigation below: it lives in the repo's `packs/GK2SaddleUpDonkeySkinPack/` (`gk2mounts/donkey/skins/<skin>/`, no
 `mount.cfg`), an external pack like the Dragon and the Critters, not a project under `src/`; its ids carry the pack's
 prefix (`donkey/saddleup-donkey-skins.hellfire`, `donkey/saddleup-donkey-skins.royal-parade`) instead of keeping
@@ -17,7 +17,7 @@ packs zip. Current: docs/making-a-mount.md "Built in or external" and the CHANGE
 
 **2026-10-26 (built in or external):** the dragon, rat, snail and worm are no longer in Saddle Up's DLL but external
 packs of their own in the repo's `packs/` (`GK2SaddleUpDragonsMountPack`, `GK2SaddleUpCrittersMountPack`), ids by the pack
-(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins. Paths and ids
+(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Larry and the donkey's two skins. Paths and ids
 below are of their day; docs/making-a-mount.md "Built in or external" is current.
 
 The user: *"let's start investigating to see what it would involve if we decide to take out the donkey skins from
@@ -27,7 +27,7 @@ anything yet, lets only investigate it"*.
 
 The skins in question are Saddle Up's two donkey skins, **Hellfire** and **Royal Parade**
 (`src/SaddleUp/assets/mounts/donkey/skins/saddleup.hellfire/` and `saddleup.royal-parade/`, 45 files each, 260 KB of
-Saddle Up's 1.8 MB of packs). The five mounts (dragon, rat, snail, worm, Gerry) stay in Saddle Up. This document is
+Saddle Up's 1.8 MB of packs). The five mounts (dragon, rat, snail, worm, Larry) stay in Saddle Up. This document is
 the investigation: the code was read, not assumed, and nothing was changed while writing it. It follows
 [mounts-as-mods.md](mounts-as-mods.md) (2026-10-20), which asked the same question for the mounts and whose
 preconditions were all built that evening.

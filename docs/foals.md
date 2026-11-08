@@ -146,7 +146,7 @@ wont constantly change". Chosen: size, colours, personality and voice, "noticeab
   size and remade it (30 remakes in the run). The size's factor is now its own draw from the salt and the index only:
   the same on every mount, so a switch between mounts of one baby size (the donkey, the dragon) keeps the babies, as
   before; shade and temper still differ per mount (they remake nothing).
-- **F11 again (1263 passed, 1 failed), the same check:** the run began on Gerry (babies 0.33) and the panel test picks
+- **F11 again (1263 passed, 1 failed), the same check:** the run began on Larry (babies 0.33) and the panel test picks
   the donkey (0.6) and back. A size change removed each baby and spawned a new one (older than the variety; any
   mount switch between baby sizes did it, the babies popping into fresh spots). Now `Instance.Rescale`: the same
   instance, its view made again at the new size where it stands (as after a scene change).

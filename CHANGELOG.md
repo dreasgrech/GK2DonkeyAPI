@@ -12,6 +12,8 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The skull is Larry** (2026-11-08): Saddle Up's skull mount is called Larry, as in the game. Gerry was the skull
+  in the first game. Your skull keeps his colours, babies and settings, and a name you gave him yourself stays.
 - **The colours window has tabs** (2026-11-08): Mount, the worn skin's own parts on a tab named after the skin, and
   Cart. Each tab's rows fill both columns, so a skin with many parts no longer makes one long list. A skin without
   parts of its own shows the two tabs. (Saddle Up's two colour headings became the tabs Mount and Cart, their words

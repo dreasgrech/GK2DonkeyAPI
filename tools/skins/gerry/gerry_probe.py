@@ -1,4 +1,4 @@
-"""Gerry's sprites out of the game's bundles, for looking at (docs/gerry-mount.md): lists every 0901_* sprite in the
+"""Larry's sprites out of the game's bundles, for looking at (docs/gerry-mount.md): lists every 0901_* sprite in the
 character atlas bundle (name, size, pivot, pixels per unit), the parts and animations, and exports each frame as a
 PNG (trimmed to the drawn pixels, as the atlas packs them). The exports are the game's art: keep them out of the
 repository.
@@ -7,7 +7,7 @@ repository.
     python tools/skins/gerry/gerry_probe.py "<game>\\GraveyardKeeper2_Data\\StreamingAssets\\aa\\StandaloneWindows64" <out folder>
 
 The game's bundles carry no Unity version string, so UnityPy needs the fallback set (the game is Unity 6000.3.9f1).
-Another preset: change PREFIX (the donkey is 0301_, Gerry 0901_) and, if its frames are in another bundle, find it
+Another preset: change PREFIX (the donkey is 0301_, Larry 0901_) and, if its frames are in another bundle, find it
 with grep -l on the bundle folder first.
 """
 import os
@@ -17,7 +17,7 @@ import UnityPy
 
 UnityPy.config.FALLBACK_UNITY_VERSION = "6000.3.9f1"
 
-PREFIX = sys.argv[3] if len(sys.argv) > 3 else "0901_"  # the character's preset prefix on its sprites (Gerry: 0901_)
+PREFIX = sys.argv[3] if len(sys.argv) > 3 else "0901_"  # the character's preset prefix on its sprites (Larry: 0901_)
 MARK = "bdy_walk_left_01"                                   # the sprite every character has: the bundle holding <prefix>MARK is the atlas
 
 

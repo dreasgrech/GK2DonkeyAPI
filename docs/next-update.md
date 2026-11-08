@@ -61,12 +61,12 @@ the decisions in B.
 - The Mounts panel with a gamepad (never tried with a controller); the paging without the framework after the Effect
   section's removal (open-items 10); the panel's first row group heading (cosmetic).
 - Skins built on their default, by eye (no shipped mount has a second skin yet).
-- The babies of the ridden mount through a door, Gerry's (fixed 2026-10-24).
+- The babies of the ridden mount through a door, Larry's (fixed 2026-10-24).
 - Switching mounts, the rest: the compressed flight clips by ear, the 2.5 ms sound-rig tick, the 55 ms frame at game
   load, the panel-close trace.
 - Sounds: the by-ear checks of the probe tone, the dragon's flight clips, the herd's calls and the babies' answers
   (phase 3), the standing sounds.
-- The 0.11 regroup's pages without the framework; the shadow and grass bend on the dragon and Gerry (parity 2.5).
+- The 0.11 regroup's pages without the framework; the shadow and grass bend on the dragon and Larry (parity 2.5).
 
 **D. The release itself** (release-checklist.md sections 2 to 6, nothing new): the release build and the offline
 scans (`tools/release-scans.sh`), **step 3b this time** (the fixture capture was skipped at 0.10.0 and rebuilt from a
@@ -88,7 +88,7 @@ Very slow, to 1.8 Slow, to 2.2 Normal, to 2.7 Fast, from 2.75 Very fast.
 |---|---|---|---|---|---|---|---|---|---|
 | Donkey | 2 (Normal) | 1.5 | yes | 6 | 0.6 | no / yes | the game's bray | by the ground | none (the game's own) |
 | Giant Rat | 2.75 (Very fast) | 2.06 | yes | 6 | 0.6 | no / yes | `spitter_attack` pitched up (a placeholder) | the ground's, six a cycle | mount, dismount, answer |
-| Gerry | 2.25 (Fast) | 1.69 | yes | 6 | 0.33 | no / yes | the game's `garry` lines (his own) | `larry_steps` (bone) | mount, dismount, answer |
+| Larry | 2.25 (Fast) | 1.69 | yes | 6 | 0.33 | no / yes | the game's `garry` lines (his own) | `larry_steps` (bone) | mount, dismount, answer |
 | Giant Worm | 1.75 (Slow) | 1.31 | yes | 6 | 0.6 | no / yes | none (by choice) | `bush_chop` (a rustle) | answer |
 | Dragon | 1.6 (Slow) | no cart | **no** (today) | no cart | 0.6 | **yes** / yes | `zombie_attack` pitched down (a placeholder) | `step_stone` | mount, dismount, answer |
 | Giant Snail | 1.25 (Very slow) | 0.94 | yes | 6 | 0.6 | no / yes | none (by choice) | none | answer |
@@ -114,7 +114,7 @@ a player's switch on for them. That is the pattern `cart = false` already follow
 |---|---|---|---|
 | 1. Data today | riding speed (and the cart speed with it), cart yes/no, babies yes/no and their size, the voice and every sound, the colours and skins, the description and `[Stats]` lines | `mount.cfg` | none |
 | 2. One small API change | **cargo enforced per mount**: the cart's slot count becomes the smaller of the player's Cart capacity and the mount's `cargo =`; the key, the panel line and the `CartSlots` plumbing (`MountRegistry.ApplyCartSlots`, `Cargo.ApplySlots`) exist | `Cargo.cs`, `MountRegistry.cs`; re-applied when a cart changes hands (a hitch), never dropping a load (the existing rule); `MountInfo.Cargo` already public | small; one self-test; the "speed: each mount's own" test asserts every built-in "carries the most (for now)" and changes with the values |
-| 3. A feature | a mount that can't come indoors (`indoors = false`: a refusal at the door and inside, like the cart's; the dragon and a 3x Gerry are too big) | `Mount.WhyMustDismount` / `WhyNotIndoors`, the panel line, the pack and code defs | small |
+| 3. A feature | a mount that can't come indoors (`indoors = false`: a refusal at the door and inside, like the cart's; the dragon and a 3x Larry are too big) | `Mount.WhyMustDismount` / `WhyNotIndoors`, the panel line, the pack and code defs | small |
 | 3. A feature | a light on the mount at night (`light =`: ride without the cart's lantern and still see; proposal 1b of mount-looks-design.md; `Lantern.cs` has the light, the dragon's fire or Hellfire's would be the look) | a light source placed on the mount's view, the day/night rule the lantern already has | small to medium |
 | 3. A feature | a game resource while riding: energy (`PlayerEnergyGameResSystem.Add`), stamina (`PlayerStaminaGameResSystem.Add`; the game spends it on attacks only, `StaminaSystem.ConsumeStamina` with each weapon's `staminaCost`, and regenerates it by the ConstDefs `stamina_regeneration` and `stamina_regeneration_delay`), insanity (`PlayerInsanityGameResSystem`; the perk `lack_of_sleep_debuff` adds insanity for energy spent) | an ability's tick (`MountAbility`) on the ridden instance | small to build; **the numbers are the work**: size them against what the game spends first (a dev probe logging the three resources over a day's work and a fight), else the mount is either pointless or a cheat |
 | 3. A feature | crossing water (the free-flight machinery moves the body off the navmesh; at ground height over water tiles it is a swim) | `Flight.cs`, `FlightGround.cs`, the landing rule | medium; its own investigation like flying's |
@@ -130,7 +130,7 @@ Then no mount is strictly better than another for a player who hauls, and the dr
 |---|---|---|---|---|---|
 | Donkey | 2 (Normal) | yes | 6 | the all-rounder: a full cart at a normal pace, the game's own look and sounds, the two skins | nothing needed |
 | Giant Rat | 2.75 (Very fast) | yes | **2** | the courier: the fastest thing on four legs, a light cart (two items, the game's own delivery cart's load) | nothing needed; it is the small mount that goes everywhere the switches allow |
-| Gerry | 2.25 (Fast) | yes | **4** | fast with a middling load, and company: the one mount that talks (his own lines on the idle timer) | insanity eased while riding him (the keeper's friend; size it first); too big for doors (`indoors = false`, he is drawn 3x) is a restriction, not a use |
+| Larry | 2.25 (Fast) | yes | **4** | fast with a middling load, and company: the one mount that talks (his own lines on the idle timer) | insanity eased while riding him (the keeper's friend; size it first); too big for doors (`indoors = false`, he is drawn 3x) is a restriction, not a use |
 | Giant Worm | Slow (1.6 since the API's words, 2026-10-27; 1.75 before) | yes | **4** | the middle of the ladder, a silent hauler | the worm has no natural use yet: crossing water, or burrow travel, would be its own; decide after a look at either |
 | Giant Snail | 1.25 (Very slow) | yes | **6** | the slow full hauler; silent | a restful ride: energy restored while riding it (size it first: the game's energy is spent by work and restored by sleep; a snail that pays for a day's work is a cheat, one that pays for the walk home is a use) |
 | Dragon | 1.6 (Slow) | **no** | no cart | **flight** (crosses water, fences, cliffs and roofs; the fastest way across the map), on since API 0.38.0 | a light at night (its fire) is the cheapest visible addition; a fight role (stamina back while riding it, or the burning ring) is the thematic one and the costliest |
@@ -164,7 +164,7 @@ only if flight ships). The event names are docs/mount-sounds.md's; a file goes i
 |---|---|---|---|---|
 | Dragon | `mount`, `dismount`, `answer` | `voice` (the zombie's cry pitched down; the roar "wants a file of our own"), `step` (the stone step), `graze` (a bellows) | `fly` (a wind loop while airborne), `touchdown` (the thud), `landed`, `refused_takeoff` | roar x2-3, a grunt on and off x2, a baby's chirp x2, wind loop x1, thud x1 (the take-off, landing, flaps and glide are the user's own already: 12 files) |
 | Giant Rat | `mount`, `dismount`, `answer` | `voice` (the spitter's cry pitched up; "a real squeak wants a file of our own"), `step` (the ground's, light), `graze` (nibbling, fine) | | squeak x3, a scrabble on and off x2, a baby squeak x2, a patter step x1 (optional) |
-| Gerry | `mount`, `dismount`, `answer` | none (his voice and Larry's bone steps are the game's own, by id) | | a bone clack on and off x2, a small skull's chatter for the babies x2 |
+| Larry | `mount`, `dismount`, `answer` | none (his voice and Larry's bone steps are the game's own, by id) | | a bone clack on and off x2, a small skull's chatter for the babies x2 |
 | Giant Worm | `answer` | `step` (a bush rustle), `graze` (a shovel), `mount` and `dismount` (the spitter's hit) | | a baby's answer x1 (or `none`: the worm is silent by choice, its babies could be too), a wet slap of its own x1 (optional) |
 | Giant Snail | `answer` | `mount` and `dismount` (the fishing blop) | | a baby's answer x1 (or `none`) |
 | All | | | `refused` (the game's `donkey_default_nope` fits by id, no file), `setoff` / `stop` (nothing needed); `jump`, `jumpland`, `perch` only when jumping ships (a thud per mount, or one shared) | |
@@ -180,11 +180,11 @@ shipped (take-off, landing, flaps, glide). New: three dragon growls (the roar, `
 pitched up the babies' answer), a landing thud (`touchdown`), a sixth wing beat; a 34 s rat recording with about a
 dozen distinct squeaks (its middle repeats), cut into eleven squeaks and a scrabble (voice, getting on and off, the
 babies' answer); a 40 s snail slime texture, cut into six squelches and a slither (getting on and off, the babies'
-answer). Still without a file: Gerry's getting on and off and babies, the worm's babies, the dragon's wind loop.
+answer). Still without a file: Larry's getting on and off and babies, the worm's babies, the dragon's wind loop.
 
 **Filled the same day** (the user: "can we fill some missing slots"): the dragon's voice, getting on and off,
 touchdown and babies' answer; the rat's voice, getting on and off and babies' answer; the snail's getting on and off
-and babies' answer. SkinsScan lists nothing missing for those three. Left: Gerry (getting on and off, the babies'
+and babies' answer. SkinsScan lists nothing missing for those three. Left: Larry (getting on and off, the babies'
 answer), the worm's babies' answer, the dragon's wind loop (`fly`), the sixth wing beat (not used: shorter and
 softer than the five), and the placeholders of steps and grazing.
 
@@ -192,20 +192,20 @@ softer than the five), and the placeholders of steps and grazing.
 `loudness.txt`): each sound's EBU R128 loudness times the game sound's own volume (the game's clips from its
 `sound_ids.csv`; ours register at 1), the cfg line's and a baby's 0.46. Before: the dragon's roar 9.7 dB and the
 rat's squeaks 12.4 dB over the donkey's bray. Now every `.volume` line puts a cry at the bray, getting on and off at
-the donkey's lip smack, an answer 6 dB under the bray. Gerry and the donkey are the game's own sounds and keep the
-game's level (Gerry's lines measure 7 dB under the bray, in the speech group).
+the donkey's lip smack, an answer 6 dB under the bray. Larry and the donkey are the game's own sounds and keep the
+game's level (Larry's lines measure 7 dB under the bray, in the speech group).
 
 **Why the babies' answers were not heard** (the trace of 2026-10-25: four roars, 20 answers, all played): the
 answers start 0.5 to 2.1 s after the call (`ScheduleAnswers`), and the dragon's roars last 1.9 to 4.2 s, so they
 play under the parent's roar; they were also 10 dB under it and pitched up 2.3 times. Built the same day: the answers
-start 0.15 s after the parent's call has ended (the game's play handle says when), one after another; Gerry's voice
+start 0.15 s after the parent's call has ended (the game's play handle says when), one after another; Larry's voice
 levelled with the bray (2.25).
 
 ## 5. Built: the dragon pulls no cart; cargo per mount
 
 - **Cargo enforced per mount** (2026-10-27, the user's go: "ok lets do it"): bin 2 of section 3 with the numbers of
-  its table (rat 2, Gerry 4, donkey 6, worm 4, snail 6); docs/cart-capacity.md section 10. The worm and the snail stay
-  behind Gerry and the donkey on both speed and load (cargo can't fix that: the cart's top is 6); their own use is a
+  its table (rat 2, Larry 4, donkey 6, worm 4, snail 6); docs/cart-capacity.md section 10. The worm and the snail stay
+  behind Larry and the donkey on both speed and load (cargo can't fix that: the cart's top is 6); their own use is a
   bin-3 ability, later. Mounts switched on for players the same day: `Debug.MountsPreview` removed (the user: the mounts are other mods now).
 
 The dragon (2026-10-25):

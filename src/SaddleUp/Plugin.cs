@@ -11,7 +11,7 @@ namespace SaddleUp
     // The API does the work (Mounts.Companion: calling, riding, hitching, looks, keeping it with the save; and
     // Mounts.SettingsPage: the options window, opened from the game's Settings window and the Mounts panel, its keys polled and
     // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
-    // the example of how little a player mod needs. Its built-in content (Gerry) is a mount pack embedded in this DLL
+    // the example of how little a player mod needs. Its built-in content (Larry) is a mount pack embedded in this DLL
     // (the csproj's assets\mounts\**) and handed to the API in Awake. Every other mount and skin comes from a mod or a
     // pack of its own, registered with the API, never with this mod: it offers whatever the API has (docs/making-a-mount.md
     // "Built in or external"). The API is the backend; a mount is a pack; the API draws it, seats the rider, colours it,
@@ -53,14 +53,14 @@ namespace SaddleUp
             // The built-in content: registered before the page is built, so its rows are made with it (the packs' mounts
             // are registered before, at the API's start; any other mod's are caught up the frame after Publish).
             int skins = Mounts.Looks.RegisterEmbedded(Guid, Assembly.GetExecutingAssembly(), SkinsPrefix);
-            if (skins > 0) Logger.LogInfo($"GK2 Saddle Up: {skins} built-in skin(s) registered (Gerry).");
+            if (skins > 0) Logger.LogInfo($"GK2 Saddle Up: {skins} built-in skin(s) registered (Larry).");
             MountCompanion me = Mounts.Companion(Guid);
             Mounts.Behaviour.Set(Guid, "StayMountedThroughDoors", false); // not offered until it's tested
             Mounts.Behaviour.Set(Guid, "FlyIndoors", false); // never offered: no flying inside buildings with Saddle Up (the user, 2026-10-23)
             Mounts.Behaviour.Set(Guid, "HitchKey", KeyCode.None); // H and G switch riding and driving; E hitches a cart in reach
 
             MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up", "dreas",
-                "Ride your own mount and drive its cart. Press H to ride, G to drive the cart and L to choose your mount. Haul logs, stone and corpses, and find your mount where you left it. Comes with the donkey and Gerry. More mounts and skins can be downloaded.");
+                "Ride your own mount and drive its cart. Press H to ride, G to drive the cart and L to choose your mount. Haul logs, stone and corpses, and find your mount where you left it. Comes with the donkey and Larry. More mounts and skins can be downloaded.");
             // no Status row since 0.12 (the user, 2026-10-27: "Active" sat in Keys for no reason): the Mods list's
             // Compatibility line and the log say when the mod is off and why
             // the Mounts panel first, on L (the user, 2026-10-27: "we cant not have a default hotkey for this"; L is

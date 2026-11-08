@@ -306,10 +306,10 @@ The cart holds the smaller of `CartSlots` and the cargo of the mount pulling it 
 holds doesn't take it (the user, 2026-10-27: Gerry hitched to the donkey's six): a hitched cart is left standing with its
 load when the mount under it changes (`Looks.Rig.DropCartIfRefused`, as for a mount with no cart), and the cart key,
 `Mounts.Hitch` and mounting in Cart style refuse it (`Looks.WhyNotCartByLoad`: "Too much on the cart (6 of at most 4).
-Take some off first."; until 2026-11-01 "Gerry pulls 4 items at most. Take 2 off the cart first.", reworded for the
+Take some off first."; until 2026-11-01 "Larry pulls 4 items at most. Take 2 off the cart first.", reworded for the
 translations: no plural chosen in code) until it holds no more; the companion's cart key still brings it over and leaves it standing
 unhitched next to the mount (MountCompanion.BringCart; the user, 2026-10-27). A mount change under a hitched cart
 re-applies it when the looks re-merge their tuning (`Looks.Rig.ApplyTuning`, once per mount, skin or style change;
 logged `Cargo: the cart's slot count follows <mount>'s cargo`); a hitch re-applies it through `Attach`. The shipped
-cargo: the giant rat 2, Gerry and the giant worm 4, the donkey and the giant snail 6 (docs/next-update.md section 3:
+cargo: the giant rat 2, Larry and the giant worm 4, the donkey and the giant snail 6 (docs/next-update.md section 3:
 the faster, the lighter). Self-test "cargo: each mount carries its own".

@@ -264,24 +264,24 @@ namespace GK2DonkeyAPI.IntegrationTests
                 yield break;
             }
             yield return Frames(3);
-            Check(Looks.LastGameSourceFound >= 60, $"Gerry's frames found: {Looks.LastGameSourceNote} (73 expected)");
-            Check(a.Mount == M("gerry"), $"the wearer is the Gerry mount ({a.Mount})");
+            Check(Looks.LastGameSourceFound >= 60, $"Larry's frames found: {Looks.LastGameSourceNote} (73 expected)");
+            Check(a.Mount == M("gerry"), $"the wearer is the Larry mount ({a.Mount})");
             int rest = Looks.TestCellOpaque(Sk("gerry"), "bdy_static_left");
             int walk = Looks.TestCellOpaque(Sk("gerry"), "bdy_walk_left_05");
             int turn = Looks.TestCellOpaque(Sk("gerry"), "bdy_turn_left_03");
             int head = Looks.TestCellOpaque(Sk("gerry"), "hed_static_down");
-            Check(rest > 9 * 100, $"the rest picture is drawn and scaled 3x ({rest} opaque pixels; Gerry's skull is about 200 pixels, so 1800 or more)");
+            Check(rest > 9 * 100, $"the rest picture is drawn and scaled 3x ({rest} opaque pixels; Larry's skull is about 200 pixels, so 1800 or more)");
             Check(walk > 0 && turn > 0, $"the walk ({walk}) and the somersault ({turn}) pictures are drawn");
             Check(head == 0, $"the head key is empty on purpose, so nothing of the donkey's head shows ({head})");
-            Check(a.Tuning.IsSet("SeatAdjustPx") && a.Tuning.SetBy("SeatAdjustPx") == Looks.TuningOwner && a.Tuning.Get<int>("SeatAdjustPx") == -16, $"the Gerry skin's one seat value ([Tuning] SeatAdjustPx = -16, both styles: the skin owns its geometry) is on the wearer ({(a.Tuning.IsSet("SeatAdjustPx") ? a.Tuning.Get<int>("SeatAdjustPx").ToString() : "not set")})");
+            Check(a.Tuning.IsSet("SeatAdjustPx") && a.Tuning.SetBy("SeatAdjustPx") == Looks.TuningOwner && a.Tuning.Get<int>("SeatAdjustPx") == -16, $"the Larry skin's one seat value ([Tuning] SeatAdjustPx = -16, both styles: the skin owns its geometry) is on the wearer ({(a.Tuning.IsSet("SeatAdjustPx") ? a.Tuning.Get<int>("SeatAdjustPx").ToString() : "not set")})");
             // seat = picture: the rider's seat is the skull picture's top at the pivot column, above the ground and
             // within the picture (160 px canvas: under 3.2 units) whatever the player's AutoSeat / SeatOffset
             bool seatOnPicture = a.I.LooksRig.TrySeatTop(out Vector3 seatTop);
             float seatUp = seatTop.y - a.Position.y;
             Check(seatOnPicture && seatUp > 0.2f && seatUp < 6f, $"the seat is the picture's own top, {seatUp:0.00} above the ground");
-            // the babies' size lives on the mount: Gerry's 0.33 (its skin.cfg), the donkey's 0.6
+            // the babies' size lives on the mount: Larry's 0.33 (its skin.cfg), the donkey's 0.6
             MountInfo gk = Mounts.Catalog.Find(M("gerry"));
-            Check(gk != null && Math.Abs(gk.FoalScale - 0.33f) < 0.001f, $"the Gerry mount's babies are 0.33x ({gk?.FoalScale})");
+            Check(gk != null && Math.Abs(gk.FoalScale - 0.33f) < 0.001f, $"the Larry mount's babies are 0.33x ({gk?.FoalScale})");
             Check(gk != null && !gk.IsBuiltIn && gk.FromPack && gk.Author == "dreas" && gk.Version == "1.0", $"Saddle Up's mount is from its pack, not built into the API (Saddle Up ships the five mounts since 2026-10-20), with the file's author and version ({gk?.Author} {gk?.Version})");
             Check(gk != null && gk.Noun == "skull" && a.I.Noun == "skull", $"the mount's noun is the file's ('{gk?.Noun}'; the sentence word '{a.I.Noun}')");
             SoundSpec gerryLips = a.I.SoundsRig.Resolve("lips");
@@ -307,7 +307,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             a.Remove();
             yield return Frames(3);
 
-            // A Gerry asleep far away, with no view to draw the skin on, is still a Gerry: its mount comes from its
+            // A Larry asleep far away, with no view to draw the skin on, is still a Larry: its mount comes from its
             // "Skin" key, not from the sheet it wears (2026-10-18: a sleeping parent counted as a donkey and its
             // babies stayed at 0.6 until it woke).
             Vector3? far = Spot(home, 50f) ?? Spot(home, 42f);
@@ -330,7 +330,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             }
             else
             {
-                Check(s.Mount == M("gerry") && s.I.Noun == "skull", $"asleep without a view it is still the Gerry mount ({s.Mount}, \"{s.I.Noun}\")");
+                Check(s.Mount == M("gerry") && s.I.Noun == "skull", $"asleep without a view it is still the Larry mount ({s.Mount}, \"{s.I.Noun}\")");
                 s.Tuning.Set(Owner, "Skin", "");
                 Check(s.Mount == MountCatalog.DonkeyId, $"the key cleared: a donkey again ({s.Mount})");
             }
@@ -338,9 +338,9 @@ namespace GK2DonkeyAPI.IntegrationTests
             yield return Frames(2);
         }
 
-        // A game-creature skin (LooksGame.cs): Gerry's 0901_ frames are found in memory or through a sprite atlas,
+        // A game-creature skin (LooksGame.cs): Larry's 0901_ frames are found in memory or through a sprite atlas,
         // every base key gets a picture (the mapped ones drawn, the head keys empty on purpose), scaled onto the 128
-        // canvas, and a donkey wears it as the Gerry mount.
+        // canvas, and a donkey wears it as the Larry mount.
         // The seat as the game applies it (docs/seat-investigation.md): every built-in skin ridden with the player's
         // AutoSeat off (the default for everyone) and on, the seat read back in art pixels with the keys that made
         // it (the instance's SeatOffset / SeatAdjustPx and who set them). A readout, not a judgement: it fails only
@@ -433,7 +433,7 @@ namespace GK2DonkeyAPI.IntegrationTests
 
         // The cart on every built-in mount (docs/mounts-parity-matrix.md 1.2, 6.2): the gap between the body's rear edge
         // and the cart body, and the seat in the cart style, read back in art px. The rat's declared gap must put the cart
-        // as far from its body as the donkey's cart is from the donkey's; the snail, worm and Gerry are read out, and
+        // as far from its body as the donkey's cart is from the donkey's; the snail, worm and Larry are read out, and
         // their gaps declared from these numbers (M2b of the plan). The dragon pulls no cart (the user, 2026-10-25): a
         // spawn with a cart wearing it is refused instead.
         internal static IEnumerator CartReadout()
@@ -505,7 +505,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             // The measure is the cart mesh's front edge (the shaft tips) past the body's rear edge, negative = the shafts
             // reach along the body, as they do on the donkey (-30 px). The rule (docs/seat-investigation.md 9): no mount's
             // cart stands closer to its body than the donkey's; the declared gap (the rat's 9, judged by eye; the dragon's 24
-            // until it stopped pulling the cart) puts it about 10 px further, the snail, worm and Gerry are narrower and
+            // until it stopped pulling the cart) puts it about 10 px further, the snail, worm and Larry are narrower and
             // stand further without a gap.
             if (clearance.TryGetValue("donkey", out float donkeyGap))
             {
@@ -763,14 +763,14 @@ namespace GK2DonkeyAPI.IntegrationTests
         // The page's Second tone row (the API's Muzzle region; the user, 2026-10-20: every part of every skin reachable
         // from the page): a companion's preset lands as the Muzzle keys on its paper mount and on its donkey wearing the
         // rat, where every Muzzle colour changes and no other; the row is left out on a mount whose skins have no such
-        // region (Gerry) and live on the rat, the snail, the dragon (its belly), the worm (its mouth, since 2026-11-04) and
+        // region (Larry) and live on the rat, the snail, the dragon (its belly), the worm (its mouth, since 2026-11-04) and
         // the donkey.
         internal static IEnumerator SecondTone()
         {
             string noPack = MissingPack("dragon", "rat", "snail", "worm", "gerry"); // our mount packs may be left out: Saddle Up alone, or one pack
             if (noPack != null) { Skip(noPack); yield break; }
             Check(MountSettingsPage.MountHasRegion(M("rat"), "Muzzle") && MountSettingsPage.MountHasRegion(M("snail"), "Muzzle") && MountSettingsPage.MountHasRegion(M("dragon"), "Muzzle") && MountSettingsPage.MountHasRegion(M("worm"), "Muzzle") && MountSettingsPage.MountHasRegion(MountCatalog.DonkeyId, "Muzzle"), "the rat, the snail, the dragon, the worm and the donkey have a Muzzle region: the row is live for them");
-            Check(!MountSettingsPage.MountHasRegion(M("gerry"), "Muzzle"), "Gerry has none: the row is left out for him");
+            Check(!MountSettingsPage.MountHasRegion(M("gerry"), "Muzzle"), "Larry has none: the row is left out for him");
             const string owner = Owner + ".secondtone";
             MountCompanion me = Mounts.Companion(owner);
             me.Skin = Sk("rat");
@@ -1270,7 +1270,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             Check(row.Value == was, "put back");
         }
 
-        // A stand-in that takes many frames to build (Gerry's, ~44 frames from the game's own pictures), its rig refreshed
+        // A stand-in that takes many frames to build (Larry's, ~44 frames from the game's own pictures), its rig refreshed
         // every frame as the Mounts panel's picture is (the user's journal, 2026-11-05: Gerry picked with a skin not
         // installed, his look built, let go at the next refresh and built again, the picture stuck on the mount before;
         // the rig compared the sheet being built with the saved id, which names nothing; docs/missing-skin.md). It must be
@@ -1281,7 +1281,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             Catalog.Entry k = Catalog.Find(gerry);
             if (k == null)
             {
-                Info("Gerry isn't registered (Saddle Up not loaded): the slow stand-in not checked");
+                Info("Larry isn't registered (Saddle Up not loaded): the slow stand-in not checked");
                 yield break;
             }
             string own = Looks.DefaultSkinOf(k), missing = gerry + "/selftest-not-installed";
@@ -1289,13 +1289,13 @@ namespace GK2DonkeyAPI.IntegrationTests
             MountHandle h = Mounts.Spawn(Owner, new MountSpawn { Position = at, Skin = missing, Rideable = false });
             if (h == null)
             {
-                Check(false, "a mount spawned with Gerry's missing skin");
+                Check(false, "a mount spawned with Larry's missing skin");
                 yield break;
             }
             try
             {
                 yield return Until(() => h.IsReady, 6f);
-                Check(waited && h.Mount == gerry, $"spawned with a skin not installed, it is Gerry ({h.Mount})");
+                Check(waited && h.Mount == gerry, $"spawned with a skin not installed, it is Larry ({h.Mount})");
                 float until = Time.realtimeSinceStartup + 8f;
                 while (h.Exists && h.I.LooksRig.WornDef?.Id != own && Time.realtimeSinceStartup < until)
                 {

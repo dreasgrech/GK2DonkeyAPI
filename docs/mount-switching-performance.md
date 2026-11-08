@@ -13,9 +13,9 @@ The game runs at 120 fps here: a normal frame is 8.3 ms, and one over about 12 m
 | What | Before | After |
 |---|---|---|
 | The click (the Mount row set) | 6 ms: the whole cfg file written on every pick | 2.2 ms: written once the picking pauses, or when the panel closes |
-| A look built | 6 pictures a frame: 4 to 17 ms a frame (Gerry, Hellfire: 17 to 44 ms) | 2 ms a frame; its sheet in a frame of its own; nothing in the click's frame |
+| A look built | 6 pictures a frame: 4 to 17 ms a frame (Larry, Hellfire: 17 to 44 ms) | 2 ms a frame; its sheet in a frame of its own; nothing in the click's frame |
 | The dragon's sheet made | 2.4 to 14.7 ms (Unity zero-fills 15.6 MB) | 3.4 ms (made uninitialized; every cell is written anyway) |
-| Gerry's frames looked for | 6.5 ms on each first pick (every sprite in memory scanned) | once a session (the game-ready check finds them) |
+| Larry's frames looked for | 6.5 ms on each first pick (every sprite in memory scanned) | once a session (the game-ready check finds them) |
 | A look picked again | built again (the dragon: 40 frames) | shown in the click's frame (held while the panel is open) |
 | The switch to a finished look | in the frame its sheet was uploaded | the frame after |
 
@@ -94,7 +94,7 @@ clip toggling when a sound has one clip.
 | Look | Pictures | Sheet | Build (2 ms a frame) |
 |---|---|---|---|
 | Rat, snail, worm | 44, 96x96 | 680x680, 1.8 MB | 4 frames |
-| Gerry (from the game's sprites) | 44, 160x160, read back through the graphics card | 1128x1128, 5 MB | 14 to 38 frames |
+| Larry (from the game's sprites) | 44, 160x160, read back through the graphics card | 1128x1128, 5 MB | 14 to 38 frames |
 | Hellfire (over the donkey's frames) | 44 | 680x680, 1.8 MB | 14 to 31 frames |
 | Dragon | 237, 128x128 | 2065x1936, 15.6 MB | 18 to 28 frames |
 
@@ -104,7 +104,7 @@ For scale:
   would roughly halve the dragon's memory and upload, for every mount.
 - **A pack may ship its sheet ready-made** (`LoadSheetPng` exists: one decode instead of one per picture). The repo's
   tools could pack Saddle Up's.
-- **Game-source looks** (Gerry) read every picture back through the graphics card, 2 to 3.5 ms each and more when the
+- **Game-source looks** (Larry) read every picture back through the graphics card, 2 to 3.5 ms each and more when the
   card is busy. Reading the character's atlas once, and cutting the frames from it on the CPU, would be one read-back
   instead of 44.
 
@@ -128,7 +128,7 @@ says which one the 2.5 ms is); the chosen mount written half a second after the 
 (21 to 24 ms with the 4 ms write).
 
 Left, and why it waits: trimmed cells and non-blocking read-backs lost most of their reason to round 1 (framings are
-measured once ever; Gerry's read-backs sit inside the 2 ms budget, no frame over 12 ms). Kept on the list for memory
+measured once ever; Larry's read-backs sit inside the 2 ms budget, no frame over 12 ms). Kept on the list for memory
 and for other mods' bigger looks, after the sound tick's cause is known. Trimming needs its shape decided first: the
 sheet's size isn't known until every picture is made, which conflicts with "the sheet first, its pictures after"; and
 every reader of a skin sprite's geometry (`rect`, `textureRect`, `bounds`, `pivot`), `LooksExport` (it writes the

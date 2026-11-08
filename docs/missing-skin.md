@@ -53,7 +53,7 @@ Asked before about the case where the mount itself is gone (the Dragons pack rem
 donkey comes, docs/mounts-as-mods.md): that one is meant, and stays.
 
 The same holds for a skin that is there but **set aside** (a game-source skin whose frames the game lacks): every place
-above treats it as missing. Today only mounts' default skins are game-source (Gerry's), so the donkey is the only
+above treats it as missing. Today only mounts' default skins are game-source (Larry's), so the donkey is the only
 fallback there. A rule that falls back to the mount's default covers a set-aside second skin too, at no cost.
 
 ## 3. The fix: one rule, used in all eleven
@@ -143,7 +143,7 @@ rehearsals A and B.
 ## 7. The hand test found a twelfth place (2026-11-05, ~23:00)
 
 The F11 of 22:50 was green. The user then picked mounts in the journal with the 0.15.0 fixture's made-up skins staged
-(dev build): "when i select another mount in the journal, the current preview gets stuck". The screenshot shows Gerry
+(dev build): "when i select another mount in the journal, the current preview gets stuck". The screenshot shows Larry
 picked and the dragon still drawn.
 
 - **The log:** "Looks: skin 'saddleup.gerry/default' loaded: 44 pictures ... 301 ms ...", then "unloaded (no donkey
@@ -152,7 +152,7 @@ picked and the dragon still drawn.
   `Find(stillWant)`, the saved id. For a stand-in that finds nothing, so the half-built sheet was let go as "the choice
   changed", built again, let go again, and the picture kept the mount before.
 - **Why F11 missed it:** the test mount's stand-in is one picture and builds at once, so no sheet was ever pending.
-  Gerry's takes about 44 frames, and the panel's picture refreshes in between.
+  Larry's takes about 44 frames, and the panel's picture refreshes in between.
 - **Why the audit missed it:** the search was for `Find(` with a few names of its argument, and this one is called
   `stillWant`.
 - **The fix:** `Find(StandIn(stillWant))`.
@@ -160,11 +160,11 @@ picked and the dragon still drawn.
   `Tuning.Get<string>("Skin")`). There are three in the rig (`WantedDef`, the pending check, the tick) and the
   companion's `WornSkin`, all through the stand-in now. Every remaining `Find(` of a skin id in shipped code takes an id
   that is already the worn one or a registered one.
-- **The regression test:** the integration scenario "skins: a slow stand-in (Gerry with a skin not installed) is worn
+- **The regression test:** the integration scenario "skins: a slow stand-in (Larry with a skin not installed) is worn
   though its rig is refreshed every frame while it builds" (`MissingSkinSlowBuild`). Without the fix the sheet is let go
   at every refresh and never worn.
 
-**Seen by hand 2026-11-05 ~23:03** (dev build, the 0.15.0 fixture's made-up dragon and Gerry skins staged; the user:
+**Seen by hand 2026-11-05 ~23:03** (dev build, the 0.15.0 fixture's made-up dragon and Larry skins staged; the user:
 "ok seems fixed now"):
 - the journal's picture follows each pick;
 - the dragon is ridden as the dragon ("Mounted ... dragon"; it was "donkey" before);
@@ -183,7 +183,7 @@ The user's own Saddle Up cfg was put back afterwards and the saves compared: ide
 - **Rehearsal A** (01:29) on fresh cfgs: no warning or error; the same cfg keys as the 0.16.0 fixture.
 - **Rehearsal B** (01:41) over the 0.15.0 fixture's Saddle Up cfg: the dragon picked with its saved skin `default-x`
   wore its own look ("the dragon's own look 'saddleup-dragon.dragon/default' is worn instead") and the ride went on
-  as the dragon; Gerry the same; the choice kept in the cfg; 188 of 189 values kept, 0 missing; no warning or error.
+  as the dragon; Larry the same; the choice kept in the cfg; 188 of 189 values kept, 0 missing; no warning or error.
 
 ## 9. The Skin row's label didn't fit (2026-11-07)
 

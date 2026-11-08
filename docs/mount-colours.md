@@ -2,7 +2,7 @@
 
 The user's rule for this: **keep things standard and common between the mounts.** The colour settings a player has
 (Coat colour, Harness colour, Second tone, custom colours with lightness, and the API's region settings) must mean the same thing
-on the donkey, the dragon, the worm and Gerry, with the donkey being one look among others, not the model the rest
+on the donkey, the dragon, the worm and Larry, with the donkey being one look among others, not the model the rest
 are bolted onto.
 
 ## 1. What exists, and why it stops at the donkey
@@ -39,7 +39,7 @@ Measured 2026-10-18 (`Colors.cs`, `docs/colors.md`, the built-in skins' PNGs):
   | Donkey (the game's atlas) | 41 in five regions | palette art |
   | Dragon | 21 | palette art (our tool quantised it) |
   | Giant Rat | 17 | palette art |
-  | Gerry (the game's skull frames) | a few dozen | palette art |
+  | Larry (the game's skull frames) | a few dozen | palette art |
   | Giant Snail | 300 | shaded art |
   | Giant Worm | 720 | shaded art |
 
@@ -87,7 +87,7 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
   A colour named that the pictures don't have is a warning (and a SkinsScan failure for the built-ins); a colour
   in two regions is an error. Everything not named is Coat. A pack with `colours = palette` keeps the donkey's map,
   since it is drawn in the donkey's colours (a recipe is an own-colour look, see below).
-- **The game-source skin (Gerry):** the same as any skin; its colours are the game's skull colours, collected from
+- **The game-source skin (Larry):** the same as any skin; its colours are the game's skull colours, collected from
   the frames at build.
 - **A recipe skin** (a mod's, through the API; Hellfire was one until 2026-10-19) is an own-colour look too: all Coat but the regions it declares in code. A pack with
   `colours = palette` is the one case that keeps the donkey's map, because its pictures are in the donkey's colours.
@@ -112,7 +112,7 @@ harness colour). A skin in its own colours keeps 48 (`PaletteMaxColours`; the si
 keeps the path and the look it had). The text below is the 2026-10-18 decision.
 
 Per look, by its colour count: **up to 48 colours, the exact swap palette; more, the cube.** The threshold is the
-keeper's own palette (32) with room; the donkey, the dragons, the rat and Gerry stay on the exact swap, the snail and
+keeper's own palette (32) with room; the donkey, the dragons, the rat and Larry stay on the exact swap, the snail and
 the worm go through the cube. The `SpriteMethod` setting keeps its meaning for looks under the threshold (Palette or
 Lut, the player's choice); above it the cube is the only path and the setting is not consulted, which the setting's
 description says. No cfg key changes, so nothing a 0.9.1 player has moves (docs/compatibility.md).
@@ -184,7 +184,7 @@ saturation and value thresholds; the first match wins; everything else is Coat).
   shell and Hellfire's lava by at least 22, most by 40 and more. The worm had no second tone: its rows were
   left out of the menu and greyed in the Mounts panel (since 2026-11-04 its mouth is its Muzzle, the "Mouth" row:
   docs/second-tone.md 8).
-- **Gerry:** Dark = the sockets and cracks, the bone is Coat, read from the game's export of his frames
+- **Larry:** Dark = the sockets and cracks, the bone is Coat, read from the game's export of his frames
   (`BepInEx\GK2-asset-probe\game-skins\saddleup.gerry\default\`) when one exists; without the export the cfg carries no `[Colors]`
   and everything is Coat.
 - **Hellfire, Royal Parade** (over the donkey): Hellfire's written once by its generator (`make_hellfire.py`, `--cfg`

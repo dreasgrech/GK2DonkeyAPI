@@ -94,7 +94,7 @@ property change doesn't invalidate the compile), and the check then fails on the
 
 `make-release-zip.py` (it runs `release-versions.py check` and `check-dist.py` first) writes
 `release/GK2-Saddle-Up-<version>.zip` with `BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and
-`BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod; Saddle Up's built-in Gerry is a pack inside its DLL),
+`BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod; Saddle Up's built-in Larry is a pack inside its DLL),
 read back and compared with `dist/`; this zip is the Nexus upload and extracts into the game folder as before (the game's
 Mods window lists only Workshop items; `Mods\Code` is the README's local test folder and our rehearsal, not a player
 install). Besides it, one zip per external pack (`packs/<Pack>/`, the pack's name after
@@ -178,7 +178,7 @@ real skin worn with `--skin`); `tools/log-scenarios.py` lists the scenarios an F
    saddleup-dragon.dragon)`, `GK2 Saddle Up: Critters 1.0.0: 3 skin(s) registered (the mounts ...)`, `GK2 Saddle Up:
    Donkey Skins 1.0.0: 2 skin(s) registered for the donkey, and the effect saddleup-donkey-skins.hellfire`; the former
    `Mounts, skins and effects: on.` went with the 0.10.0 gate on 2026-10-27: the mounts are always on, which ones a
-   player has is which packs they installed; the Mounts panel lists the donkey, Gerry and every installed pack's
+   player has is which packs they installed; the Mounts panel lists the donkey, Larry and every installed pack's
    mounts, and the donkey's Skin list Hellfire and Royal Parade with the Donkey Skins pack),
    `Cargo layout: ... embedded`, no `Dev tools unlocked` line, and no `[Warning` or `[Error` from either plugin. The
    new API cfg has no `[Debug]` section. A second run with the marker file in `BepInEx\config` shows the panel.
@@ -262,7 +262,7 @@ in that run: a heading with a picture row's label got a picture of its own (the 
 Run 2026-10-27 with the release zips of 0.12.0 / API 0.40.0 (`GK2-Saddle-Up-0.12.0.zip` and the combined packs zip of that day, since dropped), the dev
 marker, the dev DLLs and the dev-only plugins aside (staged by a script: stage-a, capture-a, stage-b, restore).
 **A, a first start** (no cfgs): 392 log lines, no warning, error or exception, no `Dev tools unlocked`, the four pack
-mounts and Gerry declared with their cargo (Gerry 4, rat 2, snail 6, worm 4, the dragon no cart), layout from embedded;
+mounts and Larry declared with their cargo (Larry 4, rat 2, snail 6, worm 4, the dragon no cart), layout from embedded;
 H, G, two items, H left the cart, G brought the same cart with both; the Mounts panel listed six mounts; the fresh API
 cfg has no `[Debug]`. Its cfgs are the `0.12.0` fixture (every value then set off its default). Found in it: the Mounts
 panel key had no default (now L, the first Keys row; rebuilt and re-extracted before B). **B, the upgrade** over the
@@ -284,7 +284,7 @@ fixture binds the cart key to the game's own T on purpose). Saves byte-identical
 
 Run 2026-10-27 15:50, with the zips rebuilt at 15:44 (after Freeplay and the speed words: a mount's speed is one of the
 API's words). **A**: 392 lines, no warning, error or exception, no `Dev tools unlocked`; every mount declared with its
-word (Gerry Fast, the rat Very fast, the snail Very slow, the worm and the dragon Slow); H, G, two items, H, G: the same
+word (Larry Fast, the rat Very fast, the snail Very slow, the worm and the dragon Slow); H, G, two items, H, G: the same
 cart hitched again with both; L the Mount Journal with six mounts; Freeplay the Saddle Up page's last section, its
 speed dropdown shown with the switch on; no `[Debug]` in the API cfg. Its cfgs are the `0.12.0` fixture again (476 +
 213 values off their defaults; only the Freeplay lines are new). **B** over the 0.10.0 cfgs: 427 lines, 0 warnings, 29
@@ -292,7 +292,7 @@ carried over, the old keys kept ("ride R, cart T"); key by key 38 of 38 Saddle U
 kept, the 20 others the rows retired on purpose. The ride on R is in the log, a drive on T is not (the fixture's T is
 the game's Tech Tree too). Saves byte-identical; everything restored.
 
-Run 2026-10-28 00:00-00:40 with the four zips of 2026-10-27 23:56 (the 23:55 dist: Saddle Up with Gerry alone, the
+Run 2026-10-28 00:00-00:40 with the four zips of 2026-10-27 23:56 (the 23:55 dist: Saddle Up with Larry alone, the
 Donkey Skins pack's zip of its own, 23 of 23 scans green): A on fresh cfgs with all three packs: API 0.40.0 and
 Saddle Up 0.12.0 loaded (ride H, cart G), each pack's own line, cargo layout embedded, no `[Debug]` section, no
 `Dev tools` line, 0 warnings in 472 lines; H, G, items, H leaves the cart, G brings the same cart back (four
@@ -374,7 +374,7 @@ commit `e16dd41`; docs/missing-skin.md section 8):
 - **B over the 0.15.0 fixture's Saddle Up cfg** (`fixture-live.py`, Hellfire worn) with A's API cfg (01:41): the six
   moved keys and the three renumbered sections carried over, 15 old lines left out, no warning or error in 434 lines;
   the dragon picked with its saved skin `default-x` wore its own look and was ridden as the dragon (the ride went on),
-  Gerry the same; key by key 188 of 189 values kept, 0 missing, the one change the tester's own pick (Mount: Gerry).
+  Larry the same; key by key 188 of 189 values kept, 0 missing, the one change the tester's own pick (Mount: Larry).
 - **Restore:** everything back, the saves identical; the five dev builds rebuilt (`--no-incremental`) and deployed at
   01:44.
 

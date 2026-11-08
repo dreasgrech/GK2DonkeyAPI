@@ -37,7 +37,7 @@ The mod plays game sounds by their **id** (`AudioConfig.sounds`, 311 entries), n
 LazyBearTechnology.dll) writes `sound_ids.csv` and `sound_ids.txt`: every id with its 3D preset (0 = 2D, 1 = the
 in-world 3D preset, 2 = sound zones, 3 = fights, 4 = stations), volume, loop flag and its clips. Run it from a folder
 with no stray `.py` files (a helper named `snappy.py` next to it shadowed a module UnityPy imports, 2026-10-24).
-The creature-like ids are few: `garry` (Gerry's voice), `voice_larry` (burps), `larry_steps`, `larry_chatterteeth`,
+The creature-like ids are few: `garry` (Larry's voice), `voice_larry` (burps), `larry_steps`, `larry_chatterteeth`,
 `gerry_somersault`, `spitter_attack` / `spitter_hit`, `stinker_death`, `zombie_idle` / `zombie_attack` / `zombie_death`,
 `wolves_howl`, `plague_doctor_cough`, the `step_*` ids, `item_use_food`, `fishing_blop`, `bush_chop`,
 `conveyor_furnace_bellows`. The built-in mounts' first picks are in their mount.cfg `[Sounds]` blocks

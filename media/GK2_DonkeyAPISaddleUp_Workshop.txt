@@ -24,7 +24,7 @@ Twice your walking speed on the donkey, one and a half times with the cart.
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/Foals.png?v=2[/img]
 
 [h3]A cart that carries six[/h3]
-Everything you pick up while driving goes on the cart, stacked in three layers. Piles, tables, graves and quest hand-ins take from it as if you held the item. Each mount pulls its own load: the donkey six, Gerry four.
+Everything you pick up while driving goes on the cart, stacked in three layers. Piles, tables, graves and quest hand-ins take from it as if you held the item. Each mount pulls its own load: the donkey six, Larry four.
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/cargo-sixitems-cycle.gif?v=2[/img]
 
@@ -48,8 +48,8 @@ In your armour you swing the sword and shoot the bow from the saddle, aim up and
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/fight-a.gif?v=2[/img]
 
-[h3]Ride Gerry![/h3]
-Gerry comes with the mod: the talking skull, three times his usual size, hopping along on pure opinion and sharing it in his own voice. Fast, with a cart that holds four, and little skulls trailing him. Press [b]L[/b] for the Mount Journal, pick Gerry and ride.
+[h3]Ride Larry![/h3]
+Larry comes with the mod: the talking skull, three times his usual size, hopping along on pure opinion and sharing it in his own voice. Fast, with a cart that holds four, and little skulls trailing him. Press [b]L[/b] for the Mount Journal, pick Larry and ride.
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/gerry-riding.gif?v=2[/img]
 
@@ -75,7 +75,7 @@ Off by default. The game's delivery donkey drops its corpses by the nun's crossr
 [*][b]H[/b] — your donkey comes and you ride. Riding: get off. Driving: leave the cart standing and ride on.
 [*][b]G[/b] — your donkey comes with its cart and you drive. Riding: the cart comes and is hitched. Driving: get off.
 [*][b]E[/b] — at your donkey: get on. At the cart: load what you hold, or take the top item with empty hands. Driving with nothing in front: set the top item down behind the cart (a chest too).
-[*][b]L[/b] — the Mount Journal: pick your mount (the donkey, Gerry, or a pack's), name it, choose its skin and babies, open its colours.
+[*][b]L[/b] — the Mount Journal: pick your mount (the donkey, Larry, or a pack's), name it, choose its skin and babies, open its colours.
 [*][b]B[/b] — ring the bell.
 [*][b]V[/b] — your mount calls out, and its babies answer.
 [*][b]Space[/b] — your mount jumps. On a mount that flies, Space again in the air takes off.
@@ -114,7 +114,7 @@ The game's [b]Settings[/b] window (pause menu or main menu) has a [b]GK2 Saddle 
 [hr][/hr]
 [h2]Mount and Skin Packs for Saddle Up[/h2]
 
-Saddle Up comes with the donkey and Gerry. More mounts and skins are packs, one Workshop item each; the Mount Journal ([b]L[/b]) lists those installed.
+Saddle Up comes with the donkey and Larry. More mounts and skins are packs, one Workshop item each; the Mount Journal ([b]L[/b]) lists those installed.
 
 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3830144338]Dragons Mount Pack[/url]: the Dragon, a mount that flies. Slow on its feet and it pulls no cart, but no fence, river or roof can stop it.
 

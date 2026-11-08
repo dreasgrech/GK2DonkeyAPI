@@ -60,10 +60,10 @@ designed (docs/open-items.md "Effects on skins").
 
 ```
 +-- Mounts ------------------------------------------------------ 6 mounts --+
-| [list 260]        | [icon] Gerry                                           |
+| [list 260]        | [icon] Larry                                           |
 |  Donkey           |        description, two or three lines                |
 |  Dragon           |--------------------------------------------------------|
-|  Gerry  <----     | [ stage 440x236, up to 3x ]   | Stats                  |
+|  Larry  <----     | [ stage 440x236, up to 3x ]   | Stats                  |
 |  Giant Rat        |                               |  Speed    2x walking   |
 |  Giant Snail      |                               |  Cart     pulls it     |
 |  Giant Worm       |                               |  Babies   0.33x its sz |
@@ -75,7 +75,7 @@ designed (docs/open-items.md "Effects on skins").
 |                          [ Colours and effect... ]  [ Done ]  [ Cancel ]   |
 +---------------------------------------------------------------------------+
 
-+-- Colours and effect: Gerry ------------------------------------------------+
++-- Colours and effect: Larry ------------------------------------------------+
 |   Mount colours                     |   Cart colours                        |
 |    Coat colour       < ... >        |    Paint            < ... >           |
 |    Custom coat       < ... >        |    Wheel colour     < ... >           |
