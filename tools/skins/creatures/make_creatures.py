@@ -692,6 +692,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         gv = BEAT_BOB_PX * 0.5 * (1.0 - amp) + max(0.0, amp - 1.0) * math.sin(2 * math.pi * (glide - lag)) if glide is not None else None
         return blend(bv, gv, M)
     bob = (0.8 * math.sin(4 * math.pi * phase) if walking else 0.0) - lift - RAISE
+    bob_rest = -lift - RAISE   # the same without the walk's bob: the tail rings' fixed angles (tail_rings)
     # the walk's weight: the shoulders rise over a planted foreleg and the haunch over a planted hind leg, twice a cycle
     # each and in turn (the body rocks; the back under the seat keeps the bob only)
     heave_f = -WALK_HEAVE * math.cos(4 * math.pi * (phase + 0.25 - 0.31)) if walking else 0.0
@@ -1712,10 +1713,16 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     tail = catmull(tpts, 160)
     tail_top = {}
     tail_len = sum(math.dist(a, b) for a, b in zip(tail, tail[1:]))
+    arc = 0.0
     for i, (x, y) in enumerate(tail):
         u = i / (len(tail) - 1)
+        arc += math.dist(tail[i - 1], (x, y)) if i else 0.0
         r = 6.0 * (1 - u) ** 1.4 + 1.0
         band = False
+        # the plates under the tail end at a share of its samples; the Armored Dragon's at a fixed length along it, under
+        # its last ring (26 to 28.6 px): ended by the share, the bending walk tail moved their end along it and the brown
+        # under the tip came and went, 4 to 9 px a frame (the user, 2026-11-08: walk 04 and 08)
+        under = arc < 27.3 if ARM else u < 0.75
         for yy in range(int(y - r - 1), int(y + r + 2)):
             for xx in range(int(x - r - 1), int(x + r + 2)):
                 d = math.hypot(xx + 0.5 - x, yy + 0.5 - y)
@@ -1723,7 +1730,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                     up = (y - (yy + 0.5)) / max(r, 0.6)
                     if band:
                         put(xx, yy, STEEL[6] if up > 0.4 else STEEL[4] if up > -0.3 else STEEL[2])
-                    elif up < -0.35 and u < 0.75:
+                    elif up < -0.35 and under:
                         put(xx, yy, DBELLY[1] if int(xx) % 4 else DBELLY[0])     # the plates under the tail
                     else:
                         put(xx, yy, DRG[4] if up > 0.5 else DRG[3] if up > -0.05 else DRG[2])
@@ -2005,7 +2012,9 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         rest_dirs = None
         if fly is None:
             # the resting tail (no sway): its direction at each ring's place, for the rings' fixed angles
-            rp = [(70.0, 50.0 + bob), (81.0, 53.0 + bob * 0.7), (91.0, 57.0), (99.0, 59.5), (103.0, 60.5)]
+            # without the walk's bob: with it the rounded root points stepped a px up or down twice a cycle and the rings
+            # took three angles through the walk, their dark edges jumping (the user, 2026-11-08: walk 04 and 08)
+            rp = [(70.0, 50.0 + bob_rest), (81.0, 53.0 + bob_rest * 0.7), (91.0, 57.0), (99.0, 59.5), (103.0, 60.5)]
             rc = catmull([(float(round(x)), float(round(y))) for x, y in rp], 160)
             rest_dirs, acc_ = {}, 0.0
             rsegs = list(zip(rc, rc[1:]))

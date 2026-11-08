@@ -45,6 +45,11 @@ For mod authors:
 
 Development:
 
+- **Mecha's tail tip steady while walking** (2026-11-08, `make_creatures.py`; docs/dragon-references.md 17; the user:
+  "black spots ... flicker while walking", walk 04 and 08): the tail rings' fixed angles came from a resting tail built
+  with the walk's bob, so they took three angles through the walk; now from the tail without it. And the brown under
+  the tail ends at a fixed length under the last ring (it came and went under the tip, 4 to 9 px a frame). Mecha's
+  pictures only; the Red Dragon is unchanged.
 - **The Armored Dragon is named Mecha** (2026-11-08, the Dragons pack; docs/dragon-references.md 16): its long name
   didn't fit the Mount Journal's Skin row in the F11 test language, and fitted German and Russian with no room to
   spare. `skin.cfg`, the 11 language files (Mecha, Меха, メカ, 메카, 机甲) and the generator's creature table; the id stays

@@ -786,3 +786,21 @@ longer) "[Armored Dragon Armored]" didn't fit even at its smallest size, and Ger
 in `skin.cfg` and in its name row of the 11 language files (Mecha in the Latin-script languages, Меха, メカ, 메카,
 机甲; every character one the game's own text draws, `tools/l10n-glyphs.py`), and in the generator's creature table.
 Its id stays `saddleup-dragon.dragon/armored` (the folder `skins\armored\`), so a save that picked it keeps it.
+
+## 17. The tail tip steady (2026-11-08)
+
+The user, on the page's walk 04 (and 08): "some black spots or something which makes it flicker while walking" at the
+last ring before the mace. Read pixel by pixel (`tools/skins/frame_check.py` and a per-ring shape print):
+- **The rings turned.** On the ground each ring is a stamp at the resting tail's direction, but that resting tail was
+  built with the walk's bob (0.8 px), and its rounded root points stepped a px up or down twice a cycle: the rings took
+  three angles through the walk (frames 1, 3, 5, 7; 2 and 6; 4 and 8), their dark steel line (192C2D) and the black
+  beside it jumping. The resting tail is now built without the walk's bob (`bob_rest`): every walk frame has the same
+  four ring stamps, moved only.
+- **The brown under the tip came and went.** The plates under the tail end at a share of its samples (u 0.75), and the
+  bending walk tail moved that end along it: 4 to 9 brown px under the tip a frame. The Armored Dragon's end at a
+  fixed length (27.3 px), under its last ring (26 to 28.6), so the tip beyond it is the tail's own colour in every
+  frame. The Red Dragon keeps its share.
+
+A plain `make_creatures.py` run changes only Mecha's pictures (the tail tip's underside in most of them; the rings in
+walk 02, 04, 06, 08); the Red Dragon and the other mounts are unchanged. The walk's sweep near the tail: the ring
+groups gone, the tip's brown gone; what stays is the tail's own wave bending it. SkinsScan ALL PASS (44).
