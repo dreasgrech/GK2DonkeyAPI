@@ -31,7 +31,8 @@ namespace GK2DonkeyAPI
         // For a mount region on a skin drawn in its own colours (skinId, loaded and whole), the average of that
         // look's colours in the region, so a picked colour comes out as light on a mount of its own colours as on the donkey; the
         // donkey's otherwise (and for a region the look has no colours in, where nothing maps anyway; and for a skin
-        // worn over the donkey, whose regions are still mostly the donkey's own colours).
+        // worn over the donkey, whose regions are still mostly the donkey's own colours, unless it names colours of its
+        // own under the region: then those).
         internal static float ArtLightness(string regionKey, string skinId = null)
         {
             ArtRange(regionKey, skinId, out float average, out _);
@@ -53,6 +54,16 @@ namespace GK2DonkeyAPI
                     ValueRange(all, out average, out top);
                     return;
                 }
+            }
+            // a skin over the donkey that names colours of its own under the region ([Colors] Harness = ...): those, the
+            // part of it the row is for. The Jester draws its own harness and hides the donkey's (2026-11-08); against
+            // the donkey's dark harness (0.35) a picked pink lifted its shades (0.58) all to white, one flat colour. A
+            // following tone's colours have left the region's list (SkinTones.Add: Royal Parade's cloth), so such a skin
+            // keeps the donkey's average.
+            else if (look != null && look.ColoursByRegion.TryGetValue(regionKey, out List<Color32> named) && named.Count > 0)
+            {
+                ValueRange(named, out average, out top);
+                return;
             }
             foreach (RegionDef d in Regions)
             {

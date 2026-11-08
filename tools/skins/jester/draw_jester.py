@@ -47,8 +47,9 @@ CLOTH_BURG = [hexc(h) for h in ("3A0A14", "641A28", "862534", "A23444", "C2485A"
 CLOTH_NAVY = [hexc(h) for h in ("141A3A", "243266", "34488A", "4E66A8", "6E86C8")]    # the tone caparison-second
 CAP_BURG = [hexc(h) for h in ("3E0A14", "641A2A", "862633", "A03444", "C14859")]      # the tone cap-front: its front point and half
 CAP_NAVY = [hexc(h) for h in ("131A39", "263266", "36488A", "4F66A7", "7086C8")]      # the tone cap-back
-COLLAR_BURG = [hexc(h) for h in ("3A0D14", "671A28", "882534", "A23644", "C1485B")]   # the tone collar: its band and middle point
-COLLAR_NAVY = [hexc(h) for h in ("151A39", "243262", "34488C", "4D67A8", "6E88C8")]   # the tone collar-points: the two outer ones
+COLLAR_BURG = [hexc(h) for h in ("1E190E", "671A28", "882534", "A23644", "C1485B")]   # the harness (the Harness row): the collar band, edged in the donkey's outline colour (the Outline row's)
+POINT_BURG = [hexc(h) for h in ("3A0A10", "671A2A", "882633", "A23441", "C3485B")]    # the tone collar-points: the front view's middle point (part_palette.py; the side view's is the band's own end)
+COLLAR_NAVY = [hexc(h) for h in ("151A39", "243262", "34488C", "4D67A8", "6E88C8")]   # the tone collar-points-second: the front view's outer two
 GOLD = [hexc(h) for h in ("5A3A0A", "966414", "E2A830", "FFD652")]             # edge, shade, base, light: the tone bells
 BAND = [hexc(h) for h in ("5A3A08", "996414", "E3A82F", "FED653")]             # the tone cap-band (its edge unused): a step off the bells'
 #   (tools/skins/part_palette.py), the cap's band and the bells two parts of their own
@@ -394,8 +395,8 @@ def posed(key, nudge=(0, 0), c=None):
 # hung over the cloth's front check, the cloth's own navy there (a blue stripe through the check above it and into the
 # one under it, "repeated colours", the user's boxes on walk 02); the front one was burgundy, against the cloth's front
 # check, burgundy below since the cloth is chequered in three columns (caparison).
-COLLAR = {"line": [(45.4, 40.6), (44.6, 42.6), (43, 45.5), (40.6, 48.2)], "band": 4.5,
-          "points": [(0.95, 118)], "len": 8, "w": 5.5, "first": 1}   # burgundy (2026-11-08: navy, it ran into the cloth's navy check under the band)
+COLLAR = {"line": [(45.4, 40.6), (44.6, 42.6), (43, 45.5), (40.6, 48.2), (38.6, 51.0)], "band": 4.5,   # to the chest (2026-11-08)
+          "points": [(1.0, 0)], "len": 6, "w": 5.5, "joined": True}   # the band's own end drawn to a point, its bell under it (2026-11-08)
 FRONT_COLLAR = {"line": [(31, 51.5), (36.5, 56.5), (42, 51.5)], "band": 2.5,   # turn 05: a short U under the chin
                 "points": [(0.15, 125), (0.5, 90), (0.85, 55)], "len": 5.5, "w": 5}   # fanned: their bells ran together
 
@@ -427,7 +428,13 @@ def collar(c, key, tf=None, swings=None, report=None):
     for (ax, ay), (bx, by) in zip(line, line[1:]):
         lens.append(lens[-1] + math.hypot(bx - ax, by - ay))
     parts, tips = [], []
+    joined = set()   # c["joined"]: the points are the band's own end, tapering on along its last stretch (below)
     for n, (t, ang) in enumerate(c["points"]):
+        if c.get("joined"):
+            # the band's end drawn to a point: from the band's end, along its last stretch, as wide as the band, in its
+            # colours, no line between them ("why is the bell part detached (more like behind it) from it? they dont
+            # look as one thing", the user, 2026-11-08: a point of its own colours, hung at another angle, cut by the band)
+            t, ang = 1.0, math.degrees(math.atan2(still[-1][1] - still[-2][1], still[-1][0] - still[-2][0]))
         ang += turn
         d = t * lens[-1]
         i = max(j for j in range(len(line) - 1) if lens[j] <= d)
@@ -435,17 +442,21 @@ def collar(c, key, tf=None, swings=None, report=None):
         hx = line[i][0] + (line[i + 1][0] - line[i][0]) * f
         hy = line[i][1] + (line[i + 1][1] - line[i][1]) * f
         ux, uy = math.cos(math.radians(ang)), math.sin(math.radians(ang))
-        w = c["w"] / 2
+        w = (c["band"] if c.get("joined") else c["w"]) / 2
         sw = swings[n] if swings else (0, 0)
         reach = c["len"]   # the swing's lift not used: it shortened the point and its bell hopped (walk 04)
         tip = (hx + ux * reach + uy * sw[0], hy + uy * reach - ux * sw[0])   # across: (1, 0) for a point straight down
         part = polygon([(hx - uy * w, hy + ux * w), tip, (hx + uy * w, hy - ux * w)]) - band
-        parts.append((part, (COLLAR_NAVY, COLLAR_BURG)[(n + c.get("first", 0)) % 2]))
+        if c.get("joined"):
+            joined |= part
+        else:
+            parts.append((part, (COLLAR_NAVY, POINT_BURG)[(n + c.get("first", 0)) % 2]))
         end = max(part, key=lambda q: (q[0] * ux + q[1] * uy, q[1])) if part else None
         tips.append(end)
         if report is not None:
             report.append((n, len(part), end))
     px = {}
+    band |= joined
     tube(band, COLLAR_BURG, px, band.union(*[part for part, _ in parts]))
     for part, ramp in parts:
         for (x, y) in part:   # a point lit on its left, shaded on its right
@@ -455,6 +466,47 @@ def collar(c, key, tf=None, swings=None, report=None):
         if end:
             small_bell(end[0], end[1] + 1, px)
     return px
+
+
+# The Jester's harness (2026-11-08) is its collar band, run from the crest down to the chest, its point and bell
+# hanging from the end: the Harness row colours it (skin.cfg [Colors] Harness lists COLLAR_BURG's shades), its edge
+# the donkey's outline colour (the Outline row's: a light harness colour turned the burgundy edge tan, no line round
+# it). The donkey's own strap is hidden, drawn over as the neck and chest it lies on. The user, with a Harness colour
+# picked: the collar "stayed red and the original harness underneath, which should be invisible since we're using our
+# own custom harness, is getting the actual cream colour"; then, the strap drawn over in the band's colours: "the end
+# looks broken ... i like the idea of the bell there and the custom harness but we need to make it right" (the
+# strap's curve round the chest stuck out under the bell). The strap's pixels are the donkey's Harness region's 15
+# colours (Colors.cs, "Donkey harness") in that frame: 16 px of it showed standing, up to 39 in the walk, 59 turning.
+DONKEY_HARNESS = {hexc(h)[:3] for h in ("62411b 3c2a14 2d210f 443017 885923 d68e38 2f1d08 3a2003 a06a29 5f3d14 765024 "
+                                        "342918 2d2114 463017 472d0e").split()}
+DONKEY_OUTLINE = {hexc(h)[:3] for h in ("1e190e", "301f0f", "42422c")}   # Colors.cs, "Donkey outline"
+
+
+def strap_hidden(key, under=frozenset()):
+    """The donkey's harness strap on frame 'key' drawn over as the donkey there: a pixel on its outline (beside a
+    transparent one) as the nearest outline pixel's colour, any other as the nearest pixel's of the coat, mane or
+    muzzle (not the strap's, not the outline's); the donkey's own colours, so its rows colour them as the rest. Not
+    where another of this skin's pieces lies under the neck already ('under': the cloth, drawn behind the strap)."""
+    don = load(key).convert("RGBA").load()
+    solid = lambda x, y: 0 <= x < 96 and 0 <= y < 96 and don[x, y][3] > 0
+    strap = {(x, y) for y in range(96) for x in range(96) if solid(x, y) and don[x, y][:3] in DONKEY_HARNESS}
+    rings = sorted(((dx, dy) for dx in range(-8, 9) for dy in range(-8, 9) if dx or dy),
+                   key=lambda d: (abs(d[0]) + abs(d[1]), abs(d[1]), d[0]))
+
+    def nearest(x, y, ok):
+        for dx, dy in rings:
+            q = (x + dx, y + dy)
+            if solid(*q) and q not in strap and ok(don[q[0], q[1]][:3]):
+                return don[q[0], q[1]]
+        return None
+    out = {}
+    for (x, y) in strap:
+        if (x, y) in under:
+            continue
+        edge = any(not solid(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+        c = nearest(x, y, (lambda col: col in DONKEY_OUTLINE) if edge else (lambda col: col not in DONKEY_OUTLINE))
+        out[(x, y)] = tuple(c[:3]) + (255,) if c is not None else hexc("1e190e")   # opaque: a few of the donkey's edge pixels are half-transparent
+    return out
 
 
 def strap_ends(key):
@@ -859,6 +911,18 @@ def main(argv):
         name = f"body@{k}.png"
         neck = dict(necks).get(f"neck@{k}.png") or shift(dict(necks)["neck.png"], stamp.neck_move(k))
         tucked_.append((name, tucked(bodies.get(name) or shift(caparison(), d), k, d, front_swing(k), set(neck))))
+    # every frame's neck piece over that frame's strap hidden (strap_hidden): the collar drawn on top of it, the
+    # cloth left as it is where it lies over the strap's edge
+    body_of = dict(tucked_)
+    necks_ = dict(necks)
+    covered = [("neck.png", {**strap_hidden(STANDING, set(body_of.get(f"body@{STANDING}.png", {}))),
+                             **necks_["neck.png"]})]
+    for k in stamp.ORDER:
+        if not k.startswith("bdy_") or k == STANDING:
+            continue
+        neck = necks_.get(f"neck@{k}.png") or shift(necks_["neck.png"], stamp.neck_move(k))
+        covered.append((f"neck@{k}.png", {**strap_hidden(k, set(body_of.get(f"body@{k}.png", {}))), **neck}))
+    necks = covered
     pieces = [("body.png", caparison())] + tucked_ + [(n, px) for n, px in bodies.items()
                                                       if n not in {t[0] for t in tucked_}] + necks
     pieces += [(n, ears_off(px, k, *reach.get(n, (9, 9, None, 2)))) for n, k, px in heads]

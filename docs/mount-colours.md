@@ -95,8 +95,11 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
   map stays (the donkey is still drawn under it), the skin's named colours are added after it (`Colors.Rebuild`;
   one the donkey has already stays the donkey's, logged once), and its unnamed colours belong to no region: kept as
   drawn (`Looks.SortColours`). The swap count is the donkey's colours plus the named ones, so it stays on the exact
-  swap; `ArtLightness` keeps the donkey's averages. Self-test "colours: a skin over the donkey keeps the donkey's
-  regions".
+  swap; `ArtLightness` keeps the donkey's averages, but for a region the skin names colours of its own under (since
+  2026-11-08: the Jester's harness, drawn by the skin with the donkey's hidden; against the donkey's dark harness a
+  picked pink lifted its shades all to white): those colours' average. A following tone's colours leave the region's
+  list (`SkinTones.Add`), so Royal Parade keeps the donkey's. Self-test "colours: a skin over the donkey keeps the
+  donkey's regions" (its lightness checks too).
 
 ### 2.3 Which shader path
 
@@ -397,6 +400,21 @@ they are as drawn, and a baby's shade of its dark parts reaches its horns as bef
 shows the donkey's colours.
 
 ### 7.6 The Jester
+
+**Amended 2026-11-08: the harness is the Jester's own.** With a Harness colour picked, the user saw the collar stay
+red and the donkey's strap turn the colour ("the original harness underneath, which should be invisible since we're
+using our own custom harness, is getting the actual cream colour"). The collar band's shades are listed under
+`[Colors] Harness` now (no `collar` tone), and the band runs from the crest to the chest and tapers to a
+point at its end (the same shape and colours, no line between: a point of its own colours read as detached), its
+bell under it, edged in the donkey's outline colour (a light harness colour turned a burgundy edge tan).
+`draw_jester.py` (`strap_hidden`) hides the donkey's strap in every frame, drawn over as the neck and chest it lies
+on (each pixel the nearest coat, mane or muzzle colour, the outline's at the edge), so the Harness row colours the
+Jester's harness and none of the donkey's shows (16 px of it did standing, up to 39 in the walk, 59 in turn 04-06).
+A first try drew the strap over in the band's colours: the strap's shape in the harness colour read as "the original
+harness ... shown instead of our custom one", broken at the chest under the bell. The collar's points are two tones: `collar-points` (burgundy: the point over the chest, the
+front view's middle one; shades from `part_palette.py`) and `collar-points-second` (navy: the front view's outer two).
+`[Base.Harness]` stays for a pixel a frame might leave. `check_skin.py` no longer warns that a covered region's row
+colours nothing when the skin lists colours of its own under it.
 
 Six tones since 2026-11-04 (the user: "yes so that we start making use of our new multi colour tone system"), every
 part of the motley its own row: `cap-front` "Cap, front half" and `cap-back` "Cap, back half" (each point with its

@@ -397,7 +397,13 @@ def main(pack):
                         q = spx[x, y] if x < body_cells[k].size[0] and y < body_cells[k].size[1] else (0, 0, 0, 0)
                         if q[3] == 0:
                             visible += 1
-            if drawn and not visible and region not in rowless:
+            # a region the skin lists colours of its own under ([Colors] Harness = ...) colours those: its row does
+            # something you see though the donkey's own is all covered (the Jester's harness drawn over the strap in
+            # every frame, 2026-11-08: this warned)
+            own = [v for (s, k), v in c.items() if s == "Colors" and k.lower() == region.lower() and v.split("#")[0].strip()]
+            if drawn and not visible and own and region not in rowless:
+                info.append(f"the donkey's {region} is under the skin in every frame ({drawn} pixel(s)); its row colours the skin's own {region} colours ([Colors])")
+            elif drawn and not visible and region not in rowless:
                 warn.append(f"the donkey's {region} is under the skin in every frame ({drawn} pixel(s), none shown): its row colours nothing you can see; [Region.{region}] row = none takes it away, or a name says what the skin draws there")
             elif region in rowless:
                 info.append(f"[Region.{region}] row = none: the donkey's {region} {'is under the skin in every frame' if drawn and not visible else f'shows in {visible} of its {drawn} pixel(s)'}, drawn as it is")

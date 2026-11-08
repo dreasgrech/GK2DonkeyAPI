@@ -1896,6 +1896,14 @@ namespace GK2DonkeyAPI
                 Check(coatAll > 0 && coatChanged == coatAll, $"a custom coat still changes the donkey under it ({coatChanged} of its {coatAll} coat colours)");
                 Check(Has(red), "the skin's red, named Harness, follows the harness");
                 Check(!Has(gold), "the skin's gold, named nothing, is kept as drawn");
+                // a custom colour's lightness against the colours the row reaches on it: the skin's own Harness red (its
+                // value 0.77), not the donkey's dark harness (the Jester's pink harness all one flat colour, 2026-11-08);
+                // the coat, which it names nothing under, still against the donkey's
+                Color.RGBToHSV(red, out _, out _, out float redValue);
+                float harnessArt = Colors.ArtLightness("Harness", "donkey/selftest.over-test");
+                float coatArt = Colors.ArtLightness("Coat", "donkey/selftest.over-test"), donkeyCoat = Colors.ArtLightness("Coat");
+                Check(Mathf.Abs(harnessArt - redValue) < 0.01f, $"a custom harness colour's lightness is set against the skin's own harness colour ({harnessArt:0.00}, its red {redValue:0.00}; the donkey's harness {Colors.ArtLightness("Harness"):0.00})");
+                Check(Mathf.Abs(coatArt - donkeyCoat) < 0.001f, $"... and the coat's against the donkey's coat, the skin naming none ({coatArt:0.00} = {donkeyCoat:0.00})");
 
                 // what the world draws of the overlay (its real material, the swap applied by the shader): the 80 red
                 // pixels blue (the harness colorize), the 20 gold ones gold, no red left. A wrong palette, a missing

@@ -42,9 +42,27 @@ For mod authors:
   the rider's walk motion (bob, hands, head) stops while the mount shows its skin's own flying pictures; true keeps it.
   The game's walk went on under those pictures whenever a direction was held, and the rider bobbed with it. Like every
   rider motion key it is the mount's to set (`mount.cfg` `[Tuning.Ride]`, `MountDef.TuningRide`).
+- **A skin over the donkey with colours of its own under a region gets a custom colour's lightness from them**
+  (2026-11-08; docs/mount-colours.md "A skin worn over the donkey"): a custom colour's brightness is its value over
+  the art's average, and for a skin over the donkey that was always the donkey's own. A skin that draws its own
+  harness (`[Colors] Harness = ...`) and hides the donkey's had its shades all lifted to white, one flat colour (the
+  Jester in pink: the donkey's harness averages 0.35, its own 0.58). Those colours count now; a skin naming none
+  under a region, and every released skin, keeps the donkey's. Self-test "colours: a skin over the donkey keeps the
+  donkey's regions" checks both.
 
 Development:
 
+- **The Jester's harness is its own and the Harness row colours it** (2026-11-08, `tools/skins/jester/`, no pack;
+  docs/mount-colours.md 7.6; the user: the collar "stayed red and the original harness underneath, which should be
+  invisible ... is getting the actual cream colour"): the collar band's shades are under `[Colors] Harness` (the
+  Collar row is gone); the band runs from the crest to the chest and tapers to a point with the bell under it (its
+  own shape and colours: a point of its own colours, at another angle, read as detached and stayed red), edged in the
+  donkey's outline colour, and the donkey's own strap is hidden in every frame (drawn over as the neck and chest), so
+  none of it shows (16 px did standing, up to 59 turning). Drawing the strap over in the harness colours instead read
+  as the donkey's harness, broken at the chest under the bell (the user).
+  The front view's collar points are Collar points (burgundy, the middle one) and Collar points, second colour
+  (navy, its outer two). `check_skin.py`: a region all covered whose row colours the skin's own listed colours is no
+  longer a warning.
 - **F11 "skins: no leaks over spawn and remove" no longer depends on luck** (2026-11-08): a skin is put on by an
   active donkey only (within 15 of the keeper or on screen), and the test scattered its 40 over 30 m; in one run all
   14 snail wearers of cycle 2 fell outside, the snail skin never loaded and the check failed. The first snail and rat
