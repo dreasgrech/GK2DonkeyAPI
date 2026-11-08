@@ -5,11 +5,12 @@ our shipped skins' construction (Royal Parade's cloth edged in its own dark with
 plates shaded light to dark): the second design was "stickers" ("like a 5 year old drew it", the user: a third of its pixels
 near-black outline, flat pure red and blue, a hat as big as the head, nothing moving with the donkey).
 
-- body.png: the caparison, quartered burgundy and navy, shaded top light to bottom dark with soft folds, edged in each
-  colour's own dark, its hem cut into points with two small bells; body@bdy_walk_left_0N.png: the hem's points and
+- body.png: the caparison, chequered burgundy and navy (three columns, two rows), shaded top light to bottom dark with
+  soft folds, edged in each colour's own dark, its hem cut into points with small bells, each point the other colour
+  of the check above it; body@bdy_walk_left_0N.png: the hem's points and
   bells trailing the body's bob;
 - neck.png: a collar wrapped round the neck behind the jaw (a curved navy band, its ends tucked into the neck's
-  outline) with three hanging points and small bells, moved by stamp with the collar strap; neck@<frame>.png where the
+  outline) with a hanging point and a small bell, moved by stamp with the collar strap; neck@<frame>.png where the
   strap bends (graze 02-05: the side collar posed by the strap's two ends; turn 04-06: a U under the chin) and in the
   walk (the points trailing the neck);
 - head.png: the cap on the standing head, a dome with a gold band and two thick points shaded like soft tubes,
@@ -389,8 +390,12 @@ def posed(key, nudge=(0, 0), c=None):
 # gold bar in graze 05, and the band hid all but 2-5 px of each, so a point vanished as it swung (two fresh reviews,
 # 2026-11-03). Three fanned still had a point under 4 px in some frames, or two bells touching; two bold ones show 6
 # px or more in every frame and no bells touch (measured over every frame's collar).
+# One point since 2026-11-08, navy, at the band's end over the chest: the rear one (70 degrees, from 0.2 along the band)
+# hung over the cloth's front check, the cloth's own navy there (a blue stripe through the check above it and into the
+# one under it, "repeated colours", the user's boxes on walk 02); the front one was burgundy, against the cloth's front
+# check, burgundy below since the cloth is chequered in three columns (caparison).
 COLLAR = {"line": [(45.4, 40.6), (44.6, 42.6), (43, 45.5), (40.6, 48.2)], "band": 4.5,
-          "points": [(0.2, 70), (0.95, 118)], "len": 8, "w": 5.5}
+          "points": [(0.95, 118)], "len": 8, "w": 5.5, "first": 1}   # burgundy (2026-11-08: navy, it ran into the cloth's navy check under the band)
 FRONT_COLLAR = {"line": [(31, 51.5), (36.5, 56.5), (42, 51.5)], "band": 2.5,   # turn 05: a short U under the chin
                 "points": [(0.15, 125), (0.5, 90), (0.85, 55)], "len": 5.5, "w": 5}   # fanned: their bells ran together
 
@@ -435,7 +440,7 @@ def collar(c, key, tf=None, swings=None, report=None):
         reach = c["len"]   # the swing's lift not used: it shortened the point and its bell hopped (walk 04)
         tip = (hx + ux * reach + uy * sw[0], hy + uy * reach - ux * sw[0])   # across: (1, 0) for a point straight down
         part = polygon([(hx - uy * w, hy + ux * w), tip, (hx + uy * w, hy - ux * w)]) - band
-        parts.append((part, (COLLAR_NAVY, COLLAR_BURG)[n % 2]))
+        parts.append((part, (COLLAR_NAVY, COLLAR_BURG)[(n + c.get("first", 0)) % 2]))
         end = max(part, key=lambda q: (q[0] * ux + q[1] * uy, q[1])) if part else None
         tips.append(end)
         if report is not None:
@@ -473,12 +478,18 @@ def collar_posed(key, swings=None):
 # --- the caparison -------------------------------------------------------------------------------------------------
 
 # On the standing frame: from the withers (x 48, behind the strap) to x 66 over the rump, its top on the back line, its
-# hem at row 56 (the belly at 57-58), quartered (the halves split at x 57, the quarters under row 48), lit along the
+# hem at row 56 (the belly at 57-58), chequered (the columns split at x 58, the rows under row 48), lit along the
 # top where the back rounds, shaded to the bottom under the belly's curve, two soft folds, the rear column rounding
 # away; three points under the hem, counterchanged, and a small bell under each (under two at first: "extend the bells
 # appropriately too", the user, when the cloth was carried forward to the strap: tucked()).
-CLOTH = {"x0": 48, "x1": 66, "hem": 56, "split": 57, "quarter": 48, "folds": (52, 62), "points": (50, 55, 60),
-         "bells": (50, 55, 60)}
+# Since 2026-11-08 chequered in three columns: the part carried forward to the strap (tucked()) is a check column of
+# its own, its colours swapped (navy over burgundy), the line at FRONT_FOLDS' 47 its seam; carried on in the middle
+# column's colours, the cloth repeated burgundy and navy beside the strap ("the marked regions have repeated colours",
+# the user). A point under each column, the other colour of the check above it (they had matched it: the points
+# counterchanged against the top row only), centred under it: 50 (the middle column, 48-56) and 59 (the rear, 57-66);
+# the front one at FRONT_POINT. Four points 5 apart had one straddling the split at 57.
+CLOTH = {"x0": 48, "x1": 66, "hem": 56, "split": 58, "quarter": 48, "folds": (54, 62), "points": (52, 60),
+         "bells": (52, 60)}
 
 
 SWING_FROM = 50   # the cloth's rows from this one down swing with the stride; above, it lies on the back
@@ -496,7 +507,7 @@ def caparison(sway=0, ripple=None):
 
     def ramp_of(x, y):
         front = x < c["split"]
-        if c["hem"] >= y > c["quarter"]:
+        if y > c["quarter"]:   # the bottom row, and the points under it (flipped once more below)
             front = not front
         if y > c["hem"]:
             front = not front
@@ -549,13 +560,13 @@ def caparison(sway=0, ripple=None):
 # colours and quarters continued from an inner column, edged where it meets the donkey, one more point under its
 # hem (FRONT_POINT) with a bell. In turn 04-06 too (the donkey facing us): the strap still runs down its near shoulder
 # there, and the chest showed between the front collar and the cloth ("now fix the turn 04-06 chest gap too").
-FRONT_POINT = 45
+FRONT_POINT = 42   # under the front check (38-47 on the hem in the walk), 45 straddled its seam at 47
 # the new part's folds: the cloth's vertical lines are 5 apart (the folds 52, 62, the seam 57), so 47 and 42 (with
 # one, the part from its front to 47 ran 6-10 px without a line in the walk: "that part of the cloth needs another
 # seem because it looks too wide to not have a seem", the user); a stretch of a fold showing under 2 rows outside the
 # collar in a frame is left out (at 42 it once lay under the collar's bells, a lone pixel showing beside them; with 3,
 # a fold showing 2 rows between the collar and the hem's band was left out: "some seems are missing", walk 05)
-FRONT_FOLDS = (42, 47)
+FRONT_FOLDS = (42,)   # 2026-11-08: its wide bottom half (strap to 49) a second line, its fold at 46 (front_check) the first
 
 
 def strap_back(key, before):
@@ -574,6 +585,56 @@ def strap_back(key, before):
         if y not in rows:
             rows[y] = max(rows[max(q for q in ys if q < y)], rows[min(q for q in ys if q > y)])
     return rows
+
+
+FRONT_SEAM = 2   # the front check reaches this many columns into the cloth's own front (x0): its top shows in every frame
+FRONT_FOLD = 4   # its fold this many columns in front of its seam (46 at rest: the middle of its top, 44-49)
+FRONT_UNDER = 8   # the bottom row in front of this many columns before the seam (42 at rest, the fold there) is a check of
+#   its own, navy: the collar band (burgundy) is the top row's first check above it ("the part which should be blue
+#   acording to the chequed pattern", the user, 2026-11-08; burgundy, it lay against the band's burgundy)
+
+
+def front_check(out, px, hem):
+    """The cloth's front check (2026-11-08) on a frame's cloth 'out' (tucked()'s, from the caparison 'px'): on each row
+    down to the hem, from the strap to FRONT_SEAM columns into the caparison's own front on that row, the other colour
+    at the same shade, and the middle check's first column a shade darker, its seam (as the split's). Only the part
+    carried forward to the strap had no top in the standing frames: the strap meets the cloth's front there, and the
+    collar's burgundy band lay against the middle check's burgundy."""
+    cloth = set(CLOTH_BURG) | set(CLOTH_NAVY)
+    firsts = {}
+    for (x, y), col in px.items():
+        if y <= hem and col in cloth:
+            firsts[y] = min(firsts.get(y, x), x)
+    if not firsts:
+        return out
+    top = min(firsts)
+    seam = lambda y: firsts.get(y, firsts[top]) + FRONT_SEAM
+    other = lambda col: (CLOTH_NAVY[CLOTH_BURG.index(col)] if col in CLOTH_BURG
+                         else CLOTH_BURG[CLOTH_NAVY.index(col)])
+    res = dict(out)
+    for (x, y), col in out.items():
+        if y > hem or col not in cloth:
+            continue
+        if x < seam(y) - FRONT_UNDER and y > hem - (CLOTH["hem"] - CLOTH["quarter"]):
+            pass   # under the collar's burgundy band, the bottom row's first check: navy, as it was (the user's mark)
+        elif x < seam(y):
+            res[(x, y)] = other(col)
+        elif x == seam(y) and (x, y - 1) in out and (x, y + 1) in out:
+            r = CLOTH_BURG if col in CLOTH_BURG else CLOTH_NAVY
+            if r.index(col) > 1:
+                res[(x, y)] = r[r.index(col) - 1]
+    # its fold, down its middle through both rows as the other checks' (FRONT_FOLD columns in front of the seam): a
+    # shade darker, not on its outline nor its top two rows. FRONT_FOLDS' one at 44 lay in the part carried forward
+    # only, which has no top at the strap: the bottom row alone had a line ("arent they missing a split in the middle
+    # like the other ones have?", the user, walk 02)
+    for (x, y), col in list(res.items()):
+        if y > hem or col not in cloth or x != seam(y) - FRONT_FOLD:
+            continue
+        if all(q in res for q in ((x - 1, y), (x + 1, y), (x, y + 1), (x, y - 1))) and res.get((x, y - 2)) in cloth:
+            r = CLOTH_BURG if col in CLOTH_BURG else CLOTH_NAVY
+            if r.index(col) > 1:
+                res[(x, y)] = r[r.index(col) - 1]
+    return res
 
 
 def tucked(px, key, d, sw=(0, 0), over=frozenset()):
@@ -612,15 +673,15 @@ def tucked(px, key, d, sw=(0, 0), over=frozenset()):
         ramp = lambda col: CLOTH_BURG if col in CLOTH_BURG else CLOTH_NAVY
         fold = {}
         for (x, y) in fill | old_edge:
-            r = ramp(inner[y])
+            r, level = ramp(inner[y]), ramp(inner[y]).index(inner[y])
             at_strap = x - 1 == back[y] + 1 and don[x - 1, y][3] > 0   # the strap's dark edge is the line here
             if any(q not in shape for q in ((x, y - 1), (x, y + 1))) or ((x - 1, y) not in shape and not at_strap):
                 out[(x, y)] = r[0]
                 continue
-            out[(x, y)] = inner[y]
+            out[(x, y)] = r[level]
             if (x in [f + d[0] + (fronts[y] - x0) for f in FRONT_FOLDS] and (x, y - 2) in shape
-                    and r.index(inner[y]) > 1):
-                fold[(x, y)] = r[r.index(inner[y]) - 1]   # a fold, as the cloth's: a shade darker, not at the top
+                    and level > 1):
+                fold[(x, y)] = r[level - 1]   # a fold, as the cloth's: a shade darker, not at the top
         # each fold's stretches showing outside the collar: 3 rows or more, else left out
         for q, col in fold.items():
             if q in over:
@@ -632,8 +693,8 @@ def tucked(px, key, d, sw=(0, 0), over=frozenset()):
                     run, y = run + 1, y + step
             if run >= 2:   # 3 left the folds out where only 2 rows show between the collar and the hem's band
                 out[q] = col
-        for q, v in shades.items():   # coloured as the cloth's other points (the front ones navy, under the navy
-            out[q] = CLOTH_NAVY[v]           # quarter), shaded as at rest
+        for q, v in shades.items():   # navy, the other colour of the front check above it (burgundy
+            out[q] = CLOTH_NAVY[v]           # below), shaded as at rest
         low = max(y for x, y in point)
         small_bell(min(x for x, y in point if y == low), low + 1, out)
     # the top over the back's bumps: on each column, the donkey's pixels just above the cloth's top (1 or 2, the coat
@@ -649,7 +710,7 @@ def tucked(px, key, d, sw=(0, 0), over=frozenset()):
         for j in range(1, k + 1):
             out[(x, t - j)] = top if j == k else under
         out[(x, t)] = under
-    return out
+    return front_check(out, px, hem)
 
 
 def front_swing(key):
