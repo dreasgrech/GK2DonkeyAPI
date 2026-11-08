@@ -3327,7 +3327,7 @@ namespace GK2DonkeyAPI
                     yield return Frames(2);
                     Info($"{noCart} picked: Drive the cart shown {MountsPanel.TestDriveShown}; the colour groups: {MountsPanel.TestColourGroups()}");
                     Check(SameOrder(firstOrder, JournalChecks(noCart)), $"the journal's rows come in one order on {was} and {noCart}");
-                    Check(!MountsPanel.TestDriveShown && !MountsPanel.TestColourGroup("Cart colours") && MountsPanel.TestColourGroup("Mount colours"),
+                    Check(!MountsPanel.TestDriveShown && !MountsPanel.TestColourGroup("Cart") && MountsPanel.TestColourGroup("Mount"),
                         $"{noCart}, which can't pull the cart: no Drive the cart button, no Cart colours (its mount colours stay)");
                     // its picture finished (the alone view): waited for, not a fixed count (a flying mount, a pack read from disk
                     // since 2026-10-26, was still building after 30 frames: the "last photo" was another mount's)
@@ -3354,7 +3354,7 @@ namespace GK2DonkeyAPI
                     Check(before != null && now != null && now != before && bad == 0,
                         $"from {noCart} to {withCart}: the last photo held {stale} frame(s), then {withCart} whole in its own view{(bad > 0 ? " (NOT: the new view not yet the new look)" : "")}");
                     yield return Frames(2);
-                    Check(MountsPanel.TestDriveShown && MountsPanel.TestColourGroup("Cart colours"), $"{withCart}, which pulls the cart: Drive the cart and the Cart colours are back");
+                    Check(MountsPanel.TestDriveShown && MountsPanel.TestColourGroup("Cart"), $"{withCart}, which pulls the cart: Drive the cart and the Cart colours tab are back");
                     yield return Seconds(1f);
                     yield return PanelShot("journal-" + withCart);
                     MountsPanel.TestOpenColours();

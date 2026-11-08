@@ -250,17 +250,20 @@ search box once the list passes eight mounts, a Call button that summons the cho
 ## The colours window's tabs (2026-11-08)
 
 The user: skins can have quite a few colour rows, so the rows of a skin that isn't the default should be apart from
-the mount's. Under the picture, where the "Mount colours" and "Cart colours" headings were, a strip of tabs across
+the mount's. Under the picture, where the "Mount colours" and "Cart colours" headings were (now "Mount" and "Cart"), a strip of tabs across
 the window, each tab's rows filling both columns below it (`MountsPanel.MakeColourTabs`, `TabColumns`).
 
 - **The tabs come from the page, not from names.** Each heading's rows are a tab named by the heading (Saddle Up's
-  "Mount colours" and "Cart colours", translated by the page). The rows of the worn skin's own parts (`ToneRows`,
+  "Mount" and "Cart", translated by the page: the options window's Mount and Cart tabs' words, renamed from "Mount
+  colours" and "Cart colours" when they became tabs). The rows of the worn skin's own parts (`ToneRows`,
   marked `Row.SkinPart`) are a tab of their own right after the rows they came with, named by the skin
   (`Looks.NameTerm`). So every mod's page gets the same, and the API names nothing of a mod or a pack. A skin
   without parts of its own: two tabs. A page with one group: no strip.
 - **The two columns.** The tab's rows keep their order, down the left column then the right, split where the two
   come out nearest in height. A row and the rows shown under it with a preset (its custom colour, its lightness)
-  stay in one column. Opening a custom colour builds the tab again (its signature), and may move the split.
+  stay in one column: a unit starts at every row but a swatch row and the slider after it (the first cut went by
+  `Visible`, which every per-skin row has, and drew the whole tab in one column). Opening a custom colour builds the
+  tab again (its signature), and may move the split.
 - **Looks.** The tabs are the options window's section cards laid side by side: flat, the chosen one in the game's
   red with its name bold, each as wide as its name (120 to 260), a rule under the strip.
 - **The gamepad.** The tabs are a navigation group over the rows: up from the rows reaches them, down goes back.

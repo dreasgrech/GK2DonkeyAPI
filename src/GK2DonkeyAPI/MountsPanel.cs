@@ -727,15 +727,21 @@ namespace GK2DonkeyAPI
         }
 
         // A tab's rows in two columns, the order kept (down the left, then down the right), split where the two come out
-        // nearest in height: a row with the rows shown under it with a preset (its custom colour, its lightness) stays
-        // whole, in one column. Heights by what shows now (a swatch row two rows' worth). One column for one such unit.
+        // nearest in height: a choice with its custom colour's swatches and the lightness row after them stays whole, in
+        // one column. Heights by what shows now (a swatch row two rows' worth). One column for one such unit. A unit
+        // starts at every row but a swatch row and the slider right after one: not by Visible, which every row a page
+        // keeps per skin has (its skin shown), so the whole tab was one unit in one column (the user's screenshot,
+        // 2026-11-08).
         private static List<(string Group, List<MountSettingsPage.Row> Rows)> TabColumns(List<MountSettingsPage.Row> tabRows)
         {
             var units = new List<List<MountSettingsPage.Row>>();
             var weights = new List<int>();
+            MountSettingsPage.Row prev = null;
             foreach (MountSettingsPage.Row r in tabRows)
             {
-                if (r.Visible == null || units.Count == 0)
+                bool follows = IsPalette(r) || (r.RowKind == MountSettingsPage.RowKind.Steps && prev != null && IsPalette(prev));
+                prev = r;
+                if (!follows || units.Count == 0)
                 {
                     units.Add(new List<MountSettingsPage.Row>());
                     weights.Add(0);

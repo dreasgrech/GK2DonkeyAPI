@@ -193,7 +193,7 @@ namespace SaddleUp
             // with its colour key (Color registers it).
             // no picture or pointer line here (2026-10-21): every row of the section is the Mounts panel's, the menus leave the
             // section out; the rows below still make "3. Colours" in the cfg, so players' files keep their section
-            p.Heading("Colours", "Mount colours");
+            p.Heading("Colours", "Mount"); // the colours window's first tab (2026-11-08: "Mount colours" before, the heading over its column)
             p.PerSkin((skinId, mountId, sfx, shown) =>
             {
                 MountLook look = me.LookOf(skinId);
@@ -224,7 +224,7 @@ namespace SaddleUp
                 // tones depending on what it needs"): whatever the skin declares, a row each; none here by name
                 p.ToneRows("Colours", skinId, sfx, me);
             });
-            p.Heading("Colours", "Cart colours");
+            p.Heading("Colours", "Cart"); // its cart tab ("Cart colours" before)
             p.PerSkin((skinId, mountId, sfx, shown) =>
             {
                 MountLook look = me.LookOf(skinId);
