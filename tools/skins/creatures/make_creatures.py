@@ -550,6 +550,24 @@ TAIL_IN = float(os.environ.get("DRAGON_TAIL_IN", "0"))          # walking: the t
 WING_ROCK = float(os.environ.get("DRAGON_WING_ROCK", "0.7"))      # walking: the folded wings take this share of the body's rock (front with the shoulders, back with the haunch)
 HIPS_ROCK = float(os.environ.get("DRAGON_HIPS_ROCK", "1"))      # walking: the hips' top line takes this share of the haunch's heave (the back's line rocks, not only what is under it)
 NECK_WAVE = os.environ.get("DRAGON_NECK_WAVE", "1") == "1"       # walking: the head's motion runs up the neck as a wave (each point its share of HEAD_LAG), not the whole neck at once
+# The Armored Dragon (Mecha) walking, a little life in its rigid parts (the user, 2026-11-08: the Red Dragon's head and
+# wings move a little, Mecha's are "100% stiff"): each follows the body's whole-pixel bob a frame late, moved as a piece
+# by whole pixels, so its plates and holes keep their pixels. The head: the helm and the neck's upper half (each neck
+# point its share, the base still; the crinet's lames with the part of the neck they lie on). The wings: the folds.
+ARM_WALK_HEAD = float(os.environ.get("DRAGON_ARM_WALK_HEAD", "0"))  # px of the late bob the head takes (0: none)
+ARM_WALK_WING = float(os.environ.get("DRAGON_ARM_WALK_WING", "0"))  # px of the late bob the folded wings take (0: none)
+ARM_WALK_LAG = float(os.environ.get("DRAGON_ARM_WALK_LAG", "0.125"))  # how late, a share of the cycle (0.125: a frame of the eight)
+ARM_WING_HINGE_X = float(os.environ.get("DRAGON_ARM_WING_HINGE_X", "46"))  # the fold's hinge: from this x (the shoulder 46) to the tip (99) each point its share
+ARM_WING_HINGE_TOP = os.environ.get("DRAGON_ARM_WING_HINGE_TOP", "0") == "1"  # only the fold's upper back edge moves (not the tip over the tail)
+ARM_WING_HINGE_END = float(os.environ.get("DRAGON_ARM_WING_HINGE_END", "99"))  # where the share reaches all of the move (the tip, 99)
+ARM_WING_ONE_SIDE = os.environ.get("DRAGON_ARM_WING_ONE_SIDE", "0") == "1"  # the fold's lag one way only: half the range (a 1 px step, not 2)
+ARM_WING_ROCK = os.environ.get("DRAGON_ARM_WING_ROCK", "1") == "1"  # the folded wings walk with the Red Dragon's rock (its tilt), the holes fixed on the body
+FOLD_HOLES = {}  # (ARM_WING_ROCK) each fold hole's place along its gap, chosen on the first walk frame drawn: (far, gap) -> share or None
+ARM_FLY_NECK = os.environ.get("DRAGON_ARM_FLY_NECK", "chest")  # flying: move = the one-piece neck takes the beat's head move; still = held on the body
+# The shoulder between the chest plate and the flank's upper lame (the user, 2026-11-08: "a right angle in the design"):
+# notch = as first drawn (the chest plate's upright edge and the lame's flat top leave a square of hide); slope = the
+# lame's front end rises to the chest plate's top corner (one sloping line); pauldron = a gold-rimmed plate over the joint
+ARM_SHOULDER = os.environ.get("DRAGON_ARM_SHOULDER", "wide")
 FORE_HEAVY = os.environ.get("DRAGON_FORE_HEAVY", "1") == "1"     # the forelegs built like the hind: a shoulder mass over a thick upper arm, a thick forearm, a short wrist to the paw
 WALK_HEAVE = float(os.environ.get("DRAGON_WALK_HEAVE", "1"))    # walking: shoulders and haunch rise over the planted legs, in turn (the seat holds)
 LEG_SWAY = float(os.environ.get("DRAGON_LEG_SWAY", "1.5"))  # flying: each leg's own small loop, px (2026-10-23; the preview page shows 1 and 2 next to it)
@@ -701,7 +719,17 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # whole pixels: a part keeps its pixels as it moves, so its shading and its plates stay put between frames
         # and the body rigid while it walks: one bob for all of it, no heave of the shoulders against the hips (that
         # reshaped the body and moved its shading bands between frames); the legs and the tail walk
+        heave_f_rock, heave_h_rock = heave_f, heave_h   # (ARM_WING_ROCK) the rock the folded wings keep
         bob, heave_f, heave_h = float(round(bob)), 0.0, 0.0
+
+    def arm_late(amount):
+        # (ARM walking) a part following the body's whole-pixel bob ARM_WALK_LAG of a cycle late: its move against the
+        # body (whole pixels) times amount (0: none); the caller rounds each point's share of it
+        if not (ARM and walking and amount):
+            return 0.0
+        now_ = round(0.8 * math.sin(4 * math.pi * phase))
+        then_ = round(0.8 * math.sin(4 * math.pi * (phase - ARM_WALK_LAG)))
+        return amount * (then_ - now_)
     px = [(0, 0, 0, 0)] * (W * H)
     fpx = [(0, 0, 0, 0)] * (W * H)   # the front layer: drawn in front of the rider (the near wing)
     see_through = set()              # (ARM_SEE) a hole's pixels: the last passes leave them empty
@@ -760,7 +788,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             out_.append((c_, STEEL[6] if side < -0.75 else STEEL_LINE if side > 0.75 else STEEL[4]))
         return out_
 
-    def pierce(centres, cells, bones, dst_of, small=False, plan=None):
+    def pierce(centres, cells, bones, dst_of, small=False, plan=None, force=False):
         # Pierced holes (ARM_HOLES eyelets | punched): each a stamp on a whole pixel, a dark hole in a steel ring lit on its
         # upper left; drawn only where the whole stamp lies in the wing's cells, clear of every bone
         if small:
@@ -807,9 +835,9 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 drew += 1
                 continue
             stamp = [(ox_ + h[0], oy_ + h[1]) for h in hole] + [(ox_ + r[0], oy_ + r[1]) for r in ring]
-            if not all(s in cells for s in stamp):
+            if not force and not all(s in cells for s in stamp):
                 continue
-            if bones and any(min(_seg(s[0] + 0.5, s[1] + 0.5, *a, *b) for a, b in bones) < 0.9 for s in stamp):
+            if not force and bones and any(min(_seg(s[0] + 0.5, s[1] + 0.5, *a, *b) for a, b in bones) < 0.9 for s in stamp):
                 continue
             if plan is not None:
                 hc_ = [(ox_ + h[0], oy_ + h[1]) for h in hole]
@@ -1300,35 +1328,67 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # same look ridden, and now also unridden, at the take-off crouch and after a landing, on the review page and in
         # the Mods picture (it jumped 2.7 px between them). The far fold is in the body picture, never lifted: as drawn.
         ox, oy = (4.0, -5.0) if far else (0.0, 3.0)
+        # (Mecha walking) the fold's back half a frame behind the body's bob, hinged at the shoulder: the root stays on
+        # the body (the whole fold moved as one slid its root up and down the back: "they still need to be attached", the
+        # user, 2026-11-08); each point its share from the shoulder (x 46) to the tip (x 99), in whole pixels
+        wl_ = arm_late(ARM_WALK_WING)
+        if ARM_WING_ONE_SIDE:
+            # half the range (the user, 2026-11-08: "a little subtler"): the late bob runs -1 -1 +1 +1 over the eight
+            # frames, a 2 px step every other frame; only its lower half, 0 0 1 1, is a 1 px step at the same frames
+            wl_ = max(0.0, wl_)
 
-        def at(x, y):
+        def hinge(x, y):
+            if not wl_:
+                return 0.0
+            share = max(0.0, min(1.0, (x - ARM_WING_HINGE_X) / (ARM_WING_HINGE_END - ARM_WING_HINGE_X)))
+            if ARM_WING_HINGE_TOP:
+                # the upper back edge only (the fold's tip lies over the tail: dipping it covered and uncovered the tail's
+                # rings, 2026-11-08): the share times how high the point is on the fold (row 50 down: none, row 39 up: all)
+                share *= max(0.0, min(1.0, (50.0 - y) / 11.0))
+            return float(rnd(wl_ * share))
+
+        def at(x, y, rest=False):
             # WING_ROCK: the fold rides the body's rock, the shoulder's heave at the front, the haunch's behind, the seat
-            # between them about still (a tilt of the whole fold, not a sway of its parts)
+            # between them about still (a tilt of the whole fold, not a sway of its parts). rest: without it (the
+            # Armored Dragon's holes are placed on the fold at rest, so they stay put on the body while it rocks)
             rock = 0.0
-            if WING_ROCK:
+            if WING_ROCK and not rest:
                 t = max(0.0, min(1.0, (x - 39.0) / 24.0))
-                rock = WING_ROCK * (heave_f + (heave_h - heave_f) * t)
-                if ARM:
-                    rock = float(round(rock))
-            return (x + ox, y + bob + oy + rock)
-        sh = at(46.0, 43.0)                                                       # the shoulder, where the wing leaves the back
-        peak = at(52.0, 26.0)
-        # the wing tip points back along the tail (the blue references: a long wedge from the wrist to past the hips,
-        # the user's mark 2026-10-20: over the rump and the first third of the tail, never near the ground)
-        tip = at(99.0, 51.0)
-        hem = [at(93.0, 56.0), at(84.0, 58.5), at(74.0, 59.5), at(64.0, 60.5), at(55.0, 60.5), at(48.0, 58.0)]   # the lower edge along the belly line
-        ring = [peak, at(66.0, 29.0), at(84.0, 38.0), tip] + hem + [at(47.0, 54.0), sh]
-        if ARM and ARM_WING == "saw-long":
-            peak, tip = at(52.0, 22.0), at(104.0, 42.0)                          # a taller peak, the point long and swept up
-            ring = [peak, at(70.0, 25.0), at(90.0, 32.0), tip] + hem + [at(47.0, 54.0), sh]
-        if ARM and ARM_WING == "pointed":
-            peak, tip = at(52.0, 22.0), at(103.0, 49.0)                          # a taller peak, a longer point back
-            ring = [peak, at(68.0, 26.0), at(88.0, 37.0), tip] + hem + [at(47.0, 54.0), sh]
-        tips = [at(84.0, 39.0), tip, at(88.0, 58.0), at(78.0, 59.5), at(68.0, 60.5), at(59.0, 61.0), at(51.0, 59.5)]
-        if ARM:
-            tips = [at(84.0, 39.0), tip, at(77.0, 59.5), at(60.0, 61.0), at(51.0, 59.5)]   # three heavy fingers, deep cuts between
-            if ARM_WING.startswith("saw"):
-                tips = [at(84.0, 39.0), tip, at(86.0, 58.0), at(76.0, 59.5), at(66.0, 60.5), at(57.0, 61.0), at(51.0, 59.5)]
+                if ARM and ARM_WING_ROCK:
+                    # the Red Dragon's rock exactly (the user, 2026-11-08: "make it identical to the default skin's
+                    # bobbing"): the body's heave before Mecha's rigid body took it off, each point's in whole pixels (a
+                    # fraction moved the fold's drawn edge at other frames than the holes' whole-pixel places)
+                    rock = float(rnd(WING_ROCK * (heave_f_rock + (heave_h_rock - heave_f_rock) * t)))
+                else:
+                    rock = WING_ROCK * (heave_f + (heave_h - heave_f) * t)
+                    if ARM:
+                        rock = float(round(rock))
+            return (x + ox, y + bob + oy + rock + (0.0 if rest else hinge(x, y)))
+
+        def build(a):
+            # the fold's points through a (at, or at without the rock): the shoulder, the peak, the tip, the hem, the
+            # outline and the finger tips
+            sh = a(46.0, 43.0)                                                    # the shoulder, where the wing leaves the back
+            peak = a(52.0, 26.0)
+            # the wing tip points back along the tail (the blue references: a long wedge from the wrist to past the hips,
+            # the user's mark 2026-10-20: over the rump and the first third of the tail, never near the ground)
+            tip = a(99.0, 51.0)
+            hem = [a(93.0, 56.0), a(84.0, 58.5), a(74.0, 59.5), a(64.0, 60.5), a(55.0, 60.5), a(48.0, 58.0)]   # the lower edge along the belly line
+            ring = [peak, a(66.0, 29.0), a(84.0, 38.0), tip] + hem + [a(47.0, 54.0), sh]
+            if ARM and ARM_WING == "saw-long":
+                peak, tip = a(52.0, 22.0), a(104.0, 42.0)                        # a taller peak, the point long and swept up
+                ring = [peak, a(70.0, 25.0), a(90.0, 32.0), tip] + hem + [a(47.0, 54.0), sh]
+            if ARM and ARM_WING == "pointed":
+                peak, tip = a(52.0, 22.0), a(103.0, 49.0)                        # a taller peak, a longer point back
+                ring = [peak, a(68.0, 26.0), a(88.0, 37.0), tip] + hem + [a(47.0, 54.0), sh]
+            tips = [a(84.0, 39.0), tip, a(88.0, 58.0), a(78.0, 59.5), a(68.0, 60.5), a(59.0, 61.0), a(51.0, 59.5)]
+            if ARM:
+                tips = [a(84.0, 39.0), tip, a(77.0, 59.5), a(60.0, 61.0), a(51.0, 59.5)]   # three heavy fingers, deep cuts between
+                if ARM_WING.startswith("saw"):
+                    tips = [a(84.0, 39.0), tip, a(86.0, 58.0), a(76.0, 59.5), a(66.0, 60.5), a(57.0, 61.0), a(51.0, 59.5)]
+            return sh, peak, tip, hem, ring, tips
+        sh, peak, tip, hem, ring, tips = build(at)
+        _, peak0, _, _, _, tips0 = build(lambda x_, y_: at(x_, y_, rest=True))   # at rest: where the holes go
         fingers = [(peak, t) for t in tips] + [(peak, sh)]                      # the last: the membrane's leading edge down to the shoulder
         dst = px if far else fpx
         # the lower edge's scallops between the finger tips: shallow arcs bulging up into the membrane
@@ -1398,8 +1458,22 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             for i_ in ((1, 3) if ARM_HOLES == "eyelets" else (2,)):
                 if i_ + 1 >= len(tips):
                     continue
+                if ARM_WING_ROCK and walking:
+                    # the fold rocks while it walks: each hole's place is chosen once, on the first walk frame drawn, and
+                    # kept on the body in every frame (chosen again each frame it stepped to the next place as the fingers
+                    # tilted by it: "one of the holes in the wings is moving up and down", the user, 2026-11-08)
+                    key_ = (far, i_)
+                    if key_ not in FOLD_HOLES:
+                        FOLD_HOLES[key_] = None
+                        for f_ in (0.55, 0.45, 0.65, 0.35, 0.75):
+                            if pierce([lp(peak, lp(tips[i_], tips[i_ + 1], 0.5), f_)], cells, fingers, None, plan=[]):
+                                FOLD_HOLES[key_] = f_
+                                break
+                    if FOLD_HOLES[key_] is not None:
+                        pierce([lp(peak, lp(tips[i_], tips[i_ + 1], 0.5), FOLD_HOLES[key_])], cells, fingers, None, plan=fold_plan, force=True)
+                    continue
                 for f_ in (0.55, 0.45, 0.65, 0.35, 0.75):
-                    if pierce([lp(peak, lp(tips[i_], tips[i_ + 1], 0.5), f_)], cells, fingers, None, plan=fold_plan):
+                    if pierce([lp(peak0, lp(tips0[i_], tips0[i_ + 1], 0.5), f_)], cells, fingers, None, plan=fold_plan):
                         break
             for hc_, _ in fold_plan:
                 for c_ in hc_:
@@ -1436,7 +1510,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 if i_ + 1 >= len(tips):
                     continue
                 for f_ in (0.55, 0.45, 0.65, 0.35, 0.75):                         # the first that fits (the fold is the same every frame)
-                    if pierce([lp(peak, lp(tips[i_], tips[i_ + 1], 0.5), f_)], cells, fingers, lambda x_, y_: dst):
+                    if pierce([lp(peak0, lp(tips0[i_], tips0[i_ + 1], 0.5), f_)], cells, fingers, lambda x_, y_: dst):
                         break
         for k in range(5):                                                        # the thumb claw: a hook from the peak towards the head
             put(peak[0] - 1 - k * 0.9, peak[1] - 1 - k * 0.5 + (0.6 * (k - 2) ** 2 if k > 2 else 0), DHORN[2 if k > 1 else 1], dst)
@@ -1809,7 +1883,21 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                     rest_ = [(x + back * PITCH_NECK * pitch * f, y - PITCH_NECK * pitch * f) for (x, y), f in zip(rest_, (0.0, 0.35, 0.7, 1.0))]
                 rest_ = [(float(round(x)), float(round(y))) for x, y in rest_]
                 d_ = (round(neck[-1][0] - rest_[-1][0]), round(neck[-1][1] - rest_[-1][1]))
-                neck = [neck[0]] + [(x + d_[0], y + d_[1]) for x, y in rest_[1:]]
+                if ARM_FLY_NECK == "still":
+                    # held on the body (the user, 2026-11-08, flying: "the head looks almost disconnected from the body and
+                    # just moving on its own accord"): the one-piece neck's move of a px or two slid its base against the
+                    # chest plate; the whole dragon still rises and sinks with the beat in the game (Flight.BeatBobPx)
+                    d_ = (0, 0)
+                chest_dy_ = 0.0
+                if ARM_FLY_NECK == "chest":
+                    # the neck rides the chest (the reference, "Dragon - Fully Animated", tracked through every frame,
+                    # 2026-11-08: the neck's base moves with the chest, in step and a px or two against it on a 512 px
+                    # dragon; held still while the chest plate dropped a px in the beat, the neck looked cut off from a
+                    # body moving without it, the user): the whole neck, the helm and the lames take the chest plate's
+                    # own whole-pixel move (chy below), its root too, so no part of it slides against the chest
+                    chest_dy_ = -float(round(1.0 - gw(0.0)))
+                    d_ = (0, int(chest_dy_))
+                neck = [(neck[0][0], neck[0][1] + chest_dy_)] + [(x + d_[0], y + d_[1]) for x, y in rest_[1:]]
                 crinet_ref = (rest_, d_)
     if walking and (WALK_NOD or HEAD_STEADY or HEAD_FOLLOW or HEAD_FWD):
         # the head dips with each step, the neck's base least (twice a cycle, a little after the body's bob); HEAD_STEADY
@@ -1832,6 +1920,13 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             mx_, my_ = 0, 0
             neck = [base_[0]] + [(bx_ + mx_, by_ + my_) for (bx_, by_) in base_[1:]]
             crinet_ref = ([(float(round(x)), float(round(y))) for x, y in base_], (mx_, my_))
+            hl_ = arm_late(ARM_WALK_HEAD)
+            if hl_:
+                # a little life (ARM_WALK_HEAD): the helm a frame behind the body's bob, the neck bending to it (each point its
+                # share, rounded: the base and its first span still, the upper half with the helm); the crinet's lames move
+                # with the part of the neck they lie on (crinet_ref's third item: by share)
+                neck = [base_[0]] + [(bx_, by_ + round(hl_ * f)) for (bx_, by_), f in zip(base_[1:], shares[1:])]
+                crinet_ref = (crinet_ref[0], (0.0, hl_), True)
     if ARM:
         neck = [(float(round(x)), float(round(y))) for x, y in neck]             # whole pixels: the helm and the lames stay put
     hx, hy = neck[-1]
@@ -1964,16 +2059,32 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         plate([(65, hipy - 9.4), (72, hipy - 8.6), (76.5, hipy - 4), (77, hipy + 2.5), (73, hipy + 6.5), (66, hipy + 5.5)],
               up=(0.3, -1.0), rivets=True, rim=True)                             # the crupper over the hips
         plate([(44, 47.5 + bob), (66, 47 + bob), (68, 53.5 + bob), (45, 54 + bob)], up=(0, -1), rim=True)   # the flank's lower lame
-        plate([(43, 42.5 + bob), (55, 41.6 + bob), (67, 42 + bob), (67.5, 48 + bob), (44, 48.5 + bob)], up=(0, -1), rivets=True)
-        plate([(chx - 12.6, chy - 4), (chx - 7, chy - 8.8), (chx + 2, chy - 8.2), (chx + 3.5, chy + 1), (chx - 2, chy + 6.6),
-               (chx - 9, chy + 5.2), (chx - 12.6, chy + 1.2)], up=(-0.35, -1.0), ridge=True, rim=True)   # the chest plate
+        if ARM_SHOULDER == "slope":
+            # the lame's front end rising to the chest plate's top corner: no square of hide between them
+            plate([(chx + 1.5, chy - 8.0), (48, 40.0 + bob), (55, 41.0 + bob), (67, 42 + bob), (67.5, 48 + bob), (44, 48.5 + bob)], up=(0, -1), rivets=True)
+        else:
+            plate([(43, 42.5 + bob), (55, 41.6 + bob), (67, 42 + bob), (67.5, 48 + bob), (44, 48.5 + bob)], up=(0, -1), rivets=True)
+        if ARM_SHOULDER == "wide":
+            # the chest plate on to the wing's leading edge (its right side under the fold): one plate between the neck and
+            # the wing, no pieces of the flank's lames, the hide and a corner in a strip a few px wide
+            plate([(chx - 12.6, chy - 4), (chx - 7, chy - 8.8), (chx + 2, chy - 8.2), (chx + 9.5, chy - 7.2), (chx + 10.5, chy + 1.5),
+                   (chx + 4.0, chy + 6.0), (chx - 2, chy + 6.6), (chx - 9, chy + 5.2), (chx - 12.6, chy + 1.2)],
+                  up=(-0.35, -1.0), ridge=True, rim=True)
+        else:
+            plate([(chx - 12.6, chy - 4), (chx - 7, chy - 8.8), (chx + 2, chy - 8.2), (chx + 3.5, chy + 1), (chx - 2, chy + 6.6),
+                   (chx - 9, chy + 5.2), (chx - 12.6, chy + 1.2)], up=(-0.35, -1.0), ridge=True, rim=True)   # the chest plate
+        if ARM_SHOULDER == "pauldron":
+            # a rounded plate over the shoulder's joint, from the chest plate's top corner over the lame's front, its rim gold
+            plate([(chx + 0.5, chy - 8.6), (chx + 5.0, chy - 10.4), (chx + 10.5, chy - 9.6), (chx + 13.5, chy - 6.8),
+                   (chx + 12.0, chy - 3.4), (chx + 6.0, chy - 2.6), (chx + 2.0, chy - 4.0)], up=(0.0, -1.0), rim=True)
         # the crinet: lames down the neck from behind the skull, a px proud of its back, across to its middle. Always
         # four, 5.5 px apart on the ground and 4.4 in the air (the flying neck is shorter), closer only on a neck too
         # short for them (takeoff's and landing's in-between frames): counted
         # from each frame's neck length the lowest came and went as the walk's bob stretched the neck's root (the user,
         # 2026-11-07: "the flashing armor part between frames"). Walking they are laid out on the neck before the head's
         # move and then moved with it, one piece with the head, by its whole pixels.
-        ref_, off_ = crinet_ref if crinet_ref is not None else (neck, (0, 0))
+        ref_, off_ = crinet_ref[:2] if crinet_ref is not None else (neck, (0, 0))
+        by_share = crinet_ref is not None and len(crinet_ref) > 2                # (ARM_WALK_HEAD) each lame its share of the head's move
         segs = list(zip(ref_, ref_[1:]))
         radii = (6.2, 5.0, 4.2)
         total = sum(math.dist(a, b) for a, b in segs)
@@ -1993,7 +2104,11 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                     rr = radii[i]
                     break
                 acc += ln
-            P = (P[0] + off_[0], P[1] + off_[1])                                 # walking: with the head's move
+            if by_share:
+                sh_ = max(0.0, 1.0 - s / total)                                  # 1 at the head, 0 at the neck's base
+                P = (P[0] + round(off_[0] * sh_), P[1] + round(off_[1] * sh_))
+            else:
+                P = (P[0] + off_[0], P[1] + off_[1])                             # walking: with the head's move
             Nb = (T[1], -T[0])                                                   # the neck's back (away from the throat)
             if Nb[1] > 0 or (Nb[1] == 0 and Nb[0] < 0):
                 Nb = (-Nb[0], -Nb[1])
