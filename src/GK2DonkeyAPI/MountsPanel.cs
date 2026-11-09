@@ -303,7 +303,9 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogInfo("Settings: the Mounts panel opens in a game only (load your game first)."); // no keeper to say it in the main menu
                     return;
                 }
+                StepTrace.Begin(IsOpen && page == p ? "the journal key again" : "the journal opened"); // dev only (Dev/StepTrace.cs)
                 UIGameSettingsWindow settings = LazyUI.GetWindow<UIGameSettingsWindow>();
+                StepTrace.Mark("the game's Settings window found");
                 if (settings == null)
                 {
                     throw new InvalidOperationException("the game's Settings window isn't there to copy from");
@@ -324,7 +326,9 @@ namespace GK2DonkeyAPI
                 Close(keep: true, back: false);
                 page = p;
                 p.HoldMountForPanel(); // picking a row shows a mount, Ride or Drive the cart makes it his
+                StepTrace.Mark("the last one closed, the mount held");
                 Build(settings);
+                StepTrace.Mark("built");
                 // the window it was opened from waits underneath, as it is: the options window (its Mounts button), else the
                 // game's (if any)
                 overOptions = OptionsWindow.IsShown;
@@ -332,11 +336,16 @@ namespace GK2DonkeyAPI
                 else GameWindowAside.SetAside("the Mounts panel");
                 GameWindowAside.TakeControls("the Mounts panel");
                 Plugin.Log.LogInfo($"Settings: the Mounts panel opened over {(overOptions ? "the options window" : GameWindowAside.UnderText)}.");
+                StepTrace.Mark("the window underneath set aside");
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Settings: the Mounts panel can't open (" + e.Message + "); the mount and its colours are still in the cfg.");
                 Close(keep: true);
+            }
+            finally
+            {
+                StepTrace.End();
             }
         }
 
@@ -348,8 +357,10 @@ namespace GK2DonkeyAPI
         {
             builtLanguage = Texts.Language;
             ui.Read(settings); // the game's look: its frame, fonts, button face, focus frame (throws when a part is missing)
+            StepTrace.Mark("build: the game's look read");
             panel = ui.Window("mounts panel", W, H, 30000);
             UiProbe.Dump(settings, ui.DialogTemplate, ui.Font, ui.FontMaterial, ui.FontSize); // dev only, Debug.UiProbe (2026-10-27)
+            StepTrace.Mark("build: the window made");
 
             // What was set when the panel opened, for a put-back (the self-tests; no Cancel button since 2026-10-21): every look row of the page (the mount, every mount's
             // skin and colours), not only the chosen mount's, so a put-back after choosing another mount puts
@@ -363,7 +374,9 @@ namespace GK2DonkeyAPI
             // the title line
             // the title in the game's own title bar, with its close button (the user, 2026-10-27: "all that gap for just the word
             // Mounts is not worth it"; the count of mounts is gone)
+            StepTrace.Mark("build: the look rows remembered");
             ui.TitleBar(panel, W, UiWords.JournalTitle.Text, () => Close(keep: true));
+            StepTrace.Mark("build: the title bar");
 
             // the list, scrolling; a search box above it once it is long
             entries = Entries();
@@ -379,6 +392,7 @@ namespace GK2DonkeyAPI
             float listH = H - listTop - Gap - ButtonsH - Pad;
             listScroll = ui.ScrollView(panel.transform, "list", Pad, listTop, ListW, listH, out listContent, 4f);
             ui.AddScrollbar(listScroll);
+            StepTrace.Mark("build: the list's frame");
 
             // the right side: the header, the stage and the stats card beside it, the look rows under them
             float x0 = Pad + ListW + Gap, rw = W - Pad - x0;
@@ -396,6 +410,7 @@ namespace GK2DonkeyAPI
             headerDesc.fontSizeMax = headerDesc.fontSize;
             headerDesc.fontSizeMin = headerDesc.fontSize * 0.8f;
 
+            StepTrace.Mark("build: the header");
             float y = HeaderH + Gap;
             stage = ui.Box(rightArea, "stage", 0f, y, StageW, StageH);
             picture = ui.Node("picture", stage, typeof(RawImage)).GetComponent<RawImage>();
@@ -409,6 +424,7 @@ namespace GK2DonkeyAPI
             stageNote = ui.Text(stage, "not installed note", UiWords.NotInstalled.Text, 1.1f, TextAlignmentOptions.Center, true, 24f, 0f, StageW - 48f, StageH);
             stageNote.gameObject.SetActive(false);
 
+            StepTrace.Mark("build: the stage");
             float statsX = StageW + 2f * Gap, statsW = rw - statsX;
             RectTransform statsCard = ui.Box(rightArea, "stats", statsX, y, statsW, StatsCardH);
             ui.Bold(ui.Text(statsCard, "stats title", UiWords.Stats.Text, 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
@@ -433,6 +449,7 @@ namespace GK2DonkeyAPI
                 v.color = ui.ButtonTextColor;
                 statLines.Add((l, v));
             }
+            StepTrace.Mark("build: the stats card");
             // the abilities card: built with room for AbilityMax lines, sized and filled for the mount picked (BuildRight)
             abilitiesCard = ui.Box(rightArea, "abilities", statsX, y + StatsCardH + Gap, statsW, StatsTitleH);
             ui.Bold(ui.Text(abilitiesCard, "abilities title", UiWords.Abilities.Text, 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
@@ -456,6 +473,7 @@ namespace GK2DonkeyAPI
                 abilityLines.Add((ai, an, al));
             }
             statsColX = statsX; statsColW = statsW; statsColTop = y;
+            StepTrace.Mark("build: the abilities card");
 
             // the look rows (the Skin): under the stats card, in its column (the user, 2026-10-25: centred under the stage,
             // under a "Skin" heading, they sat off to the right with empty space round them)
@@ -463,6 +481,7 @@ namespace GK2DonkeyAPI
             journalW = statsW;
             contentScroll = ui.ScrollView(rightArea, "content", statsX, rowsTop, statsW, Mathf.Max(40f, y + StageH - rowsTop), out contentRoot, 2f, manual: true);
             ui.AddScrollbar(contentScroll);
+            StepTrace.Mark("build: the rows' frame");
 
             // the buttons, on the list's and the stage's edges (the user's screenshots, 2026-10-30): Options centred under
             // the mount list, the buttons' own width; Customize centred under the stage (it colours what the stage shows); Drive the cart and Ride
@@ -498,15 +517,20 @@ namespace GK2DonkeyAPI
             UiKit.Hand(jnav, 1, GUIDirection.Up, 0);
             UiKit.Rect(drive, stageRight, buttonsY, callW, ButtonH);
 
+            StepTrace.Mark("build: the buttons");
             pictureOff = false;
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;
             Mounts.Catalog.MountsChanged -= OnRegistryChanged;
             Mounts.Looks.SkinsChanged += OnRegistryChanged;
             Mounts.Catalog.MountsChanged += OnRegistryChanged;
             panel.SetActive(true); // before the list: a layout under an inactive root computes nothing, so the scroll to the chosen mount was lost
+            StepTrace.Mark("build: switched on");
             BuildList();
+            StepTrace.Mark("build: the list's cards");
             BuildRight();
+            StepTrace.Mark("build: the right side (the chosen mount's rows)");
             UiKit.FitToScreen(panel, W, H);
+            StepTrace.Mark("build: fitted to the screen");
             Plugin.Log.LogInfo($"Settings: the Mounts panel of {page.Title} is open ({entries.Count} mount(s), {rows.Count} look rows for {builtFor}{(panel.transform.localScale.x < 1f ? $", scaled to {panel.transform.localScale.x:0.##} to fit the screen" : "")}).");
         }
 
@@ -578,15 +602,24 @@ namespace GK2DonkeyAPI
         {
             if (page == null) return;
             Perf.TracePick(id);
-            using (Perf.Measure(Perf.S.Pick))
+            StepTrace.Begin("a mount picked in the journal"); // dev only
+            try
             {
-                page.SelectMount(id);
-                nextPicture = 0f; // the picture follows the pick at once (its view may change: cart or alone)
-                using (Perf.Measure(Perf.S.PickRows))
+                using (Perf.Measure(Perf.S.Pick))
                 {
-                    BuildRight();
-                    MarkList();
+                    page.SelectMount(id);
+                    nextPicture = 0f; // the picture follows the pick at once (its view may change: cart or alone)
+                    StepTrace.Mark("the choice applied (the Mount row set)");
+                    using (Perf.Measure(Perf.S.PickRows))
+                    {
+                        BuildRight();
+                        MarkList();
+                    }
                 }
+            }
+            finally
+            {
+                StepTrace.End();
             }
         }
 
@@ -641,7 +674,9 @@ namespace GK2DonkeyAPI
                 statLines[statLines.Count - 1].Label.text = UiWords.SkinRow.Text;
                 statLines[statLines.Count - 1].Value.text = UiWords.NotInstalled.Text;
             }
+            StepTrace.Mark("right: header, picture, stats");
             ShowAbilities(e, k);
+            StepTrace.Mark("right: abilities");
             if (e != null)
             {
                 headerName.text = e.Label;
@@ -659,6 +694,7 @@ namespace GK2DonkeyAPI
                     : UiWords.NoSkinNote.Text;
             }
 
+            StepTrace.Mark("right: name and description");
             // the page's look rows for this mount, in groups: the journal takes the Mount section's rows (the Skin); the
             // colours window takes every other look section (the colours, under its two headings)
             journalGroups.Clear();
@@ -685,16 +721,21 @@ namespace GK2DonkeyAPI
                 if (mountSection) AddTo(journalGroups, null, r);  // the journal: the Skin, no heading (the user, 2026-10-25)
                 else AddTo(colourGroups, group, r);               // the colours window: every colour row
             }
+            if (StepTrace.On) StepTrace.Mark("right: the page's " + page.Rows.Count + " rows sorted into groups");
             foreach (var g in journalGroups) JournalOrder(g.Rows, chosen); // the name, the Skin, then the rest: the same on every mount
             journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, journalW - ScrollbarW, rows, out _);
+            if (StepTrace.On) StepTrace.Mark("right: the journal's " + rows.Count + " rows built");
             MakeColourTabs();
+            StepTrace.Mark("right: the colour tabs");
             if (colours != null)
             {
                 coloursTitle.text = ColoursTitle();
                 BuildColourTabStrip();
                 BuildColourTab();
+                StepTrace.Mark("right: the colours window's rows");
             }
             Refresh();
+            StepTrace.Mark("right: refreshed (every row's value)");
         }
 
         // The colours window's tabs from its groups (colourTabs): a group's own rows a tab named by its heading; its skin's
@@ -1587,7 +1628,7 @@ namespace GK2DonkeyAPI
             closing?.SavePickedSoon(); // the picking is over: the chosen mount to the cfg file half a second on (put back below when not kept: written again by its set)
             DeferredSave.Soon(); // the rows changed in it too
             if (closing != null) lastPage = closing; // its pending write is done by Tick after the panel is gone
-            Looks.ReleasePanelHolds(); // the looks shown while it was open (the worn ones stay with their wearers)
+            Looks.KeepPanelHoldsAWhile(); // the looks shown while it was open, kept a while (picked again soon: no build); the worn ones stay with their wearers
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;
             Mounts.Catalog.MountsChanged -= OnRegistryChanged;
             if (colours != null) CloseColours(keep: true, reshow: false); // its rows are the journal's snapshot's too; the journal goes next

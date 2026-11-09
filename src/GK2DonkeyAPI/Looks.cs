@@ -1162,6 +1162,24 @@ namespace GK2DonkeyAPI
         // pack was a gigabyte on the main thread, docs/multi-mod-loading.md 2.2).
         internal static Color32[] DecodePng(byte[] png, out int w, out int h, out string why, int maxW = MaxPictureSide, int maxH = MaxPictureSide, long maxPixels = (long)MaxPictureSide * MaxPictureSide)
         {
+            Color32[] fresh = null; // a new array each call: the caller keeps it
+            return DecodePngInto(png, ref fresh, out w, out h, out why, maxW, maxH, maxPixels);
+        }
+
+        // One texture every picture is decoded in, kept (a new one each was made and destroyed per picture), shrunk back
+        // after a large one so it never holds a sheet's memory.
+        private static Texture2D decodeScratch;
+        private static int[] decodeWords; // a 4-byte format's pixels, kept between pictures
+        private static bool decodeFormatSaid;
+        private const int ScratchKeepPixels = 512 * 512;
+
+        // DecodePng into the caller's buffer, reused when it is the picture's size (else made anew and handed back in
+        // it): a skin's build decodes its pictures one after another into one array, put in the sheet before the next.
+        // The build's garbage was nearly all a new pixel array per picture (the dragon 15.7 of 16 MB, the Mecha 31.5 of
+        // 33; 2026-11-09, docs/performance.md "Skin sheets let go and built again"). The array is the caller's until its
+        // next call: a caller that keeps pixels (an icon, a test) passes a buffer of its own or calls DecodePng.
+        internal static Color32[] DecodePngInto(byte[] png, ref Color32[] buffer, out int w, out int h, out string why, int maxW = MaxPictureSide, int maxH = MaxPictureSide, long maxPixels = (long)MaxPictureSide * MaxPictureSide)
+        {
             w = h = 0;
             why = null;
             if (png == null)
@@ -1181,7 +1199,11 @@ namespace GK2DonkeyAPI
                 why = $"it is {hw}x{hh}, larger than {Math.Min(maxW, MaxPictureSide)}x{Math.Min(maxH, MaxPictureSide)}";
                 return null;
             }
-            var t = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            if (decodeScratch == null || !decodeScratch)
+            {
+                decodeScratch = new Texture2D(2, 2, TextureFormat.RGBA32, false) { name = "gk2 decode scratch", hideFlags = HideFlags.HideAndDontSave };
+            }
+            Texture2D t = decodeScratch;
             try
             {
                 if (!t.LoadImage(png, markNonReadable: false))
@@ -1191,11 +1213,42 @@ namespace GK2DonkeyAPI
                 }
                 w = t.width;
                 h = t.height;
-                return t.GetPixels32();
+                TextureFormat fmt = t.format;
+                if (!decodeFormatSaid)
+                {
+                    decodeFormatSaid = true;
+                    Plugin.Log.LogInfo($"Looks: pictures decode to {fmt} ({(fmt == TextureFormat.RGBA32 || fmt == TextureFormat.ARGB32 || fmt == TextureFormat.BGRA32 ? "read into a reused buffer" : "converted by Unity, a new array each")}).");
+                }
+                int n = w * h;
+                if (fmt == TextureFormat.RGBA32)
+                {
+                    // the texture's own memory read in place (no array of its own), copied into the reused buffer
+                    if (buffer == null || buffer.Length != n) buffer = new Color32[n];
+                    t.GetPixelData<Color32>(0).CopyTo(buffer);
+                    return buffer;
+                }
+                if (fmt == TextureFormat.ARGB32 || fmt == TextureFormat.BGRA32)
+                {
+                    // PNGs decode to ARGB32 here (the first build of the fix still made a new array per picture: the run of
+                    // 2026-11-09): the memory copied into one kept int array, each pixel's bytes put in RGBA order
+                    if (decodeWords == null || decodeWords.Length != n) decodeWords = new int[n];
+                    t.GetPixelData<int>(0).CopyTo(decodeWords);
+                    if (buffer == null || buffer.Length != n) buffer = new Color32[n];
+                    bool argb = fmt == TextureFormat.ARGB32;
+                    for (int i = 0; i < n; i++)
+                    {
+                        int v = decodeWords[i]; // little-endian: the first byte lowest
+                        byte b0 = (byte)v, b1 = (byte)(v >> 8), b2 = (byte)(v >> 16), b3 = (byte)(v >> 24);
+                        buffer[i] = argb ? new Color32(b1, b2, b3, b0) : new Color32(b2, b1, b0, b3);
+                    }
+                    return buffer;
+                }
+                buffer = t.GetPixels32(); // another format the PNG decoded to: converted by Unity, as before
+                return buffer;
             }
             finally
             {
-                Object.Destroy(t);
+                if ((long)t.width * t.height > ScratchKeepPixels) t.Reinitialize(2, 2); // a sheet's size given back at once
             }
         }
 
@@ -1841,10 +1894,14 @@ namespace GK2DonkeyAPI
             internal static readonly double MsPerTick = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
             internal long Sheet, Make, Read, Decode, Put, Upload, Sprites, Colours;
             internal long FrameWork, WorstFrameWork, Alloc;
+            // The garbage by step (the build's cost investigation, 2026-11-09): the files read, decoded, the rest of making a
+            // picture (an over or inherited copy, a recipe), put in the sheet, the sheet made, the finish (upload, sprites, colours).
+            internal long ARead, ADecode, AMake, APut, ASheet, AFinish;
             internal int Frames, LastFrame = -1;
             internal float WorstGameFrame;
             internal static long Now => System.Diagnostics.Stopwatch.GetTimestamp();
             internal static string Ms(long ticks) => (ticks * MsPerTick).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+            internal static string Mb(long bytes) => (bytes / 1048576.0).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
             internal string Line(int pictures)
             {
                 long work = Sheet + Make + Put + Upload + Sprites + Colours;
@@ -1853,7 +1910,8 @@ namespace GK2DonkeyAPI
                     (Read + Decode > 0 ? $" (files read {Ms(Read)}, decoded {Ms(Decode)})" : "") +
                     $", put in the sheet {Ms(Put)}; uploaded {Ms(Upload)}, sprites {Ms(Sprites)}, colours {Ms(Colours)}; " +
                     $"the most in one frame {Ms(WorstFrameWork)} ms, the game's slowest frame meanwhile {(WorstGameFrame * 1000f).ToString("F0", ci)} ms; " +
-                    $"allocated {(Alloc / 1048576.0).ToString("F1", ci)} MB";
+                    $"allocated {(Alloc / 1048576.0).ToString("F1", ci)} MB" +
+                    $" (files read {Mb(ARead)}, decoded {Mb(ADecode)}, the rest of making {Mb(AMake - ARead - ADecode)}, put in the sheet {Mb(APut)}, the sheet {Mb(ASheet)}, the finish {Mb(AFinish)} MB)";
             }
         }
 
@@ -2179,6 +2237,9 @@ namespace GK2DonkeyAPI
             return !string.IsNullOrEmpty(id) && loaded.TryGetValue(id, out Loaded l) && l.ColoursSorted && l.Def.OwnColours ? l : null;
         }
         internal static int LoadedCount => loaded.Count;
+        // The self-tests: a finished build's cost line (Loaded.Cost), null until the skin is whole.
+        internal static string TestBuildLine(string id) => !string.IsNullOrEmpty(id) && loaded.TryGetValue(id, out Loaded l) && l.Ready ? l.Cost.Line(l.Frames.Count) : null;
+        internal static long TestBuildAlloc(string id) => !string.IsNullOrEmpty(id) && loaded.TryGetValue(id, out Loaded l) && l.Ready ? l.Cost.Alloc : -1;
 
         // The skin sheets alive now (each counted in Live.Textures with the colour textures): the leak checks tell the two apart.
         internal static int SheetCount
@@ -2308,6 +2369,7 @@ namespace GK2DonkeyAPI
             if (d.Recipe != null) return RecipeProducer(d, gamePrefix);
             if (d.LoadSheetPng != null) return SheetProducer(d, counts);
             var keys = new List<string>(d.Keys());
+            Color32[] reuse = null; // this producer's pixels, one picture at a time (put in the sheet before the next; DecodePngInto)
             return new Producer
             {
                 Keys = keys,
@@ -2315,6 +2377,7 @@ namespace GK2DonkeyAPI
                 {
                     byte[] png;
                     long t0 = BuildCost.Now;
+                    long b0 = counts != null ? Perf.AllocatedBytes() : 0;
                     try
                     {
                         png = d.LoadPng(key);
@@ -2323,13 +2386,15 @@ namespace GK2DonkeyAPI
                     {
                         return new Pixels { Why = e.Message };
                     }
-                    long t1 = BuildCost.Now;
+                    long t1 = BuildCost.Now, b1 = counts != null ? Perf.AllocatedBytes() : 0;
                     var px = new Pixels();
-                    px.P = DecodePng(png, out px.W, out px.H, out px.Why, d.CanvasW, d.CanvasH);
+                    px.P = DecodePngInto(png, ref reuse, out px.W, out px.H, out px.Why, d.CanvasW, d.CanvasH);
                     if (counts != null)
                     {
                         counts.Cost.Read += t1 - t0;
                         counts.Cost.Decode += BuildCost.Now - t1;
+                        counts.Cost.ARead += b1 - b0;
+                        counts.Cost.ADecode += Perf.AllocatedBytes() - b1;
                     }
                     return px;
                 },
@@ -2371,6 +2436,13 @@ namespace GK2DonkeyAPI
                     l.Bad++;
                     Plugin.Log.LogWarning($"Looks: skin '{d.Id}', picture {key}: its own is skipped ({(o.P == null ? o.Why : $"{o.W}x{o.H}, the skin's canvas is {d.CanvasW}x{d.CanvasH}")}); the default's is drawn there.");
                     o = default(Pixels);
+                }
+                if (o.P != null && !d.OverDefault)
+                {
+                    // its own picture, not drawn over the default's: the default's isn't needed (it was decoded and dropped
+                    // for every frame, half of the Mecha's build and its garbage; 2026-11-09)
+                    l.OwnPictures++;
+                    return o;
                 }
                 Pixels p = parentKeys.Contains(key) ? parent.Produce(key) : default(Pixels);
                 if (o.P == null)
@@ -2585,11 +2657,24 @@ namespace GK2DonkeyAPI
         // else wears them), so the world's rule stands: a sheet nobody wears is freed.
         // At most PanelHoldBytes of sheets (other mods' mounts make the list unbounded): the least recently shown goes
         // first, never the one shown now.
+        // Kept PanelKeepSeconds after the panel closes, not let go at once (2026-11-09, docs/performance.md "Skin sheets
+        // let go and built again"): browsing the journal again built every look shown again, 14 builds and about 106 MB of
+        // garbage in five minutes of the user's play (the Mecha 33 MB each time). Let go when the time is up (TickWarm),
+        // within the same cap.
         private static readonly List<Loaded> panelHolds = new List<Loaded>();
         private const long PanelHoldBytes = 64L * 1024 * 1024;
+        internal const float PanelKeepSeconds = 300f;
+        private static float panelHoldsUntil = float.MaxValue;
+
+        // The panel closed: its looks kept a while (let go by TickWarm when the time is up).
+        internal static void KeepPanelHoldsAWhile()
+        {
+            if (panelHolds.Count > 0) panelHoldsUntil = Time.unscaledTime + PanelKeepSeconds;
+        }
 
         internal static void HoldForPanel(string id)
         {
+            panelHoldsUntil = float.MaxValue; // shown: kept while the panel is open
             if (string.IsNullOrEmpty(id) || !loaded.TryGetValue(id, out Loaded l) || !l.Ready) return;
             int at = panelHolds.IndexOf(l);
             if (at == panelHolds.Count - 1 && at >= 0) return; // the most recent already
@@ -2610,8 +2695,10 @@ namespace GK2DonkeyAPI
         // A look's pictures as built, hashed (Loaded.PixelHash); 0 when it has none of its own (a code skin's sprites).
         internal static ulong ContentHash(string id) => !string.IsNullOrEmpty(id) && loaded.TryGetValue(id, out Loaded l) && l.Ready ? l.PixelHash : 0UL;
 
+        // Let go now (the time up; the self-test runner between scenarios, so each sees the world's rule).
         internal static void ReleasePanelHolds()
         {
+            panelHoldsUntil = float.MaxValue;
             if (panelHolds.Count == 0) return;
             var let = new List<Loaded>(panelHolds);
             panelHolds.Clear();
@@ -2653,6 +2740,7 @@ namespace GK2DonkeyAPI
 
         internal static void TickWarm()
         {
+            if (panelHolds.Count > 0 && Time.unscaledTime >= panelHoldsUntil) ReleasePanelHolds(); // the journal's looks, their time up
             string id = (WarmWanted ?? "").Trim();
             SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(StandIn(id)); // the look worn for it (docs/missing-skin.md)
             if (d != null && d.Unavailable != null) d = null;
@@ -2691,6 +2779,11 @@ namespace GK2DonkeyAPI
         private const double BuildMsPerFrame = 2.0;
         private static readonly long buildTicks = (long)(BuildMsPerFrame / BuildCost.MsPerTick);
         private static readonly List<Loaded> building = new List<Loaded>();
+        // How often each skin was built this session, and the builds of one built before (a sheet let go and worn again: the
+        // investigation of 2026-11-09, docs/performance.md), with their garbage.
+        private static readonly Dictionary<string, int> builtTimes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        internal static int BuiltAgain;
+        internal static long BuiltAgainBytes;
         private static int builtFrame = -1;
 
         // Called once per frame from the rigs' ticks: the skins being loaded or built, for BuildMsPerFrame. A new sheet is
@@ -2727,7 +2820,9 @@ namespace GK2DonkeyAPI
                         l.SheetFor = -1;
                         try
                         {
+                            long sa = Perf.AllocatedBytes();
                             l.MakeSheet(count);
+                            cost.ASheet += Perf.AllocatedBytes() - sa;
                         }
                         catch (Exception e)
                         {
@@ -2768,12 +2863,14 @@ namespace GK2DonkeyAPI
                         worked = true;
                         try
                         {
-                            long p0 = BuildCost.Now;
+                            long p0 = BuildCost.Now, m0 = Perf.AllocatedBytes();
                             Pixels made = l.Produce(key);
-                            long p1 = BuildCost.Now;
+                            long p1 = BuildCost.Now, m1 = Perf.AllocatedBytes();
                             l.Put(key, made);
                             cost.Make += p1 - p0;
                             cost.Put += BuildCost.Now - p1;
+                            cost.AMake += m1 - m0;
+                            cost.APut += Perf.AllocatedBytes() - m1;
                         }
                         catch (Exception e)
                         {
@@ -2785,7 +2882,9 @@ namespace GK2DonkeyAPI
                     if (l.ToBuild.Count == 0)
                     {
                         building.RemoveAt(k);
+                        long fa = Perf.AllocatedBytes();
                         l.Finish();
+                        cost.AFinish += Perf.AllocatedBytes() - fa;
                         finished = true;
                     }
                     cost.FrameWork += BuildCost.Now - f0;
@@ -2793,7 +2892,10 @@ namespace GK2DonkeyAPI
                     cost.Alloc += Perf.AllocatedBytes() - a0;
                     if (finished)
                     {
-                        Plugin.Log.LogInfo($"Looks: skin '{l.Def.Id}' loaded: {l.Frames.Count} pictures{(l.Bad > 0 ? ", " + l.Bad + " skipped" : "")}{(l.NotInSheet > 0 ? ", " + l.NotInSheet + " frames past the sheet's last cell (" + (l.Layered ? "its default's" : "the " + l.Def.Base.Id) + " shows there)" : "")}{(l.Layered ? $", built on '{l.Parent.Id}': {l.OwnPictures} own, {l.Inherited} from it{(l.Composed > 0 ? $", {l.Composed} drawn over it ({l.Erased} pixels erased)" : "")}" : "")}{(l.WholeKeys.Count > 0 ? $", {l.WholeKeys.Count} built whole over the {l.Def.Base.Id} ({l.Erased} pixels erased)" : "")} ({l.SizeNote}); {l.Cost.Line(l.Frames.Count)}.");
+                        builtTimes.TryGetValue(l.Def.Id, out int times);
+                        builtTimes[l.Def.Id] = ++times;
+                        if (times > 1) { BuiltAgain++; BuiltAgainBytes += l.Cost.Alloc; }
+                        Plugin.Log.LogInfo($"Looks: skin '{l.Def.Id}' loaded: {l.Frames.Count} pictures{(l.Bad > 0 ? ", " + l.Bad + " skipped" : "")}{(l.NotInSheet > 0 ? ", " + l.NotInSheet + " frames past the sheet's last cell (" + (l.Layered ? "its default's" : "the " + l.Def.Base.Id) + " shows there)" : "")}{(l.Layered ? $", built on '{l.Parent.Id}': {l.OwnPictures} own, {l.Inherited} from it{(l.Composed > 0 ? $", {l.Composed} drawn over it ({l.Erased} pixels erased)" : "")}" : "")}{(l.WholeKeys.Count > 0 ? $", {l.WholeKeys.Count} built whole over the {l.Def.Base.Id} ({l.Erased} pixels erased)" : "")} ({l.SizeNote}); {l.Cost.Line(l.Frames.Count)}; built {times} time(s) this session (skins built again: {BuiltAgain}, {BuildCost.Mb(BuiltAgainBytes)} MB of garbage).");
                     }
                 }
             }

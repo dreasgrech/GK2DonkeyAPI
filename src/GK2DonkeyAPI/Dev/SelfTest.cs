@@ -859,6 +859,7 @@ namespace GK2DonkeyAPI
         internal static IEnumerator CleanUp()
         {
             LeftBehind();
+            if (!MountsPanel.IsOpen) Looks.ReleasePanelHolds(); // the journal's looks kept after it closed (5 min, Looks.KeepPanelHoldsAWhile) let go: each scenario starts from the world's rule
             if (Mounts.IsMounted)
             {
                 Mounts.Dismount("self-test");

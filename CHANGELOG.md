@@ -18,6 +18,8 @@ For players:
   place than yours rest until you are there. A small memory leak with mounts calling each other is fixed. Putting
   items on the cart and taking them off costs less, and so do mounts coming back into view (riding through a herd,
   going through a door).
+  Browsing the Mount Journal again no longer builds every mount's look again, and building a look makes far less
+  memory garbage (the dragons most).
 - **The skull is Larry** (2026-11-08): Saddle Up's skull mount is called Larry, as in the game. Gerry was the skull
   in the first game. Your skull keeps his colours, babies and settings, and a name you gave him yourself stays.
 - **The colours window has tabs** (2026-11-08): Mount, the worn skin's own parts on a tab named after the skin, and
@@ -105,6 +107,24 @@ Development:
   cost every view coming back 0.53-0.57 ms and 15-17 KB, against 0.03 ms frozen). A view taken from the pool starts
   its animator without the head (the layer emptied before it is switched on, as for an idle view) and skips the
   second restart in `PrepareParts` (0.5 ms and 8 KB a view).
+- **The journal's picture and the standard zoom** (2026-11-09, docs/performance.md): the journal's picture is
+  rendered only when it can have changed (`PreviewStage.NeedsRender`: a new walk frame, look, framing or tuning, at most
+  1/24 s apart), 25 photos a second instead of about 176, the mod 0.63 -> 0.22 ms a frame while it is open; its pose
+  reads the animator's parameters once (5 KB a frame of garbage gone). A dev-only steps trace (`Dev/StepTrace.cs`,
+  `[steps]` lines) on the journal's opening and each pick, and the journal survey (integration scenario, Garbage group).
+  The measurement scenarios and the perf runner's suites run at 100% zoom (`StandardZoom`: Grave Zoom, when installed,
+  set for the run and put back as it was); the views survey finds its idle spot from the camera's scale.
+- **Skin builds: less garbage, the journal's looks kept** (2026-11-09, docs/performance.md "Skin sheets let go and built
+  again"): measured first (each build's garbage by step in its line; `BuildSurvey` comparing a PNG per picture with one
+  ready-made sheet: the sheet decoded in one frame, 10.5 ms and twice the garbage, not taken; every build line says how
+  often the skin was built this session). Pictures are decoded into one kept texture and a reused array
+  (`Looks.DecodePngInto`): the decode was the dragon's 15.7 of 16 MB and the Mecha's 31.5 of 33. A variant not drawn
+  over its default no longer decodes the default's picture too. The journal keeps the looks it showed 5 minutes after
+  it closes (`Looks.KeepPanelHoldsAWhile`; the user's play: browsing again built 14 looks, about 106 MB, in 5 minutes).
+  PNGs decode to ARGB32 here: `DecodePngInto` puts each pixel's bytes in RGBA order from a kept `int[]` (the first
+  version read RGBA32 only and changed nothing; checked against Unity's own conversion pixel for pixel). After: the
+  Mecha 32.8 -> 1.3 MB a build, the critters and Royal Parade 1.8 -> 0.2, Armored 2.3 -> 0.6; Hellfire 6.0 -> 4.1 and
+  Larry 6.2 (their own paths, left). F11 2054/0/0.
 - **The other skins' colour rows biggest part first too** (2026-11-08; the Donkey Skin Pack's CHANGELOG): judged on
   the pictures, a part that sits on another right after it. Royal Parade: Saddle cloth, Trim and fringe, Emblem,
   Crown, Jewels. Armored: Body armour, Skirt, Helmet, Plume, Brass (trim over both helmet and armour, last).

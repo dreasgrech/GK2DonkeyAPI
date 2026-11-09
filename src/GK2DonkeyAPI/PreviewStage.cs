@@ -54,6 +54,9 @@ namespace GK2DonkeyAPI
             internal float EdgeChecksUntil;
             internal int EdgeStamp = -1;
             internal int LastRenderFrame = -1;
+            internal float LastRenderAt = -10f;   // when it was last rendered (unscaled)
+            internal Sprite RenderedSprite;    // the copy's body sprite (the walk frame) it was rendered with
+            internal int RenderedGapStamp = -2; // the paper's tuning stamp it was rendered with
             internal bool Drawn;               // a finished photo is in Rt (what a look still settling holds on to)
             internal string DrawnLook = "";    // the look that photo is of (LooksRig.Wearing when it was taken)
             internal bool StandIn;             // the alone view last asked for in the cart view's place (a mount that can't pull the cart)
@@ -195,6 +198,32 @@ namespace GK2DonkeyAPI
         private static GameObject stage, copy;
         private static Light lamp;
         private static Animator animator;
+        private static SpriteRenderer copyBody; // the copy's body sprite renderer: its sprite is the walk frame
+
+        // A photo only when the picture can have changed (the journal's picture was rendered every frame, 0.5 ms, though the
+        // walk changes picture about ten times a second; 2026-11-09, docs/performance.md): a new walk frame, a new look or
+        // framing, the tuning re-merged, or MinRenderGap since the last (the cart's sway and the swinging lamp move between
+        // the walk's frames: 24 a second keeps them smooth). RenderEveryFrame: the old way (dev, for comparing).
+        internal static bool RenderEveryFrame;
+        private const float MinRenderGap = 1f / 24f;
+        internal static int TestRenders, TestRenderSkips; // the self-tests: photos taken and skipped
+        // The self-tests: the stage (its copy, lights, cameras) switched off and on, to measure what it costs while no window
+        // shows it (it stays on after the first journal for the session).
+        internal static bool TestStageActive
+        {
+            get => stage != null && stage.activeSelf;
+            set { if (stage != null) stage.SetActive(value); }
+        }
+        internal static bool TestStageBuilt => stage != null;
+
+        private static bool NeedsRender(View v, Mount.Instance paper)
+        {
+            if (RenderEveryFrame || v.Reframe || v.TightenStep >= 0 || !v.Drawn) return true;
+            if (v.DrawnLook != (paper.LooksRig.Wearing ?? "")) return true;
+            if (gapStamp != v.RenderedGapStamp) return true;
+            if (copyBody != null && !ReferenceEquals(copyBody.sprite, v.RenderedSprite)) return true;
+            return Time.unscaledTime - v.LastRenderAt >= MinRenderGap;
+        }
         private static bool failed, loadStarted, described;
         private static int framesSinceBuilt, lastPoseFrame = -1;
         private static Mount.Instance dressedAs;
@@ -359,6 +388,15 @@ namespace GK2DonkeyAPI
                 if (Time.frameCount != v.LastRenderFrame)
                 {
                     v.LastRenderFrame = Time.frameCount;
+                    if (!NeedsRender(v, paper))
+                    {
+                        TestRenderSkips++;
+                        return v.Rt; // the last photo still shows what the copy is now
+                    }
+                    TestRenders++;
+                    v.LastRenderAt = Time.unscaledTime;
+                    v.RenderedSprite = copyBody != null ? copyBody.sprite : null;
+                    v.RenderedGapStamp = gapStamp;
                     Render(v);
                     if (v.TightenStep < 0) { v.Drawn = true; v.DrawnLook = paper.LooksRig.Wearing ?? ""; }
                 }
@@ -620,12 +658,22 @@ namespace GK2DonkeyAPI
             {
                 // Walking on the spot, facing left: the game's own parameters (AnimationComponentBase: State 1 = Walk,
                 // Direction 0 right / -180 left, walk_speed 1 = the clip's own pace).
-                foreach (AnimatorControllerParameter p in animator.parameters)
+                // Which of them it has, read once per animator: animator.parameters makes a new array of new objects on
+                // every read (most of the picture's 5 KB a frame, 2026-11-09).
+                if (!ReferenceEquals(paramsOf, animator))
                 {
-                    if (p.name == "Direction" && p.type == AnimatorControllerParameterType.Float) animator.SetFloat("Direction", -180f);
-                    else if (p.name == "State" && p.type == AnimatorControllerParameterType.Int) animator.SetInteger("State", 1);
-                    else if (p.name == "walk_speed" && p.type == AnimatorControllerParameterType.Float) animator.SetFloat("walk_speed", 1f);
+                    paramsOf = animator;
+                    hasDirection = hasState = hasWalkSpeed = false;
+                    foreach (AnimatorControllerParameter p in animator.parameters)
+                    {
+                        if (p.name == "Direction" && p.type == AnimatorControllerParameterType.Float) hasDirection = true;
+                        else if (p.name == "State" && p.type == AnimatorControllerParameterType.Int) hasState = true;
+                        else if (p.name == "walk_speed" && p.type == AnimatorControllerParameterType.Float) hasWalkSpeed = true;
+                    }
                 }
+                if (hasDirection) animator.SetFloat(DirectionId, -180f);
+                if (hasState) animator.SetInteger(StateId, 1);
+                if (hasWalkSpeed) animator.SetFloat(WalkSpeedId, 1f);
             }
             using (Mount.Bind(paper))
             {
@@ -653,6 +701,10 @@ namespace GK2DonkeyAPI
                 }
             }
         }
+
+        private static Animator paramsOf;
+        private static bool hasDirection, hasState, hasWalkSpeed;
+        private static readonly int DirectionId = Animator.StringToHash("Direction"), StateId = Animator.StringToHash("State"), WalkSpeedId = Animator.StringToHash("walk_speed");
 
         private static readonly Dictionary<Transform, Vector3> cartRest = new Dictionary<Transform, Vector3>();
         private static Vector3 cartDir = Vector3.right;
@@ -880,6 +932,7 @@ namespace GK2DonkeyAPI
                     if (t.name == "bdy")
                     {
                         body = sr;
+                        copyBody = sr; // its sprite: a new walk frame (Picture renders on it)
                     }
                 }
             }

@@ -180,6 +180,7 @@ namespace GK2PerfRunner
         private IEnumerator RunSeries()
         {
             HoldTimeOfDay();
+            zoomLine = "# " + StandardZoom.Begin(); // 100% for the suite (StandardZoom.cs), put back by the cleanup
             for (index = 1; index <= count; index++)
             {
                 if (index > 1)
@@ -232,6 +233,7 @@ namespace GK2PerfRunner
             lines.Add($"# GK2 Perf Runner suite{(count > 1 ? $" {index} of {count}" : "")}, {DateTime.Now:yyyy-MM-dd HH:mm:ss}; scene {LoopPath.Scene}, loop {LoopPath.Length:F1} units");
             lines.Add($"# settle {SettleSeconds:F0} s, record {RecordSeconds:F0} s (idle {IdleSeconds:F0} s), hitch cycles {HitchCycles}; dev panel {(ApiDev.TuningWindowOn() ? "ON ([perf] logging adds to the frames)" : "off")}");
             lines.Add(timeLine);
+            lines.Add(zoomLine);
             yield return Snapshot("the first memory snapshot");
             censusAtStart = Census.Take();
             if (censusSeriesStart == null) censusSeriesStart = censusAtStart;
@@ -420,6 +422,7 @@ namespace GK2PerfRunner
         }
 
         private string timeLine = "";
+        private string zoomLine = "# the zoom: not set";
 
         private void HoldTimeOfDay()
         {
@@ -482,6 +485,7 @@ namespace GK2PerfRunner
                 timeHeld = false;
                 log.LogInfo("[perfrunner] time of day back to the real time.");
             }
+            StandardZoom.End(); // the player's own zoom back (Grave Zoom), whatever ended the suite
             float t0 = Time.realtimeSinceStartup;
             while (!Hog.Idle && Time.realtimeSinceStartup - t0 < 60f)
             {

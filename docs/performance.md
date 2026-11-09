@@ -686,6 +686,169 @@ a walk by hand. That run's world ended with 11 views against 17 (the levels' bor
 rather than compared: colour textures 43 -> 43, one skin sheet more (Larry's: loaded twice and let go once in the
 crowd's span, let go again in the next scenario: held a little longer, not kept).
 
+### The journal: its picture, the stage after closing, the opening (2026-11-09, after the pass)
+
+Measured by the journal survey (integration scenario, Garbage group, `JournalSurvey.cs`; uncapped, the user's zoom):
+
+- **The picture, fixed:** `PreviewStage.NeedsRender` takes a photo only when the picture can have changed (a new walk
+  frame: the copy's body sprite; a new look or framing; the tuning re-merged; at most 1/24 s since the last, for the
+  cart's sway and the swinging lamp), and the pose reads the animator's parameters once per animator (by hash after).
+  Every frame (the old way, `RenderEveryFrame` for comparing): 175-177 photos a second, the mod 0.62-0.65 ms a frame
+  (`Preview` 0.50-0.52); the new way: 25 a second, the mod 0.22 ms (`Preview` 0.10); the frame 5.64-5.70 -> 5.46-5.47
+  ms. The picture's garbage (5 KB a frame before, `animator.parameters`) under 0.05 KB. Checked: it still renders
+  while open (25 a second), and fewer photos than the old way.
+- **The stage left on after closing (review row 5): not worth a change.** On against off, each twice: 5.39 / 5.61
+  against 5.42 / 5.49 ms a frame, the mod 0.129 / 0.123 against 0.119 / 0.130 ms.
+- **Opening it: 7.8-8.9 ms and 430-520 KB a time** (`[steps]` trace, three opens): the right side, the chosen mount's
+  rows (`BuildRight`), 2.6-3.2 ms and 250-276 KB; the list's cards 1.6-1.9 ms; the stats and abilities cards 0.6-1.0;
+  the buttons 0.35-0.55; the game's window underneath set aside 0.65-0.95. `BuildRight` runs on every pick in the list
+  too (the pick traces' `PickRows` 3.0-3.5 ms): split further next (it walks every row of the page, every mount's and
+  skin's, for the journal's few).
+
+### Measurements at the game's own zoom (2026-11-09)
+
+Every measurement above was taken at the user's Grave Zoom setting (another author's mod on the dev machine; 250% that
+day, and it varies). Grave Zoom shrinks the camera's view (`CameraSystem.CalculateOrthographicSize` x 100 / zoom): at
+250% the screen shows 40% of the width and height, a sixth of the area. Our levels make a mount fully active on screen
+(or within 15), the babies catch up out of sight, and the game draws what is in view, so zoomed in the costs read
+lower than at 100%, which most players have.
+
+From now on the measurement scenarios (the crowd, the views survey, the journal survey, the garbage survey) and the
+perf runner's suites run at 100%: `StandardZoom` (tools/GK2DonkeyAPI.IntegrationTests and a copy in GK2PerfRunner)
+finds Grave Zoom by its GUID, reads its zoom at that moment, sets 100% without writing its cfg, and puts the read value
+back after (with the write, so the file ends as it was); without Grave Zoom nothing is touched. Each says the zoom in
+its first line; the crowd's TSV rows carry it in the phase; the suite file has a `# the zoom` line. The views survey's
+idle phases find the keeper's spot from the camera's scale now (`IdleSpot`: the most of the crowd off screen with the
+levels' margin, inside the sleep radius), not a fixed 24 units that was off screen at 250% only. The functional
+scenarios stay at the player's zoom (several place things at distances meant to be off screen there).
+
+So numbers taken from here on read higher than the tables above (more on screen, more active), not as a regression.
+
+**The first run at 100% (Garbage group, 15 passed, 0 failed; the zoom put back after each scenario):**
+
+| The crowd at 100% (vs 250% the same day) | Frame mean | p99 / worst | The mod | Mod KB a frame |
+|---|---|---|---|---|
+| none of the test's | 5.17 ms | 6.39 / 8.6 | 0.21 ms | 0.29 |
+| 12 in view | 6.52 | 7.98 / 9.3 | 0.45 | 0.17 |
+| 36 in view | 11.54 (5.92-6.46) | 14.16 / 31.5 | 1.01 (0.61-0.67) | 1.65 |
+| + 120 scattered | 12.82 (6.82-7.30) | 15.03 / 17.8 | 2.03 (1.21-1.22) | 6.92 |
+| riding through | 11.30 | 20.34 / 34.7 | 1.68 | **53.6** (8.9-20) |
+
+- **Riding through the herd at 100%: 53.6 KB a frame, 32 of it `LooksBuild`.** In the 12 s the Mecha dragon's skin
+  was let go (its one wearer asleep as the keeper rode past) and loaded again when it woke: 237 pictures, a 15.6 MB
+  sheet, 64 ms of work over 31 frames. `LooksRig.Sleep` lets a sheet go as soon as no awake mount wears it; a mount
+  waking again a moment later builds it from scratch. Open: a grace period before a sleeping wearer's sheet is let go.
+- **The journal's picture at 100%:** every frame 6.72-6.79 ms a frame, the new way 5.53-5.66 (147-149 photos a second
+  against 25).
+- **The journal's opening and each pick, split:** the 469 rows of the page sorted into groups cost 0.11-0.18 ms (the
+  suspicion was wrong); **building the journal's 8 rows' controls costs 2.4-3.8 ms and 300-360 KB, on every open and
+  every pick** (about 0.35 ms and 43 KB a row: the rows are destroyed and made again, their controls bound to the
+  rows of the mount picked). Applying the choice 0.5 ms; the rest under 0.3. Not changed: keeping the controls and
+  pointing them at the new rows means reworking RowControls (each control's handlers are bound to its row), a larger
+  change than a menu click's one frame is worth before the release.
+
+### Skin sheets let go and built again (investigated 2026-11-09)
+
+**When a sheet is held:** by every awake mount wearing it (`Looks.Rig`), by the companion's chosen skin (`TickWarm`,
+always), and by the journal while it is open (`HoldForPanel`, up to 64 MB, let go when it closes). **When it is let
+go:** at once, when the last hold goes (`Looks.Release`): its last wearer falls asleep (`Rig.Sleep`), is removed, or
+the journal closes. Wearing it again builds it from its files again.
+
+**What a build costs** (every build of the run of 2026-11-09, at 100%; `[Looks] ... loaded` lines):
+
+| Skin | Pictures, sheet | Work, frames | Garbage a build | The most in one frame |
+|---|---|---|---|---|
+| Mecha (dragon/armored) | 237, 2065x1936, 15.6 MB | 60 ms over 28 | **33 MB** | 2.3-3.9 ms |
+| dragon/default | 237, 15.6 MB | 40 ms over 19 | (one build) | |
+| Larry (game source, read back through the graphics card) | 44, 1128x1128, 5 MB | 85-240 ms over 30-44 | 6.2 MB | 4.7 ms |
+| Hellfire (over the donkey, erasing) | 44, 1.8 MB | 225-260 ms over 45 | 5.7 MB | 5.4-7.9 ms |
+| Armored | 44, 1.8 MB | 20 ms over 7 | 2.3 MB | 4.1 |
+| rat, snail, worm, Royal Parade | 44, 1.8 MB | 4-5 ms over 3-4 | 1.7-2.2 MB | 2.0-2.6 |
+
+The garbage is per picture: the PNG's bytes (read through a growing `MemoryStream`, then `ToArray`), a `Color32[]`
+from `GetPixels32` (64 KB for a 128x128 canvas), and a copy for an over skin or one built on its default
+(`(Color32[])f.P.Clone()`, `WrapAlone`); each is put in the sheet and dropped. 237 pictures x about 140 KB is the
+dragon's 33 MB: one build brings the game's next collection (about 14 ms) much nearer.
+
+**Where it is built again in play:**
+- **Browsing the journal again** (the most common): the looks it showed are let go when it closes; opening it and
+  picking the dragon again is another 33 MB build, every time.
+- **Riding back and forth past a mount**, **a door** (the yard falls asleep going in), **walking away and back**:
+  for every skin worn only by mounts that fall asleep (mounts left in the world, other mods' mounts, the test crowds).
+  The ridden mount's own skin is the companion's, always held: never this.
+- Measured: the crowd's ride at 100%, the Mecha let go and built again within 12 s (53.6 KB a frame for the phase).
+
+**Two ways to cut it, not built yet:**
+- **A. Keep let-go sheets a while** (a cache of recently used sheets, capped at about 64 MB of sheets, the least
+  recently used let go first): wearing it again takes it at once, no build. Covers the journal browsed again, doors,
+  riding past, walking away and back. One place in the code (`Release` keeps instead of destroying; `Acquire` takes
+  from it). Costs up to the cap in texture memory (the sheets are non-readable: graphics memory). Two self-tests
+  check today's "freed at once" (`SkinSleep`, `SkinOnOff`) and would check "kept, then freed when the cache lets
+  go" instead.
+- **B. Make a build make less garbage:** each picture decoded into reused buffers (one texture, a reused pixel array,
+  the PNG read into a sized buffer, the over and inherit copies into reused arrays). Helps every first build too
+  (the first pick of each look, the first spawn). More code in the build pipeline (the pixel hash, the colours, the
+  regions read the same arrays).
+
+**The three measurements (the user's run, 2026-11-09):**
+
+1. **A build's garbage by step** (`BuildCost.ARead`... in every build line): nearly all of it is the decode, a new
+   `Color32[]` per picture (`GetPixels32`): the dragon 15.7 of 16.0-16.5 MB, the Mecha 31.5 of 32.5-32.8, the critters
+   and Royal Parade 1.7 of 1.7-1.9. Reading the files 0.2-1.2 MB. Hellfire 1.7 decoded + 4.2 the erase's copies
+   (`WrapErase`); Larry 6.4, all the game's frames read back (`LooksGame`).
+2. **A ready-made sheet against a PNG per picture** (the builds survey, `BuildSurvey.cs`: the dragon's 120 main
+   pictures written both ways as test skins, each built twice): per picture 64-65 ms of work over 31 frames, the most
+   in one frame 2.4-2.5 ms, 8.6-9.0 MB of garbage; one sheet 20 ms over 7 frames, **the most in one frame 10.5-10.6
+   ms, 16.2-16.3 MB** (the whole sheet decoded in one frame into one array, then a new array per cell). Not a way.
+3. **How often in play** (`built N time(s) this session` in every build line): about 5 minutes of the user's play
+   (the journal browsed, closed, browsed again; the yard; a door): **14 builds of skins built before, about 106 MB of
+   garbage**, all but one from browsing the journal again (the Mecha three times at 33 MB); the yard and the door
+   rebuilt Larry once. The Garbage group's own run: 30 rebuilds, 204 MB (the tests drive it hard).
+
+**What the numbers point to:**
+- **B, narrowed:** decode into one reused texture and one reused pixel array per canvas size (`DecodePng`), so a
+  build's garbage falls by 90-97% for the dragons, critters and Royal Parade (Hellfire about 30%; Larry needs its own
+  read-back change). Every build gains, the first ones too, with no memory kept.
+- **A, narrowed to the journal:** keep the journal's held looks after it closes (its existing 64 MB cap, let go after
+  some minutes unused) instead of letting them go at once: browsing again builds nothing. The general cache for
+  sleeping wearers isn't what play shows (one rebuild in the yard).
+
+**Changed (agreed with the user, 2026-11-09):**
+- **B:** `DecodePngInto` decodes into one kept texture (`decodeScratch`, shrunk back after a picture over 512x512)
+  and copies its memory (`GetPixelData`, read in place) into the caller's reused array; the per-file producer keeps
+  one array per producer (a variant's own and its default's are two producers, so composing keeps both). `DecodePng`
+  still hands back a new array (the icons, the sheet pack, the hostile-files test keep theirs). A variant that is not
+  drawn over its default no longer decodes the default's picture for a frame it has its own (the Mecha decoded both,
+  237 + 237).
+- **A:** `Looks.KeepPanelHoldsAWhile` on the journal's close: its looks kept `PanelKeepSeconds` (300 s; showing one
+  again keeps them while open), within the 64 MB cap, let go by `TickWarm` when the time is up. The self-test runner
+  lets them go between scenarios (`CleanUp`), so each scenario starts from "a sheet nobody wears is freed".
+- **Tests:** the builds survey checks a 120-picture build from files leaves under 3 MB (8.6-9.0 before); the journal
+  survey closes, opens and browses again and checks no look is built again.
+
+**First try of B didn't take:** the next F11 (2051 passed, 2 failed: the two "under 3 MB" checks, 8.4 and 8.6 MB) showed
+the decode still at 8.0 MB. The fast path read RGBA32 only, and **PNGs decode to ARGB32 here** (now said once in the
+log: "Looks: pictures decode to ARGB32"), so every picture took the old `GetPixels32`. `DecodePngInto` now copies an
+ARGB32 or BGRA32 texture's memory into one kept `int[]` and puts each pixel's bytes in RGBA order itself; a check
+compares that with Unity's own conversion pixel for pixel.
+
+**After (the user's F11 Run all, 2026-11-09): 2054 passed, 0 failed, 0 warnings; no `[heads]` line.**
+
+| Skin | Garbage a build before | After |
+|---|---|---|
+| Mecha (dragon/armored) | 32.5-32.8 MB | **1.2-1.3 MB** (most of it the files read) |
+| Armored (donkey) | 2.2-2.3 MB | 0.5-0.7 MB |
+| Royal Parade, rat | 1.7-1.8 MB | 0.1-0.2 MB |
+| Hellfire | 5.6-6.0 MB | 4.0-4.3 MB (left: the erase's copies, `WrapErase`) |
+| Larry | 6.1-6.5 MB | 6.2 MB (left: the game's frames read back, `LooksGame`) |
+| the builds survey, 120 dragon pictures from files | 8.4-9.0 MB | 0.7-1.4 MB |
+
+- Decoded into the reused buffer = Unity's own conversion: 32,768 pixels compared, 0 differ.
+- The journal closed, opened and browsed again: no look built again.
+- The run's every rebuild together: 132 builds of skins built before, 132.9 MB (about 1 MB each; the Garbage group
+  alone before the fix: 30 rebuilds, 204 MB).
+- **Left:** Hellfire's erase copies (about 4 MB a build) and Larry's read-backs (about 6 MB), their own code paths.
+
 **Left for after this pass, by what a player feels:** the cargo refresh per item (2-6 ms; row 20's other half), the
 door frame with babies (row 10), opening the journal (one 14 ms frame), the garbage of views waking and sleeping
 riding through a herd, the picture drawn every frame while the journal is open (rows 4-5).

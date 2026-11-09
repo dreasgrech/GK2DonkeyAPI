@@ -25,6 +25,20 @@ namespace GK2DonkeyAPI.IntegrationTests
 
         internal static IEnumerator MountCrowd()
         {
+            Info(StandardZoom.Begin()); // the game's own zoom for a measurement (StandardZoom.cs), put back after
+            yield return Seconds(1f);
+            try
+            {
+                yield return MountCrowdAtZoom();
+            }
+            finally
+            {
+                StandardZoom.End();
+            }
+        }
+
+        private static IEnumerator MountCrowdAtZoom()
+        {
             string noPack = Tests.MissingPack("dragon", "rat", "snail", "worm", "gerry", "hellfire", "royal-parade");
             if (noPack != null) { Skip(noPack); yield break; }
             if (LazyWindowsStackController.ActiveWindow != null || MountsPanel.IsOpen || OptionsWindow.IsOpen)
@@ -229,6 +243,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             float median = ft[ft.Count / 2], p99 = ft[Math.Min(ft.Count - 1, (int)(ft.Count * 0.99))], worst = ft[ft.Count - 1];
             int views = 0, inst = 0;
             foreach (Mount.Instance i in Mount.All) { inst++; if (i.HasView) views++; }
+            label += $" [zoom {StandardZoom.Now}]";
             Info($"{label}: {ft.Count} frames, mean {mean:F2} ms ({1000.0 / mean:F0} fps), median {median:F2}, 99th {p99:F2}, worst {worst:F1}; the mod {modMs:F2} ms and {kb:F2} KB a frame, {gcs} collection(s); {counts[0]} adults, {counts[1]} babies, {counts[2]} carts of the test; {inst} instances, {views} views; levels {Lod.ActiveCount} active / {Lod.IdleCount} idle / {Lod.AsleepCount} asleep");
             rows.Add(string.Join("\t", DateTime.Now.ToString("yyyy-MM-dd HH:mm"), label, counts[0], counts[1], counts[2], inst, views,
                 Lod.ActiveCount, Lod.IdleCount, Lod.AsleepCount, ft.Count, mean.ToString("F2"), median.ToString("F2"), p99.ToString("F2"),

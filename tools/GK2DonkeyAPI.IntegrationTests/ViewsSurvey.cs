@@ -17,6 +17,20 @@ namespace GK2DonkeyAPI.IntegrationTests
     {
         internal static IEnumerator Run()
         {
+            Info(StandardZoom.Begin()); // the game's own zoom for a measurement (StandardZoom.cs), put back after
+            yield return Seconds(1f);
+            try
+            {
+                yield return RunAtZoom();
+            }
+            finally
+            {
+                StandardZoom.End();
+            }
+        }
+
+        private static IEnumerator RunAtZoom()
+        {
             string noPack = Tests.MissingPack("dragon", "rat", "snail", "worm", "gerry", "hellfire", "royal-parade");
             if (noPack != null) { Skip(noPack); yield break; }
             if (!DevTools.Unlocked) { Skip("the views probe is dev only"); yield break; }
@@ -27,8 +41,8 @@ namespace GK2DonkeyAPI.IntegrationTests
                 far = Spot(home, d);
                 if (far != null) break;
             }
-            Vector3? idle = Spot(home, 24f) ?? Spot(home, 20f);
-            if (far == null || idle == null) { Skip("no spot far enough from the test spot for the keeper (sleep) or at an idle distance"); yield break; }
+            if (far == null) { Skip("no spot far enough from the test spot for the keeper (sleep)"); yield break; }
+            Vector3? idle = null; // found from the crowd and the camera's scale before the idle phases (IdleSpot: any zoom)
 
             var made = new List<MountHandle>();
             bool was = ViewCost.Forced;
@@ -78,6 +92,9 @@ namespace GK2DonkeyAPI.IntegrationTests
                 }
 
                 // 6. an idle distance: off screen within the sleep radius (frozen, or switched off without a cart)
+                idle = IdleSpot(made, out string idleWhy);
+                Info("[views] the idle spot: " + idleWhy);
+                if (idle == null) { Info("[views] no idle spot found: phases 6 to 8 skipped"); yield break; }
                 pool0 = ViewPool.Count; reused0 = Lod.ReusedTotal; spawned0 = Lod.SpawnedTotal;
                 PutKeeper(idle.Value, homeFacing);
                 yield return Seconds(2f);
@@ -103,6 +120,9 @@ namespace GK2DonkeyAPI.IntegrationTests
                 }
                 yield return Until(() => AllReady(made), 20f);
                 yield return Settle(10f);
+                Vector3? idle8 = IdleSpot(made, out string idle8Why); // again, with the 60 more
+                Info("[views] the idle spot for phase 8: " + idle8Why);
+                if (idle8 != null) idle = idle8;
                 ViewCost.Reset();
                 bool offWas = Lod.IdleSwitchesOff;
                 int vsyncWas = QualitySettings.vSyncCount, rateWas = Application.targetFrameRate;
@@ -164,6 +184,45 @@ namespace GK2DonkeyAPI.IntegrationTests
             if (lines.Count == 0) Info("[views]   no view came or went");
             foreach (string l in lines) Info("[views]   " + l);
             ViewCost.Reset();
+        }
+
+        // Where the keeper stands for the idle phases: of 8 directions at 16 to 34 units from the test spot, the spot (with
+        // ground and room) where the most of the test's mounts would be idle (beyond the active radius, inside the sleep radius,
+        // off screen with the levels' margin) by the camera's scale now, so at any zoom (a fixed 24 units was off screen only
+        // at the zoom the survey was written at, 250%). Null: none found.
+        private static Vector3? IdleSpot(List<MountHandle> made, out string why)
+        {
+            Vector3 a = CameraSystem.WorldToScreenPoint(home), bx = CameraSystem.WorldToScreenPoint(home + Vector3.right * 10f), bz = CameraSystem.WorldToScreenPoint(home + Vector3.forward * 10f);
+            float ppuX = Mathf.Abs(bx.x - a.x) / 10f, ppuZ = Mathf.Abs(bz.y - a.y) / 10f;
+            if (ppuX <= 0f || ppuZ <= 0f) { why = "the camera's scale couldn't be read"; return null; }
+            float offX = Screen.width * (0.5f + Lod.ScreenMargin) / ppuX, offZ = Screen.height * (0.5f + Lod.ScreenMargin) / ppuZ;
+            float activeR = Lod.ActiveRadius + 3f, sleepR = Lod.SleepRadius;
+            Vector3? best = null;
+            int bestN = -1, alive = 0;
+            foreach (MountHandle h in made) if (h.Exists) alive++;
+            for (float dist = 16f; dist <= 34f; dist += 2f)
+            {
+                for (int k = 0; k < 8; k++)
+                {
+                    float ang = k * 45f * Mathf.Deg2Rad;
+                    Vector3 p = home + new Vector3(Mathf.Cos(ang) * dist, 0f, Mathf.Sin(ang) * dist);
+                    float g = Mount.Instance.GroundHeight(p, out _);
+                    if (float.IsNaN(g)) continue;
+                    p.y = g;
+                    if (!FreeSpot(p)) continue;
+                    int n = 0;
+                    foreach (MountHandle h in made)
+                    {
+                        if (!h.Exists) continue;
+                        Vector3 d = h.Position - p;
+                        float flat = Mathf.Sqrt(d.x * d.x + d.z * d.z);
+                        if (flat > activeR && flat < sleepR && (Mathf.Abs(d.x) > offX || Mathf.Abs(d.z) > offZ)) n++;
+                    }
+                    if (n > bestN) { bestN = n; best = p; }
+                }
+            }
+            why = best == null ? "no spot with ground and room" : $"{Vector3.Distance(best.Value, home):F0} from the test spot; off screen beyond {offX:F0} across or {offZ:F0} deep at the zoom now ({StandardZoom.Now}); {bestN} of {alive} predicted idle";
+            return best;
         }
 
         private static bool AllReady(List<MountHandle> made)

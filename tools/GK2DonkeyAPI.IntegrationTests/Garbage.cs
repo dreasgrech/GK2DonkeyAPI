@@ -18,6 +18,20 @@ namespace GK2DonkeyAPI.IntegrationTests
 
         internal static IEnumerator GarbageSurvey()
         {
+            Info(StandardZoom.Begin()); // the game's own zoom for a measurement (StandardZoom.cs), put back after
+            yield return Seconds(1f);
+            try
+            {
+                yield return GarbageSurveyAtZoom();
+            }
+            finally
+            {
+                StandardZoom.End();
+            }
+        }
+
+        private static IEnumerator GarbageSurveyAtZoom()
+        {
             string noPack = MissingPack("dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
             if (noPack != null) { Skip(noPack); yield break; }
             bool bySection = Perf.AllocBySection, probe = StrideProbe.On;
