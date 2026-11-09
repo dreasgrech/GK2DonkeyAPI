@@ -65,6 +65,7 @@ namespace GK2DonkeyAPI
             // The creature's own geometry, from its rest picture: the feet (its lowest opaque row) go on the base's
             // ground row, its centre column on the base's pivot column. Read once, on the first frame produced.
             int groundSrc = -1, centreSrc = -1;
+            Color32[] scaledBuf = null, emptyBuf = null; // this skin's pictures, one at a time (put in the sheet before the next)
             string restName = ResolveGameFrame("bdy_static_left", g, frames, b, null);
             // The rest picture read and measured: the build's first step, a frame of its own (Prepare; a read-back through
             // the graphics card, as each picture is), else before the first picture.
@@ -79,7 +80,7 @@ namespace GK2DonkeyAPI
             Func<string, Pixels> produce = key =>
             {
                 string name = map[key];
-                if (name == null) return new Pixels { P = new Color32[d.CanvasW * d.CanvasH], W = d.CanvasW, H = d.CanvasH }; // empty on purpose
+                if (name == null) return new Pixels { P = emptyBuf ?? (emptyBuf = new Color32[d.CanvasW * d.CanvasH]), W = d.CanvasW, H = d.CanvasH }; // empty on purpose (one array, never written)
                 Rest();
                 if (!frames.TryGetValue(name, out CreatureFrame get)) return new Pixels { Why = $"the game has no '{g.Prefix}{name}' sprite in memory" };
                 SkinFrame f = ReadCreatureFrame(get, name, b);
@@ -92,7 +93,7 @@ namespace GK2DonkeyAPI
                     Measure(f, out int feet, out _);
                     if (feet > groundSrc) groundThis = groundSrc + Mathf.RoundToInt((feet - groundSrc) * (1f - g.Lift));
                 }
-                Color32[] px = Scaled(f, scale, groundThis, centreSrc, d);
+                Color32[] px = Scaled(f, scale, groundThis, centreSrc, d, ref scaledBuf);
                 int opaque = 0;
                 for (int i = 0; i < px.Length; i++) if (px[i].a != 0) opaque++;
                 GameSourceOpaque[d.Id + "/" + key] = opaque; // for the self-test: the sheet itself is unreadable once uploaded
@@ -326,7 +327,7 @@ namespace GK2DonkeyAPI
             if (s == null) return null;
             try
             {
-                return ReadFrame(name, s, b);
+                return ReadFrameShared(name, s, b); // into the build's kept memory: measured and scaled before the next read (2026-11-10)
             }
             finally
             {
@@ -359,10 +360,12 @@ namespace GK2DonkeyAPI
         // The frame scaled by whole pixels onto the skin's canvas: the creature's ground row lands on the base's
         // ground row, its centre column on the pivot column; nearest neighbour, so each source pixel is a scale x scale
         // block and nothing is blurred.
-        private static Color32[] Scaled(SkinFrame f, int scale, int groundSrc, int centreSrc, SkinDef d)
+        private static Color32[] Scaled(SkinFrame f, int scale, int groundSrc, int centreSrc, SkinDef d, ref Color32[] buf)
         {
             int w = d.CanvasW, h = d.CanvasH;
-            var o = new Color32[w * h];
+            if (buf == null || buf.Length != w * h) buf = new Color32[w * h];
+            else Array.Clear(buf, 0, buf.Length); // only the pixels the frame reaches are written
+            Color32[] o = buf;
             int groundDst = Mathf.RoundToInt(d.PivotY) - (Mathf.RoundToInt(d.Base.PivotY) - d.Base.GroundRow); // the base's feet, below its pivot
             int centreDst = Mathf.RoundToInt(d.PivotX);
             for (int y = 0; y < h; y++)

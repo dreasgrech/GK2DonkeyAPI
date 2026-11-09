@@ -139,7 +139,20 @@ namespace GK2DonkeyAPI
         // read of the game's art, so the check sees the pixels the skins are built on. The donkey's own frames come with
         // their eye and nostril pixels repainted (FacePixels: a skin's whole frames as the atlas shows them, built before
         // the atlas was repainted or after), or as the game draws them (the check, the exports), or as the atlas holds them.
-        internal static SkinFrame ReadFrame(string key, Sprite s, SkinBase b, FacePixels.Read face = FacePixels.Read.Repainted)
+        // shared: the build's one reader into kept memory (ReadFrameShared): one texture, one crop, one canvas and one frame,
+        // each picture read into them; for a builder that is done with the frame before it reads the next (the erase of an
+        // over skin, a game-source skin's frames). A recipe (another mod's code, which may keep the frame), the donkey
+        // frames' check, the face pixels and the export read with copies of their own, as before. Hellfire's build made
+        // about 3.5 MB of these per build, Larry's about 6 (2026-11-10, docs/performance.md).
+        private static Texture2D sharedReadTex;
+        private static Color32[] sharedCrop, sharedCanvas;
+        private static readonly SkinFrame sharedFrame = new SkinFrame();
+
+        internal static SkinFrame ReadFrameShared(string key, Sprite s, SkinBase b, FacePixels.Read face = FacePixels.Read.Repainted) => ReadFrame(key, s, b, face, shared: true);
+
+        internal static SkinFrame ReadFrame(string key, Sprite s, SkinBase b, FacePixels.Read face = FacePixels.Read.Repainted) => ReadFrame(key, s, b, face, shared: false);
+
+        private static SkinFrame ReadFrame(string key, Sprite s, SkinBase b, FacePixels.Read face, bool shared)
         {
             Texture2D tex = s.texture;
             Rect r = s.textureRect;
@@ -153,10 +166,26 @@ namespace GK2DonkeyAPI
             {
                 Graphics.Blit(tex, rt);
                 RenderTexture.active = rt;
-                tmp = new Texture2D(w, h, TextureFormat.RGBA32, false);
-                tmp.ReadPixels(new Rect(r.x, r.y, w, h), 0, 0, false);
-                Color32[] crop = tmp.GetPixels32();
-                var canvas = new Color32[cw * ch];
+                Color32[] crop, canvas;
+                if (shared)
+                {
+                    if (sharedReadTex == null || !sharedReadTex) sharedReadTex = new Texture2D(w, h, TextureFormat.RGBA32, false) { name = "gk2 frame reader", hideFlags = HideFlags.HideAndDontSave };
+                    else if (sharedReadTex.width != w || sharedReadTex.height != h) sharedReadTex.Reinitialize(w, h);
+                    sharedReadTex.ReadPixels(new Rect(r.x, r.y, w, h), 0, 0, false);
+                    if (sharedCrop == null || sharedCrop.Length != w * h) sharedCrop = new Color32[w * h];
+                    sharedReadTex.GetPixelData<Color32>(0).CopyTo(sharedCrop); // RGBA32, made so above: read in place
+                    crop = sharedCrop;
+                    if (sharedCanvas == null || sharedCanvas.Length != cw * ch) sharedCanvas = new Color32[cw * ch];
+                    else Array.Clear(sharedCanvas, 0, sharedCanvas.Length); // the trim's margins stay empty
+                    canvas = sharedCanvas;
+                }
+                else
+                {
+                    tmp = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                    tmp.ReadPixels(new Rect(r.x, r.y, w, h), 0, 0, false);
+                    crop = tmp.GetPixels32();
+                    canvas = new Color32[cw * ch];
+                }
                 int ox = Mathf.FloorToInt(s.textureRectOffset.x), oy = Mathf.FloorToInt(s.textureRectOffset.y);
                 for (int y = 0; y < h; y++)
                 {
@@ -168,7 +197,12 @@ namespace GK2DonkeyAPI
                         if (cx >= 0 && cx < cw) canvas[cy * cw + cx] = crop[y * w + x];
                     }
                 }
-                var f = new SkinFrame { Key = key, W = cw, H = ch, P = canvas };
+                SkinFrame f = shared ? sharedFrame : new SkinFrame();
+                f.Key = key;
+                f.W = cw;
+                f.H = ch;
+                f.P = canvas;
+                f.Bob = 0;
                 // the back row from the top at the base's back column: Unity's rows run from the bottom
                 int backFromTop = -1;
                 for (int yTop = 0; yTop < ch; yTop++)

@@ -95,18 +95,65 @@ namespace GK2DonkeyAPI
             if (f != null) f.DeactivateInputField(); // its onEndEdit writes it
         }
 
-        // A row of our own for a row of a page, or null for a choice with nothing to choose from.
-        internal GameObject OwnRow(Transform parent, MountSettingsPage.Row r, RowLayout lay, out Action refresh, out float height)
+        // A built row's tie to the page row it shows: its controls read the row through it, so a row built for one mount's
+        // row can be pointed at another mount's row of the same shape (Rebind) instead of being destroyed and made again
+        // (the journal on every pick: 2.4-3.8 ms and 300-360 KB for its 8 rows; docs/performance.md).
+        internal sealed class Bound
         {
-            refresh = null;
-            height = 0f;
+            internal MountSettingsPage.Row Row;
+            internal string Shape;   // what the build fixed (Shape); null: never pointed at another row
+            internal Action Refresh;
+            internal float Height;
+        }
+
+        // Can the row be built (a value with its setting, a choice with choices)? A list's choices are filled here.
+        private static bool Buildable(MountSettingsPage.Row r)
+        {
             MountSettingsPage.RowKind kind = r.RowKind;
             bool valued = kind == MountSettingsPage.RowKind.Toggle || kind == MountSettingsPage.RowKind.Steps || kind == MountSettingsPage.RowKind.Choice
                 || kind == MountSettingsPage.RowKind.List || kind == MountSettingsPage.RowKind.Text || kind == MountSettingsPage.RowKind.Key;
             bool other = kind == MountSettingsPage.RowKind.Button || kind == MountSettingsPage.RowKind.Info;
-            if ((valued && r.Entry == null) || (!valued && !other)) return null;
+            if ((valued && r.Entry == null) || (!valued && !other)) return false;
             if (kind == MountSettingsPage.RowKind.List) MountSettingsPage.FillList(r);
-            if ((kind == MountSettingsPage.RowKind.Choice || kind == MountSettingsPage.RowKind.List) && (r.ChoiceLabels == null || r.ChoiceValues == null)) return null;
+            if ((kind == MountSettingsPage.RowKind.Choice || kind == MountSettingsPage.RowKind.List) && (r.ChoiceLabels == null || r.ChoiceValues == null)) return false;
+            return true;
+        }
+
+        // Everything a row's build fixes but the row itself: its kind, its label (its width and height), a range's values
+        // (the number buttons, the slider's steps), whether it can be greyed (its CanvasGroup) and the column. Two rows
+        // of one shape take the same controls. Null for a key (its clash is fixed at build) and a button (its word).
+        internal static string Shape(MountSettingsPage.Row r, RowLayout lay)
+        {
+            MountSettingsPage.RowKind kind = r.RowKind;
+            if (kind == MountSettingsPage.RowKind.Key || kind == MountSettingsPage.RowKind.Button) return null;
+            string head = (int)kind + "|" + (Texts.Label(r) ?? "") + "|" + (r.Enabled != null ? "e" : "-");
+            if (kind == MountSettingsPage.RowKind.Steps) head += "|" + r.Min + "|" + r.Max + "|" + r.Step;
+            return head + "|" + lay.LabelX + "|" + lay.CtrlLeft + "|" + lay.CtrlRight + "|" + lay.ColW;
+        }
+
+        // A built row pointed at another row of its shape, shown with that row's value. False: the row can't be built
+        // (the caller builds nothing for it, as OwnRow would).
+        internal bool Rebind(Bound b, MountSettingsPage.Row r)
+        {
+            if (b == null || !Buildable(r)) return false;
+            b.Row = r;
+            b.Refresh?.Invoke();
+            return true;
+        }
+
+        // A row of our own for a row of a page, or null for a choice with nothing to choose from.
+        internal GameObject OwnRow(Transform parent, MountSettingsPage.Row r, RowLayout lay, out Action refresh, out float height) =>
+            OwnRow(parent, r, lay, out refresh, out height, out _);
+
+        // The same, with its tie to the row (Bound: for pointing it at another row later).
+        internal GameObject OwnRow(Transform parent, MountSettingsPage.Row r, RowLayout lay, out Action refresh, out float height, out Bound bound)
+        {
+            refresh = null;
+            height = 0f;
+            bound = null;
+            MountSettingsPage.RowKind kind = r.RowKind;
+            if (!Buildable(r)) return null;
+            var b = new Bound { Row = r };
             float ctrlW = kind == MountSettingsPage.RowKind.Toggle ? SwitchW
                 : kind == MountSettingsPage.RowKind.Key ? Mathf.Min(KeyW, lay.CtrlRight - lay.CtrlLeft)
                 : kind == MountSettingsPage.RowKind.Button ? Mathf.Min(ButtonRowW, lay.CtrlRight - lay.CtrlLeft)
@@ -142,29 +189,33 @@ namespace GK2DonkeyAPI
             switch (kind)
             {
                 case MountSettingsPage.RowKind.Toggle:
-                    refresh = Switch(go.transform, r, ctrlLeft, Mathf.Round((height - SwitchH) / 2f));
+                    refresh = Switch(go.transform, b, ctrlLeft, Mathf.Round((height - SwitchH) / 2f));
                     break;
                 case MountSettingsPage.RowKind.Steps:
                     int count = (r.Max - r.Min) / Math.Max(1, r.Step) + 1;
-                    refresh = count <= MaxNumberButtons ? Numbers(go.transform, r, ctrlLeft, cy, ctrlW, count) : SliderRow(go.transform, r, ctrlLeft, height, ctrlW);
+                    refresh = count <= MaxNumberButtons ? Numbers(go.transform, b, ctrlLeft, cy, ctrlW, count) : SliderRow(go.transform, b, ctrlLeft, height, ctrlW);
                     break;
                 case MountSettingsPage.RowKind.Text:
-                    refresh = TextRow(go.transform, r, ctrlLeft, cy, ctrlW);
+                    refresh = TextRow(go.transform, b, ctrlLeft, cy, ctrlW);
                     break;
                 case MountSettingsPage.RowKind.Key:
-                    refresh = KeyBox(go.transform, r, ctrlLeft, cy, ctrlW);
+                    refresh = KeyBox(go.transform, b, ctrlLeft, cy, ctrlW);
                     break;
                 case MountSettingsPage.RowKind.Button:
-                    RowButton(go.transform, r, ctrlLeft, Mathf.Round((height - ChoiceH - 2f) / 2f), ctrlW);
+                    RowButton(go.transform, b, ctrlLeft, Mathf.Round((height - ChoiceH - 2f) / 2f), ctrlW);
                     break;
                 case MountSettingsPage.RowKind.Info:
-                    refresh = InfoValue(go.transform, r, ctrlLeft, height, ctrlW);
+                    refresh = InfoValue(go.transform, b, ctrlLeft, height, ctrlW);
                     break;
                 default:
-                    refresh = Dropdown(go.transform, r, ctrlLeft, cy, ctrlW);
+                    refresh = Dropdown(go.transform, b, ctrlLeft, cy, ctrlW);
                     break;
             }
             refresh?.Invoke();
+            b.Refresh = refresh;
+            b.Height = height;
+            b.Shape = Shape(r, lay);
+            bound = b;
             return go;
         }
 
@@ -226,7 +277,7 @@ namespace GK2DonkeyAPI
         }
 
         // On/off: a switch, its knob left (off) or right (on, in the game's red).
-        private Action Switch(Transform parent, MountSettingsPage.Row r, float x, float y)
+        private Action Switch(Transform parent, Bound bd, float x, float y)
         {
             GameObject sw = ui.Node("switch", parent, typeof(Image), typeof(UnityEngine.UI.Button));
             UiKit.Rect(sw, x, y, SwitchW, SwitchH);
@@ -243,13 +294,13 @@ namespace GK2DonkeyAPI
             knobImg.raycastTarget = false;
             b.targetGraphic = knobImg;
             Hover(b, 1.25f);
-            Action flip = () => SetValue(r, !(r.Entry.BoxedValue is bool on && on));
+            Action flip = () => SetValue(bd.Row, !(bd.Row.Entry.BoxedValue is bool on && on));
             b.onClick.AddListener(() => flip());
             NavItem(sw, flip);
             float kw = Mathf.Round(SwitchW / 2f);
             return () =>
             {
-                bool on = r.Entry.BoxedValue is bool v && v;
+                bool on = bd.Row.Entry.BoxedValue is bool v && v;
                 track.color = on ? new Color(UiKit.CardChosen.r, UiKit.CardChosen.g, UiKit.CardChosen.b, 0.55f) : UiKit.BoxColor;
                 knobImg.color = on ? Color.white : KnobOff;
                 UiKit.Rect(knob, on ? SwitchW - kw - 2f : 2f, 2f, kw, SwitchH - 4f);
@@ -257,21 +308,21 @@ namespace GK2DonkeyAPI
         }
 
         // A small range: a button per value in a row, the chosen one in the game's red.
-        private Action Numbers(Transform parent, MountSettingsPage.Row r, float x, float y, float w, int count)
+        private Action Numbers(Transform parent, Bound bd, float x, float y, float w, int count)
         {
             float bw = Mathf.Floor((w - (count - 1) * NumberGap) / count);
             float left = x + (w - (count * bw + (count - 1) * NumberGap)); // the rounding's slack on the left: the row ends on the value edge
             var buttons = new List<(int Value, Image Face, TextMeshProUGUI Label)>();
             for (int i = 0; i < count; i++)
             {
-                int v = r.Min + i * r.Step;
-                GameObject b = ui.OwnButton(parent, "value " + v, v.ToString(), bw, CtrlH, () => SetValue(r, v), flat: true);
+                int v = bd.Row.Min + i * bd.Row.Step; // the same on every row of this shape (Shape)
+                GameObject b = ui.OwnButton(parent, "value " + v, v.ToString(), bw, CtrlH, () => SetValue(bd.Row, v), flat: true);
                 UiKit.Rect(b, left + i * (bw + NumberGap), y, bw, CtrlH);
                 buttons.Add((v, b.GetComponent<Image>(), b.GetComponentInChildren<TextMeshProUGUI>(true)));
             }
             return () =>
             {
-                int now = r.Entry.BoxedValue is int n ? n : r.Min;
+                int now = bd.Row.Entry.BoxedValue is int n ? n : bd.Row.Min;
                 foreach ((int value, Image face, TextMeshProUGUI label) in buttons)
                 {
                     bool on = value == now;
@@ -286,9 +337,9 @@ namespace GK2DonkeyAPI
         }
 
         // A large range: a slider, its value written beside it (the row's own words: "80%").
-        private Action SliderRow(Transform parent, MountSettingsPage.Row r, float x, float rowH, float w)
+        private Action SliderRow(Transform parent, Bound bd, float x, float rowH, float w)
         {
-            int steps = (r.Max - r.Min) / Math.Max(1, r.Step);
+            int steps = (bd.Row.Max - bd.Row.Min) / Math.Max(1, bd.Row.Step);
             TextMeshProUGUI value = ui.Text(parent, "value", "", 0.95f, TextAlignmentOptions.Right, false, x + w - ValueW, 0f, ValueW, rowH);
             value.color = ui.ButtonTextColor;
             // our make, as the switch: a dark box with the faint edge, filled in the journal's red up to the handle, the
@@ -335,88 +386,88 @@ namespace GK2DonkeyAPI
             s.wholeNumbers = true;
             Hover(s, 1.2f);
             bool syncing = false;
-            string Words(int v) => r.Format != null ? r.Format(v) : v.ToString();
+            string Words(int v) => bd.Row.Format != null ? bd.Row.Format(v) : v.ToString();
             s.onValueChanged.AddListener(f =>
             {
-                int v = r.Min + Mathf.RoundToInt(f) * r.Step;
+                int v = bd.Row.Min + Mathf.RoundToInt(f) * bd.Row.Step;
                 value.text = Words(v);
-                if (!syncing) SetValue(r, v);
+                if (!syncing) SetValue(bd.Row, v);
             });
             GamepadNavigationItem item = NavItem(go, () => { });
             foreach (GamepadNavigationItem k in new List<GamepadNavigationItem>(steppers.Keys)) if (k == null) steppers.Remove(k);
             steppers[item] = d => s.value = Mathf.Clamp(s.value + d, 0f, steps); // Left/Right on the gamepad (TickGamepad)
             return () =>
             {
-                int now = r.Entry.BoxedValue is int n ? n : r.Min;
+                int now = bd.Row.Entry.BoxedValue is int n ? n : bd.Row.Min;
                 syncing = true;
-                try { s.value = Mathf.Clamp((now - r.Min) / Math.Max(1, r.Step), 0, steps); }
+                try { s.value = Mathf.Clamp((now - bd.Row.Min) / Math.Max(1, bd.Row.Step), 0, steps); }
                 finally { syncing = false; }
                 value.text = Words(now);
             };
         }
 
         // A text (the mount's name): a text box, written when the typing ends (Enter, a click elsewhere).
-        private Action TextRow(Transform parent, MountSettingsPage.Row r, float x, float y, float w)
+        private Action TextRow(Transform parent, Bound bd, float x, float y, float w)
         {
             TMP_InputField f = InputBox(parent, "text", x, y, w, CtrlH, UiWords.None.Text, NameChars);
-            f.text = r.Entry.BoxedValue as string ?? "";
+            f.text = bd.Row.Entry.BoxedValue as string ?? "";
             f.onEndEdit.AddListener(v =>
             {
                 string t = (v ?? "").Trim();
-                if (!string.Equals(t, r.Entry.BoxedValue as string ?? "", StringComparison.Ordinal)) SetValue(r, t);
+                if (!string.Equals(t, bd.Row.Entry.BoxedValue as string ?? "", StringComparison.Ordinal)) SetValue(bd.Row, t);
             });
             NavItem(f.gameObject, () => f.ActivateInputField());
             return () =>
             {
-                string now = r.Entry.BoxedValue as string ?? "";
+                string now = bd.Row.Entry.BoxedValue as string ?? "";
                 if (!f.isFocused && f.text != now) f.text = now;
             };
         }
 
         // A key: a box with the key in words ("H", "Ctrl + G", "Left Shift", "None"); a click (or Select) sets it, the
         // next key pressed being the key (KeyCapture), the box saying so meanwhile.
-        private Action KeyBox(Transform parent, MountSettingsPage.Row r, float x, float y, float w)
+        private Action KeyBox(Transform parent, Bound bd, float x, float y, float w)
         {
-            GameObject b = ui.OwnButton(parent, "key", "", w, CtrlH, () => KeyCapture.Start(r, window(), changed), flat: true);
+            GameObject b = ui.OwnButton(parent, "key", "", w, CtrlH, () => KeyCapture.Start(bd.Row, window(), changed), flat: true);
             UiKit.Rect(b, x, y, w, CtrlH);
             Image face = b.GetComponent<Image>();
             TextMeshProUGUI label = b.GetComponentInChildren<TextMeshProUGUI>(true);
-            bool clash = KeyCapture.Clash(r) != null;
+            bool clash = KeyCapture.Clash(bd.Row) != null;
             return () =>
             {
-                bool setting = KeyCapture.Row == r;
+                bool setting = KeyCapture.Row == bd.Row;
                 if (face != null) face.color = setting ? UiKit.CardChosen : UiKit.CardBase;
                 if (label == null) return;
-                label.text = setting ? UiWords.PressAKey.Text : KeyCapture.Words((KeyboardShortcut)r.Entry.BoxedValue);
+                label.text = setting ? UiWords.PressAKey.Text : KeyCapture.Words((KeyboardShortcut)bd.Row.Entry.BoxedValue);
                 label.color = setting ? ui.ButtonTextColor : clash ? ClashColor : ui.FontColor;
                 label.fontStyle = setting ? FontStyles.Italic : FontStyles.Normal;
             };
         }
 
         // A button of the page's (the Mounts panel, the safe spot): the game's button face with its word.
-        private void RowButton(Transform parent, MountSettingsPage.Row r, float x, float y, float w)
+        private void RowButton(Transform parent, Bound bd, float x, float y, float w)
         {
-            GameObject b = ui.OwnButton(parent, "button", Texts.Button(r), w, ChoiceH + 2f, () => press?.Invoke(r));
+            GameObject b = ui.OwnButton(parent, "button", Texts.Button(bd.Row), w, ChoiceH + 2f, () => press?.Invoke(bd.Row));
             UiKit.Rect(b, x, y, w, ChoiceH + 2f);
         }
 
         // An info line: its value as text on the value edge, read again on every refresh.
-        private Action InfoValue(Transform parent, MountSettingsPage.Row r, float x, float rowH, float w)
+        private Action InfoValue(Transform parent, Bound bd, float x, float rowH, float w)
         {
             TextMeshProUGUI value = ui.Text(parent, "value", "", 0.95f, TextAlignmentOptions.Right, true, x, 0f, w, rowH);
             value.color = ui.ButtonTextColor;
             return () =>
             {
-                string s = r.InfoValue?.Invoke();
+                string s = bd.Row.InfoValue?.Invoke();
                 value.text = string.IsNullOrEmpty(s) ? "-" : s;
             };
         }
 
         // A list: the chosen one's name on a button, a click opens the list under it.
-        private Action Dropdown(Transform parent, MountSettingsPage.Row r, float x, float y, float w)
+        private Action Dropdown(Transform parent, Bound bd, float x, float y, float w)
         {
             GameObject b = null;
-            b = ui.OwnButton(parent, "dropdown", "", w, CtrlH, () => OpenDropdown(r, b), textLeft: 8f, flat: true);
+            b = ui.OwnButton(parent, "dropdown", "", w, CtrlH, () => OpenDropdown(bd.Row, b), textLeft: 8f, flat: true);
             UiKit.Rect(b, x, y, w, CtrlH);
             TextMeshProUGUI label = b.GetComponentInChildren<TextMeshProUGUI>(true);
             if (label != null) UiKit.Rect(label.gameObject, 8f, 0f, w - 8f - 22f, CtrlH);
@@ -424,11 +475,11 @@ namespace GK2DonkeyAPI
             Color normal = label != null ? label.color : Color.white;
             return () =>
             {
-                int at = ChoiceIndex(r);
+                int at = ChoiceIndex(bd.Row);
                 if (label == null) return;
-                label.text = at >= 0 ? Texts.Choice(r, at) : (r.Entry.BoxedValue?.ToString() ?? "");
+                label.text = at >= 0 ? Texts.Choice(bd.Row, at) : (bd.Row.Entry.BoxedValue?.ToString() ?? "");
                 // a skin not installed (or set aside): its name at half strength, as the journal greys a mount not installed
-                label.color = Texts.Dimmed(r, at) ? new Color(normal.r, normal.g, normal.b, normal.a * 0.5f) : normal;
+                label.color = Texts.Dimmed(bd.Row, at) ? new Color(normal.r, normal.g, normal.b, normal.a * 0.5f) : normal;
             };
         }
 

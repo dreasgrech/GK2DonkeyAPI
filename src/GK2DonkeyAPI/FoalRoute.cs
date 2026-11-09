@@ -42,20 +42,60 @@ namespace GK2DonkeyAPI
         private readonly float maxRise;
         private readonly Vector3 origin;                      // world position of cell (0, 0)'s corner
         private readonly int w, h;
+        // The grid's arrays (borrowed from a Grid, see there)
         private readonly sbyte[] cellState;                   // 0 unknown, 1 free, 2 blocked
         private readonly float[] cellHeight;
         private readonly float[] g;
         private readonly int[] from;
         private readonly bool[] closed;
-        private readonly List<int> open = new List<int>();    // binary heap on f
+        private readonly List<int> open;                      // binary heap on f
         private readonly float[] f;
         private readonly int start, goal;
         private readonly Vector3 goalPoint;
         private readonly float startY;
-        private readonly Stopwatch watch = new Stopwatch();
+        private readonly Stopwatch watch;
 
-        // start and goal are body points; range: how far from the start the grid may reach (either way).
-        internal FoalRouteSearch(Vector3 startPoint, Vector3 goalPoint, float range, float maxRise,
+        // A search's working arrays, kept by whoever searches (one per foal) and reused by its next search: a search was
+        // 30-72 KB of new arrays (up to 64 x 64 cells), several a second in a herd (docs/performance.md, the pass of
+        // 2026-11-09). One search at a time per Grid: a new search on it ends the use of the one before (that one is
+        // never stepped again; its Corners/Why are its own).
+        internal sealed class Grid
+        {
+            internal sbyte[] State = Array.Empty<sbyte>();
+            internal float[] Height = Array.Empty<float>(), G = Array.Empty<float>(), F = Array.Empty<float>();
+            internal int[] From = Array.Empty<int>();
+            internal bool[] Closed = Array.Empty<bool>();
+            internal readonly List<int> Open = new List<int>();
+            internal readonly Stopwatch Watch = new Stopwatch();
+
+            internal void Prepare(int n)
+            {
+                if (State.Length < n)
+                {
+                    State = new sbyte[n];
+                    Height = new float[n];
+                    G = new float[n];
+                    F = new float[n];
+                    From = new int[n];
+                    Closed = new bool[n];
+                }
+                Array.Clear(State, 0, n);
+                Array.Clear(Height, 0, n);
+                Array.Clear(F, 0, n);
+                Array.Clear(Closed, 0, n);
+                for (int i = 0; i < n; i++)
+                {
+                    G[i] = float.MaxValue;
+                    From[i] = -1;
+                }
+                Open.Clear();
+                Watch.Reset();
+            }
+        }
+
+        // start and goal are body points; range: how far from the start the grid may reach (either way). grid: the
+        // caller's kept working arrays (null: new ones for this search alone).
+        internal FoalRouteSearch(Grid grid, Vector3 startPoint, Vector3 goalPoint, float range, float maxRise,
             Func<Vector3, float> groundAt, Func<Vector3, bool> freeAt, Func<Vector3, float, Vector3, float, bool> stepFits,
             Func<Vector3, Vector3, bool> legClear = null)
         {
@@ -76,17 +116,19 @@ namespace GK2DonkeyAPI
             w = Mathf.Max(2, Mathf.CeilToInt((maxX - minX) / Cell));
             h = Mathf.Max(2, Mathf.CeilToInt((maxZ - minZ) / Cell));
             int n = w * h;
-            cellState = new sbyte[n];
-            cellHeight = new float[n];
-            g = new float[n];
-            f = new float[n];
-            from = new int[n];
-            closed = new bool[n];
-            for (int i = 0; i < n; i++)
+            if (grid == null)
             {
-                g[i] = float.MaxValue;
-                from[i] = -1;
+                grid = new Grid();
             }
+            grid.Prepare(n);
+            cellState = grid.State;
+            cellHeight = grid.Height;
+            g = grid.G;
+            f = grid.F;
+            from = grid.From;
+            closed = grid.Closed;
+            open = grid.Open;
+            watch = grid.Watch;
             // A goal outside the box: the route leads to the box's edge nearest to it, and the next plan goes on.
             Vector3 gp = goalPoint;
             gp.x = Mathf.Clamp(gp.x, minX + Cell * 0.5f, maxX - Cell * 0.5f);

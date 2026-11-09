@@ -743,9 +743,9 @@ So numbers taken from here on read higher than the tables above (more on screen,
 - **The journal's opening and each pick, split:** the 469 rows of the page sorted into groups cost 0.11-0.18 ms (the
   suspicion was wrong); **building the journal's 8 rows' controls costs 2.4-3.8 ms and 300-360 KB, on every open and
   every pick** (about 0.35 ms and 43 KB a row: the rows are destroyed and made again, their controls bound to the
-  rows of the mount picked). Applying the choice 0.5 ms; the rest under 0.3. Not changed: keeping the controls and
-  pointing them at the new rows means reworking RowControls (each control's handlers are bound to its row), a larger
-  change than a menu click's one frame is worth before the release.
+  rows of the mount picked). Applying the choice 0.5 ms; the rest under 0.3. First left as it was (each control's
+  handlers bound to its row); changed on 2026-11-10: a pick keeps the rows and points them at the new mount's rows
+  ("The last four, fixed" below). The opening still builds them once.
 
 ### Skin sheets let go and built again (investigated 2026-11-09)
 
@@ -877,6 +877,58 @@ Taken by what the 100% crowd showed (phase 3, 36 in view and 120 around: the mod
 **Left for after this pass, by what a player feels:** the cargo refresh per item (2-6 ms; row 20's other half), the
 door frame with babies (row 10), opening the journal (one 14 ms frame), the garbage of views waking and sleeping
 riding through a herd, the picture drawn every frame while the journal is open (rows 4-5).
+
+### The last four, fixed (2026-11-10)
+
+The four left from the tables above, investigated and written together for one F11 run (the user: an F11 after
+each fix took too long).
+
+**After (the user's F11 Run all, 2026-11-10 00:56: 2054 passed, 0 failed, 0 warnings; every hand check fine: the
+donkey's own voice in the journal, values landing on the picked mount, the gamepad walk, Hellfire and Larry's looks,
+babies routing):**
+
+| | Before | After |
+|---|---|---|
+| A pick in the journal, all its steps | the rows alone 2.4-3.8 ms, 300-360 KB | 0.63-0.89 ms, 8-12 KB in all; 8 of 8 rows kept on each of 7 picks (56 kept, 0 made), none pointing at another mount's row |
+| Hellfire, garbage a build | 4.1 MB (6.0 before the decode fix) | 0.4-0.5 MB (one 0.8), 15 builds |
+| Larry, garbage a build | 6.2 MB | 0.2-0.3 MB (three 0.6), 18 builds |
+| Hellfire / Larry, work a build, quiet | 225-260 / 85-240 ms | 53-80 / 55-80 ms in most builds |
+| The most in one frame, quiet (the run's end, 9 ms game frames) | 5.4-7.9 / 4.7 ms | 4.2 / 4.2 ms |
+| A baby's route search | 30-72 KB new | its grid kept (no line measures it; searches found, 0.1-0.5 ms) |
+
+**Seen, not a regression shown:** in the busiest scenarios (the views survey uncapped, the waking and indoors tests,
+the game's frames 18-43 ms meanwhile) a Hellfire or Larry build had its most in one frame at 10-15 ms (the views
+survey 12.4-15.2). The before numbers above are from the crowd run only; nothing measured those scenarios before, so
+they can't be compared. The step that costs is unchanged: each picture is `Graphics.Blit` of the game's atlas and a
+`ReadPixels` that waits for the graphics card, longer when it is busy. The way to take it out of the frame is an
+asynchronous read-back (`AsyncGPUReadback`), Round 2's "async read-backs", not done.
+
+- **Hellfire's erase (about 4 MB a build):** for each of its 44 pictures `WrapErase` read the donkey's frame back from
+  the game (`LooksRecipes.ReadFrame`: a new texture, a 64 KB crop and a 64 KB canvas, a new `SkinFrame`), then cloned
+  that frame's pixels for the picture it returned. Now the read goes through `ReadFrameShared`: one kept texture
+  (reinitialised only when the size changes, read through `GetPixelData` into a kept crop), one kept canvas, one
+  kept `SkinFrame`; and the picture is written into one array kept by the skin's producer. Safe because the build
+  puts each picture in the sheet (`Loaded.Put`) before it asks for the next (`AdvanceBuilds`), and the erase loop
+  writes every pixel when there is no base frame.
+- **Larry's read-backs (about 6 MB a build):** its pictures are the game's frames read back the same way
+  (`LooksGame.ReadCreatureFrame`), then scaled into a new array, and an empty key got a new empty array. Now the
+  shared frame, and the scaled and the empty pictures go into two arrays kept per producer. Recipes registered by
+  another mod still get a frame of their own (`ReadFrame`): their code may keep it.
+- **The babies' route search (30-72 KB a search):** `FoalRouteSearch` made six arrays of the grid's size (up to
+  64 x 64 cells), its open list and a stopwatch on every search, and `StartRoute` four closures. Now each baby keeps
+  a `FoalRouteSearch.Grid` (grown to the largest search it made, about 73 KB at most, kept for the baby's life),
+  cleared at the start of each search, and its four tests made once. A baby runs one search at a time: a new one drops
+  the one before, which is never stepped again (its corners and its reason are its own).
+- **The journal's rows on a pick (2.4-3.8 ms, 300-360 KB):** the rows' controls were destroyed and made again on every
+  pick, each control's handlers bound to the picked mount's row. Now every control reads its row through a tie
+  (`RowControls.Bound`); on a pick, `BuildRows` keeps last build's rows and points each at the new mount's row of the
+  same shape (`RowControls.Shape`: kind, label, a range's values, whether it can be greyed, the column), then refreshes
+  it. Rows with no match are made, rows left over destroyed; headings, their lines and the colours window's swatch
+  rows are made again as before. A key row (its clash is fixed when built) and a button row (its word) are never kept.
+  A name being typed is written to its own mount's row first (`CommitFields`). Opening the journal still builds the
+  rows once: the panel itself is made on every open and destroyed on close; keeping it would change the panel's
+  lifetime and is not done. The journal survey counts rows kept and made on each pick and checks that every kept row
+  reads the row it is listed for (`MountsPanel.TestRowsBoundWrong`).
 
 ### What can't be measured here
 

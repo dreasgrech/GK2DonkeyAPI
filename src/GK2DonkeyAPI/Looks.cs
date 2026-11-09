@@ -2604,6 +2604,7 @@ namespace GK2DonkeyAPI
             Func<string, Pixels> inner = l.Produce;
             Color32 erase = l.Def.Erase.Value;
             bool said = false;
+            Color32[] outBuf = null; // this skin's erased pictures, one at a time (put in the sheet before the next; 2026-11-10)
             l.Produce = key =>
             {
                 Pixels px = inner(key);
@@ -2625,12 +2626,14 @@ namespace GK2DonkeyAPI
                     if (!gameFrames.TryGetValue(key, out Sprite s) || s == null) why = "the base's frame is not in memory";
                     else
                     {
-                        f = ReadFrame(key, s, b);
+                        f = ReadFrameShared(key, s, b); // into the build's kept memory: done with before the next picture
                         if (f == null) why = "the base's frame could not be read";
                         else if (f.W != px.W || f.H != px.H) { why = $"the base's canvas is {f.W}x{f.H}, the picture {px.W}x{px.H}"; f = null; }
                     }
                 }
-                var outp = new Pixels { W = px.W, H = px.H, P = f != null ? (Color32[])f.P.Clone() : new Color32[px.P.Length] };
+                if (outBuf == null || outBuf.Length != px.P.Length) outBuf = new Color32[px.P.Length];
+                if (f != null) Array.Copy(f.P, outBuf, outBuf.Length); // the base's frame under it (every pixel written below when there is none)
+                var outp = new Pixels { W = px.W, H = px.H, P = outBuf };
                 for (int i = 0; i < px.P.Length; i++)
                 {
                     Color32 c = px.P[i];

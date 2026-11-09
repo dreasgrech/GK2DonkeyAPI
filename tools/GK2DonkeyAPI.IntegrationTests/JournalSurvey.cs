@@ -65,13 +65,22 @@ namespace GK2DonkeyAPI.IntegrationTests
                 var ids = new List<string> { MountCatalog.DonkeyId };
                 foreach (string id in new[] { "dragon", "rat", "snail", "worm", "gerry" }) if (Catalog.Find(Tests.M(id)) != null) ids.Add(Tests.M(id));
                 ids.Add(MountCatalog.DonkeyId);
+                int reusedAll = 0, madeAll = 0, boundWrong = 0;
                 foreach (string id in ids)
                 {
                     StepTrace.Last = "";
                     MountsPanel.TestSelect(id);
                     Info($"[journal] picked {id}: {(StepTrace.Last.Length > 0 ? StepTrace.Last : "no trace line")}");
+                    Info($"[journal]   its rows: {MountsPanel.LastRowsReused} kept from the mount before, {MountsPanel.LastRowsMade} made");
+                    reusedAll += MountsPanel.LastRowsReused;
+                    madeAll += MountsPanel.LastRowsMade;
+                    boundWrong += MountsPanel.TestRowsBoundWrong();
                     yield return Seconds(1.5f); // its look built and shown (held by the journal once whole)
                 }
+                // the rows' controls pointed at the next mount's rows, not destroyed and made again (2.4-3.8 ms and 300-360 KB
+                // a pick before; RowControls.Bound)
+                Check(reusedAll > 0 && reusedAll > madeAll, $"picking another mount keeps the journal's rows ({reusedAll} kept, {madeAll} made over {ids.Count} picks)");
+                Check(boundWrong == 0, $"every kept row shows the picked mount's own setting ({boundWrong} pointing elsewhere)");
 
                 // 1c. closed and opened again, every mount picked again: the looks the journal showed are kept after it closes
                 // (Looks.KeepPanelHoldsAWhile), so nothing is built again (before: every look, the Mecha 33 MB each time)

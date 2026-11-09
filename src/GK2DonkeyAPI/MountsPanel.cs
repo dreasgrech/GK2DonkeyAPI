@@ -74,6 +74,12 @@ namespace GK2DonkeyAPI
         private static readonly List<(string Id, Image Face, TextMeshProUGUI Label)> cards = new List<(string, Image, TextMeshProUGUI)>();
         private static readonly List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> rows = new List<(MountSettingsPage.Row, GameObject, Action, CanvasGroup)>();
         private static readonly List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> colourRows = new List<(MountSettingsPage.Row, GameObject, Action, CanvasGroup)>();
+        // each built row's tie to its page row (RowControls.Bound), and last build's rows waiting to be pointed at the next
+        // build's (BuildRows)
+        private static readonly Dictionary<GameObject, RowControls.Bound> rowBound = new Dictionary<GameObject, RowControls.Bound>();
+        private static readonly List<(GameObject Go, RowControls.Bound B)> spareRows = new List<(GameObject, RowControls.Bound)>();
+        internal static int LastRowsReused { get; private set; }  // the last BuildRows: rows kept and pointed at new rows
+        internal static int LastRowsMade { get; private set; }    // ... and rows made
         private static readonly List<(string Group, List<MountSettingsPage.Row> Rows)> journalGroups = new List<(string, List<MountSettingsPage.Row>)>();
         private static readonly List<(string Group, List<MountSettingsPage.Row> Rows)> colourGroups = new List<(string, List<MountSettingsPage.Row>)>();
         private static readonly Dictionary<string, string> groupShown = new Dictionary<string, string>(StringComparer.Ordinal); // a colours group's heading in the player's language (Texts), by its English
@@ -899,8 +905,24 @@ namespace GK2DonkeyAPI
             List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> into, out float needed)
         {
             controls.CloseDropdown(refocus: false); // its button goes with the rows
-            foreach (Transform c in root) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
+            controls.CommitFields(); // a name being typed is written to its own row before the rows are pointed at others
+            // the rows built last time are kept by shape and pointed at this time's rows of that shape (a pick: the same 8
+            // rows for the next mount; 2.4-3.8 ms and 300-360 KB when they were made again, docs/performance.md); every
+            // other part (the headings, their lines, the swatch rows) goes and is made again
+            spareRows.Clear();
+            foreach (var e in into)
+            {
+                if (e.Go != null && rowBound.TryGetValue(e.Go, out RowControls.Bound eb) && eb.Shape != null) spareRows.Add((e.Go, eb));
+            }
+            foreach (Transform c in root)
+            {
+                if (SpareIndex(c.gameObject) >= 0) continue;
+                rowBound.Remove(c.gameObject);
+                c.gameObject.SetActive(false);
+                UnityEngine.Object.Destroy(c.gameObject);
+            }
             into.Clear();
+            int reused = 0, made = 0;
             var sig = new StringBuilder();
             // the journal: one column as wide as the stats card, the labels on its labels' edge, the controls ending on its
             // values' edge (the scrollbar beyond); the colours window: columns as wide as a swatch row, the controls on
@@ -955,23 +977,48 @@ namespace GK2DonkeyAPI
                             UiKit.Place(go, cx, cy);
                             cy += sh + 4f;
                         }
-                        else if ((go = controls.OwnRow(root, r, lay, out refresh, out float h)) != null)
+                        else if (TakeSpare(r, lay, out go, out RowControls.Bound sb))
+                        {
+                            refresh = sb.Refresh; // last time's row of this shape, now showing this row
+                            UiKit.Place(go, cx, cy);
+                            cy += sb.Height + 4f;
+                            reused++;
+                        }
+                        else if ((go = controls.OwnRow(root, r, lay, out refresh, out float h, out RowControls.Bound nb)) != null)
                         {
                             UiKit.Place(go, cx, cy); // the panel's own controls (RowControls)
                             cy += h + 4f;
+                            if (nb != null) rowBound[go] = nb;
+                            made++;
                         }
                         else
                         {
                             Plugin.Log.LogInfo($"Settings: {page.Title}'s row '{r.Label}' has nothing to choose from; left out of the Mounts panel.");
                             continue; // a list with no choices (every control is our own: no game row to fall back on)
                         }
-                        CanvasGroup grp = r.Enabled != null ? go.AddComponent<CanvasGroup>() : null;
+                        CanvasGroup grp = null;
+                        if (r.Enabled != null)
+                        {
+                            grp = go.GetComponent<CanvasGroup>(); // a row kept: its own (the shape says it has one)
+                            if (grp == null) grp = go.AddComponent<CanvasGroup>();
+                        }
                         into.Add((r, go, refresh, grp));
                     }
                     tallest = Math.Max(tallest, cy - rowTop);
                 }
                 y = rowTop + tallest + 8f;
             }
+            // last time's rows no row of this time's took
+            foreach ((GameObject sg, RowControls.Bound _) in spareRows)
+            {
+                rowBound.Remove(sg);
+                if (sg == null) continue;
+                sg.SetActive(false);
+                UnityEngine.Object.Destroy(sg);
+            }
+            spareRows.Clear();
+            LastRowsReused = reused;
+            LastRowsMade = made;
             needed = y;
             root.sizeDelta = new Vector2(0f, needed);
             scroll.verticalNormalizedPosition = 1f;
@@ -979,6 +1026,33 @@ namespace GK2DonkeyAPI
             foreach (GamepadNavigationItem ni in root.GetComponentsInChildren<GamepadNavigationItem>(true)) ni.group = navGroup;
             controls.NavDirty = true;
             return sig.ToString();
+        }
+
+        private static int SpareIndex(GameObject go)
+        {
+            for (int i = 0; i < spareRows.Count; i++) if (spareRows[i].Go == go) return i;
+            return -1;
+        }
+
+        // Last build's row of r's shape, pointed at r (its value shown); false: none, or r can't be built.
+        private static bool TakeSpare(MountSettingsPage.Row r, RowLayout lay, out GameObject go, out RowControls.Bound b)
+        {
+            go = null;
+            b = null;
+            if (spareRows.Count == 0) return false;
+            string shape = RowControls.Shape(r, lay);
+            if (shape == null) return false;
+            for (int i = 0; i < spareRows.Count; i++)
+            {
+                if (!string.Equals(spareRows[i].B.Shape, shape, StringComparison.Ordinal)) continue;
+                if (spareRows[i].Go == null || !controls.Rebind(spareRows[i].B, r)) return false;
+                go = spareRows[i].Go;
+                b = spareRows[i].B;
+                spareRows.RemoveAt(i);
+                go.name = "row " + (r.Entry != null ? r.Entry.Definition.Key : r.Label ?? ""); // as OwnRow names it
+                return true;
+            }
+            return false;
         }
 
         private static bool IsPalette(MountSettingsPage.Row r) => r?.Entry != null && r.Entry.SettingType == typeof(PaletteColor);
@@ -1303,6 +1377,13 @@ namespace GK2DonkeyAPI
 
         // The self-test's view of the panel ("settings: the Mounts panel opens...").
         internal static int TestRows => rows.Count;
+        // every journal row's controls read the row it is listed for (a kept row pointed at the new mount's row); the count wrong
+        internal static int TestRowsBoundWrong()
+        {
+            int wrong = 0;
+            foreach (var e in rows) if (e.Go != null && rowBound.TryGetValue(e.Go, out RowControls.Bound b) && b.Row != e.Row) wrong++;
+            return wrong;
+        }
         internal static int TestColourRows => colourRows.Count;
         internal static Transform TestRoot(bool coloursWindow) => coloursWindow ? (colours != null ? colours.transform : null) : (panel != null ? panel.transform : null);
         internal static int TestEntries => entries.Count;
@@ -1658,6 +1739,8 @@ namespace GK2DonkeyAPI
             }
             before.Clear();
             rows.Clear();
+            rowBound.Clear(); // the rows go with the panel
+            spareRows.Clear();
             cards.Clear();
             journalGroups.Clear();
             colourGroups.Clear();

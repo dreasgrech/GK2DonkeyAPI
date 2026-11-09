@@ -149,6 +149,12 @@ namespace GK2DonkeyAPI
 
             // A route around obstacles (FoalRoute.cs): the search in progress, or the corners being walked.
             private FoalRouteSearch routeSearch;
+            // kept for this foal's searches, made once (a search was 30-72 KB of new arrays and four new closures)
+            private FoalRouteSearch.Grid routeGrid;
+            private System.Func<Vector3, float> routeGroundAt;
+            private System.Func<Vector3, bool> routeFreeAt;
+            private System.Func<Vector3, float, Vector3, float, bool> routeStepFits;
+            private System.Func<Vector3, Vector3, bool> routeLegClear;
             private List<Vector3> route;
             private int routeIndex;
             private float nextRouteAt;
@@ -652,16 +658,23 @@ namespace GK2DonkeyAPI
                 }
                 route = null;
                 nextRouteAt = Time.time + 1f; // at most one plan a second
-                routeSearch = new FoalRouteSearch(body, slot, RouteRange, MaxRisePerSample,
-                    pt => GroundHeight(pt, out _), foot => FreeAt(foot, out _),
-                    (a, ga, b, gb) => StepFits(a, ga, b, gb, MaxRisePerSample),
-                    (a, b) =>
+                if (routeGrid == null)
+                {
+                    routeGrid = new FoalRouteSearch.Grid();
+                    routeGroundAt = pt => GroundHeight(pt, out _);
+                    routeFreeAt = foot => FreeAt(foot, out _);
+                    routeStepFits = (a, ga, b, gb) => StepFits(a, ga, b, gb, MaxRisePerSample);
+                    routeLegClear = (a, b) =>
                     {
                         // the trot's own test of each leg, so the route found is one it walks (FoalRouteSearch.Finish)
                         bool ok = LineWalkable(a, b, "route leg");
                         groundFail = null;
                         return ok;
-                    });
+                    };
+                }
+                // a search still running is dropped here (never stepped again), so its grid is free for this one
+                routeSearch = new FoalRouteSearch(routeGrid, body, slot, RouteRange, MaxRisePerSample,
+                    routeGroundAt, routeFreeAt, routeStepFits, routeLegClear);
                 if (routesLogged < 30)
                 {
                     if (DevDiag) DiagLog($"[foal] {Describe()} works out a way round ({why}), {FlatDistance(body, slot):F1} to go.");

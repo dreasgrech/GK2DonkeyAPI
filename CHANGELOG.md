@@ -21,7 +21,8 @@ For players:
   items on the cart and taking them off costs less, and so do mounts coming back into view (riding through a herd,
   going through a door).
   Browsing the Mount Journal again no longer builds every mount's look again, and building a look makes far less
-  memory garbage (the dragons most).
+  memory garbage (the dragons most). Picking a mount in the Mount Journal is quicker, and babies finding their way
+  around things make less memory garbage.
 - **The skull is Larry** (2026-11-08): Saddle Up's skull mount is called Larry, as in the game. Gerry was the skull
   in the first game. Your skull keeps his colours, babies and settings, and a name you gave him yourself stays.
 - **The colours window has tabs** (2026-11-08): Mount, the worn skin's own parts on a tab named after the skin, and
@@ -132,6 +133,20 @@ Development:
   flag (`Instance.InRegistry`); the base frames' scan waits for a loaded game; the profiler times only for the dev
   panel, a measured phase or the self-tests (`Perf.Timing`); the companion keeps each baby's looks per family and reads
   the catalog's entry.
+- **The last four rows: Hellfire, Larry, the babies' routes, the journal's rows** (2026-11-10, docs/performance.md
+  "The last four, fixed"): Hellfire's erase reads the game's frame into a shared frame (`LooksRecipes.ReadFrameShared`:
+  a kept texture and canvas) and writes into one array kept per skin, instead of a new read-back and a copy of it for
+  every picture; Larry's read-backs go through the same shared frame, and its scaled and empty pictures into arrays kept per producer
+  (`LooksGame`). Recipes another mod registers still get a frame of their own (`ReadFrame`). A baby's route search
+  borrows its grid from the baby (`FoalRouteSearch.Grid`: up to 64 x 64 cells, about 73 KB kept per baby that has
+  searched, cleared per search) and its four tests are made once per baby, instead of 30-72 KB and four closures new
+  on every search. The journal's rows are kept on a pick and pointed at the new mount's rows of the same shape
+  (`RowControls.Bound`, `Shape`, `Rebind`; kind, label, range, greying and column the same): a pick no longer
+  destroys and makes the rows' controls (2.4-3.8 ms and 300-360 KB). Opening the journal still builds them once (the
+  panel is made on each open). A key or button row is never kept (its clash or its word is fixed when built). The
+  journal survey checks that picks keep the rows and that every kept row reads the picked mount's own setting.
+  After (F11 2054/0/0): a pick 0.63-0.89 ms and 8-12 KB in all (56 rows kept, 0 made over 7 picks); Hellfire 4.1 ->
+  0.4-0.5 MB a build, Larry 6.2 -> 0.2-0.3 MB.
 - **The other skins' colour rows biggest part first too** (2026-11-08; the Donkey Skin Pack's CHANGELOG): judged on
   the pictures, a part that sits on another right after it. Royal Parade: Saddle cloth, Trim and fringe, Emblem,
   Crown, Jewels. Armored: Body armour, Skirt, Helmet, Plume, Brass (trim over both helmet and armour, last).
