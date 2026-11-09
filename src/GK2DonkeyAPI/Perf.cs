@@ -72,6 +72,7 @@ namespace GK2DonkeyAPI
             Doors,      // foals through a door with the keeper (IndoorsTick) and a corpse at the morgue door (MorgueHandover)
             Scenes,     // the instances sorted by scene and this frame's snapshot (BuildByScene, TakeSnapshot)
             Warm,       // the work spread over frames: translations, looks and sounds read ahead, sheets built, the art checks
+            Slot,       // a baby's spot searched beside its lead (Foals.FreeSlot: its slots, then rings, each against every mount and a walk line)
             Count,
         }
 
@@ -374,6 +375,7 @@ namespace GK2DonkeyAPI
                 {
                     nextLog = now + 10f;
                     Plugin.Log.LogInfo("[perf] " + Summary(oneLine: true));
+                    if (!ViewCost.Forced) ViewCost.LogAndReset(); // the views' costs by path and step, when any came or went (dev)
                     if (AllocBySection && logFrames > 0) Plugin.Log.LogInfo("[perf] " + AllocByPart());
                 }
             }

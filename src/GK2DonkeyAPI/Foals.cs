@@ -898,7 +898,8 @@ namespace GK2DonkeyAPI
                     return SlotNearParent(SiblingIndex());
                 }
                 groundFail = null;
-                Vector3 slot = FreeSlot(p, out clear);
+                Vector3 slot;
+                using (Perf.Measure(Perf.S.Slot)) slot = FreeSlot(p, out clear);
                 if (!clear)
                 {
                     fail = groundFail ?? "every slot taken";

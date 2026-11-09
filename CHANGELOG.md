@@ -16,7 +16,8 @@ For players:
   writes the settings file at every step of a slider (it is written a moment after you stop). Mounts standing near
   you, riding, jumping and flying make less work and less memory garbage each frame, and mounts left in another
   place than yours rest until you are there. A small memory leak with mounts calling each other is fixed. Putting
-  items on the cart and taking them off costs less.
+  items on the cart and taking them off costs less, and so do mounts coming back into view (riding through a herd,
+  going through a door).
 - **The skull is Larry** (2026-11-08): Saddle Up's skull mount is called Larry, as in the game. Gerry was the skull
   in the first game. Your skull keeps his colours, babies and settings, and a name you gave him yourself stays.
 - **The colours window has tabs** (2026-11-08): Mount, the worn skin's own parts on a tab named after the skin, and
@@ -93,6 +94,17 @@ Development:
   and switches colliders off on the active parts only (`MakeView` did all when the copy was made). An item on 2.3-2.5
   -> 1.75-2.0 ms, off 1.0-1.2 -> 0.2-0.4 ms; what is left is the game's own `DropViewAtomMesh.Activate` (1.4 ms, it
   goes through the ~370 item meshes of the copy). F11 2046/0/0.
+- **The door with babies, traced** (2026-11-09, docs/performance.md): a door starts the dev `[pick]` trace ("the
+  keeper went through a door"), and the babies' spot search is a profiler part of its own (`Perf.S.Slot`). Sixteen
+  doors with one and five babies: the search stays under 0.5 ms; the frames after a door are the mounts' views made
+  again, one a frame (2.4-3.7 ms each), inside the door's fade. No change to the door itself.
+- **Views coming and going cost less** (2026-11-09, docs/performance.md "The views investigation"): a dev-only views
+  probe (`Dev/ViewCost.cs`, `[view-cost]` lines: every path a view takes, each step's time and allocation) and the
+  views survey (integration scenario, Garbage group) measured them all first. Idle views are frozen instead of
+  switched off (`Lod.IdleSwitchesOff` false: measured uncapped with 74 idle, switching off saved no frame time and
+  cost every view coming back 0.53-0.57 ms and 15-17 KB, against 0.03 ms frozen). A view taken from the pool starts
+  its animator without the head (the layer emptied before it is switched on, as for an idle view) and skips the
+  second restart in `PrepareParts` (0.5 ms and 8 KB a view).
 - **The other skins' colour rows biggest part first too** (2026-11-08; the Donkey Skin Pack's CHANGELOG): judged on
   the pictures, a part that sits on another right after it. Royal Parade: Saddle cloth, Trim and fringe, Emblem,
   Crown, Jewels. Armored: Body armour, Skirt, Helmet, Plume, Brass (trim over both helmet and armour, last).

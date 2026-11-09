@@ -13,7 +13,8 @@ namespace GK2DonkeyAPI
     //   - Animator.Rebind and switching the Animator component off and on leave that fallback unchanged;
     //   - switching the animator's object off and on with the head layer empty sets it to none, and the walk is clean.
     // So the head layer is emptied wherever a donkey's animator starts: once per view in PrepareParts
-    // (RestartWithoutHead), and before an idle view is switched back on (Tiers.cs). HeadWatch only checks.
+    // (RestartWithoutHead), and before an idle view or a view from the pool is switched on (Tiers.cs; such a view skips
+    // the restart, 2026-11-09). HeadWatch only checks.
     internal static partial class Mount
     {
         internal sealed partial class Instance

@@ -604,6 +604,88 @@ Each cargo view is a copy of the keeper's overhead model: 380 transforms, ~370 i
 own hands too. What's left of an item's cost is that call, once per item that gets a fresh view. F11 Run all
 after the change: 2046 passed, 0 failed, 0 warnings.
 
+### The door with babies, traced (2026-11-09, after the pass)
+
+A door now starts the `[pick]` trace ("the keeper went through a door", dev only: the next 120 frames, each over
+12 ms or with a part of 2 ms or more named by part), and the babies' spot search has its own part (`Slot`, around
+`Foals.FreeSlot` in a catch-up and in `PlaceAgain`). The user's run: 16 doors in and out, 8 with one baby and 8 with
+five.
+
+- **The babies' spot search is not it:** `Slot` never reached 0.5 ms in a frame; `Doors` (the whole door step, the
+  five babies placed) 1.6 ms once, under 0.5 the other 15 times.
+- **What the frames after a door hold is the mounts' views made again**, one a frame (the spawn queue's cap):
+  `Spawn` 2.4-3.7 ms in each (`SpawnView`, the game's own spawn or a parked view switched on, 0.9-1.4; `Prepare`,
+  the view's parts, 0.7-3.0), for a few frames. The keeper lands 100 units from the yard, so the yard's mounts fall
+  asleep going in and wake coming out, and the babies' views are made where they land.
+- **The worst:** a 13 ms frame with the mod at 3.9 ms (the first door of the session: `Spawn` 3.2 and `Doors` 1.6),
+  otherwise frames of 7-10 ms with the mod at 2-3.7 ms; one 21 ms frame with the mod under 0.5 ms (the game's). The
+  frames are inside the door's fade. Performance Hog's earlier 5.5 and 11.3 ms frames are the same view work.
+- **Not changed.** What would help is cheaper view making (the same work as riding through a herd); taken together
+  with that item.
+
+### The views investigation (2026-11-09, after the pass)
+
+What a mount's view costs as it comes and goes, every path, measured before any change: the views probe
+(`Dev/ViewCost.cs`, dev only: each path's steps, time and exact allocation, a `[view-cost]` summary every 10 s with
+the `[perf]` logging) and the views survey (integration scenario, Garbage group, `ViewsSurvey.cs`: a mixed crowd of 43
+made in view, the keeper 60 away and back twice, 24 away (idle) and back). The user's run, plus doors and riding by
+hand:
+
+| Path | Time a run | Garbage a run | Its biggest step |
+|---|---|---|---|
+| a view taken from the pool | 0.4-0.6 ms | 6-11 KB | switched on, the game's `OnEnable`: 0.35-0.47 ms, 6-11 KB |
+| a new view (`Wgo.Spawn`) | 0.01 ms | under 1 KB | (its parts arrive frames later: hidden till prepared, 0.02 ms) |
+| its parts prepared (`PrepareParts`) | 0.77-0.88 ms | 9-60 KB | **the animator restarted without a head (`RestartWithoutHead`: its object switched off and on): 0.50-0.63 ms, 8 KB, every view**; colours attached 0.09-0.19 ms (1.6-40 KB, the shared colour textures' first build) |
+| a cart's parts prepared | 0.97-1.05 ms | 9-75 KB | the cart: cargo, chest, parts, lantern 0.32 ms |
+| a view released (parked or destroyed) | 0.25-0.36 ms | 4-33 KB | parked: switched off, the game's `OnDisable`, 0.13-0.15 ms; the sprites reset and the prefab check 0.09 ms (up to 28 KB the first round, 2-5 KB after) |
+| an idle view switched on again | 0.41-0.57 ms | 8-12 KB | the game's `OnEnable` |
+| an idle view switched off | 0.09-0.16 ms | 0-2 KB | the game's `OnDisable` |
+| an idle view frozen or unfrozen | 0.00 ms | 0 | |
+
+- **The pool works:** 26-28 of 31 wakes taken from it in the survey (the misses: carts, never pooled). In the
+  user's own play the only misses were carts; the babies' own sizes don't split it (the suspicion was wrong).
+- **The walks of the view by name** (colliders, navmesh cuts, cart parts, body sprite) are 0.01-0.03 ms each: not it.
+- **A view from the pool restarts its animator twice:** switched on to come out of the pool (0.4 ms), then off and on
+  again in `PrepareParts` to start without the head sprite (0.5 ms, 8 KB). The idle switch-on empties the head layer
+  before switching on and needs no restart.
+- **Idle views switched off** (`Lod.IdleSwitchesOff`, on): every one coming back pays 0.4-0.6 ms and 8-12 KB, against
+  0 for a frozen one. Whether switching off saves frame time is unmeasured uncapped (the levels self-test runs at the
+  frame cap: frozen 8.34, switched off 8.38 ms); the survey's phase 8 now compares them uncapped with 60 more donkeys.
+- **Measured uncapped (phase 8, 74 idle views, each mode twice, the order reversed):** switched off 3.41 and 3.62 ms
+  a frame, frozen 3.43 and 3.48 ms; the mod 0.31 ms in all four. Switching off saves no frame time here. What it
+  costs: 0.14 ms and 4 KB per view going idle, 0.53-0.57 ms and 15-17 KB per view coming back; frozen: 0.02 and
+  0.03-0.04 ms, under 1 KB.
+
+**Changed (agreed with the user):**
+- **Idle views frozen, not switched off** (`Lod.IdleSwitchesOff` false by default; the switch stays, on the panel's
+  Debug tab and in the self-tests).
+- **A view from the pool starts without the head** (`TakeParkedView` empties the head layer before switching it on,
+  as the idle switch-on does) and `PrepareParts` skips `RestartWithoutHead` for it (`startedHeadless`); a view from
+  `Wgo.Spawn` restarts as before. `HeadWatch` logs `[heads]` if a still head ever shows over a walk.
+- **Not changed:** the walks of the view by name (0.01-0.03 ms each), the game's spawn (0.01 ms), a cart's parts
+  (about 1 ms, carts don't wake often), the game's own switch on and off into and out of the pool (0.4 and 0.14 ms).
+
+**After (the user's F11 Run all, 2026-11-09):** 2051 passed, 1 failed (below), 0 warnings; no `[heads]` line.
+
+| Path | Before | After |
+|---|---|---|
+| a view from the pool: its parts prepared | 0.77-0.83 ms, 9-14 KB (the restart 0.50-0.63 ms, 8 KB) | **0.24-0.30 ms**, 0-2 KB once warm (the restart 0.00) |
+| a wake from the pool, made and prepared | about 1.4 ms | **about 0.9 ms** |
+| an idle view coming back | 0.41-0.57 ms, 8-12 KB | **0.00-0.04 ms, 0 KB** |
+| an idle view going idle | 0.09-0.16 ms | 0.00-0.02 ms |
+
+A view from `Wgo.Spawn` (new, or a cart: carts aren't pooled) still restarts its animator (0.46-0.60 ms), as it must.
+Phase 8 again: frozen 0.327 ms the mod, switched off 0.308-0.322.
+
+The one failure was the crowd's leak check: "colour textures back (50 -> 49)". `Live.Textures` counts the skin
+sheets too, and Larry's sheet, loaded by the garbage survey's picking just before, was let go during the crowd
+(5 sheets loaded, 6 unloaded in its span). Not a leak (a leak grows) and not the views change. The check now compares
+the colour textures alone (`Live.Textures - Looks.SheetCount`) and the sheets as "no more than at the start".
+Run again (the Garbage group): 7 passed, 0 failed, 0 warnings; no `[heads]` line, and the user saw no still head over
+a walk by hand. That run's world ended with 11 views against 17 (the levels' border), so the counters were reported
+rather than compared: colour textures 43 -> 43, one skin sheet more (Larry's: loaded twice and let go once in the
+crowd's span, let go again in the next scenario: held a little longer, not kept).
+
 **Left for after this pass, by what a player feels:** the cargo refresh per item (2-6 ms; row 20's other half), the
 door frame with babies (row 10), opening the journal (one 14 ms frame), the garbage of views waking and sleeping
 riding through a herd, the picture drawn every frame while the journal is open (rows 4-5).

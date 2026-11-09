@@ -410,6 +410,7 @@ namespace GK2DonkeyAPI
                 // the tier change to asleep did that, but a removal, a send-away or the game unloading the scene did not,
                 // and the next donkey built from the parts (ours, or the game's delivery donkey) came frozen or unseen.
                 UnquietForPool();
+                ViewCost.Mark("release: unfrozen");
                 foreach (Renderer r in hiddenRenderers)
                 {
                     if (r != null && r) r.forceRenderingOff = false;
@@ -420,12 +421,18 @@ namespace GK2DonkeyAPI
                     if (r != null && r) r.forceRenderingOff = false;
                 }
                 donkeyOnly.Clear();
+                ViewCost.Mark("release: renderers shown again");
                 try { if (sleep) LooksRig.Sleep(); else LooksRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the skin failed: {e.Message}"); }
+                ViewCost.Mark("release: skin let go");
                 try { EffectsRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the effect failed: {e.Message}"); }
+                ViewCost.Mark("release: effect");
                 try { SoundsRig.Detach(); ForgetAnimation(this); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: stopping the sounds failed: {e.Message}"); }
+                ViewCost.Mark("release: sounds");
                 try { ColorsRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the colours failed: {e.Message}"); }
+                ViewCost.Mark("release: colours");
                 try { LanternRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the lantern failed: {e.Message}"); }
                 try { CargoRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the cargo holder failed: {e.Message}"); }
+                ViewCost.Mark("release: lantern and cargo holder");
                 foreach (var pr in partRest)
                 {
                     if (pr.T == null || !pr.T) continue;
@@ -434,7 +441,9 @@ namespace GK2DonkeyAPI
                     if (pr.T.gameObject.activeSelf != pr.Active) pr.T.gameObject.SetActive(pr.Active);
                 }
                 partRest.Clear();
+                ViewCost.Mark("release: part rests put back");
                 try { RestoreColliders(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the colliders failed: {e.Message}"); }
+                ViewCost.Mark("release: colliders put back");
                 // Back to the pool with the prefab's sprites, then checked against the prefab: anything the mod changed and
                 // didn't put back is put right and logged ([pool], DonkeyPrefab.cs). (The next view of ours made from these
                 // parts starts its animator again without a head anyway: RestartWithoutHead.)
@@ -450,7 +459,9 @@ namespace GK2DonkeyAPI
                                 if (sr.name == "hed") sr.sprite = null;
                             }
                         }
+                        ViewCost.Mark("release: sprites reset");
                         DonkeyPrefab.Audit(part, Describe());
+                        ViewCost.Mark("release: checked against the prefab");
                     }
                 }
                 catch (Exception e)

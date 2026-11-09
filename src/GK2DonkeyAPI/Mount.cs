@@ -1236,12 +1236,17 @@ namespace GK2DonkeyAPI
 
             // ------------------------------------------------------------------ the donkey view
 
+            private bool startedHeadless; // the view's animator started with the head layer empty (a view from the pool)
+
             private bool TrySpawn(PlayerController pc, GameScene scene)
             {
+                ViewCost.Begin("view made"); // dev only (Dev/ViewCost.cs)
                 try
                 {
                     string id = WgoId;
-                    if (TakeParkedView(scene, id)) // a released view of the same mount (Tiers.cs, ViewPool): no Wgo.Spawn
+                    bool fromPool = TakeParkedView(scene, id);
+                    if (ViewCost.On) ViewCost.Mark(fromPool ? "taken from the pool" : "the pool had none: " + PoolMissWhy());
+                    if (fromPool) // a released view of the same mount (Tiers.cs, ViewPool): no Wgo.Spawn
                     {
                         viewOrigin = "taken from the mod's view pool";
                         switchedOff = false;
@@ -1270,10 +1275,15 @@ namespace GK2DonkeyAPI
                     {
                         SuppressScripts = false;
                     }
+                    ViewCost.Mark("its data");
+                    startedHeadless = false; // the game starts its animator: PrepareParts restarts it without the head
                     donkey = Wgo.Spawn(data, scene.transform, registerInChunkManagerIfStatic: true, ignoreChunkRegistration: true, applyDefaultWgoPartState: true);
+                    ViewCost.Mark("the game's Wgo.Spawn");
                     viewOrigin = "made by Wgo.Spawn";
                     MuteColliders(); // parts from the game's pool arrive inside Wgo.Spawn, before OnVisualPartsLoaded knows the view
+                    ViewCost.Mark("colliders muted");
                     donkey.UpdateChunkVisibility(isVisible: true);
+                    ViewCost.Mark("chunk visibility");
                     quietAnimators.Clear(); // the old view's (Tiers.cs): a view the game destroyed while idle left them
                     quietKeepState.Clear();
                     switchedOff = false;
@@ -1291,6 +1301,10 @@ namespace GK2DonkeyAPI
                     DestroyDonkey();
                     return false;
                 }
+                finally
+                {
+                    ViewCost.End();
+                }
             }
 
             // Wgo.CompleteVisualPartsLoad just created our donkey's view. The part loader delivers the prefab some frames
@@ -1307,22 +1321,30 @@ namespace GK2DonkeyAPI
                 {
                     return;
                 }
+                ViewCost.Begin("parts delivered (hidden till prepared)");
                 hiddenRenderers.Clear();
                 HideRenderersNow();
+                ViewCost.Mark("renderers hidden");
                 revealFrame = int.MaxValue; // until PrepareParts
                 MuteColliders(); // and nothing solid before then (a physics step comes first)
+                ViewCost.Mark("colliders muted");
+                ViewCost.End();
             }
 
             // Once the prefab is loaded: no blocking, no interaction target, no navmesh cut; cart per style.
             private void PrepareParts(PlayerController pc)
             {
+                ViewCost.Begin(HasCart ? "parts prepared (with a cart)" : "parts prepared");
                 partsReady = true;
                 NoteAnimation(this, donkey != null && donkey ? donkey.MainWgoPart?.AnimationComponent : null); // the lips event finds its instance (Sounds.cs)
                 try
                 {
                     // No still head over the walk (the "double donkey"): the animator started again with the head layer
                     // empty, so the walk falls back to no head (measured, HeadWatch.cs). First, before the parts are set.
-                    RestartWithoutHead();
+                    // A view from the pool started with it empty already (TakeParkedView): no second restart.
+                    if (!startedHeadless) RestartWithoutHead();
+                    startedHeadless = false;
+                    ViewCost.Mark("animator restarted without a head");
                     // The facing straight to the animator once per view (a view from the pool, ours or the game's, may hold
                     // a stale Direction, and the data doesn't tell it again when the facing value is the same).
                     try
@@ -1332,7 +1354,9 @@ namespace GK2DonkeyAPI
                     catch
                     {
                     }
+                    ViewCost.Mark("facing");
                     RememberColliders(); // put back with the rest before the parts return to the game's pool
+                    ViewCost.Mark("colliders remembered");
                     donkey.SetInteractableCollidersState(isActive: false);
                     donkey.SetLayerToAllColliders(26);
                     foreach (Collider collider in donkey.GetComponentsInChildren<Collider>(includeInactive: true))
@@ -1347,14 +1371,17 @@ namespace GK2DonkeyAPI
                             collider.enabled = false;
                         }
                     }
+                    ViewCost.Mark("colliders off (a walk of the view)");
                     // No navmesh cut of any mount (the prefab's two NavMeshCutSphereCustom are off already; measured 2026-10-03:
                     // "0 on"): a mod donkey never cuts the ground the keeper walks on. Put back by RestoreColliders.
                     foreach (CustomNavMeshCutBakeSourceBase cut in donkey.GetComponentsInChildren<CustomNavMeshCutBakeSourceBase>(includeInactive: true))
                     {
                         cut.gameObject.SetActive(value: false);
                     }
+                    ViewCost.Mark("navmesh cuts off (a walk of the view)");
                     bool cart = activeStyle == MountStyle.Cart;
                     RememberPartRest(); // the prefab's own state, put back before the parts return to the game's pool
+                    ViewCost.Mark("part rests remembered");
                     foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: true))
                     {
                         if (Array.IndexOf(CartPartNames, t.name) < 0)
@@ -1367,6 +1394,7 @@ namespace GK2DonkeyAPI
                         }
                         t.gameObject.SetActive(cart);
                     }
+                    ViewCost.Mark("cart parts shown or hidden (a walk by name)");
                     cartParts.Clear();
                     if (cart)
                     {
@@ -1376,6 +1404,7 @@ namespace GK2DonkeyAPI
                         CollectCartParts();
                         LanternRig.Attach(donkey); // poses the pole's child nodes; the sway parents stay the animator's
                     }
+                    ViewCost.Mark("cart: cargo, chest, parts, lantern");
                     donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(S.WalkCycleSpeed.Value * (mounted ? pc.PhysicalBody.SpeedMultiplier : 1f));
                     bodySprite = null;
                     donkeyBodyRenderer = null;
@@ -1388,6 +1417,7 @@ namespace GK2DonkeyAPI
                             break;
                         }
                     }
+                    ViewCost.Mark("walk speed and body sprite (a walk by name)");
                     if (bodySprite == null)
                     {
                         Plugin.Log.LogWarning("Mount: body sprite 'bdy' not found on the mount prefab; using the fixed centering offset.");
@@ -1400,17 +1430,22 @@ namespace GK2DonkeyAPI
                     {
                         AttachRider(pc);
                     }
+                    ViewCost.Mark("free cart and rider");
                     ColorsRig.Attach(donkey); // the Colors tab: nothing is touched while every colour is at its default
+                    ViewCost.Mark("colours attached");
                     if (HasDonkey)
                     {
                         LooksRig.Attach(donkey.gameObject); // the skin's overlays, hidden with the rest by the line below
                     }
+                    ViewCost.Mark("skin attached");
                     HideDonkeyForAFrame(); // the facing is applied by Follow this frame; the animator shows it next frame
+                    ViewCost.Mark("hidden for a frame");
                 }
                 catch (Exception e)
                 {
                     Plugin.Log.LogWarning($"Mount: preparing the donkey view failed: {e.Message}");
                 }
+                ViewCost.End();
             }
 
             // The rider's half of preparing: the keeper's body sprite, his late-update hook, the seat and the near leg.

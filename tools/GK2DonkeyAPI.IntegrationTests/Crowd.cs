@@ -40,7 +40,11 @@ namespace GK2DonkeyAPI.IntegrationTests
             if (Looks.Find(mecha) != null) looks.Add(mecha);
 
             yield return Settle(15f);
-            int tex0 = Live.Textures, mat0 = Live.Materials, lamp0 = Live.LampObjects, mesh0 = Live.Meshes, cargo0 = Live.CargoHolders;
+            // Live.Textures counts the skin sheets too: a sheet an earlier scenario still held and let go during this one
+            // read as a colour texture gone (50 -> 49, Larry's sheet from the garbage survey's picking, 2026-11-09). The
+            // colour textures are compared alone, and the sheets may only be fewer at the end (the crowd's let go).
+            int sheets0 = Looks.SheetCount;
+            int tex0 = Live.Textures - sheets0, mat0 = Live.Materials, lamp0 = Live.LampObjects, mesh0 = Live.Meshes, cargo0 = Live.CargoHolders;
             int shared0 = Colors.SharedTextures.Count, inst0 = Mount.All.Count, views0 = WorldViews();
 
             var made = new List<MountHandle>();
@@ -132,11 +136,12 @@ namespace GK2DonkeyAPI.IntegrationTests
             {
                 // The levels' hysteresis (asleep beyond 35, awake again only within 30) can leave a world mount at a
                 // border asleep: the made-and-destroyed counters then differ by its view, not by a leak. Said, not judged.
-                Info($"the world's own mounts have {views1} view(s) now against {views0} at the start (the levels' border): the counters not compared; materials {mat0} -> {Live.Materials}, colour textures {tex0} -> {Live.Textures} (shared {shared0} -> {Colors.SharedTextures.Count}), lamps {lamp0} -> {Live.LampObjects}, meshes {mesh0} -> {Live.Meshes}, cargo holders {cargo0} -> {Live.CargoHolders}");
+                Info($"the world's own mounts have {views1} view(s) now against {views0} at the start (the levels' border): the counters not compared; materials {mat0} -> {Live.Materials}, colour textures {tex0} -> {Live.Textures - Looks.SheetCount}, skin sheets {sheets0} -> {Looks.SheetCount} (shared {shared0} -> {Colors.SharedTextures.Count}), lamps {lamp0} -> {Live.LampObjects}, meshes {mesh0} -> {Live.Meshes}, cargo holders {cargo0} -> {Live.CargoHolders}");
                 yield break;
             }
             Check(Live.Materials == mat0, $"crowd gone: colour materials back ({mat0} -> {Live.Materials})");
-            Check(Live.Textures == tex0 && Colors.SharedTextures.Count == shared0, $"crowd gone: colour textures back ({tex0} -> {Live.Textures}, shared {shared0} -> {Colors.SharedTextures.Count})");
+            Check(Live.Textures - Looks.SheetCount == tex0 && Colors.SharedTextures.Count == shared0, $"crowd gone: colour textures back ({tex0} -> {Live.Textures - Looks.SheetCount}, shared {shared0} -> {Colors.SharedTextures.Count})");
+            Check(Looks.SheetCount <= sheets0, $"crowd gone: no skin sheet more than at the start ({sheets0} -> {Looks.SheetCount})");
             Check(Live.LampObjects == lamp0 && Live.Meshes == mesh0, $"crowd gone: lamps and meshes back ({lamp0}/{mesh0} -> {Live.LampObjects}/{Live.Meshes})");
             Check(Live.CargoHolders == cargo0, $"crowd gone: cargo holders back ({cargo0} -> {Live.CargoHolders})");
         }

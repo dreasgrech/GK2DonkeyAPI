@@ -28,7 +28,11 @@ namespace GK2DonkeyAPI
         // which also stops the game's own per-frame work on it. Off: frozen instead (animators and renderers off, the
         // view active). Carts are always frozen: switching a cart's view on again re-initialises its conditional drawer
         // (which cart meshes show), which the cargo display relies on.
-        internal static bool IdleSwitchesOff = true;
+        // Off since 2026-11-09: measured uncapped with 74 idle views, switching off saved no frame time (3.41 and 3.62 ms
+        // a frame against frozen 3.43 and 3.48), and cost every view coming back 0.53-0.57 ms and 15-17 KB (the game's
+        // OnEnable) against 0.03 ms frozen (docs/performance.md, the views investigation). Kept as a switch (the panel,
+        // the self-tests).
+        internal static bool IdleSwitchesOff = false;
 
         // For the [perf] line: how many are in each level, and views made / released in the last second.
         internal static int ActiveCount, IdleCount, AsleepCount;
@@ -390,6 +394,19 @@ namespace GK2DonkeyAPI
 
             private void QuietAnimators(bool quiet)
             {
+                ViewCost.Begin(quiet ? "frozen or switched off (idle)" : "unfrozen or switched on (active again)");
+                try
+                {
+                    QuietAnimatorsInner(quiet);
+                }
+                finally
+                {
+                    ViewCost.End();
+                }
+            }
+
+            private void QuietAnimatorsInner(bool quiet)
+            {
                 if (!quiet && switchedOff)
                 {
                     switchedOff = false;
@@ -398,7 +415,9 @@ namespace GK2DonkeyAPI
                         // Switching on starts its animator, which takes the head layer's sprite as the walk's fallback
                         // (the frozen idle left the still head there): emptied first (HeadWatch.cs). No PrepareParts follows.
                         EmptyHeadLayer(donkey);
+                        ViewCost.Mark("on: head layer emptied");
                         donkey.gameObject.SetActive(true);
+                        ViewCost.Mark("on: switched on (the game's OnEnable)");
                         // Switched on, the game's WgoPart.OnEnable runs its ConditionalDrawer again, whose rule for an empty
                         // inventory switches the empty cart body (donkey_cart_empty_sway) on: hidden again, as PrepareParts
                         // does for a donkey without a cart (only those are ever switched off). Found reading the drawer
@@ -412,6 +431,7 @@ namespace GK2DonkeyAPI
                         }
                         // The game's AnimationComponent.OnEnable puts its own skin layers back: the colours are checked on this
                         // frame's Colors tick, so a donkey with its own colours doesn't enter the screen in the game's for 0.2 s.
+                        ViewCost.Mark("on: cart parts hidden again (a walk by name)");
                         ColorsRig.CheckNow();
                         LooksRig.CheckNow();
                         // Switched off, its animator lost its state and parameters (and the game's OnDisable set Idle):
@@ -425,6 +445,7 @@ namespace GK2DonkeyAPI
                         catch
                         {
                         }
+                        ViewCost.Mark("on: rigs told, facing sent");
                         wakeCheckFrame = Time.frameCount + 2;
                     }
                     return;
@@ -435,6 +456,7 @@ namespace GK2DonkeyAPI
                     {
                         switchedOff = true;
                         donkey.gameObject.SetActive(false);
+                        ViewCost.Mark("off: switched off (the game's OnDisable)");
                     }
                     return;
                 }
@@ -474,6 +496,7 @@ namespace GK2DonkeyAPI
                     {
                         if (r != null && r) r.forceRenderingOff = false;
                     }
+                    ViewCost.Mark("unfrozen: animators and renderers back");
                     quietRenderers.Clear();
                     return;
                 }
@@ -493,6 +516,7 @@ namespace GK2DonkeyAPI
                         quietAnimators.Add(a);
                     }
                 }
+                ViewCost.Mark("frozen: animators off (a walk of the view)");
                 foreach (Renderer r in donkey.GetComponentsInChildren<Renderer>(includeInactive: true))
                 {
                     if (!r.forceRenderingOff)
@@ -531,17 +555,33 @@ namespace GK2DonkeyAPI
             // Asleep: the view to the pool (ViewPool) when another donkey can use it, else released for good as before.
             private void ParkOrDestroyView()
             {
+                ViewCost.Begin("view released");
+                try
+                {
+                    ParkOrDestroyViewInner();
+                }
+                finally
+                {
+                    ViewCost.End();
+                }
+            }
+
+            private void ParkOrDestroyViewInner()
+            {
                 Wgo v = donkey;
                 string key = v != null && v ? ViewPool.Key(SceneId, WgoId, ViewScale) : null;
                 bool can = key != null && !mounted && !riderAttached && HasDonkey && !HasCart && !Ephemeral
                     && InventoryEmpty(v) && ViewPool.HasRoom(key);
                 if (!can)
                 {
+                    if (ViewCost.On) ViewCost.Mark("not parked: " + (mounted ? "ridden" : !HasDonkey ? "a free cart" : HasCart ? "with a cart" : Ephemeral ? "the summon" : !InventoryEmpty(v) ? "holds items" : "the pool full for its size"));
                     try { LooksRig.Sleep(); } catch (System.Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: letting go of the skin failed: {e.Message}"); } // asleep either way: its hold on the sheet goes (DestroyDonkey's ReleaseView keeps holds)
                     DestroyDonkey();
+                    ViewCost.Mark("destroyed (its parts back to the game's pool)");
                     return;
                 }
                 ReleaseView(sleep: true); // back to the prefab's state, as for the game's own pool; the skin's sheet let go of
+                ViewCost.Mark("put back to the prefab's state");
                 donkey = null;
                 partsReady = false;
                 cartParts.Clear();
@@ -552,8 +592,10 @@ namespace GK2DonkeyAPI
                 bubblePoint = null; // its label point is in the parked view, which may go to another donkey
                 try
                 {
+                    ViewCost.Mark("parked: fields cleared");
                     v.gameObject.SetActive(false);
                     ViewPool.Park(key, v);
+                    ViewCost.Mark("parked: switched off (the game's OnDisable)");
                     Lod.Parked++;
                     Lod.ParkedTotal++;
                 }
@@ -584,6 +626,16 @@ namespace GK2DonkeyAPI
                 }
             }
 
+            // Why a view came from Wgo.Spawn, not the pool (the views probe, Dev/ViewCost.cs; only read with it on).
+            private string PoolMissWhy()
+            {
+                if (mounted) return "ridden";
+                if (!HasDonkey) return "a free cart";
+                if (HasCart) return "with a cart";
+                if (Ephemeral) return "the summon";
+                return ViewPool.Count == 0 ? "the pool empty" : "none of its size (others parked)";
+            }
+
             // TrySpawn: a parked view of this scene, mount and size instead of a new one, when there is one.
             private bool TakeParkedView(GameScene scene, string wgoId)
             {
@@ -595,6 +647,7 @@ namespace GK2DonkeyAPI
                 {
                     return false;
                 }
+                ViewCost.Mark("pool: a parked view found");
                 donkey = v;
                 v.Data.Position = VisualConsts.GetRoundedPosXYZ(Position, PixelSize());
                 v.Data.MovableDirection = new Vector2(riderFacingX, 0f);
@@ -602,7 +655,14 @@ namespace GK2DonkeyAPI
                 HideRenderersNow();          // shown again one frame after PrepareParts, as a new view is
                 revealFrame = int.MaxValue;
                 MuteColliders();             // ReleaseView put the game's colliders back: off before it is switched on
+                ViewCost.Mark("pool: placed, hidden, colliders muted");
+                // The head layer emptied before it is switched on, as for an idle view (QuietAnimators): its animator starts
+                // without the still head, so PrepareParts needn't restart it a second time (0.5 ms and 8 KB a view, the views
+                // investigation 2026-11-09; HeadWatch.cs).
+                EmptyHeadLayer(v);
+                startedHeadless = true;
                 v.gameObject.SetActive(true);
+                ViewCost.Mark("pool: switched on (the game's OnEnable)");
                 // Switched off in the pool, its animator lost its parameters: its Direction went back to the default, and
                 // the data, given the same facing it had, doesn't tell it again. The facing and the stand pose are sent
                 // again, as when an idle view is switched back on, and checked two frames later ([wake]). (The still head

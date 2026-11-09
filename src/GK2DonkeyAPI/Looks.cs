@@ -2180,6 +2180,17 @@ namespace GK2DonkeyAPI
         }
         internal static int LoadedCount => loaded.Count;
 
+        // The skin sheets alive now (each counted in Live.Textures with the colour textures): the leak checks tell the two apart.
+        internal static int SheetCount
+        {
+            get
+            {
+                int n = 0;
+                foreach (Loaded l in loaded.Values) if (l.Sheet != null) n++;
+                return n;
+            }
+        }
+
         // A hold on a skin's pictures: loaded on the first, shared after. A sheet is filled a few frames a tick
         // (AdvanceBuilds) and the skin is Ready when whole; a sprite source is ready at once. A skin built on its mount's
         // default (LooksInherit.cs) takes the default's pictures where it has none of its own, and its sheet is kept only

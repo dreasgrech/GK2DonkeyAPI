@@ -96,6 +96,7 @@ namespace GK2DonkeyAPI
             {
                 doorPending = false;
                 bool inside = Instance.IsIndoors();
+                Perf.TracePick("the keeper went through a door"); // dev only: the frames from here named by part (the [pick] trace)
                 Plugin.Log.LogInfo($"[indoors] the keeper went through a door (event frame {doorFrame}, now {Time.frameCount}, control {(controls ? "back" : "not back yet")}): from {doorFrom:F1} in {doorFromScene} to {pd.position.Value:F1} in {pd.currentGameSceneId}, {(inside ? "indoors" : "outdoors")} ({PresetName()}).");
                 ThroughDoor(pd, inside);
             }
@@ -285,7 +286,8 @@ namespace GK2DonkeyAPI
                 {
                     return;
                 }
-                FreeSlot(p, out bool clear);
+                bool clear;
+                using (Perf.Measure(Perf.S.Slot)) FreeSlot(p, out clear);
                 groundFail = null;
                 if (clear)
                 {
