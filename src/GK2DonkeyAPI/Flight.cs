@@ -781,7 +781,7 @@ namespace GK2DonkeyAPI
             Set(Phase.Jumping, $"jump: up to {J.Height:0} px held, {Mathf.Min(J.Tap, J.Height):0} px tapped, {J.Time:0.##} s in the air ({J.From})");
             Mount.Instance.KeeperJumped(i); // its babies jump along (FoalHops.cs)
             Rigidbody rb0 = MainGame.PlayerController?.PhysicalBody?.Rb;
-            JumpTrace.Begin($"mount {Looks.MountWanted(i).Label}; {(byKey ? "by the key" : "held (a button or a mod)")}; at {(rb0 != null ? rb0.position.ToString("F3") : "-")}, its speed {(rb0 != null ? new Vector3(rb0.linearVelocity.x, 0f, rb0.linearVelocity.z).magnitude.ToString("0.00") : "-")}; " +
+            if (JumpTrace.On) JumpTrace.Begin($"mount {Looks.MountWanted(i).Label}; {(byKey ? "by the key" : "held (a button or a mod)")}; at {(rb0 != null ? rb0.position.ToString("F3") : "-")}, its speed {(rb0 != null ? new Vector3(rb0.linearVelocity.x, 0f, rb0.linearVelocity.z).magnitude.ToString("0.00") : "-")}; " +
                 $"the shape: {J.From}: height {J.Height}, tap {J.Tap}, hold min {J.HoldMin}, time {J.Time}, rise share {J.RiseShare}, hang {J.Hang}, crouch {J.Crouch}/{J.CrouchTime}, squash {J.Squash}; perch {JumpPerchS}, steer {JumpSteerS}, over things {JumpOver}; " +
                 $"the ride's top {rideTopSpeed:0.00}, clearance {ClearancePx}, bump tall {BumpTall}, drawn ground {UseDrawnGround}; indoors {Mount.Instance.IsIndoors()}");
         }
@@ -893,7 +893,7 @@ namespace GK2DonkeyAPI
                     break;
                 case Phase.Jumping:
                     JumpTick(dt);
-                    if (Now == Phase.Jumping)
+                    if (Now == Phase.Jumping && JumpTrace.On) // the trace line built only when it is kept (dev only; 2026-11-09)
                     {
                         Rigidbody rbT = MainGame.PlayerController?.PhysicalBody?.Rb;
                         JumpTrace.Frame($"{jumpStage};{jumpT:0.000};{traceArc:0.00};{heightPx:0.00};{traceSolid:0.00};{traceThing};{(rbT != null ? JumpTrace.V(rbT.position) : "-;-;-")};{jumpVel.x:0.00};{jumpVel.z:0.00};{Free};{(float.IsPositiveInfinity(jumpLetGo) ? "-" : jumpLetGo.ToString("0.00"))}");
@@ -1068,7 +1068,7 @@ namespace GK2DonkeyAPI
                     jumpTookSpeed = v.magnitude;
                     EnterFree(pc, "jump");
                     jumpFreed = true;
-                    JumpTrace.Note($"the body taken at {rb.position:F3} (the take-off spot), its speed {v.magnitude:0.00} ({v.x:0.00}, {v.z:0.00})");
+                    if (JumpTrace.On) JumpTrace.Note($"the body taken at {rb.position:F3} (the take-off spot), its speed {v.magnitude:0.00} ({v.x:0.00}, {v.z:0.00})");
                     jumpPath.Add(rb.position);
                 }
             }
@@ -1096,7 +1096,7 @@ namespace GK2DonkeyAPI
                 if (!float.IsNaN(groundTop)) solid = Mathf.Max(0f, (groundTop - rb.position.y) / PxWorldY);
                 Jumps.Floor(under, float.NaN, top, solid);
                 jumpOverPx = Mathf.Max(jumpOverPx, solid);
-                traceThing = Mount.Instance.LastFloorThing != null ? Mount.Instance.PathOf(Mount.Instance.LastFloorThing) : (float.IsNaN(under) ? "no ground" : "ground");
+                if (JumpTrace.On) traceThing = Mount.Instance.LastFloorThing != null ? Mount.Instance.PathOf(Mount.Instance.LastFloorThing) : (float.IsNaN(under) ? "no ground" : "ground");
             }
             traceArc = arc; traceSolid = solid;
             if (rb == null || !Free) traceThing = "";
@@ -1115,7 +1115,7 @@ namespace GK2DonkeyAPI
                         heightPx = solid;
                         perchThing = Mount.Instance.LastFloorThing;
                         JumpTrace.Outcome("over");
-                        JumpTrace.Note($"came down over {traceThing} ({solid:0.0} px up) at {rb.position:F3}, the jump's speed {jumpVel.magnitude:0.00}; the thing's bounds {(perchThing != null ? perchThing.bounds.min.ToString("F2") + ".." + perchThing.bounds.max.ToString("F2") : "-")}");
+                        if (JumpTrace.On) JumpTrace.Note($"came down over {traceThing} ({solid:0.0} px up) at {rb.position:F3}, the jump's speed {jumpVel.magnitude:0.00}; the thing's bounds {(perchThing != null ? perchThing.bounds.min.ToString("F2") + ".." + perchThing.bounds.max.ToString("F2") : "-")}");
                         Vector3 hv = jumpVel; hv.y = 0f;
                         if (hv.magnitude > 0.5f) { perchDir = hv.normalized; perchSpeed = Mathf.Max(hv.magnitude, 2.5f); }
                         else EdgeOf(rb.position);
@@ -1573,7 +1573,7 @@ namespace GK2DonkeyAPI
             {
                 // what was really moved is the speed now (into a wall: none of it; along one: the slide's share, never more)
                 Vector3 moved = next - rb.position; moved.y = 0f;
-                JumpTrace.Step($"{jumpStage};{traceStick.x:0.00};{traceStick.y:0.00};{traceWant.x / 1f:0.00};{traceWant.z:0.00};{traceIntended.x:0.0000};{traceIntended.z:0.0000};{traceBump.x:0.0000};{traceBump.z:0.0000};{(traceBlocker ?? "-").Replace(';', ',')};{traceWall.x:0.0000};{traceWall.z:0.0000};{JumpTrace.V(next)};{moved.magnitude:0.0000}");
+                if (JumpTrace.On) JumpTrace.Step($"{jumpStage};{traceStick.x:0.00};{traceStick.y:0.00};{traceWant.x / 1f:0.00};{traceWant.z:0.00};{traceIntended.x:0.0000};{traceIntended.z:0.0000};{traceBump.x:0.0000};{traceBump.z:0.0000};{(traceBlocker ?? "-").Replace(';', ',')};{traceWall.x:0.0000};{traceWall.z:0.0000};{JumpTrace.V(next)};{moved.magnitude:0.0000}");
                 traceBlocker = null;
                 if (jumpStage == JumpStage.Perch)
                 {

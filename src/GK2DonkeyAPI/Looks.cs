@@ -3224,23 +3224,23 @@ namespace GK2DonkeyAPI
                 {
                     if (abilityMount != null)
                     {
-                        if (wasRidden) CallAll(a => a.Dismounted(h), "Dismounted");
-                        CallAll(a => a.Detached(h), "Detached");
+                        if (wasRidden) CallAll(AbDismounted, h, default, "Dismounted");
+                        CallAll(AbDetached, h, default, "Detached");
                         ForgetAbilityValues(abilityMount);
                     }
                     abilityMount = k;
                     abilityOff = k.Abilities.Length > 0 ? new bool[k.Abilities.Length] : null;
                     wasRidden = false;
                     ForgetAbilityValues(k); // nothing of an earlier life under this owner (an older side file) before Attached
-                    CallAll(a => a.Attached(h), "Attached");
+                    CallAll(AbAttached, h, default, "Attached");
                 }
                 if (k.Abilities.Length == 0) return;
                 bool ridden = owner.IsRidden;
                 MountStyle style = owner.CurrentStyle;
                 if (ridden != wasRidden || (ridden && style != riddenStyle))
                 {
-                    if (wasRidden) CallAll(a => a.Dismounted(h), "Dismounted");
-                    if (ridden) CallAll(a => a.Mounted(h, style), "Mounted");
+                    if (wasRidden) CallAll(AbDismounted, h, default, "Dismounted");
+                    if (ridden) CallAll(AbMounted, h, style, "Mounted");
                     wasRidden = ridden;
                     riddenStyle = style;
                 }
@@ -3262,7 +3262,14 @@ namespace GK2DonkeyAPI
                 }
             }
 
-            private void CallAll(Action<MountAbility> call, string what)
+            // The hooks as lambdas that capture nothing (made once): the arguments come through CallAll. A capturing lambda
+            // made a closure object at TickAbilities' entry, every active view every frame (2026-11-09, docs/performance.md).
+            private static readonly Action<MountAbility, MountHandle, MountStyle> AbDismounted = (a, h, s) => a.Dismounted(h);
+            private static readonly Action<MountAbility, MountHandle, MountStyle> AbDetached = (a, h, s) => a.Detached(h);
+            private static readonly Action<MountAbility, MountHandle, MountStyle> AbAttached = (a, h, s) => a.Attached(h);
+            private static readonly Action<MountAbility, MountHandle, MountStyle> AbMounted = (a, h, s) => a.Mounted(h, s);
+
+            private void CallAll(Action<MountAbility, MountHandle, MountStyle> call, MountHandle h, MountStyle style, string what)
             {
                 Catalog.Entry k = abilityMount;
                 if (k == null || abilityOff == null) return;
@@ -3271,7 +3278,7 @@ namespace GK2DonkeyAPI
                     if (abilityOff[i]) continue;
                     try
                     {
-                        call(k.Abilities[i]);
+                        call(k.Abilities[i], h, style);
                     }
                     catch (Exception e)
                     {
@@ -3288,8 +3295,8 @@ namespace GK2DonkeyAPI
                 MountHandle h = owner?.Handle;
                 if (h != null)
                 {
-                    if (wasRidden) CallAll(a => a.Dismounted(h), "Dismounted");
-                    CallAll(a => a.Detached(h), "Detached");
+                    if (wasRidden) CallAll(AbDismounted, h, default, "Dismounted");
+                    CallAll(AbDetached, h, default, "Detached");
                 }
                 ForgetAbilityValues(abilityMount);
                 abilityMount = null;

@@ -291,7 +291,7 @@ while playing with the Mods window closed. Each looked the window up with `GameO
 walk of the whole scene that found nothing. Every other step stayed under 0.5 ms apart from one-off peaks (views
 built after a load, a door, a foal's route).
 
-**Fixed** (`ModsWindow.cs`, both use it): the window is looked for only at the main menu or while the game is paused
+**Fixed** (`ModsWindow.cs`, both use it; all three files gone since the options rework, f6cb77b): the window is looked for only at the main menu or while the game is paused
 (it opens only from the main menu or over the pause menu, a window on the game's modal stack, and `MainGame` pauses
 while one is open), and once found it is kept (the framework makes it once: `ModsMenuWindow.CreateInstance`) and only
 checked for `activeInHierarchy`. Probe after: both 0.00-0.01 ms while playing; the Mods menu page, its picture and
@@ -355,7 +355,8 @@ ms a frame; hitch worst 16.5-19.0 ms (the cargo changes, unchanged).
 
 - **The per-frame work, about 0.5 ms with 63:** Shuffle, Pose and Ground checks. Not visible at the cap. Worth a pass
   if slower PCs or hundreds of donkeys matter.
-- **What the API logs for players:** the routine `[foal]` and `[shuffle]` lines (follows, works out a way round, route
+- **What the API logs for players** (done since: the routine lines are built only behind `DevDiag`, found
+  2026-11-09; a few rarer ones are still built before the budget, row 22 of the 2026-11-09 pass): the routine `[foal]` and `[shuffle]` lines (follows, works out a way round, route
   found, found no step) are written without the dev tools too, up to 4 a second, for as long as foals are about; their
   text is built before the 4-a-second budget is checked. Proposed 2026-10-16: those dev-only, the ones a bug report
   needs kept (can't follow, stood inside, caught up out of sight); not decided.
@@ -423,3 +424,173 @@ reversed, 2 s each. Medians over both rounds, in ms:
   them), so raising it costs nothing to a skin under it.
 - "As the game draws them" (nothing set by the test) still ran on the exact swap at 42 pairs: there is no swap-off
   baseline in this table.
+
+## The pass of 2026-11-09: before the release, for lower-end PCs
+
+237 commits since the scripted suites of 2026-10-16 (flying, rider motion, sounds, skins and colour regions, the
+journal and options windows, leave-mounts, babies on foot). Measure, agree, fix, measure again.
+
+### Measuring added
+
+- **Parts for the frame's untimed steps** (Perf.cs, MountRegistry.Tick): `Companion`, `HeadWatch`, `Doors` (foals
+  indoors, the morgue hand-over), `Scenes` (BuildByScene, the snapshot), `Warm` (Texts/Looks.TickWarm,
+  AdvanceBuilds, DonkeyFrames, FacePixels, SoundBank.Advance, the pack watch, RecheckAsideSkins; its known heavy
+  insides keep their own parts, LooksBuild and SndStart).
+- **The mount crowd** (integration scenario, Garbage group; `tools/GK2DonkeyAPI.IntegrationTests/Crowd.cs`): every
+  shipped look (the donkey, Hellfire, Royal Parade, Armored, the dragon, Mecha, Larry, rat, snail, worm), every second
+  one with a baby, every third donkey look with a cart, night held so the lanterns are lit, no vsync and no frame
+  cap. Phases: none, 12 in view, 36 in view, + 120 scattered up to 60 away, riding through them; each the frame's
+  mean, median, 99th percentile and worst, the mod's ms and KB a frame, the collections, the levels; a row each in
+  `BepInEx\GK2-crowd.tsv` (appended, so runs before and after compare). Then all removed and the colour textures,
+  materials, lamps, meshes and cargo holders checked back.
+
+### Seen in the dev session's log before any change (17 instances, 12 babies, 120 fps cap)
+
+The mod 1.0-1.1 ms and 6-7 KB a frame **with the Mount Journal open**: `Preview` 0.6 ms and 5 KB of it (the picture
+drawn with a camera render every frame, `PrevRender` 0.5 ms; `PrevPose` the garbage), `Stand` 0.26 ms for 16, `Looks`
+0.14, `Ride` 0.14. Opening the journal: one 21 ms frame (`Keys` 11.4 ms, the window built in the key's frame, 1 MB
+allocated). The `[preview]` midday line every 10 s while it is open.
+
+### Findings of the code review (four reviews: riding and flying; standing mounts and babies; looks, colours and
+sounds; the players' windows). Not measured yet unless said.
+
+| # | Where | What | Who pays | Confidence |
+|---|---|---|---|---|
+| 1 | `Looks.Rig.TickAbilities` (Looks.cs:3217) | a closure object made at the method's entry (the lambdas capture `h`), every active view every frame, abilities or not: about 32 B each, 2-3 KB a frame at 60-100 active. The last of the 2026-10-25 suspects (the key polling, `Flight.SameKey` and full-id `Looks.Find` are fixed) | everyone | high (IL read) |
+| 2 | `RowControls.SetValue` (RowControls.cs:173) | every slider step and click in the journal and options writes the whole cfg (Saddle Up's `SaveOnConfigSet` on): 3.5-4.7 ms a write measured for the mount pick, which alone defers its save (`SavePickedSoon`); a slider drag is 13-16 writes | anyone changing a setting; worse on a slow disk | high |
+| 3 | `Sounds.TestVoiceTimes` (Sounds.cs:35, :1191) | a test list filled on every call and answer in normal play, emptied only by the self-tests: grows all session and keeps removed instances alive (the zoneCache kind of leak) | everyone with standing mounts | high |
+| 4 | `PreviewStage` (PreviewStage.cs:236, :586) | while the journal or colours window is open, a full camera render every frame (culling the whole scene, the midday hold's ~20 global writes) though the walk changes only at its keyframes; `animator.parameters` a new array a frame (:623) | the journal open (0.6 ms, 5 KB a frame, seen) | high |
+| 5 | `PreviewStage` (:892, :1277) | the stage is switched on at the first journal open and never off: its copy animates (`AlwaysAnimate`) and its renderers and light stay in the scene; the paper's look rig stays in `Looks.attached` | everyone after the first open | high on the mechanism, cost unmeasured |
+| 6 | `Flight.cs:899`, `:1576`, `:1099`; `FlightGround.cs:429`, `:513` | jump and flight trace lines (11-14 formatted values) built every frame and physics step and thrown away for players (`JumpTrace.On` is dev-only); blocker descriptions (names, layer names) built for every candidate | jumping and flying | high |
+| 7 | `LooksRecipes.BaseFramesInMemory` (LooksRecipes.cs:120, from `Looks.TickWarm`) | while the companion's skin waits for the donkey's frames (an over skin that erases, a recipe), `FindObjectsOfTypeAll<Sprite>` every 3 s (6-7 ms measured for the same scan in DonkeyFrames), no game-ready gate, never gives up | the main menu, or before a mount has a view, with such a skin chosen | medium-high |
+| 8 | `FoalRouteSearch` (FoalRoute.cs:58) | 30-72 KB per route search (six grid arrays up to 64x64, closures, a Stopwatch); at most one a second per following baby | babies working their way round | high on the allocation |
+| 9 | `MountRegistry.IsRegistered` (:150) | `instances.Contains`, a linear search, about twice per active baby per frame and in `WantTier`, `SteadyIndoors`, `MountHandle.Exists`: O(babies x instances) | hundreds of mounts | high, small at 63 |
+| 10 | `Foals.FreeSlot`/`Taken` (Foals.cs:952, :1007), `FoalsIndoors.PlaceAgain` (:281) | a catch-up tests up to ~40 spots, each against every instance (not `InScene`) with a camera test each; a door does every baby in one frame; `PlaceAgain` a full search every frame per baby while the screen is black | doors, babies far behind | medium |
+| 11 | `SafeGround.IsModView` (:505) from `FlightGround.FloorUnder`/`Blocks` | every instance walked for every cast hit, every frame and physics step in the air; `ObjectTop` (`:525`) `GetComponentInParent` before its cache | flying among many mounts | high on the code |
+| 12 | `Sounds.Resolve` (:920) | every event re-resolved every 0.5 s per active mount: a `SoundSpec` and 2-3 joined strings each | many mounts in view | medium |
+| 13 | `Mount.cs:2489` | a ground probe (navmesh lookup and raycasts) every ridden frame whose answer only a debug log reads; `GroundHeightPair` computed before the surface hits that are used first | riding | high |
+| 14 | `Mount.IsAttackState` (:959) | `GetType().Name`, a new string each call, 1-3 a ridden frame, more in fights | riding | medium-high |
+| 15 | `Looks.WantedDef`/`StandIn` (:245, :1748) | a skin that isn't installed, or a short id, takes the miss path every read (Substrings, a joined key, a walk of every skin), 2-3 reads per rig a frame | a player who removed a pack | medium |
+| 16 | `Tiers.cs:231` | an instance in another loaded scene is always Active (views queued, shuffle, sounds), never idle or asleep | scenes the game keeps loaded; leave-mounts makes it likelier | high on the code, frequency unknown |
+| 17 | `OptionsWindow` refresh (:503), `KeyCapture.Clash` | twice a second while open: a signature string and a clash check of every key row against every plugin's keys (BepInEx's LINQ `Modifiers`) | the options window open; grows with mods installed | medium |
+| 18 | `MountCompanion.UpdateFoal` (once a second) | two `System.Random`, a closure and a `ToLowerInvariant` per baby per family, a new list per `LeftNow()` | leave-mounts with families | medium |
+| 19 | the lantern (`Lantern.ApplyLight`, `LampHang.CopyLook`) | ~12 light and renderer properties and property blocks written every frame per active cart, changed or not | carts in view | low-medium |
+| 20 | `Cargo.Rig.OnChanged` → `RefreshViews` (Cargo.cs:899, :1478) | the known cargo hitch: each item change walks the cart's whole hierarchy with a `.name` per transform, views matched by position so a removal from the middle activates every later one; six changes, six refreshes in one frame | loading the cart | high on the mechanism |
+| 21 | `Perf.Measure` (Perf.cs:107) | the profiler is always on: two timestamps per part and call, about 10 parts per active instance a frame plus `Stand` and `HeadWatch` for every instance, asleep ones too (~25 ns each; more on a PC with a slow timer). At 300 instances ~0.15 ms of measuring alone. It also means a run with the dev panel on reads the mod slightly high | everyone | medium |
+| 22 | Smaller | `MountsPanel.Tick` closure every frame (closed too); `KeeperMask` 32 Unity calls per call; `Sounds.EmitInner` `LastEvent` join on every play; `DropCartIfRefused` text built before its retry check; `Colors.AllSlotsLut` `sharedMaterials`; a Behaviour override marking colours dirty per instance (O(n²)); `MountRules.Poll` `ToArray` per feature; logs built before the 4-a-second budget (Foals.cs:469, 522, 766, 829, 935; FoalsIndoors.cs:209, 263, 354; MountRegistry.cs:950; Colors.cs:749; Patches.cs:218) | | |
+
+Checked and clean: `OnPreCull` (once a frame, idle rigs skipped), `HeadWatch` (every 6 frames, early outs),
+`BuildByScene`/snapshots, idle and asleep `StandTick`, `SafeSpots.Tick`, `KeyActions.Poll`, `Plugin.OnGUI` for
+players (`useGUILayout` off), `AdvanceBuilds` idle, `DonkeyFrames`/`FacePixels` once done, colour textures shared,
+skin sheets shared and non-readable, `Stand()` writing on change. Struck from "Still open" above: the routine
+`[shuffle]` and `[foal]` step lines are built only behind `DevDiag` now.
+
+Not explained by the code: the 2.5 ms `Sounds` frames of 2026-10-25 (the `SndPlay` part answers it in the next run).
+
+### Fixed (the agreed cut, 2026-11-09; built, deployed after the baseline run)
+
+- **1:** the ability hooks are static lambdas fed `h` and the style through `CallAll`: nothing captured, no closure.
+- **2:** `DeferredSave.cs`: a row control's value set with the file's save-on-set off, the file written 1.5 s after
+  the last change (`MountRegistry.Tick`), half a second after the journal or options window closes (`Soon`: not in
+  the closing frame, the 21-24 ms frame of 2026-10-25), and at quit (`FlushAll`). A mod whose file doesn't save on
+  set keeps its way. The self-tests don't drive the row controls, so no test reads the file in between.
+- **3:** `TestVoiceTimes` filled only while `SelfTest.Running`.
+- **6:** `JumpTrace.Frame`/`Step`/`Begin` and the per-jump notes behind `JumpTrace.On`, `traceThing` (a `PathOf`
+  every airborne frame) too; `Nearest` and `Shapes` describe their winner once after the loop.
+- **13:** `lastCartGround` only with `DevTools.Unlocked` (its only reader is `LogGeometry`).
+- **14:** `IsAttackState` compares the state's `Type` with the last one seen and keeps its answer.
+- **16:** another scene than the keeper's: Idle instead of Active. Idle, not Asleep, so the view stays and nothing
+  pops in when the keeper comes back through the door; the next level check (four a second) makes them active then.
+- **20, not done:** the once-a-frame flag would only merge the dev test load's six changes; a player loads one item
+  at a time and pays the full refresh each (2-4 ms). What helps there is making the refresh cheaper (the parts
+  cached, the container's subtree skipped, views keyed by item), held for the measurements.
+
+Proof: the same run again after deploying (the crowd TSV rows side by side, the suites, the garbage survey).
+
+### The baseline, before the fixes (the user's run, 2026-11-09 01:30-02:40)
+
+**The mount crowd** (`GK2-crowd.tsv`, uncapped, dev panel on):
+
+| Phase | Instances / views | Frame mean (fps) | p99 / worst | The mod | Mod KB a frame |
+|---|---|---|---|---|---|
+| none of the test's | 14 / 13 | 2.62 ms (381) | 3.43 / 4.2 | 0.05 ms | 0.12 |
+| 12 in view | 32 / 31 | 3.46 (289) | 4.27 / 4.7 | 0.21 | 0.53 |
+| 36 in view | 68 / 67 | 5.92 (169) | 7.16 / 8.8 | 0.61 | 2.58 (Abilities 1.73 of it) |
+| + 120 scattered | 248 / 206 | 6.82 (147) | 8.18 / 10.8 | 1.22 | 3.06 |
+| riding through | 248 / 140 | 6.68 (150) | 9.20 / 14.7 | 1.16 | 8.89 |
+
+No collection in any phase. Its leak checks failed the first time on the test itself (the ride left the keeper
+elsewhere, 6 of the world's 13 views fell asleep: materials 28 -> 16); the test now puts him back and compares only
+when the world's views are back (see Crowd.cs).
+
+**Levels** (frame time by mode, 300 test donkeys, 120 cap): levels on 0.31 ms the mod, 120 fps; levels off 2.02 ms,
+102 fps. 104 passed, 0 failed.
+
+**By hand (Performance Hog 1.3.0, dev panel on):**
+
+| Recording | The API ms a frame | Worst | Alloc a frame | Notes |
+|---|---|---|---|---|
+| a volume slider dragged (17 s) | 0.615 | 6.72 | 9.1 KB | 22 steps, each 5.0-5.5 ms in `RowControls.SliderRow` (file write); `dreas.gk2.saddleup.cfg` written 25 times, 2.8 MB; 1% low 104.7 fps |
+| the dragon jumped and flown (36 s) | 0.359 | 4.62 | 3.8 KB | the worst at the start, a cluster of 2.3-3 ms frames 14 s in; no hitch |
+| a door with 5 babies (17 s) | 0.214 | 5.46 | 2.2 KB | one 5.5 ms frame going in (the babies placed), then 1.6-2.8 ms frames |
+| 6 items onto the cart one by one (11 s) | 0.279 | 7.83 | 0.4 KB | `Cargo.Rig.OnChanged` 2.5-6.2 ms an item |
+
+**The suites** (3 in a row, the donkey, night, dev panel off; `suite-2026-11-09_02-08-30` / `_02-18-42` /
+`_02-29-35`; the first attempt stopped on Performance Hog 1.3.0's new `ReportWriter.Write(RecordingResult, out
+string)`: the runner now takes the report Performance Hog writes itself, `RecordingResult.ReportPath`). The dragon
+can't run the suite (its cart and hitch runs need a mount that pulls the cart).
+
+| Run | API ms a frame (3 suites) | Alloc a frame | 2026-10-16 |
+|---|---|---|---|
+| walk | 0.283 / 0.279 / 0.265 | 3.5 / 1.6 / 1.4 KB | 0.15-0.16 |
+| ride | 0.285 / 0.329 / 0.319 | 1.5 / 1.7 / 1.6 KB | 0.21-0.22 |
+| cart | 0.299 / 0.297 / 0.294 | 2.1 / 1.6 / 1.9 KB | 0.22 |
+| idle | 0.186 / 0.293 / 0.209 | 6.5 / 0.7 / 0.5 KB | 0.17-0.18 |
+| hitch | 0.219 / 0.319 / 0.221, worst 18.3 ms | 18-38 KB | worst 16.5-19.0 |
+
+- **Steady:** 0.27-0.32 ms a frame, about 0.1 ms over 2026-10-16 (the save now has 14 mounts, 11 of them babies,
+  against 6 and 4 then); worst frames in steady runs 1.4-1.6 ms; no collection started in our code.
+- **Hitches:** only the test load's (`Rig.OnChanged` 10-17.5 ms when six items go on or off at once, the dev test
+  load's frames), as on 2026-10-16.
+- **Memory:** flat over the series (+0 B, +424 B; 40,400-40,600 objects): no leak.
+
+### After the fixes (the user's run, 2026-11-09 13:40-14:52)
+
+**Regression:** F11 Run all 2050 passed, 0 failed, 0 warnings (the crowd's leak checks pass: materials 28 -> 28,
+colour textures 41 -> 41, shared 37 -> 37, lamps, meshes and cargo holders back).
+
+**The suites** (the same three, donkey, night, dev panel off): walk 0.285 / 0.242 / 0.218 ms a frame (before 0.283 /
+0.279 / 0.265), ride 0.330 / 0.278 / 0.258 (0.285 / 0.329 / 0.319), cart 0.306 / 0.267 / 0.245 (0.299 / 0.297 /
+0.294), idle 0.175 / 0.256 / 0.249 (0.186 / 0.293 / 0.209): suites 2 and 3 about 0.04-0.06 ms (~15%) lower walking,
+riding and driving; the first is the warm-up in both. Allocations 1-3 KB a frame in both (Performance Hog's heap
+estimate swings; a crowd of 14 has few active views). Memory flat (-56 B, +56 B).
+
+**The mount crowd**, the mod's garbage a frame: 12 in view 0.53 -> 0.41 KB, **36 in view 2.58 -> 0.11 KB**
+(Abilities gone from it), + 120 scattered 3.06 -> 1.74 KB. Riding through 8.89 -> 20.07 KB: not comparable (the
+scatter is random; 172 views at the end against 140, more woke on the way), and its parts are the waking and
+sleeping: Spawn 6.8, LooksTick 3.5, Prepare 2.9, Release 2.4, Abilities 1.8 (the Attached hooks and the `abilityOff`
+array of each mount waking, not a frame's closure). The mod's milliseconds as before; the frame times don't compare
+between the sessions (the "none" phase itself 2.62 -> 2.83 ms). **Open:** the garbage of views waking and sleeping
+(~20 KB a frame riding through a big herd, a collection in 12 s).
+
+**By hand:**
+
+| Recording | Before | After |
+|---|---|---|
+| a slider dragged end to end | 22 frames of 5.0-5.5 ms (a cfg write each), 0.615 ms a frame | **one** 5.4 ms frame, the write after letting go; 0.580 ms a frame (the journal open) |
+| the dragon jumped and flown | worst 4.62 ms, 0.359 ms a frame, 3.8 KB | worst 2.76 ms, 0.373 ms, 3.0 KB |
+| a door with 5 babies | one 5.5 ms frame going in | one 11.3 ms frame going in (same scene both sides: the indoors is ~100 units off, so the yard's mounts fall asleep and the babies are placed in that frame; how heavy depends on the mounts near the door) |
+| 6 items onto the cart | 2.5-6.2 ms an item | 2.0-2.7 ms an item (unchanged code; varies); opening the journal in the same recording: one 13.9 ms frame (`OpenPanel` 7.5 ms, `BuildList` 3.7) |
+
+The 306 MB "Disk written" in these reports is the self-test run's temporary test packs (`SelfTest.WriteTempPack`,
+285 MB) and its settings changes: dev only.
+
+**Left for after this pass, by what a player feels:** the cargo refresh per item (2-6 ms; row 20's other half), the
+door frame with babies (row 10), opening the journal (one 14 ms frame), the garbage of views waking and sleeping
+riding through a herd, the picture drawn every frame while the journal is open (rows 4-5).
+
+### What can't be measured here
+
+The GPU: the game's build keeps no frame timing (`FrameTimingManager` off), and the colour-swap table above showed
+this PC's card hiding the shader's work. A weaker card isn't measured; CPU milliseconds and garbage are what we can
+show, and those scale onto a slower CPU roughly as they are.

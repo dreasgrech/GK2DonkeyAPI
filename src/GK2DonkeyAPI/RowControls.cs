@@ -174,7 +174,7 @@ namespace GK2DonkeyAPI
         {
             try
             {
-                if (!Equals(r.Entry.BoxedValue, v)) r.Entry.BoxedValue = v;
+                if (!Equals(r.Entry.BoxedValue, v)) DeferredSave.Set(r.Entry, v); // the file written once the changing pauses (a slider wrote it every step)
             }
             catch (Exception e)
             {

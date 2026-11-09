@@ -1188,7 +1188,7 @@ namespace GK2DonkeyAPI
                     if (d.Id == "voice" || d.Id == "answer")
                     {
                         nextVoiceAt = Time.time + VoiceGapS; // one voice at a time in the scene (the standing ones wait; the ridden one and the answers go anyway)
-                        TestVoiceTimes.Add((Time.time, owner, d.Id));
+                        if (SelfTest.Running) TestVoiceTimes.Add((Time.time, owner, d.Id)); // only while the self-tests run: filled in play, it grew all session and kept removed instances alive (2026-11-09)
                         if (d.Id == "voice" && !IsBaby) { callHandle = h; callAt = Time.time; } // the babies answer once it has ended (TickInner)
                     }
                     if (owner.Handle != null) Mounts.Sounds.RaisePlayed(owner.Handle, eventId);

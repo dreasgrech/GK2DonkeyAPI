@@ -413,7 +413,8 @@ namespace GK2DonkeyAPI
                 float bottom = at.y + r + 0.05f, top = Mathf.Max(bottom, flightY + b.size.y - r);
                 int mask = KeeperMask(rb) & ~(1 << rb.gameObject.layer) & ~(1 << 14); // not himself, not the edge walls
                 int n = Physics.CapsuleCastNonAlloc(new Vector3(at.x, bottom, at.z), new Vector3(at.x, top, at.z), r, dir, flyHits, dist + 0.02f, mask, QueryTriggerInteraction.Ignore);
-                bool found = false;
+                bool found = false, bestGround = false;
+                float bestReach = 0f;
                 for (int i = 0; i < n; i++)
                 {
                     RaycastHit h = flyHits[i];
@@ -425,9 +426,13 @@ namespace GK2DonkeyAPI
                     if (reach <= flightY) continue; // under the flight (or nothing drawn there)
                     if (!found || h.distance < best.distance)
                     {
-                        best = h; found = true;
-                        what = $"{c.name} (layer {LayerMask.LayerToName(c.gameObject.layer)}, {(ground ? "ground face at" : "drawn up to")} {reach:0.00}, its collider {c.bounds.max.y:0.00}; {Where(c)}) above the flight at {flightY:0.00}";
+                        best = h; found = true; bestGround = ground; bestReach = reach;
                     }
+                }
+                if (found) // the winner described once, not every closer candidate (2026-11-09)
+                {
+                    Collider c = best.collider;
+                    what = $"{c.name} (layer {LayerMask.LayerToName(c.gameObject.layer)}, {(bestGround ? "ground face at" : "drawn up to")} {bestReach:0.00}, its collider {c.bounds.max.y:0.00}; {Where(c)}) above the flight at {flightY:0.00}";
                 }
                 return found;
             }
@@ -509,10 +514,9 @@ namespace GK2DonkeyAPI
                     if (!found || h.distance < best.distance)
                     {
                         best = h; found = true;
-                        Collider c = h.collider;
-                        what = $"{c.name} (the game's see-through shape, top {c.bounds.max.y:0.00}) at the flight's height {flightY:0.00}";
                     }
                 }
+                if (found) what = $"{best.collider.name} (the game's see-through shape, top {best.collider.bounds.max.y:0.00}) at the flight's height {flightY:0.00}"; // once, for the winner
                 return found;
             }
 

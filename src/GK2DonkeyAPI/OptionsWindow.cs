@@ -146,6 +146,7 @@ namespace GK2DonkeyAPI
         // back: to where it was opened from, as it was. Not back (the game left): only the windows go.
         private static void Close(bool back)
         {
+            DeferredSave.Soon(); // the rows changed in it: to their cfg files half a second on
             bool was = window != null;
             bool fromPanel = overPanel;
             string title = page?.Title;

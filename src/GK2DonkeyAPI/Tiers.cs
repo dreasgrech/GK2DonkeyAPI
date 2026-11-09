@@ -230,7 +230,10 @@ namespace GK2DonkeyAPI
                 string keeperScene = pc.PlayerData.currentGameSceneId;
                 if (SceneId != keeperScene)
                 {
-                    return Tier.Active; // another scene: no view anyway; the scene's own loading decides
+                    // another scene: frozen like an idle one (its view kept, no shuffle, posing or sounds; a scene the game keeps
+                    // loaded ran its mounts in full and never let them rest, 2026-11-09, docs/performance.md); active again
+                    // with the keeper there, at the next level check (four a second)
+                    return Tier.Idle;
                 }
                 // A foal is never below its parent: while the parent is active (ridden, near the keeper, on screen) the
                 // foal trots after it as before, also off screen. Frozen or asleep by its own distance it stopped
@@ -275,13 +278,12 @@ namespace GK2DonkeyAPI
                             : mounted ? "ridden"
                             : Ephemeral ? "the summoned donkey"
                             : ReferenceEquals(this, TuningWindow.Editing) ? "edited on the panel"
-                            : pd != null && SceneId != pd.currentGameSceneId ? "in another scene: its scene decides"
                             : p != null && p.tier == Tier.Active && p.SceneId == SceneId ? $"its parent {p.FullId} is active"
                             : withKeeper && p != null ? "with the keeper"
                             : $"within {Lod.ActiveRadius:F0} of the keeper or on screen";
                         break;
                     case Tier.Idle:
-                        why = $"off screen, within {Lod.SleepRadius:F0}";
+                        why = pd != null && SceneId != pd.currentGameSceneId ? "in another scene than the keeper" : $"off screen, within {Lod.SleepRadius:F0}";
                         break;
                     default:
                         why = $"farther than {Lod.SleepRadius:F0}; wakes within {Lod.WakeRadius:F0}";

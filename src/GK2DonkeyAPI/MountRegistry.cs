@@ -433,15 +433,17 @@ namespace GK2DonkeyAPI
             using (Perf.Measure(Perf.S.Tick))
             {
                 TickInner();
-                MountCompanion.TickAll();
+                using (Perf.Measure(Perf.S.Companion)) MountCompanion.TickAll();
                 using (Perf.Measure(Perf.S.Preview)) PreviewStage.Tick();
                 using (Perf.Measure(Perf.S.PanelTick)) MountsPanel.Tick();
+                using Perf.Scope warm = Perf.Measure(Perf.S.Warm); // to the end of Tick
                 Texts.TickWarm();      // the translation files read ahead, one owner a frame (a game's start, a language change)
                 Looks.TickWarm();      // the companion's skin acquired ahead (built by the next line, held), so a first spawn wears it at once
                 Looks.AdvanceBuilds(); // a sheet builds whether or not a rig with a view ticks this frame (one pass per frame)
                 DonkeyFrames.Tick();   // the game's donkey art against the art the skins were drawn on: once a session, a frame a tick
                 FacePixels.Tick();     // then the donkey's eye and nostril pixels repainted in the game's atlas, a frame a tick
                 SoundBank.Advance();   // a pack's sound file started, one a frame
+                DeferredSave.Tick();   // a setting changed in a window written to its cfg file once the changing pauses
                 Looks.TickPackWatch(); // dev only: Debug.SkinPackAutoReload
                 Looks.RecheckAsideSkins(); // a set-aside game-source skin nobody wears: offered again when its frames arrive (once a minute)
             }
@@ -503,7 +505,7 @@ namespace GK2DonkeyAPI
             }
 
             SafeSpots.Tick(pc); // never lost: the safe-spot record, the key and the fall watchdog (mounts on or off)
-            BuildByScene();
+            using (Perf.Measure(Perf.S.Scenes)) BuildByScene();
             if (Ridden == null && Time.frameCount <= Instance.gearHideUntilFrame)
             {
                 // A pose's animator state switches its gear on every frame and needs a frame or two to be left after
@@ -532,23 +534,27 @@ namespace GK2DonkeyAPI
                     }
                 }
             }
-            try
+            using (Perf.Measure(Perf.S.Doors))
             {
-                IndoorsTick(pc); // foals coming through a door with the keeper (FoalsIndoors.cs)
+                try
+                {
+                    IndoorsTick(pc); // foals coming through a door with the keeper (FoalsIndoors.cs)
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Mount: foals indoors: " + e.Message);
+                }
+                try
+                {
+                    MorgueHandover.Tick(pc); // a corpse off the cart parked at the morgue door (MorgueHandover.cs)
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Mount: corpse into the morgue: " + e.Message);
+                }
             }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning("Mount: foals indoors: " + e.Message);
-            }
-            try
-            {
-                MorgueHandover.Tick(pc); // a corpse off the cart parked at the morgue door (MorgueHandover.cs)
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning("Mount: corpse into the morgue: " + e.Message);
-            }
-            List<Instance> all = TakeSnapshot();
+            List<Instance> all;
+            using (Perf.Measure(Perf.S.Scenes)) all = TakeSnapshot();
             try
             {
                 for (int k = 0; k < all.Count; k++)
@@ -556,7 +562,7 @@ namespace GK2DonkeyAPI
                     Instance i = all[k];
                     try
                     {
-                        i.HeadWatch(); // every view, ridden or not: the still-head tripwire (HeadWatch.cs)
+                        using (Perf.Measure(Perf.S.HeadWatch)) i.HeadWatch(); // every view, ridden or not: the still-head tripwire (HeadWatch.cs)
                     }
                     catch (Exception e)
                     {

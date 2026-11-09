@@ -1585,6 +1585,7 @@ namespace GK2DonkeyAPI
             MountSettingsPage closing = page;
             if (wasOpen) Perf.TracePick("the panel closed, " + (closing?.MountChosen ?? MountCatalog.DonkeyId) + " chosen"); // the world's mount turning into it
             closing?.SavePickedSoon(); // the picking is over: the chosen mount to the cfg file half a second on (put back below when not kept: written again by its set)
+            DeferredSave.Soon(); // the rows changed in it too
             if (closing != null) lastPage = closing; // its pending write is done by Tick after the panel is gone
             Looks.ReleasePanelHolds(); // the looks shown while it was open (the worn ones stay with their wearers)
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;

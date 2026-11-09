@@ -12,6 +12,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Smoother on slower PCs** (2026-11-09): changing a setting in the Mount Journal or the options window no longer
+  writes the settings file at every step of a slider (it is written a moment after you stop). Mounts standing near
+  you, riding, jumping and flying make less work and less memory garbage each frame, and mounts left in another
+  place than yours rest until you are there. A small memory leak with mounts calling each other is fixed.
 - **The skull is Larry** (2026-11-08): Saddle Up's skull mount is called Larry, as in the game. Gerry was the skull
   in the first game. Your skull keeps his colours, babies and settings, and a name you gave him yourself stays.
 - **The colours window has tabs** (2026-11-08): Mount, the worn skin's own parts on a tab named after the skin, and
@@ -58,6 +62,29 @@ For mod authors:
 
 Development:
 
+- **Performance pass, measuring first** (2026-11-09, docs/performance.md "The pass of 2026-11-09"): the profiler
+  times the frame's steps that had no part: `Companion` (MountCompanion.TickAll), `HeadWatch`, `Doors` (foals
+  indoors, the morgue hand-over), `Scenes` (the by-scene lists and the frame's snapshot) and `Warm` (translations,
+  looks and sounds read ahead, sheets built, the art checks); `Perf.PhaseModMsPerFrame`/`PhaseKbPerFrame`/
+  `PhaseCollections` for a scenario's own table. New integration scenario "the mount crowd" (Garbage group,
+  `tools/GK2DonkeyAPI.IntegrationTests/Crowd.cs`): every shipped look with babies and carts, lanterns lit at night,
+  uncapped; 12 then 36 in view, 120 more scattered, ridden through; a row per phase appended to
+  `BepInEx\GK2-crowd.tsv`; then the made-and-destroyed counters checked back. Four code reviews of the frame's paths
+  since 2026-10-16, findings in the doc. Fixed from them (the agreed cut, rows of the doc's table):
+  1, `Looks.Rig.TickAbilities` passes the hook's arguments to lambdas that capture nothing (a closure a frame per
+  active view gone); 2, `DeferredSave` (new): the journal's and options' row controls set the value at once and write
+  the cfg 1.5 s after the last change, half a second after a window closes, and at quit; 3, `Sounds.TestVoiceTimes`
+  filled only while the self-tests run (it grew all session and held removed instances); 6, the jump and flight trace
+  lines built only with `JumpTrace.On`, the blocker described once per search instead of per closer candidate;
+  13, the cart-rear ground probe of the ridden frame (read only by the dev button's `LogGeometry`) only with the dev
+  tools; 14, `IsAttackState` keeps its answer for the last state class (`Type.Name` allocates); 16, an instance in
+  another scene than the keeper is Idle (frozen, view kept), not Active (`Tiers.cs`; the panel's reason "in another
+  scene than the keeper"). Not done: 20's once-a-frame cargo refresh (only the dev test load changes several items in
+  a frame; a player's single item needs the refresh made cheaper, held). Measured before and after in the user's runs
+  (F11 2050/0/0 after; 36 mounts in view 2.58 -> 0.11 KB of garbage a frame; a slider drag 22 cfg writes -> 1; the
+  suites ~15% lower). The crowd scenario puts the keeper back before its leak checks and compares only with the
+  world's views back. tools/GK2PerfRunner works with Performance Hog 1.3.0 (it takes the report Performance Hog writes
+  itself, `RecordingResult.ReportPath`; 1.3.0's `ReportWriter.Write` takes the recording).
 - **The other skins' colour rows biggest part first too** (2026-11-08; the Donkey Skin Pack's CHANGELOG): judged on
   the pictures, a part that sits on another right after it. Royal Parade: Saddle cloth, Trim and fringe, Emblem,
   Crown, Jewels. Armored: Body armour, Skirt, Helmet, Plume, Brass (trim over both helmet and armour, last).

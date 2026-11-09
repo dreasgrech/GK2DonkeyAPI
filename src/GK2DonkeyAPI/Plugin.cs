@@ -564,6 +564,14 @@ namespace GK2DonkeyAPI
                 {
                     Log.LogWarning("Cargo layout: saving at quit failed: " + e.Message);
                 }
+                try
+                {
+                    DeferredSave.FlushAll(); // a setting changed in a window just before quitting
+                }
+                catch (Exception e)
+                {
+                    Log.LogWarning("Settings: writing the changed settings at quit failed: " + e.Message);
+                }
             };
             Enabled = Config.Bind("General", "Enabled", true,
                 "Master switch for the mount. GK2 Donkey API does nothing on its own: a mod built on it summons and dismounts the donkey. Off: no mod can mount (the kill switch if one misbehaves).");

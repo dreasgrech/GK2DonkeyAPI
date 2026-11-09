@@ -308,6 +308,10 @@ namespace GK2PerfRunner
 
         private IEnumerator Export(string label)
         {
+            // Performance Hog 1.3.0 writes the report itself as the recording stops: given a few seconds to, so the
+            // runner doesn't write a second copy (1.2.0 never does: written here after the wait).
+            float until = Time.realtimeSinceStartup + 5f;
+            while (Hog.AutoReportPath == null && Time.realtimeSinceStartup < until) yield return null;
             string path = Hog.Export(out string error);
             if (path == null)
             {

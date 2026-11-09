@@ -54,11 +54,33 @@ namespace GK2PerfRunner
         internal static void StopRecording() => recorder.GetMethod("Stop", Type.EmptyTypes).Invoke(null, null);
         internal static bool StartSnapshot() => (bool)snapshot.GetMethod("Start", Type.EmptyTypes).Invoke(null, null);
 
+        // The report Performance Hog wrote by itself when the last recording stopped (1.3.0: RecordingResult.ReportPath),
+        // or null (1.2.0 doesn't; or not written yet).
+        internal static string AutoReportPath
+        {
+            get
+            {
+                object last = Find() ? recorder.GetProperty("Last")?.GetValue(null) : null;
+                FieldInfo f = last?.GetType().GetField("ReportPath");
+                string p = f?.GetValue(last) as string;
+                return string.IsNullOrEmpty(p) ? null : p;
+            }
+        }
+
+        // The last recording's report: the one Performance Hog wrote itself (1.3.0), else written now. 1.2.0's Write
+        // takes (out error); 1.3.0's (RecordingResult, out error): the older call stopped the suite of 2026-11-09 with a
+        // TargetParameterCountException.
         internal static string Export(out string error)
         {
-            object[] args = { null };
-            string path = (string)writer.GetMethod("Write").Invoke(null, args);
-            error = (string)args[0];
+            error = null;
+            string auto = AutoReportPath;
+            if (auto != null) return auto;
+            MethodInfo w = writer.GetMethod("Write");
+            object[] args = w.GetParameters().Length == 2
+                ? new object[] { recorder.GetProperty("Last")?.GetValue(null), null }
+                : new object[] { null };
+            string path = (string)w.Invoke(null, args);
+            error = (string)args[args.Length - 1];
             return path;
         }
     }

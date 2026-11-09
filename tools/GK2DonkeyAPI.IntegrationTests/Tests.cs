@@ -52,6 +52,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             new Scenario { Group = GroupFlying, Name = "jump: the dragon's own (its [Jump] with wings; live, a take-off and landing on its flying frames)", Body = DragonJump },
             new Scenario { Group = GroupFlying, Name = "rider: still on the dragon's flying pictures while the game walks under them (the stick held in the air), its own BobInFlight bringing the motion back, the bob on the ground after", Body = DragonRiderSteady },
             new Scenario { Group = GroupGarbage, Name = "the garbage survey (measures only): on foot standing and walking, riding walking and still, the Mounts panel picking, the dev stride probe; the garbage by part in each", Body = GarbageSurvey, HidesPanel = true },
+            new Scenario { Group = GroupGarbage, Name = "the mount crowd (measures only): every shipped look with babies and carts, lanterns lit at night, uncapped; 12 then 36 in view, 120 more scattered (the levels), ridden through; rows in BepInEx\\GK2-crowd.tsv; then everything gone and the counters back", Body = CrowdTests.MountCrowd, HidesPanel = true },
             new Scenario { Group = GroupWalk, Name = "the walk survey (measures only): every mount ridden and with the cart, steered right and left by the test, a standing one and a baby near; the stride probe's rows in BepInEx/GK2-strides", Body = WalkSurvey },
         };
     }

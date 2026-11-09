@@ -67,6 +67,11 @@ namespace GK2DonkeyAPI
             SndSurface, //   inside SndEmit: the ground's surface under the mount (a raycast) and its step sound
             DevProbe,   //   inside Sounds: the dev-only stride probe (StrideProbe.Tick/Step: a log line and a CSV append a cycle)
             Keys,       // the mods' keys polled and the Settings window's key capture (Plugin.Update, before Tick)
+            Companion,  // the companions' frame (MountCompanion.TickAll: each mod's ridden mount kept dressed and in step)
+            HeadWatch,  // the still-head tripwire, every instance with a view, ridden or not (Instance.HeadWatch)
+            Doors,      // foals through a door with the keeper (IndoorsTick) and a corpse at the morgue door (MorgueHandover)
+            Scenes,     // the instances sorted by scene and this frame's snapshot (BuildByScene, TakeSnapshot)
+            Warm,       // the work spread over frames: translations, looks and sounds read ahead, sheets built, the art checks
             Count,
         }
 
@@ -402,6 +407,11 @@ namespace GK2DonkeyAPI
         }
 
         internal static void PhaseAbort() => phaseOn = false;
+
+        // The running (or last) phase's figures as numbers, for a scenario's own table (the mount crowd's TSV).
+        internal static double PhaseModMsPerFrame => phaseTicks[(int)S.Tick] * MsPerTick / Math.Max(1, phaseFrames);
+        internal static double PhaseKbPerFrame => phaseAlloc / 1024.0 / Math.Max(1, phaseFrames);
+        internal static int PhaseCollections => GC.CollectionCount(0) - phaseGc;
 
         internal static string PhaseEnd(string label)
         {

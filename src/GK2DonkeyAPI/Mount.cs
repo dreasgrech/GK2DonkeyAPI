@@ -956,7 +956,22 @@ namespace GK2DonkeyAPI
             // The game's attack states (sword, bow, their focus stances, the spear): the keeper fights from the saddle, so
             // they do not end the ride; RestoreSpeed leaves their speed alone. One rule for both (by name: eight classes,
             // and the game adds to them).
-            internal static bool IsAttackState(SSMState s) => s != null && s.GetType().Name.StartsWith("Attack", StringComparison.Ordinal);
+            // The answer kept for the last state class seen: Type.Name makes a new string on every call in this runtime, and
+            // this runs 1-3 times a ridden frame, more in a fight (2026-11-09, docs/performance.md).
+            internal static bool IsAttackState(SSMState s)
+            {
+                if (s == null) return false;
+                Type t = s.GetType();
+                if (!ReferenceEquals(t, attackCheckedType))
+                {
+                    attackCheckedType = t;
+                    attackCheckedAnswer = t.Name.StartsWith("Attack", StringComparison.Ordinal);
+                }
+                return attackCheckedAnswer;
+            }
+
+            private static Type attackCheckedType;
+            private static bool attackCheckedAnswer;
 
             private string WhyMustDismount(PlayerController pc)
             {
@@ -2486,7 +2501,7 @@ namespace GK2DonkeyAPI
                     // 2026-10-01). The step limit below stays as the backstop.
                     GroundHeightPair(target + bodyOffset, basePos, basePos.y, out float gd, out float gk, out string pairSource);
                     lastDonkeyGroundSource = lastKeeperGroundSource = pairSource;
-                    lastCartGround = GroundHeight(target + bodyOffset - right * (sign * 1.2f), out lastCartGroundSource);
+                    if (DevTools.Unlocked) lastCartGround = GroundHeight(target + bodyOffset - right * (sign * 1.2f), out lastCartGroundSource); // read only by LogGeometry (the dev button): a navmesh lookup and raycasts every ridden frame for nothing otherwise (2026-11-09)
                     // The walkable surface under the body, as the game snaps a walking object (layers 11 and 12, the highest
                     // hit within reach of the keeper's level): the donkey stands on it. Taken as a difference from the
                     // keeper's height, it carried his physics body's hover over a slope (+0.03 to +0.05 going down the
