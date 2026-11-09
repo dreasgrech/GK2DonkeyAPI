@@ -585,6 +585,25 @@ between the sessions (the "none" phase itself 2.62 -> 2.83 ms). **Open:** the ga
 The 306 MB "Disk written" in these reports is the self-test run's temporary test packs (`SelfTest.WriteTempPack`,
 285 MB) and its settings changes: dev only.
 
+### The cart's item cost, step by step (2026-11-09, after the pass)
+
+A dev-only probe (`Dev/CargoCost.cs`, with the `[perf]` logging): one `[cargo-cost]` line per item on or off, each
+step's time and the views' size. Six wood loaded and taken off by hand:
+
+| Step | Before | After |
+|---|---|---|
+| the loaded body (`SetGameLoadedBody`: every transform under the cart walked by name, 443 -> 2,343 with six views) | 0.20 -> 0.89 ms, growing a view at a time | 0.00 (the two bodies found once per view, `FindCartBodies`) |
+| a new item's view: the game's `DropViewAtomMesh.Activate` | 1.40-1.50 (with our walk) | 1.40-1.50 (our walk now of the active parts only: 0.00-0.01) |
+| the packer | 3.4 and 1.6 ms on the 2nd and 3rd item, then 0.1-0.3 | the same: a first use a session (later loads in the run: 0.5 ms or under) |
+| the rest (mirror, events, slots, the cart parts collected again, the hint) | about 0.2 | about 0.2 |
+| **an item on, 4th to 6th** | **2.3-2.5 ms** | **1.75-2.0 ms** |
+| **an item off** | **1.0-1.2 ms** | **0.2-0.4 ms** |
+
+Each cargo view is a copy of the keeper's overhead model: 380 transforms, ~370 item meshes. The game's `Activate`
+(decompiled) reads the name of every one of them and switches each off to show one: what it does for the keeper's
+own hands too. What's left of an item's cost is that call, once per item that gets a fresh view. F11 Run all
+after the change: 2046 passed, 0 failed, 0 warnings.
+
 **Left for after this pass, by what a player feels:** the cargo refresh per item (2-6 ms; row 20's other half), the
 door frame with babies (row 10), opening the journal (one 14 ms frame), the garbage of views waking and sleeping
 riding through a herd, the picture drawn every frame while the journal is open (rows 4-5).

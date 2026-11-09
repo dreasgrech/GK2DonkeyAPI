@@ -15,7 +15,8 @@ For players:
 - **Smoother on slower PCs** (2026-11-09): changing a setting in the Mount Journal or the options window no longer
   writes the settings file at every step of a slider (it is written a moment after you stop). Mounts standing near
   you, riding, jumping and flying make less work and less memory garbage each frame, and mounts left in another
-  place than yours rest until you are there. A small memory leak with mounts calling each other is fixed.
+  place than yours rest until you are there. A small memory leak with mounts calling each other is fixed. Putting
+  items on the cart and taking them off costs less.
 - **The skull is Larry** (2026-11-08): Saddle Up's skull mount is called Larry, as in the game. Gerry was the skull
   in the first game. Your skull keeps his colours, babies and settings, and a name you gave him yourself stays.
 - **The colours window has tabs** (2026-11-08): Mount, the worn skin's own parts on a tab named after the skin, and
@@ -85,6 +86,13 @@ Development:
   suites ~15% lower). The crowd scenario puts the keeper back before its leak checks and compares only with the
   world's views back. tools/GK2PerfRunner works with Performance Hog 1.3.0 (it takes the report Performance Hog writes
   itself, `RecordingResult.ReportPath`; 1.3.0's `ReportWriter.Write` takes the recording).
+- **The cart's item cost** (2026-11-09, docs/performance.md "The cart's item cost, step by step"): a dev-only probe,
+  `Dev/CargoCost.cs` (a `[cargo-cost]` line per item on or off, with the `[perf]` logging), split it. The loaded and
+  empty cart bodies are found once per view (`Cargo.Rig.FindCartBodies`) instead of a walk by name of every
+  transform under the cart on each change (2,343 with six items aboard: 0.2-0.9 ms); `ActivateFor` sets the layer
+  and switches colliders off on the active parts only (`MakeView` did all when the copy was made). An item on 2.3-2.5
+  -> 1.75-2.0 ms, off 1.0-1.2 -> 0.2-0.4 ms; what is left is the game's own `DropViewAtomMesh.Activate` (1.4 ms, it
+  goes through the ~370 item meshes of the copy). F11 2046/0/0.
 - **The other skins' colour rows biggest part first too** (2026-11-08; the Donkey Skin Pack's CHANGELOG): judged on
   the pictures, a part that sits on another right after it. Royal Parade: Saddle cloth, Trim and fringe, Emblem,
   Crown, Jewels. Armored: Body armour, Skirt, Helmet, Plume, Brass (trim over both helmet and armour, last).

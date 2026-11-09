@@ -124,6 +124,7 @@ namespace GK2DonkeyAPI
                         }
                     }
                 }
+                CargoCost.Mark("cart parts to rest");
                 CargoRig.RefreshViews();
                 cartParts.Clear();
                 logGeometry = false; // measured and logged at mount already; a cargo change only re-collects
@@ -131,6 +132,7 @@ namespace GK2DonkeyAPI
                 {
                     CollectCartParts();
                     TestCargoRecollects++;
+                    CargoCost.Mark("cart parts collected again");
                 }
                 finally
                 {

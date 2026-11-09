@@ -898,12 +898,16 @@ namespace GK2DonkeyAPI
 
             private void OnChanged(List<Item> _)
             {
+                CargoCost.Begin(); // dev only: the steps' times, one line (Dev/CargoCost.cs)
                 SyncMirror();
+                CargoCost.Mark("mirror and events");
                 if (owner.IsRidden)
                 {
                     TestLoads.CartChanged(inv); // a test item that left the cart is ordinary cargo from now on
                 }
+                CargoCost.Mark("test loads");
                 ApplySlots(); // a lowered setting takes effect once the extra items are off
+                CargoCost.Mark("slots");
                 if (!unloading)
                 {
                     owner.OnCargoChanged(); // refreshes the views and re-collects the lifted cart parts
@@ -911,7 +915,9 @@ namespace GK2DonkeyAPI
                 if (owner.IsRidden)
                 {
                     RefreshTargetHint();
+                    CargoCost.Mark("hint");
                 }
+                CargoCost.End("an item on or off the cart", donkey, views.Count);
             }
 
             // The hint over what the keeper faces is built when he turns to it and rebuilt only when the game asks
@@ -1453,12 +1459,18 @@ namespace GK2DonkeyAPI
                 }
                 viewKeys[view] = key;
                 view.SetInteractionState(isUnderInteraction: false);
+                CargoCost.Mark("the game's activate");
+                // Only what is switched on now: MakeView set every part's layer and switched every collider off,
+                // inactive ones included, when the copy was made; the game's Activate switches the item's own part on.
+                // Walking the whole copy (380 transforms) each time was measured at the 1.4 ms of a new item; split, the walk
+                // is under 0.01 ms either way and the 1.4 is the game's Activate (it reads the name of and switches off
+                // every one of the ~370 item meshes to show one; 2026-11-09, docs/performance.md).
                 int layer = container != null ? container.gameObject.layer : view.gameObject.layer;
-                foreach (Transform t in view.GetComponentsInChildren<Transform>(includeInactive: true))
+                foreach (Transform t in view.GetComponentsInChildren<Transform>(includeInactive: false))
                 {
                     t.gameObject.layer = layer;
                 }
-                foreach (Collider c in view.GetComponentsInChildren<Collider>(includeInactive: true))
+                foreach (Collider c in view.GetComponentsInChildren<Collider>(includeInactive: false))
                 {
                     c.enabled = false;
                 }
@@ -1514,7 +1526,9 @@ namespace GK2DonkeyAPI
                         }
                         drawn.Add(new Drawn { Item = it, LoadOrder = k });
                     }
+                    CargoCost.Mark("container and list");
                     SetGameLoadedBody(!modDrawsCorpse);
+                    CargoCost.Mark("loaded body");
 
                     // Views: one per drawn item, activated with the item's mesh, then measured.
                     for (int i = 0; i < drawn.Count; i++)
@@ -1538,8 +1552,10 @@ namespace GK2DonkeyAPI
                         }
                         view.gameObject.SetActive(true);
                         bool fresh = ActivateFor(view, drawn[i].Item);
+                        CargoCost.Mark(fresh ? "view activated (new item)" : "view kept");
                         drawn[i].View = view;
                         bool measured = MeasureMeshes(view.transform, view.transform, out drawn[i].Box);
+                        CargoCost.Mark("measured");
                         if (!measured)
                         {
                             drawn[i].Box = new Bounds(Vector3.zero, new Vector3(0.5f, 0.4f, 0.5f));
@@ -1559,7 +1575,9 @@ namespace GK2DonkeyAPI
                         }
                     }
 
+                    CargoCost.Mark("views activated and measured");
                     Pack(drawn, s, gameCorpse ? LoadedBodyExtra() : 0f);
+                    CargoCost.Mark("pack");
                     if (AnyHidden && owner.IsRidden)
                     {
                         for (int i = 0; i < placedViews.Count && i < Placed.Count; i++)
@@ -1572,6 +1590,7 @@ namespace GK2DonkeyAPI
                     }
                     // A chest riding (CartChest): its stand-in on the bed, placed like a lone item, listed for the panel.
                     owner.ChestRig.Layout(container, s.CargoBedDepth.Value, Placed, out string chestNote);
+                    CargoCost.Mark("chest");
                     if (chestNote != null)
                     {
                         LastFloor = s.CargoBedDepth.Value;
@@ -1785,16 +1804,46 @@ namespace GK2DonkeyAPI
                     }
                     return;
                 }
-                foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: true))
+                FindCartBodies();
+                foreach (Transform t in loadedBodies)
                 {
-                    if (t.name == "donkey_cart_body_sway" && t.gameObject.activeSelf)
+                    if (t != null && t && t.gameObject.activeSelf)
                     {
                         t.gameObject.SetActive(false);
                     }
-                    else if (t.name == "donkey_cart_empty_sway" && !t.gameObject.activeSelf)
+                }
+                foreach (Transform t in emptyBodies)
+                {
+                    if (t != null && t && !t.gameObject.activeSelf)
                     {
                         t.gameObject.SetActive(true);
                     }
+                }
+            }
+
+            // The cart's loaded and empty bodies, found once per view. Walking every transform under the cart on each
+            // change read the name of each: with six items aboard 2,343 of them (each cargo view is a copy of the
+            // keeper's overhead model, 380 transforms), 0.2 to 0.9 ms an item (the [cargo-cost] lines, 2026-11-09).
+            private Wgo bodiesOf;
+            private readonly List<Transform> loadedBodies = new List<Transform>(), emptyBodies = new List<Transform>();
+
+            private void FindCartBodies()
+            {
+                bool gone = false;
+                foreach (Transform t in loadedBodies) if (t == null || !t) gone = true;
+                foreach (Transform t in emptyBodies) if (t == null || !t) gone = true;
+                if (ReferenceEquals(bodiesOf, donkey) && !gone && (loadedBodies.Count > 0 || emptyBodies.Count > 0))
+                {
+                    return;
+                }
+                bodiesOf = donkey;
+                loadedBodies.Clear();
+                emptyBodies.Clear();
+                foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: true))
+                {
+                    if (container != null && t.IsChildOf(container)) continue; // the cargo views: no cart body in them
+                    if (t.name == "donkey_cart_body_sway") loadedBodies.Add(t);
+                    else if (t.name == "donkey_cart_empty_sway") emptyBodies.Add(t);
                 }
             }
 
