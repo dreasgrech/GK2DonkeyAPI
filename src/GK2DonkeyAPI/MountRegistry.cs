@@ -147,7 +147,9 @@ namespace GK2DonkeyAPI
 
         internal static Instance Current => bound ?? Ridden;
 
-        internal static bool IsRegistered(Instance i) => i != null && instances.Contains(i);
+        // A flag the registry keeps, not a search of the list: asked about twice per active baby a frame and in the levels'
+        // checks, the search grew with mounts x babies (the review of 2026-11-09).
+        internal static bool IsRegistered(Instance i) => i != null && i.InRegistry;
 
         internal readonly struct Binding : IDisposable
         {
@@ -243,6 +245,7 @@ namespace GK2DonkeyAPI
                 i.Handle = new MountHandle(i);
             }
             instances.Add(i);
+            i.InRegistry = true;
             byFullId[i.FullId] = i;
             structureVersion++;
             if (!i.Ephemeral)
@@ -258,6 +261,7 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
+            i.InRegistry = false;
             InstanceControls.Forget(i);
             if (byFullId.TryGetValue(i.FullId, out Instance same) && same == i)
             {
@@ -755,6 +759,7 @@ namespace GK2DonkeyAPI
             }
             if (instances.Count > 0)
             {
+                foreach (Instance left in instances) left.InRegistry = false;
                 instances.Clear();
             }
             byFullId.Clear();

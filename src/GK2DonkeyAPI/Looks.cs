@@ -161,6 +161,7 @@ namespace GK2DonkeyAPI
             // so two mods' "fire" for two mounts never meet (the user, 2026-10-24). LocalId: the "<skin>" part, its folder's
             // name; "default" is the mount's own look (DefaultSkinName).
             internal string Id, LocalId, Name, Author, Version, Owner;
+            internal string SoundWho;         // "<owner>/<id>", made once (the sounds' resolve; Sounds.cs)
             internal string Description;      // for the Mounts panel: a line or two about the look
             internal string Unavailable;      // why the skin can't be worn now (a game-source skin whose frames the game no longer has): not offered, the donkey shows
             internal string Portrait;         // a pack's: a PNG of the pack (next to the frames) for the panel's list; null: the mount drawn
@@ -2954,8 +2955,26 @@ namespace GK2DonkeyAPI
             // Creature facts (the mount: cart, babies, effect, abilities) follow the WANTED skin at once (a sheet still
             // building, or no view at all); the drawing's geometry (the tuning merge) follows the WORN skin, so a rider
             // on the old picture never takes the new picture's numbers (docs/mounts-parity-matrix.md 2.10).
-            internal Catalog.Entry MountNow => (pending?.Def ?? WantedDef ?? skin?.Def)?.Mount ?? Catalog.Donkey;
-            internal SkinDef DefNow => pending?.Def ?? WantedDef ?? skin?.Def;
+            // The donkey asked for (the Skin key empty or "donkey"): the donkey now, not the skin still worn until the next tick
+            // lets it go (the journal's row click auditioned the donkey in the previous mount's voice: the user, 2026-11-10).
+            internal Catalog.Entry MountNow => WantsDonkey ? Catalog.Donkey : (pending?.Def ?? WantedDef ?? skin?.Def)?.Mount ?? Catalog.Donkey;
+            internal SkinDef DefNow => WantsDonkey ? null : pending?.Def ?? WantedDef ?? skin?.Def;
+
+            private bool WantsDonkey
+            {
+                get
+                {
+                    if (owner == null) return false;
+                    string want;
+                    using (Mount.Bind(owner))
+                    {
+                        want = Skin.Value;
+                    }
+                    if (want == null) return true;
+                    want = want.Trim();
+                    return want.Length == 0 || want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase);
+                }
+            }
             internal SkinDef WornDef => skin?.Def;
             // A new look on its way: a sheet still building, or the Skin key naming another skin than the one worn (the
             // settings picture holds its last finished photo meanwhile, PreviewStage).

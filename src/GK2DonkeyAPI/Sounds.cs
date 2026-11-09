@@ -22,7 +22,12 @@ namespace GK2DonkeyAPI
         private static readonly HashSet<string> warnedIds = new HashSet<string>();
 
         // The last event any rig played, for the dev tab.
-        public static string LastEvent { get; private set; } = "";
+        // The last sound emitted, said when read: built on every emit before (each step of every mount), read only by the
+        // dev window, the self-tests and a refused API play (2026-11-09).
+        public static string LastEvent => LastText(lastE, lastV, lastId, lastNote);
+        private static string lastE, lastV, lastId, lastNote;
+
+        private static string LastText(string e, string v, string id, string note) => e == null ? "" : note != null ? e + note : e + (v != null ? "." + v : "") + " " + id;
 
         internal static bool StandingOn => Plugin.StandingSounds == null || Plugin.StandingSounds.Value;
 
@@ -224,6 +229,7 @@ namespace GK2DonkeyAPI
             if (paper == null || paper.SoundsRig == null || Time.unscaledTime < nextAudition) return;
             if (!Mount.Instance.IsInGame(out PlayerController pc, out _) || pc == null) return;
             nextAudition = Time.unscaledTime + 0.35f;
+            paper.SoundsRig.ForgetResolved(); // the mount just picked, not the one resolved half a second ago
             paper.SoundsRig.Stop("voice");
             paper.SoundsRig.Audition("voice", pc.transform);
         }
@@ -458,7 +464,13 @@ namespace GK2DonkeyAPI
             private readonly HashSet<string> warned = new HashSet<string>();
             private bool tickFailedSaid;
 
-            internal string LastEvent { get; private set; } = "";
+            internal string LastEvent => LastText(myE, myV, myId, myNote);
+            private string myE, myV, myId, myNote;
+
+            private void NoteLast(string e, string v, string id, string note)
+            {
+                myE = lastE = e; myV = lastV = v; myId = lastId = id; myNote = lastNote = note;
+            }
             // Plays that reached the game's player, by event (the self-tests).
             internal readonly Dictionary<string, int> TestPlays = new Dictionary<string, int>(StringComparer.Ordinal);
             // the last play of each event and its handler: the dev table marks what is playing now
@@ -913,11 +925,15 @@ namespace GK2DonkeyAPI
             // What plays for an event (and a variant: "grass" for step) on this instance now: a mod's override, then
             // (step 3) the skin's and the mount's blocks, then the base: the player's cfg keys of the instance's style
             // as bound (a mount's pins on them included). Kept half a second: the walk asks every frame.
+            // The kept resolves dropped: the journal's audition, right after a pick (two picks within the half second played
+            // the first one's voice).
+            internal void ForgetResolved() => cache.Clear();
+
             internal SoundSpec Resolve(string eventId, string variant = null)
             {
                 SoundEvents.Def d = SoundEvents.Find(eventId);
                 if (d == null) return null;
-                string key = variant != null ? eventId + "." + variant : eventId;
+                string key = variant != null ? SoundBlock.Key(eventId, variant) : eventId; // the pair joined once, kept (SoundBlock.Key)
                 float now = Time.unscaledTime;
                 if (cache.TryGetValue(key, out (SoundSpec Spec, float At) c) && now - c.At < 0.5f) return c.Spec;
                 // bound here too (not only in Emit and Tick): the base reads Tuned values, which serve this instance's
@@ -956,14 +972,14 @@ namespace GK2DonkeyAPI
                 SoundBank.FileSource mountFiles = Looks.MountSoundFiles(mount);
                 Looks.SoundLayer style = cart ? Looks.SoundLayer.Cart : Looks.SoundLayer.Ride;
                 bool baby = IsBaby;
-                string mountWho = mount.Owner + "/" + mount.Id, skinWho = skin != null ? skin.Owner + "/" + skin.Id : null; // a code mount's or skin's clips are banked under its mod too
+                string mountWho = mount.SoundWho ?? (mount.SoundWho = mount.Owner + "/" + mount.Id), skinWho = skin != null ? skin.SoundWho ?? (skin.SoundWho = skin.Owner + "/" + skin.Id) : null; // a code mount's or skin's clips are banked under its mod too
                 touched |= Apply(Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(eventId, variant), "mount", mountFiles, mountWho, r, ref vol, ref pitch);
                 touched |= Apply(Looks.MountSoundBlock(mount, style)?.Get(eventId, variant), "mount", mountFiles, mountWho, r, ref vol, ref pitch);
                 if (baby) touched |= Apply(Looks.MountSoundBlock(mount, Looks.SoundLayer.Baby)?.Get(eventId, variant), "mount", mountFiles, mountWho, r, ref vol, ref pitch);
                 // a skin built on its mount's default: the default's sounds between the mount's and its own, its file lines
                 // read from the default's own sounds\ (docs/skin-layering-plan.md 2.5)
                 Looks.SkinDef parent = skin?.Parent;
-                string parentWho = parent != null ? parent.Owner + "/" + parent.Id : null;
+                string parentWho = parent != null ? parent.SoundWho ?? (parent.SoundWho = parent.Owner + "/" + parent.Id) : null;
                 touched |= Apply(Looks.SkinSoundBlock(parent, Looks.SoundLayer.Both)?.Get(eventId, variant), "default", parent?.SoundFiles, parentWho, r, ref vol, ref pitch);
                 touched |= Apply(Looks.SkinSoundBlock(parent, style)?.Get(eventId, variant), "default", parent?.SoundFiles, parentWho, r, ref vol, ref pitch);
                 if (baby) touched |= Apply(Looks.SkinSoundBlock(parent, Looks.SoundLayer.Baby)?.Get(eventId, variant), "default", parent?.SoundFiles, parentWho, r, ref vol, ref pitch);
@@ -971,7 +987,7 @@ namespace GK2DonkeyAPI
                 touched |= Apply(Looks.SkinSoundBlock(skin, style)?.Get(eventId, variant), "skin", skin?.SoundFiles, skinWho, r, ref vol, ref pitch);
                 if (baby) touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Baby)?.Get(eventId, variant), "skin", skin?.SoundFiles, skinWho, r, ref vol, ref pitch);
                 SoundLine ov = null;
-                if (variant != null) overrides.TryGetValue(eventId + "." + variant, out ov);
+                if (variant != null) overrides.TryGetValue(SoundBlock.Key(eventId, variant), out ov);
                 if (ov == null) overrides.TryGetValue(eventId, out ov);
                 touched |= Apply(ov, "mod", null, ov?.Owner ?? "mod", r, ref vol, ref pitch);
                 r.Volume *= vol;
@@ -1144,12 +1160,12 @@ namespace GK2DonkeyAPI
                 if (d.Stoppable) Stop(eventId);
                 if (s.Silent)
                 {
-                    LastEvent = Sounds.LastEvent = eventId + " (silent)";
+                    NoteLast(eventId, null, null, " (silent)");
                     return null;
                 }
                 if (s.Loading)
                 {
-                    LastEvent = Sounds.LastEvent = eventId + " (its files still loading)";
+                    NoteLast(eventId, null, null, " (its files still loading)");
                     return null;
                 }
                 string id = s.BankId ?? s.GameId;
@@ -1193,7 +1209,7 @@ namespace GK2DonkeyAPI
                     }
                     if (owner.Handle != null) Mounts.Sounds.RaisePlayed(owner.Handle, eventId);
                 }
-                LastEvent = Sounds.LastEvent = eventId + (variant != null ? "." + variant : "") + " " + id;
+                NoteLast(eventId, variant, id, null);
                 return h;
             }
 

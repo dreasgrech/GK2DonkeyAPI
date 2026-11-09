@@ -33,6 +33,7 @@ namespace GK2DonkeyAPI
             // idle (Tiers.cs) wakes the frame after it is brought near; riding it before that would measure the seat
             // from an inactive view, whose renderers have no size.
             internal bool Ready => HasView && !switchedOff;
+            internal bool InRegistry; // in the registry's list now (Register/Unregister): IsRegistered without a search of the list (2026-11-09)
 
             // Where it stands: the donkey root's place (WgoData.Position; the donkey's body is drawn half a unit to its
             // facing side of it, a free cart's shafts point that way). Kept up to date while ridden (Follow).

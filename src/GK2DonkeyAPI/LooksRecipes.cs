@@ -120,6 +120,7 @@ namespace GK2DonkeyAPI
         internal static bool BaseFramesInMemory(SkinBase b, string prefix)
         {
             if (gameBase == b && gamePrefix == prefix && gameFrames.Count > 0) return true;
+            if (!Mount.IsGameReady) return false; // the game loads them with the world: at the main menu the scan (every sprite in memory, 6-7 ms) found nothing every 3 s (the review of 2026-11-09)
             if (Time.realtimeSinceStartup < baseFramesCheckAt) return false;
             baseFramesCheckAt = Time.realtimeSinceStartup + 3f;
             FindGameFrames(b, prefix, quiet: true);

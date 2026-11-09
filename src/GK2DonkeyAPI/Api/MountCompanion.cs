@@ -254,6 +254,12 @@ namespace GK2DonkeyAPI.Api
             internal string MountId; // a left one's mount (its key's); the current one is the skin's
             internal string Salt;
             internal MountHandle SaltOf;
+            // Each baby's looks as last worked out, for the salt, the baby mount and the variety they were worked out for: the
+            // check once a second made two System.Randoms and a closure per baby every time (0.1-0.3 KB a frame; 2026-11-09).
+            internal readonly FoalLooks[] Looks = new FoalLooks[MaxFoals];
+            internal readonly bool[] LooksSet = new bool[MaxFoals];
+            internal string LooksSalt, LooksMount;
+            internal float LooksK = -1f;
         }
 
         private Family cur = new Family();
@@ -286,11 +292,28 @@ namespace GK2DonkeyAPI.Api
         // The mount a baby is a baby of: the parent's own when they wear its skin (and it has babies), else the donkey.
         private static string BabyMountId(Family f, MountOwn own)
         {
-            MountInfo m = f.Donkey != null && f.Donkey.Exists && own.FoalsWearSkin ? Mounts.Catalog.Find(f.Donkey.Mount) : null;
+            GK2DonkeyAPI.Catalog.Entry m = f.Donkey != null && f.Donkey.Exists && own.FoalsWearSkin ? GK2DonkeyAPI.Catalog.Find(f.Donkey.Mount) : null; // the entry itself: the public Find makes a MountInfo each call
             return m != null && m.Foals ? m.Id : MountCatalog.DonkeyId;
         }
 
-        private FoalLooks LooksOfFoal(Family f, MountOwn own, int i) => FoalLooks.For(FoalSalt(f), BabyMountId(f, own), i, VarietyNow);
+        private FoalLooks LooksOfFoal(Family f, MountOwn own, int i)
+        {
+            string salt = FoalSalt(f), mount = BabyMountId(f, own);
+            float k = VarietyNow;
+            if (!string.Equals(salt, f.LooksSalt, StringComparison.Ordinal) || !string.Equals(mount, f.LooksMount, StringComparison.Ordinal) || Math.Abs(k - f.LooksK) > 0.0001f)
+            {
+                f.LooksSalt = salt;
+                f.LooksMount = mount;
+                f.LooksK = k;
+                Array.Clear(f.LooksSet, 0, f.LooksSet.Length);
+            }
+            if (!f.LooksSet[i])
+            {
+                f.Looks[i] = FoalLooks.For(salt, mount, i, k);
+                f.LooksSet[i] = true;
+            }
+            return f.Looks[i];
+        }
 
         internal FoalLooks TestLooksOfFoal(int i) => LooksOfFoal(cur, CurrentOwn, i); // the self-test
         // The self-tests of the mounts left in the world (Dev/LeaveMountsTests.cs): a load's finding again by the keys, and a
@@ -1523,7 +1546,7 @@ namespace GK2DonkeyAPI.Api
             // A baby's size is its mount's (MountDef.FoalScale: the donkey's 0.6, a larger-drawn mount's 0.33): a baby of another
             // size (the mount changed under it) is made again at the right one.
             // ... and only when the babies are the same mount and skin: plain baby donkeys are 0.6 (the row's promise)
-            MountInfo babyMount = parent && mountOwn.FoalsWearSkin ? Mounts.Catalog.Find(d.Mount) : null;
+            GK2DonkeyAPI.Catalog.Entry babyMount = parent && mountOwn.FoalsWearSkin ? GK2DonkeyAPI.Catalog.Find(d.Mount) : null; // the entry: no MountInfo made each second
             float babySize = babyMount != null && babyMount.Foals ? babyMount.FoalScale : 0.6f; // a mount without babies of its own: plain donkeys
             for (int i = 0; i < MaxFoals; i++)
             {

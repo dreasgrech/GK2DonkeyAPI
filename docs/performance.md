@@ -849,6 +849,31 @@ compares that with Unity's own conversion pixel for pixel.
   alone before the fix: 30 rebuilds, 204 MB).
 - **Left:** Hellfire's erase copies (about 4 MB a build) and Larry's read-backs (about 6 MB), their own code paths.
 
+### More of the review's rows, fixed (2026-11-09, late)
+
+Taken by what the 100% crowd showed (phase 3, 36 in view and 120 around: the mod 6.92 KB a frame, `Sounds` 4.19 of it,
+`SndResolve` 2.92, `SndEmit` 0.94; `Companion` 0.1-0.3 KB a frame in every garbage phase):
+
+- **Row 12, the sounds' resolve:** a variant event ("step" on "grass") joined `eventId + "." + variant` for the cache
+  key, the override and each of up to nine layers' `SoundBlock.Get`, and each resolve joined the mount's, skin's and
+  default's `owner/id`: about a dozen strings a resolve, every 0.5 s per event per active mount. Now `SoundBlock.Key`
+  joins a pair once and keeps it, and `Catalog.Entry.SoundWho` / `SkinDef.SoundWho` are made once.
+- **The last sound's text** (`Sounds.LastEvent`, the rig's `LastEvent`): built on every emit (each step of every mount),
+  read only by the dev window, the self-tests and a refused API play: now kept as its parts and said when read.
+- **Row 9, `IsRegistered`:** a flag the registry keeps (`Instance.InRegistry`, set in `Register`, cleared in
+  `Unregister` and the leave-the-game clear), not `instances.Contains`.
+- **Row 7, the base frames' scan at the main menu:** `LooksRecipes.BaseFramesInMemory` waits for a loaded game (the
+  frames come with the world), as `DonkeyFrames` does: no 6-7 ms scan every 3 s at the menu with Hellfire chosen.
+- **Row 21, the profiler for players:** `Perf.Timing` (the [perf] logging, a measured phase, or the self-tests): off,
+  no timestamps per part per mount and no summary string once a second. Performance Hog's runs with the dev panel off
+  now see the mod as a player has it.
+- **Row 18, the companion's once-a-second baby check:** each baby's looks (`FoalLooks.For`: two `System.Random` and a
+  closure each) kept per family until the salt, the baby mount or the variety changes; the catalog read as its entry,
+  not `Mounts.Catalog.Find` (a new `MountInfo` each call).
+- **Not taken:** row 10 (the catch-up search walking every instance): searching this scene's list only would miss a
+  baby moved into the scene earlier in the same frame (the "two babies on one spot" of 2026-10-03), and it measured
+  under 0.5 ms at the doors.
+
 **Left for after this pass, by what a player feels:** the cargo refresh per item (2-6 ms; row 20's other half), the
 door frame with babies (row 10), opening the journal (one 14 ms frame), the garbage of views waking and sleeping
 riding through a herd, the picture drawn every frame while the journal is open (rows 4-5).

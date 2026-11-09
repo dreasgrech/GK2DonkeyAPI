@@ -45,13 +45,24 @@ namespace GK2DonkeyAPI
     //   voice.idle_every = 25                 the event's own numbers (SoundEvents.Def.Numbers)
     internal sealed class SoundBlock
     {
+        // "<event>.<variant>" (step.grass), made once per pair and kept: a resolve looked a variant up in up to nine layers,
+        // each joining the pair anew (about 3 KB a frame with a crowd at 100% zoom; 2026-11-09, docs/performance.md).
+        private static readonly Dictionary<string, Dictionary<string, string>> joined = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+
+        internal static string Key(string eventId, string variant)
+        {
+            if (!joined.TryGetValue(eventId, out Dictionary<string, string> byVariant)) joined[eventId] = byVariant = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (!byVariant.TryGetValue(variant, out string k)) byVariant[variant] = k = eventId + "." + variant;
+            return k;
+        }
+
         internal readonly Dictionary<string, SoundLine> Lines = new Dictionary<string, SoundLine>(StringComparer.OrdinalIgnoreCase);
 
         internal int Count => Lines.Count;
 
         internal SoundLine Get(string eventId, string variant)
         {
-            if (variant != null && Lines.TryGetValue(eventId + "." + variant, out SoundLine v)) return v;
+            if (variant != null && Lines.TryGetValue(Key(eventId, variant), out SoundLine v)) return v;
             return Lines.TryGetValue(eventId, out SoundLine l) ? l : null;
         }
 

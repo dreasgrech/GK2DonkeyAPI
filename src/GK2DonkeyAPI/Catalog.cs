@@ -18,6 +18,7 @@ namespace GK2DonkeyAPI
         internal sealed class Entry
         {
             internal string Id, Name, Author, Version, Owner;
+            internal string SoundWho;  // "<owner>/<id>", made once (the sounds' resolve joined it twice a second per mount; Sounds.cs)
             internal string Needs;     // a pack's [Mount] needs = (the API version it was written for), kept for its Save
             internal int Format;       // a pack's [Mount] format = (0: not given)
             internal string Noun;                      // the word a sentence uses ("a crab can't pull the cart"); null: the name in lower case

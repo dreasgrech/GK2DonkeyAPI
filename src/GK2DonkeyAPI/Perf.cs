@@ -112,6 +112,7 @@ namespace GK2DonkeyAPI
 
             internal Scope(S s)
             {
+                if (!Timing) { this.s = -1; m0 = 0; t0 = 0; return; } // nobody reads it: no timestamps
                 this.s = (int)s;
                 m0 = AllocBySection ? AllocatedNow() : 0;
                 t0 = Stopwatch.GetTimestamp();
@@ -119,6 +120,7 @@ namespace GK2DonkeyAPI
 
             public void Dispose()
             {
+                if (s < 0) return;
                 frameTicks[s] += Stopwatch.GetTimestamp() - t0;
                 frameCalls[s]++;
                 if (AllocBySection)
@@ -138,6 +140,11 @@ namespace GK2DonkeyAPI
         private static readonly long[] frameBytes = new long[(int)S.Count];
         private static readonly long[] sumBytes = new long[(int)S.Count];
         internal static readonly double[] BytesPerFrame = new double[(int)S.Count];
+
+        // Whether the parts are timed at all: only for someone who reads them (the dev panel's [perf] logging, a measured
+        // phase, the self-tests). For players it timed every part of every mount every frame and built a summary
+        // string once a second that nobody saw (the review of 2026-11-09).
+        internal static bool Timing => LogEvery10s || phaseOn || SelfTest.Running;
 
         internal static Scope Measure(S s) => new Scope(s);
 
@@ -196,14 +203,18 @@ namespace GK2DonkeyAPI
         internal readonly struct AllocScope : IDisposable
         {
             private readonly long m0;
+            private readonly bool on;
 
             internal AllocScope(bool _)
             {
-                m0 = AllocatedNow();
+                on = Timing;
+                m0 = on ? AllocatedNow() : 0;
+
             }
 
             public void Dispose()
             {
+                if (!on) return;
                 long d = AllocatedNow() - m0;
                 if (d > 0)
                 {
@@ -293,6 +304,7 @@ namespace GK2DonkeyAPI
         // Once per frame, first thing in Mount.Tick: closes the previous frame.
         internal static void BeginFrame()
         {
+            if (!Timing) return;
             int f = Time.frameCount;
             if (f == lastFrame)
             {

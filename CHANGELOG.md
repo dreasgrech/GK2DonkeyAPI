@@ -12,6 +12,8 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The donkey's own voice in the Mount Journal** (2026-11-10): picking the donkey after another mount played that other
+  mount's call.
 - **Smoother on slower PCs** (2026-11-09): changing a setting in the Mount Journal or the options window no longer
   writes the settings file at every step of a slider (it is written a moment after you stop). Mounts standing near
   you, riding, jumping and flying make less work and less memory garbage each frame, and mounts left in another
@@ -125,6 +127,11 @@ Development:
   version read RGBA32 only and changed nothing; checked against Unity's own conversion pixel for pixel). After: the
   Mecha 32.8 -> 1.3 MB a build, the critters and Royal Parade 1.8 -> 0.2, Armored 2.3 -> 0.6; Hellfire 6.0 -> 4.1 and
   Larry 6.2 (their own paths, left). F11 2054/0/0.
+- **More of the review's rows** (2026-11-09, docs/performance.md "More of the review's rows, fixed"): the sounds'
+  resolve joins its keys once (`SoundBlock.Key`, `SoundWho`); the last sound's text is said when read; `IsRegistered` a
+  flag (`Instance.InRegistry`); the base frames' scan waits for a loaded game; the profiler times only for the dev
+  panel, a measured phase or the self-tests (`Perf.Timing`); the companion keeps each baby's looks per family and reads
+  the catalog's entry.
 - **The other skins' colour rows biggest part first too** (2026-11-08; the Donkey Skin Pack's CHANGELOG): judged on
   the pictures, a part that sits on another right after it. Royal Parade: Saddle cloth, Trim and fringe, Emblem,
   Crown, Jewels. Armored: Body armour, Skirt, Helmet, Plume, Brass (trim over both helmet and armour, last).
