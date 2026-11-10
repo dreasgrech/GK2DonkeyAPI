@@ -63,7 +63,7 @@ colours.palette_cream,크림색,Cream,"a colour of the colours window's palette 
 colours.palette_snow,눈색,Snow,"a colour of the colours window's palette (E8E6E0): its name in the field of the part painted with it"
 colours.palette_ash,잿빛,Ash,"a colour of the colours window's palette (8E8B85): its name in the field of the part painted with it"
 colours.palette_slate,청회색,Slate,"a colour of the colours window's palette (5A6670): its name in the field of the part painted with it"
-colours.palette_charcoal,숯색,Charcoal,"a colour of the colours window's palette (3A3A3A): its name in the field of the part painted with it"
+colours.palette_charcoal,어두운 잿빛,Charcoal,"a colour of the colours window's palette (3A3A3A): its name in the field of the part painted with it"
 colours.palette_black,검정,Black,"a colour of the colours window's palette (1E1E1E): its name in the field of the part painted with it"
 colours.palette_rust,녹슨색,Rust,"a colour of the colours window's palette (A0461E): its name in the field of the part painted with it"
 colours.palette_brick,벽돌색,Brick,"a colour of the colours window's palette (9C4A3A): its name in the field of the part painted with it"

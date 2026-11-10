@@ -1683,25 +1683,20 @@ namespace GK2DonkeyAPI
                     if (lightGroup == null) lightGroup = lightGo.AddComponent<CanvasGroup>();
                 }
             }
-            RectTransform bracket = Bracket(host.transform);
             partPanel.sizeDelta = new Vector2(partColW, y);
             partPanelRefresh = () =>
             {
-                if (bracket == null) return;
+                if (host == null) return;
                 object now = p.Choice.Entry.BoxedValue;
                 bool isCustom = Equals(now, p.Custom);
                 PaletteColor picked = ((BepInEx.Configuration.ConfigEntry<PaletteColor>)p.Pal.Entry).Value;
-                bool any = false;
+                // the chosen slot's frame in the game's yellow, nothing round it (the user, 2026-11-10: the corner brackets
+                // too, "probably one is enough", and cut off at the palette's top)
                 foreach (var s in slots)
                 {
                     bool on = s.Kind == 0 ? Equals(now, p.Default) : s.Kind == 2 ? p.Kept != null && Equals(now, p.Kept) : isCustom && s.Colour == picked;
                     if (s.Outer != null) s.Outer.color = on ? BracketColour : SlotOuter;
-                    if (!on) continue;
-                    any = true;
-                    UiKit.Rect(bracket.gameObject, s.X - 6f, s.Y - 6f, s.W + 12f, s.H + 12f);
-                    bracket.SetAsLastSibling();
                 }
-                bracket.gameObject.SetActive(any);
                 if (keptSlot != null) keptSlot.SetActive(KeptNow(p));
                 lightRefresh?.Invoke();
                 if (lightGroup != null)
@@ -1760,29 +1755,6 @@ namespace GK2DonkeyAPI
             Image outer = Slot(parent, name, hex, x, y, w, SlotPx, click);
             ui.Text(outer.transform, "label", text ?? "", 0.9f, TextAlignmentOptions.Left, false, SlotPx, 0f, w - SlotPx - 6f, SlotPx);
             return outer;
-        }
-
-        // The game's selection mark (its zombie screen's): yellow corner brackets around the chosen slot.
-        private static RectTransform Bracket(Transform parent)
-        {
-            GameObject go = ui.Node("bracket", parent);
-            for (int corner = 0; corner < 4; corner++)
-            {
-                var at = new Vector2(corner % 2, corner / 2);
-                for (int bar = 0; bar < 2; bar++)
-                {
-                    GameObject b = ui.Node("bracket bar", go.transform, typeof(Image));
-                    var rt = (RectTransform)b.transform;
-                    rt.anchorMin = rt.anchorMax = at;
-                    rt.pivot = at;
-                    rt.anchoredPosition = Vector2.zero;
-                    rt.sizeDelta = bar == 0 ? new Vector2(9f, 2f) : new Vector2(2f, 9f);
-                    b.GetComponent<Image>().color = BracketColour;
-                    b.GetComponent<Image>().raycastTarget = false;
-                }
-            }
-            go.SetActive(false);
-            return (RectTransform)go.transform;
         }
 
         private static string Signature(List<(string Group, List<MountSettingsPage.Row> Rows)> groups)

@@ -261,8 +261,8 @@ end greyed) and its zombie screen (item slots, the chosen one in yellow corner b
   a palette colour shows as its colour (the 24 have no translated names). The arrows step Original, the kept named
   colour, then the 24; each greys at its end. The tab's other rows (the lantern switches) under the parts.
 - **Right column, the chosen part's palette** (`BuildPartPanel`): Original and the kept named colour as wide slots
-  with their names, the 24 colours as 34 px slots eight a row, the chosen slot's frame yellow and the game's corner
-  brackets around it, then the part's lightness row: always there, greyed while the part is Original or a kept named
+  with their names, the 24 colours as 34 px slots eight a row, the chosen slot's frame in the game's yellow (its corner brackets too until the user, the same day: "probably
+  one is enough"), then the part's lightness row: always there, greyed while the part is Original or a kept named
   colour (the user: "i prefer disabling the control instead of hiding it because it moves stuff up and down").
 - **Original's colour** is the part's art as drawn (`Colors.ArtSampleHex`: of the region's colours as the lightness
   rule reads them, the one nearest their average; a skin's own part's from `SkinTones.ColoursOf`). Rows say what they
