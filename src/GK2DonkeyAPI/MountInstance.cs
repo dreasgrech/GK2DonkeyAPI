@@ -589,7 +589,9 @@ namespace GK2DonkeyAPI
                     }
                     return reason;
                 }
+                StepTrace.Mark("mount: asked (WhyCannotMount, the cart, the rules)");
                 MountRules.Poll(force: true);
+                StepTrace.Mark("mount: the feature rules polled");
                 // Called to the keeper and not moved since (ComeToKeeper, a mod's keys): he stays where he is,
                 // which is where its place was worked out from. Otherwise the spot on its seat, from its place (not its
                 // view's transform: the view follows a move only in the next StandTick, and riding in the same frame put
@@ -615,6 +617,7 @@ namespace GK2DonkeyAPI
                         ComeTo(pc, here, riderFacingX);
                     }
                 }
+                StepTrace.Mark("mount: the keeper on the seat");
                 cameFor = null;
                 mounted = true;
                 lastGoodGroundDelta = 0f; // a new ride: no ride sample yet (Ride style ground, Mount.cs)
@@ -622,6 +625,7 @@ namespace GK2DonkeyAPI
                 riderAttached = true;
                 SoundsRig.OnMounted();
                 SoundsRig.Emit("mount");
+                StepTrace.Mark("mount: its sounds (OnMounted, the mount sound)");
                 pc.PhysicalBody.SetFacingDirection(new Vector2(riderFacingX, 0f));
                 pc.PhysicalBody.SpeedMultiplier = S.SpeedMultiplier.Value;
                 donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(S.WalkCycleSpeed.Value * pc.PhysicalBody.SpeedMultiplier);
@@ -637,15 +641,18 @@ namespace GK2DonkeyAPI
                 {
                     Plugin.Log.LogWarning($"Mount: attaching the rider to {Describe()} failed: {e.Message}");
                 }
+                StepTrace.Mark("mount: the rider attached");
                 lastMirrored = (AnimationState)(-1);
                 lastWalkMultiplier = 0f;
                 if (HasCart)
                 {
                     CargoRig.LoadFromHead("mount");
                 }
+                StepTrace.Mark("mount: the cargo loaded from his head");
                 Plugin.Log.LogInfo($"Mounted {Describe()} ({activeStyle}, speed x{S.SpeedMultiplier.Value}).");
                 Mounts.SetRideOwner(OwnerId);
                 Mounts.RaiseMounted(activeStyle);
+                StepTrace.Mark("mount: owner set, Mounted raised (the mods' handlers)");
                 return null;
             }
 
@@ -844,6 +851,7 @@ namespace GK2DonkeyAPI
                 // Not in armour, riding or on foot (a hitch on foot is the companion's G and the world's E): the cart is
                 // refused in a fight everywhere, or it slips in by one path and not another (seen 2026-10-14). Other mods'
                 // rules for the Cart style are asked when the hitch mounts the keeper in that style.
+                StepTrace.Mark("hitch: the mount and the cart asked");
                 string rule = WhyNotCart(pc) ?? (mounted ? MountRules.WhyCannotMount(MountStyle.Cart) : null);
                 if (rule != null)
                 {
@@ -868,6 +876,7 @@ namespace GK2DonkeyAPI
                     }
                     seatFloor = seat.y;
                 }
+                StepTrace.Mark("hitch: the rules asked, the seat checked (WhyKeeperCannotStandAt when riding)");
                 List<Item> items = cart.CargoRig.TakeAllForTransfer();
                 MoveCartSettings(cart, this);
                 MergeData(cart, this);
@@ -892,8 +901,10 @@ namespace GK2DonkeyAPI
                 }
                 riderFacingX = facing;
                 CargoRig.SetCarried(items);
+                StepTrace.Mark("hitch: the cart taken over, the keeper placed");
                 Restyle(pc, scene, MountStyle.Cart);
                 Plugin.Log.LogInfo($"Mount: {Describe()} hitched cart {cart.FullId} ({items.Count} item(s) on it).");
+                StepTrace.Mark("hitch: the view made again with the cart (Restyle)");
                 SoundsRig.Emit("hitch");
                 Mounts.RaiseHitched(Handle, cart.Handle);
                 if (!cart.Ephemeral)

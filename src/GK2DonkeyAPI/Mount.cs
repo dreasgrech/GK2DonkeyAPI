@@ -30,7 +30,18 @@ namespace GK2DonkeyAPI
             };
 
             private bool mounted;
-            private Wgo donkey;
+            // the view (null: none); every change counted, for the set of views in use (SafeGround.IsModView)
+            private Wgo donkeyView;
+            private Wgo donkey
+            {
+                get => donkeyView;
+                set
+                {
+                    donkeyView = value;
+                    ViewsChanged++;
+                }
+            }
+            internal static int ViewsChanged { get; private set; }
             private bool partsReady;
             private MountStyle activeStyle;
 
@@ -483,6 +494,7 @@ namespace GK2DonkeyAPI
                 {
                     return; // the view was rebuilt without the cart: ready in a frame or two
                 }
+                StepTrace.Mark("ride: the dismount checks");
                 MountRules.Poll(force: false);
                 string ruleWhy = MountRules.WhyMustDismountIfDue();
                 if (ruleWhy != null)
@@ -520,6 +532,7 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogInfo("Mount: donkey re-summoned after scene change.");
                 }
 
+                StepTrace.Mark("ride: the rules polled, the view checked");
                 if (!partsReady && donkey.MainWgoPart != null)
                 {
                     PrepareParts(pc);
@@ -539,6 +552,7 @@ namespace GK2DonkeyAPI
                 // The attack states set the multiplier themselves (the focus stances 0.5 on enter, 1 on exit), the rest of
                 // the time it is ours: the mount's speed in free walking, and half of it in a focus stance, as the game
                 // halves the keeper's own (docs/mounted-combat.md).
+                StepTrace.Mark("ride: the parts prepared, held items set down");
                 SSMState curState = pc.Ssm?.CurState;
                 float wantSpeed = curState is FreePlayerState ? S.SpeedMultiplier.Value
                     : curState is AttackSwordFocusedPlayerState || curState is AttackBowFocusedPlayerState ? S.SpeedMultiplier.Value * S.FocusSpeed.Value
@@ -548,9 +562,12 @@ namespace GK2DonkeyAPI
                     pc.PhysicalBody.SpeedMultiplier = wantSpeed;
                 }
 
+                StepTrace.Mark("ride: the speed");
                 Flight.Tick(this); // the flying experiment (Flying tab): off by default, then no lift
+                StepTrace.Mark("ride: flight (Flight.Tick)");
                 Follow(pc);
                 ChestRig.Follow();
+                StepTrace.Mark("ride: follow, the chest");
                 RevealDonkeyIfDue();
                 if (partsReady)
                 {
@@ -566,6 +583,7 @@ namespace GK2DonkeyAPI
                         Plugin.Log.LogWarning("Sounds: update failed: " + e.Message);
                     }
                 }
+                StepTrace.Mark("ride: revealed, sounds");
                 if (activeStyle == MountStyle.Cart && partsReady)
                 {
                     LanternRig.Tick();
@@ -579,11 +597,13 @@ namespace GK2DonkeyAPI
                         EffectsRig.Tick();
                     }
                 }
+                StepTrace.Mark("ride: lantern, colours, looks, effects");
                 if (seatPending && partsReady)
                 {
                     seatPending = false;
                     ApplyAutoSeat(pc);
                 }
+                StepTrace.Mark("ride: the seat (ApplyAutoSeat when pending)");
                 lastRiderPose = EffectivePose;
                 HidePoseGear(pc, lastRiderPose);
 
@@ -717,7 +737,7 @@ namespace GK2DonkeyAPI
             {
                 if (!style.HasValue)
                 {
-                    Colors.MarkDirty(); // a Colors (or behaviour) override: rebuilt at the next frame
+                    ColorsRig.MarkDirty(); // a Colors (or behaviour) override: rebuilt at the next frame. Its own only: the global path (Mount.OnTuningChanged) marks every instance once before it calls each (each marked all: n x n; docs/performance.md row 22)
                 }
                 CargoRig.ApplySlots(); // the slot count: the cfg, a mod's override, or this instance's own (the panel's instance editing, MountHandle.Tuning)
                 if (!mounted || (style.HasValue && activeStyle != style.Value))
@@ -3450,10 +3470,12 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 string shown = UiWords.Shown(text);
+                StepTrace.Mark("say: the words in the player's language (UiWords.Shown)"); // dev only: the first refusal's 12 ms split (2026-11-10)
                 TestLastShown = shown;
                 try
                 {
                     Bubble.Talk(new PhraseData(true, null, shown, null, null, SpeechBubbleType.Think, fixedShowTimeValue: Mathf.Max(0f, seconds)));
+                    StepTrace.Mark("say: the game's bubble (Bubble.Talk)");
                 }
                 catch (Exception e)
                 {

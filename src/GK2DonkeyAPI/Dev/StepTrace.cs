@@ -20,13 +20,14 @@ namespace GK2DonkeyAPI
         private static string what;
         private static long t0, b0;
 
-        internal static void Begin(string name)
+        internal static bool Begin(string name) // true: this run started (false: off, or one already running)
         {
-            if (!On || what != null) return;
+            if (!On || what != null) return false;
             what = name;
             n = 0;
             b0 = Perf.AllocatedBytes();
             t0 = Stopwatch.GetTimestamp();
+            return true;
         }
 
         internal static void Mark(string step)
@@ -36,6 +37,19 @@ namespace GK2DonkeyAPI
             ticks[n] = Stopwatch.GetTimestamp();
             bytes[n] = Perf.AllocatedBytes();
             n++;
+        }
+
+        // The same, the line written only when the run took at least minMs (a frame's step traced every frame of a pick
+        // trace: only the heavy ones said).
+        internal static void End(double minMs)
+        {
+            if (what == null) return;
+            if ((Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency < minMs)
+            {
+                what = null;
+                return;
+            }
+            End();
         }
 
         internal static void End()

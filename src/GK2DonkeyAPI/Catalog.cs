@@ -72,7 +72,7 @@ namespace GK2DonkeyAPI
         internal static void Bind()
         {
             Donkey = new Entry { Id = DonkeyId, Name = "Donkey", Author = "the game", Version = "1.0", Owner = Plugin.Guid, BuiltIn = true };
-            defs[DonkeyId] = Donkey;
+            defs[DonkeyId] = Donkey; Looks.RegistryVersion++;
         }
 
         // A mount's speed (the user, 2026-10-22; one of the API's words since 2026-10-27: "these definitions should not be
@@ -305,7 +305,7 @@ namespace GK2DonkeyAPI
                 NoteLost(old);
             }
             lost.RemoveAll(l => l.Id.Equals(d.Id, StringComparison.OrdinalIgnoreCase) && l.Owner == d.Owner);
-            defs[d.Id] = d;
+            defs[d.Id] = d; Looks.RegistryVersion++;
             Changed();
             Looks.MountArrived(d);
             Late(d.Owner, "the mount '" + d.Id + "'");
@@ -399,7 +399,7 @@ namespace GK2DonkeyAPI
                     if (!Outranks(d, have)) throw new ArgumentException($"mount '{d.Id}' is registered in code by {have.Owner} (version {have.Version ?? "none"}); this pack (version {d.Version ?? "none"}) is not newer, so it is left out. Add skins to it with a mount folder without mount.cfg, or raise the version.");
                     Plugin.Log.LogWarning($"Catalog: mount '{d.Id}' from {where} (version {d.Version ?? "none"}) replaces the one from {Where(have)} (version {have.Version ?? "none"}): the newer wins. Remove the old one.");
                     Retire(have);
-                    defs[d.Id] = d;
+                    defs[d.Id] = d; Looks.RegistryVersion++;
                     Changed();
                     return d;
                 }
@@ -434,7 +434,7 @@ namespace GK2DonkeyAPI
                 }
                 throw new ArgumentException($"mount '{d.Id}' is already defined by {have.Owner} (version {have.Version ?? "none"}); this one (version {d.Version ?? "none"}) is not newer, so it is left out. Delete the one you don't want, or raise the version of the one you do.");
             }
-            defs[d.Id] = d;
+            defs[d.Id] = d; Looks.RegistryVersion++;
             Changed();
             Looks.MountArrived(d);
             Late(d.Owner, "the mount '" + d.Id + "'");
@@ -482,7 +482,7 @@ namespace GK2DonkeyAPI
         {
             Entry d = Find(id);
             if (d == null || d.Owner != owner || d == Donkey) return false;
-            defs.Remove(d.Id);
+            defs.Remove(d.Id); Looks.RegistryVersion++;
             SoundBank.UnregisterAll(SoundBankOwner(d)); // a code mount's clips (the entries only: the clips are the mod's)
             Changed();
             Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' withdrawn by {owner}; its skins fall back to the donkey mount.");

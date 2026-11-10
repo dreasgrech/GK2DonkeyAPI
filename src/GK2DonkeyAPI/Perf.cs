@@ -240,6 +240,7 @@ namespace GK2DonkeyAPI
         private const int TraceFrames = 120;
         private const double TraceSlowMs = 12.0;
         private static string traceWhat;
+        internal static bool Tracing => traceWhat != null; // a pick trace is running (dev only): the one-off steps traced too (StepTrace)
         private static int traceLeft, traceSeen, traceSlow;
         private static double traceWorst, traceSum;
         private static readonly StringBuilder trace = new StringBuilder();

@@ -422,7 +422,7 @@ namespace GK2DonkeyAPI
                     if (h.distance <= 0f || !Blocks(rb, c, h.normal)) continue; // inside it already at the start: let him out
                     if (ignoreThing != null && SameThing(c, ignoreThing)) continue;
                     bool ground = ((1 << c.gameObject.layer) & GroundLayers) != 0;
-                    float reach = ground ? h.point.y : colliderToo ? Mathf.Max(ObjectTop(c, out _), c.bounds.max.y) : ObjectTop(c, out _);
+                    float reach = ground ? h.point.y : colliderToo ? Mathf.Max(ObjectTop(c), c.bounds.max.y) : ObjectTop(c);
                     if (reach <= flightY) continue; // under the flight (or nothing drawn there)
                     if (!found || h.distance < best.distance)
                     {
@@ -477,7 +477,7 @@ namespace GK2DonkeyAPI
                     int bit = 1 << c.gameObject.layer;
                     float y;
                     if ((bit & GroundLayers) != 0 || (bit & OccluderLayers) != 0) y = h.point.y;
-                    else if (Blocks(rb, c, Vector3.up)) y = Mathf.Max(h.point.y, ObjectTop(c, out _));
+                    else if (Blocks(rb, c, Vector3.up)) y = Mathf.Max(h.point.y, ObjectTop(c));
                     else continue;
                     // Only what is under the mount's feet: a thing drawn higher than them (a tree whose trunk the cast met
                     // while the mount flew low past its crown) is beside or around the flight, not a floor; taken as one, it
@@ -524,6 +524,10 @@ namespace GK2DonkeyAPI
             // (no Wgo) the renderers under the nearest of its parents (up to five levels) that has any overlapping the
             // collider seen from above. Shadow-only meshes (*_sh, *-sh), water surfaces (*-ws), blackouts, particles and
             // the scene's huge pieces (over 12 across) left out. Nothing found: -infinity. Cached per collider.
+            // The same without its Wgo: the cache read first (the Wgo looked up only to fill it), every cast hit in flight.
+            internal static float ObjectTop(Collider c) =>
+                c != null && pictureTop.TryGetValue(c.GetInstanceID(), out float cached) ? cached : ObjectTop(c, out _);
+
             internal static float ObjectTop(Collider c, out Wgo wgo)
             {
                 wgo = c != null ? c.GetComponentInParent<Wgo>() : null;

@@ -684,7 +684,15 @@ namespace GK2DonkeyAPI
             private int lookColourCount; // the worn look's colours in the mount's sprite group (0: the donkey's own lists)
             private bool lookOver; // the worn look is drawn over the donkey: its count is its pairs, against PaletteMaxColoursOver
             private static readonly HashSet<string> OverSharedWarned = new HashSet<string>(StringComparer.Ordinal); // skins already told (Rebuild)
-            public string Note { get; private set; } = "not attached";
+            // What the rig has (the dev window's line): set as words, or as the counts of an attach and said when read (an
+            // attach is every view made; docs/performance.md row 22).
+            public string Note
+            {
+                get => note ?? $"{noteSprites} sprites ({noteDonkey} donkey, {noteWheel} wheel), {noteMeshes} cart meshes";
+                private set => note = value;
+            }
+            private string note = "not attached";
+            private int noteSprites, noteDonkey, noteWheel, noteMeshes;
 
             private static readonly int IdPalette = Shader.PropertyToID("_Palette");
             private static readonly int IdLut = Shader.PropertyToID("_ReplaceLUT");
@@ -736,6 +744,7 @@ namespace GK2DonkeyAPI
                             sprites.Add(new SpriteTarget { R = sr, G = Group.WheelSprites });
                         }
                     }
+                    ViewCost.Mark("colours: the sprites found (a walk by name)"); // dev only: the 133 KB of "colours attached" split (2026-11-10)
                     foreach (Object3DMesh m in root.GetComponentsInChildren<Object3DMesh>(includeInactive: true))
                     {
                         if (UnderCargo(m.transform)) continue;
@@ -745,8 +754,13 @@ namespace GK2DonkeyAPI
                             meshes.Add(new MeshTarget { M = m, G = g.Value });
                         }
                     }
-                    Note = $"{sprites.Count} sprites ({Count(sprites, Group.DonkeySprites)} donkey, {Count(sprites, Group.WheelSprites)} wheel), {meshes.Count} cart meshes";
-                    Mount.DiagLog("Colors: attached; " + Note + "."); // once per view: shares the 4-a-second budget
+                    ViewCost.Mark("colours: the cart meshes found (a walk by name)");
+                    noteSprites = sprites.Count;
+                    noteDonkey = Count(sprites, Group.DonkeySprites);
+                    noteWheel = Count(sprites, Group.WheelSprites);
+                    noteMeshes = meshes.Count;
+                    note = null; // said from the counts when read
+                    if (Mount.DiagRoom()) Mount.DiagLog("Colors: attached; " + Note + "."); // once per view: shares the 4-a-second budget, built only when there is room
                 }
                 catch (Exception e)
                 {
@@ -754,7 +768,9 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogWarning("Colors: " + Note);
                 }
                 dirty = true;
+                ViewCost.Mark("colours: the rest of the attach");
                 Tick();
+                ViewCost.Mark("colours: built and applied (Tick)");
             }
 
             private int Count(List<SpriteTarget> list, Group g)
@@ -1194,17 +1210,21 @@ namespace GK2DonkeyAPI
                     tex = new Texture2D(1024, 32, TextureFormat.RGBA32, mipChain: false) { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
                     Live.TextureMade(tex);
                 }
-                var px = (Color32[])IdentityLut.Clone();
+                // the identity copied into one kept array, not a new 128 KB clone per build (every view made with colours,
+                // every colour change; docs/performance.md, 2026-11-10): SetPixels32 copies it into the texture at once
+                Color32[] id = IdentityLut;
+                if (lutScratch == null) lutScratch = new Color32[id.Length];
+                Array.Copy(id, lutScratch, id.Length);
                 foreach (var p in pairs)
                 {
-                    px[LutIndex(p.Src)] = p.Dst;
+                    lutScratch[LutIndex(p.Src)] = p.Dst;
                 }
-                tex.SetPixels32(px);
+                tex.SetPixels32(lutScratch);
                 tex.Apply(updateMipmaps: false);
                 return tex;
             }
 
-            private static Color32[] identityLut;
+            private static Color32[] identityLut, lutScratch;
 
             private static Color32[] IdentityLut
             {
@@ -1328,13 +1348,15 @@ namespace GK2DonkeyAPI
                 Renderer r = m.ObjRenderer;
                 Material lutMat = LazyBearTechnology.LazySingletonSO<GlobalResources>.Instance?.matObject3DLUT;
                 if (r == null || lutMat == null) return true; // nothing to compare against
-                Material[] mats = r.sharedMaterials;
-                for (int i = 0; i < mats.Length && i < m.SubMeshCount; i++)
+                r.GetSharedMaterials(slotMats); // into a kept list: sharedMaterials is a new array each read (docs/performance.md row 22)
+                for (int i = 0; i < slotMats.Count && i < m.SubMeshCount; i++)
                 {
-                    if (mats[i] != lutMat) return false;
+                    if (slotMats[i] != lutMat) return false;
                 }
                 return true;
             }
+
+            private static readonly List<Material> slotMats = new List<Material>(4);
 
             private bool SpriteUpToDate(SpriteTarget t)
             {

@@ -63,7 +63,9 @@ namespace GK2DonkeyAPI
                 }
                 // The navmesh only: the keeper falls where nothing holds him, and the ground raycast is no proof of that
                 // (a water surface on a ground layer would pass). Too strict at worst: then the donkey comes to him.
-                if (!OnNavmesh(spot, out float g))
+                bool onMesh = OnNavmesh(spot, out float g);
+                StepTrace.Mark("seat: the navmesh under it");
+                if (!onMesh)
                 {
                     return $"no navmesh under {spot:F2} ({(float.IsNaN(g) ? "no ground found" : "other ground at " + g.ToString("F2"))})";
                 }
@@ -75,6 +77,7 @@ namespace GK2DonkeyAPI
                 // keeper riding along a fence "blocked" at his own feet, and every hitch there was refused (the cart G
                 // brought stayed by the fence, the user's video 2026-10-03). Colliders were never the danger here.
                 string gap = GroundGap(KeeperNow(pc), spot);
+                StepTrace.Mark("seat: ground the whole way (GroundGap)");
                 if (gap != null)
                 {
                     return "the way there: " + gap;
@@ -137,7 +140,9 @@ namespace GK2DonkeyAPI
                     {
                         return "the way there is blocked: " + way;
                     }
+                    StepTrace.Mark("reach: his body's way (BodyWayBlocked)"); // dev only (a step trace running): the seat check split, 2026-11-10
                     string fit = BodyDoesNotFit(rb, body, mask, to);
+                    StepTrace.Mark("reach: his body fits there");
                     if (fit != null)
                     {
                         return fit;
@@ -151,7 +156,12 @@ namespace GK2DonkeyAPI
                 {
                     Physics.queriesHitBackfaces = backfaces;
                 }
-                return WhyNotOnGameGrid(pc, rb, to) ?? WhyNotConnected(from, to);
+                string grid = WhyNotOnGameGrid(pc, rb, to);
+                StepTrace.Mark("reach: the game's walk grid (WhyNotOnGameGrid)");
+                if (grid != null) return grid;
+                string connected = WhyNotConnected(from, to);
+                StepTrace.Mark("reach: the walkable mesh connects (WhyNotConnected)");
+                return connected;
             }
 
             // A donkey's spot on the keeper's side of every wall: his body's way to it clear (as for moving him, but any
@@ -175,10 +185,16 @@ namespace GK2DonkeyAPI
                 }
             }
 
-            // Every layer the keeper's body collides with.
+            // Every layer the keeper's body collides with. Worked out once a frame per layer (32 Unity calls; asked several
+            // times a frame and physics step in the air; docs/performance.md row 22).
+            private static int maskLayer = -1, maskFrame = -1, maskKept;
+
             internal static int KeeperMask(Rigidbody rb)
             {
                 int layer = rb.gameObject.layer, mask = 0;
+                if (layer == maskLayer && maskFrame == Time.frameCount) return maskKept;
+                maskLayer = layer;
+                maskFrame = Time.frameCount;
                 for (int l = 0; l < 32; l++)
                 {
                     if (!Physics.GetIgnoreLayerCollision(layer, l))
@@ -186,6 +202,7 @@ namespace GK2DonkeyAPI
                         mask |= 1 << l;
                     }
                 }
+                maskKept = mask;
                 return mask;
             }
 
@@ -502,14 +519,32 @@ namespace GK2DonkeyAPI
                 return null;
             }
 
+            // Is the collider part of a view of ours (in use)? Asked for every cast hit, every frame and physics step in the
+            // air: the views in use are kept as a set, made again when a view or the instances change (ViewsChanged, All's
+            // count), and the hit's Wgos up its parents are looked up in it (it walked every instance with IsChildOf for
+            // each hit; docs/performance.md row 11).
+            private static readonly System.Collections.Generic.HashSet<Wgo> viewsInUse = new System.Collections.Generic.HashSet<Wgo>();
+            private static int viewsInUseAt = -1, viewsInUseCount = -1;
+
             private static bool IsModView(Collider c)
             {
-                foreach (Instance i in All)
+                if (viewsInUseAt != ViewsChanged || viewsInUseCount != All.Count)
                 {
-                    if (i.donkey != null && i.donkey && c.transform.IsChildOf(i.donkey.transform))
+                    viewsInUse.Clear();
+                    foreach (Instance i in All)
                     {
-                        return true;
+                        if (i.donkey != null && i.donkey) viewsInUse.Add(i.donkey);
                     }
+                    viewsInUseAt = ViewsChanged;
+                    viewsInUseCount = All.Count;
+                }
+                if (viewsInUse.Count == 0 || c == null) return false;
+                // the view itself or any Wgo between it and the collider (a cargo item, the chest's stand-in)
+                for (Wgo w = c.GetComponentInParent<Wgo>(true); w != null;)
+                {
+                    if (viewsInUse.Contains(w)) return true;
+                    Transform up = w.transform.parent;
+                    w = up != null ? up.GetComponentInParent<Wgo>(true) : null;
                 }
                 return false;
             }

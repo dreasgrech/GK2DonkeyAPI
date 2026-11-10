@@ -1099,12 +1099,39 @@ namespace GK2DonkeyAPI.Api
                 return;
             }
             nextFeatureCheck = now + 0.5f;
+            // the rules copied once into a kept list (a rule may add or remove rules), not once per feature
+            // (docs/performance.md row 22); copied again after a feature changed (its handlers may add rules). A poll
+            // from inside one (a rule added by a handler) takes a copy of its own.
+            bool outer = polling == 0;
+            List<Rule> list = outer ? pollRules : new List<Rule>(rules);
+            if (outer)
+            {
+                pollRules.Clear();
+                pollRules.AddRange(rules);
+            }
+            polling++;
+            try
+            {
+                PollFeatures(list, outer);
+            }
+            finally
+            {
+                polling--;
+                if (outer) pollRules.Clear();
+            }
+        }
+
+        private static readonly List<Rule> pollRules = new List<Rule>();
+        private static int polling;
+
+        private static void PollFeatures(List<Rule> list, bool outer)
+        {
             for (int i = 0; i < FeatureCount; i++)
             {
                 MountFeature f = (MountFeature)i;
                 bool ok = true;
                 string by = null;
-                foreach (Rule r in rules.ToArray())
+                foreach (Rule r in list)
                 {
                     if (r.Feature == null || r.Which != f)
                     {
@@ -1136,6 +1163,11 @@ namespace GK2DonkeyAPI.Api
                     allowed[i] = ok;
                     Plugin.Log.LogInfo($"API: feature {f} {(ok ? "allowed again" : "switched off by " + by)}.");
                     Mount.OnFeatureChanged(f, ok);
+                    if (outer)
+                    {
+                        list.Clear();
+                        list.AddRange(rules);
+                    }
                 }
             }
         }

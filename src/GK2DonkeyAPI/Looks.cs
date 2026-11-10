@@ -413,7 +413,7 @@ namespace GK2DonkeyAPI
                 d.Report += "Over on a code skin of a mount other than the donkey is not drawn over its default yet: drawn in its place; ";
             }
             Resolve(d); // built on its mount's default (LooksInherit.cs): what it doesn't say, the default's
-            defs[d.Id] = d;
+            defs[d.Id] = d; RegistryVersion++; // what saved ids resolve to may change (FindWanted)
             Catalog.Late(d.Owner, "the skin '" + d.Id + "'");
             Plugin.Log.LogInfo($"Looks: skin '{d.Id}' ({d.Name}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}{(d.Parent != null ? ", built on '" + d.Parent.Id + "'" + (d.OverDefault ? " (drawn over it)" : "") : "")}{(d.Report.Length > 0 ? ": " + d.Report : "")}.");
             if (IsDefaultSlot(d))
@@ -714,7 +714,7 @@ namespace GK2DonkeyAPI
         {
             SkinDef d = Find(id);
             if (d == null || d.Owner != owner) return false;
-            defs.Remove(d.Id);
+            defs.Remove(d.Id); RegistryVersion++;
             ForgetPortraits(d.Id);
             SoundBank.ForgetSkin(d); // its files' entries, so a pack put back is read anew
             SoundBank.UnregisterAll("skin/" + d.Owner + "/" + d.Id); // a code skin's clips (the entries only: the clips are the mod's; Sounds.Rig banks them under its mod)
@@ -1799,7 +1799,48 @@ namespace GK2DonkeyAPI
         // skin that is installed (worn, or set aside), the donkey's own ids and skins, a skin whose mount isn't installed.
         // The saved id is kept wherever it is stored; every place that turns it into what is drawn, what the mount is or
         // whose colours apply looks up this instead.
+        // Kept per id until a skin or mount is registered or withdrawn (RegistryVersion): read 2-3 times a frame per mount,
+        // and a skin that isn't installed took the slow path every time (Substrings, a joined key, a walk of every skin;
+        // docs/performance.md row 15).
         internal static string StandIn(string id)
+        {
+            if (id == null) return null;
+            Remembered(out Dictionary<string, string> ids, out _);
+            if (ids.TryGetValue(id, out string s)) return s;
+            s = StandInNow(id);
+            ids[id] = s;
+            return s;
+        }
+
+        // Find(StandIn(id)), kept the same way: the look worn for a saved id (null: none).
+        internal static SkinDef FindWanted(string id)
+        {
+            if (id == null) return null;
+            Remembered(out _, out Dictionary<string, SkinDef> found);
+            if (found.TryGetValue(id, out SkinDef d)) return d;
+            d = Find(StandIn(id));
+            found[id] = d;
+            return d;
+        }
+
+        internal static int RegistryVersion; // every skin or mount registered or withdrawn (Register, Unregister, Catalog)
+        private static readonly Dictionary<string, string> standIns = new Dictionary<string, string>(StringComparer.Ordinal);
+        private static readonly Dictionary<string, SkinDef> wanted = new Dictionary<string, SkinDef>(StringComparer.Ordinal);
+        private static int rememberedAt = -1;
+
+        private static void Remembered(out Dictionary<string, string> ids, out Dictionary<string, SkinDef> found)
+        {
+            if (rememberedAt != RegistryVersion || standIns.Count > 512 || wanted.Count > 512)
+            {
+                standIns.Clear();
+                wanted.Clear();
+                rememberedAt = RegistryVersion;
+            }
+            ids = standIns;
+            found = wanted;
+        }
+
+        private static string StandInNow(string id)
         {
             string s = (id ?? "").Trim();
             if (s.Length == 0 || s.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) || Find(s) != null) return id;
@@ -2746,7 +2787,7 @@ namespace GK2DonkeyAPI
         {
             if (panelHolds.Count > 0 && Time.unscaledTime >= panelHoldsUntil) ReleasePanelHolds(); // the journal's looks, their time up
             string id = (WarmWanted ?? "").Trim();
-            SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(StandIn(id)); // the look worn for it (docs/missing-skin.md)
+            SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : FindWanted(id); // the look worn for it (docs/missing-skin.md)
             if (d != null && d.Unavailable != null) d = null;
             if (warm != null && warm.Def == d && warm.Parent == d.Parent) return; // a new default is a new sheet
             if (warm == null && d == null) return;
@@ -3017,7 +3058,7 @@ namespace GK2DonkeyAPI
                         want = (Skin.Value ?? "").Trim();
                     }
                     if (want.Length == 0 || want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return null;
-                    SkinDef d = Find(StandIn(want)); // a skin not installed, of a mount that is: its own look (docs/missing-skin.md)
+                    SkinDef d = FindWanted(want); // a skin not installed, of a mount that is: its own look (docs/missing-skin.md)
                     if (d == null || d.Unavailable != null || d.Base != viewBase) return null; // set aside (its game frames gone): the donkey comes instead, in mount too, not only in the drawing
                     if (Catalog.Find(d.MountId) == null) return null; // a skin whose mount isn't installed: the donkey as it is, never the skin on the donkey's facts (the choice is kept)
                     if (owner.ViewScale != 1f && !d.Mount.Foals) return null;
@@ -3129,7 +3170,7 @@ namespace GK2DonkeyAPI
                         {
                             stillWant = (Skin.Value ?? "").Trim();
                         }
-                        if (ReferenceEquals(pending.Def, Find(StandIn(stillWant))) && pending.Parent == pending.Def.Parent) return; // the same skin (a stand-in for one not installed: the look being built, docs/missing-skin.md; the user's journal, 2026-11-05: compared with the saved id, a stand-in still building was let go at every refresh and built again, the picture stuck on the mount before) or (the same definition: a replaced or reloaded one is new and must be switched to), still building: a colour or mount change doesn't throw the half-built sheet away
+                        if (ReferenceEquals(pending.Def, FindWanted(stillWant)) && pending.Parent == pending.Def.Parent) return; // the same skin (a stand-in for one not installed: the look being built, docs/missing-skin.md; the user's journal, 2026-11-05: compared with the saved id, a stand-in still building was let go at every refresh and built again, the picture stuck on the mount before) or (the same definition: a replaced or reloaded one is new and must be switched to), still building: a colour or mount change doesn't throw the half-built sheet away
                         Looks.Release(pending); // the choice changed again before it was ready
                         pending = null;
                     }
@@ -3491,10 +3532,11 @@ namespace GK2DonkeyAPI
             private bool DropCartIfRefused(Catalog.Entry k)
             {
                 if (owner == null || !owner.HasCart || owner.Handle == null) return false;
+                if (!k.Cart && k == cartCheckedFor) return false;
+                if (Time.unscaledTime < cartRetryAt) return false; // before the words below: an overloaded cart that can't be left made them every frame (docs/performance.md row 22)
                 // the mount pulls the cart but fewer items than it holds: left standing too, with its load (2026-10-27)
                 string overload = k.Cart ? WhyNotCartByLoad(owner, owner) : null;
-                if ((k.Cart && overload == null) || (!k.Cart && k == cartCheckedFor)) return false;
-                if (Time.unscaledTime < cartRetryAt) return false;
+                if (k.Cart && overload == null) return false;
                 bool ridden = owner.IsRidden;
                 MountHandle left = Mounts.Unhitch(owner.Handle);
                 if (left != null)

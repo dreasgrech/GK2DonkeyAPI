@@ -178,6 +178,64 @@ namespace GK2DonkeyAPI
         //   held with it are among the other's.
         // "Same key as X" for the same combination, "Clashes with X (its key)" for an overlap. The other mods' and the
         // game's keys are read when the options window opens (Snapshot).
+        // ClashKept: the same, kept per row until a key row's key changes, the key rows change or Snapshot runs (the
+        // windows ask for every key row twice a second; each answer went through every row of every page and BepInEx's
+        // LINQ Modifiers; docs/performance.md row 17). The keys are compared on every call (a key just set is seen at
+        // once), without allocating (SameKey).
+        internal static string ClashKept(MountSettingsPage.Row r)
+        {
+            if (r == null) return null;
+            string lang = Texts.Language; // the text names rows in the player's language
+            if (KeysMoved() || !string.Equals(lang, clashesLanguage, StringComparison.Ordinal))
+            {
+                clashesKept.Clear();
+                clashesLanguage = lang;
+            }
+            if (clashesKept.TryGetValue(r, out string said)) return said;
+            said = Clash(r);
+            clashesKept[r] = said;
+            return said;
+        }
+
+        private static readonly Dictionary<MountSettingsPage.Row, string> clashesKept = new Dictionary<MountSettingsPage.Row, string>();
+        private static readonly List<(MountSettingsPage.Row Row, KeyboardShortcut Key)> keysSeen = new List<(MountSettingsPage.Row, KeyboardShortcut)>();
+        private static string clashesLanguage;
+
+        // Has any key row's key (or the list of key rows) changed since the last look? The list kept up to date.
+        private static bool KeysMoved()
+        {
+            int n = 0;
+            bool moved = false;
+            foreach (MountSettingsPage p in MountSettingsPage.All)
+            {
+                foreach (MountSettingsPage.Row o in p.Rows)
+                {
+                    if (o.RowKind != MountSettingsPage.RowKind.Key || !(o.Entry is ConfigEntry<KeyboardShortcut> e)) continue;
+                    KeyboardShortcut k = e.Value;
+                    if (n < keysSeen.Count)
+                    {
+                        if (keysSeen[n].Row != o || !KeyActions.SameKey(keysSeen[n].Key, k))
+                        {
+                            keysSeen[n] = (o, k);
+                            moved = true;
+                        }
+                    }
+                    else
+                    {
+                        keysSeen.Add((o, k));
+                        moved = true;
+                    }
+                    n++;
+                }
+            }
+            if (n != keysSeen.Count)
+            {
+                keysSeen.RemoveRange(n, keysSeen.Count - n);
+                moved = true;
+            }
+            return moved;
+        }
+
         internal static string Clash(MountSettingsPage.Row r)
         {
             if (r == null || r.RowKind != MountSettingsPage.RowKind.Key || r.Entry == null) return null;
@@ -270,6 +328,7 @@ namespace GK2DonkeyAPI
         // menus' own (Up, Down, Select, Back...).
         internal static void Snapshot()
         {
+            clashesKept.Clear(); // the others are read again
             others.Clear();
             var ours = new HashSet<ConfigFile>();
             foreach (MountSettingsPage p in MountSettingsPage.All) if (p.Config != null) ours.Add(p.Config);

@@ -182,6 +182,8 @@ namespace GK2DonkeyAPI.Api
         {
             foreach (MountCompanion c in all.Values)
             {
+                bool trace = Perf.Tracing && StepTrace.On; // dev only: a heavy companion frame in a pick trace split (8.7 ms on the mount's frame, 2026-11-10)
+                bool began = trace && StepTrace.Begin("the companion's frame (" + c.OwnerId + ")");
                 try
                 {
                     c.Tick();
@@ -190,6 +192,7 @@ namespace GK2DonkeyAPI.Api
                 {
                     Said.Warn("companion " + c.OwnerId + " " + e.Message, $"Companion of {c.OwnerId}: {e.Message}");
                 }
+                if (began) StepTrace.End(3.0);
             }
         }
 
@@ -636,7 +639,11 @@ namespace GK2DonkeyAPI.Api
         // written to the log, with its reason.
         public MountResult Use(MountStyle style)
         {
+            StepTrace.Mark("the key's own handler, before Use"); // dev only (a run begun by KeyActions)
+            Perf.TracePick(style == MountStyle.Cart ? "the cart key" : "the ride key"); // dev only: the frames from here by part (a 25.8 ms frame was seen once)
+            StepTrace.Mark("the pick trace started");
             MountResult r = UseNow(style);
+            StepTrace.Mark(r.Ok ? "Use: done or under way" : "Use: refused");
             if (!r.Ok)
             {
                 Plugin.Log.LogInfo($"{OwnerId}: {style} not now: {r.Reason}");
@@ -748,9 +755,11 @@ namespace GK2DonkeyAPI.Api
                 // after (BringCart asks the same; the user, 2026-10-26: "although it cant pull it, it still brings it")
                 // (a cart holding more than the mount pulls is not refused here: it is brought over and left unhitched, BringCart)
                 string noCart = Mount.Instance.WhyNotCart(keeper) ?? (Donkey != null && Donkey.Exists ? GK2DonkeyAPI.Looks.WhyNotCartByMount(Donkey.I) : null);
+                StepTrace.Mark("Use: the cart asked (WhyNotCart, by the mount)");
                 if (noCart != null)
                 {
                     Mount.Say(noCart);
+                    StepTrace.Mark("Use: the refusal said (Mount.Say)");
                     return MountResult.Refused(noCart);
                 }
             }
@@ -874,9 +883,11 @@ namespace GK2DonkeyAPI.Api
             if (Mount.Instance.IsInGame(out PlayerController keeper, out _))
             {
                 string no = Mount.Instance.WhyNotCart(keeper) ?? GK2DonkeyAPI.Looks.WhyNotCartByMount(to?.I);
+                StepTrace.Mark("BringCart: the cart asked");
                 if (no != null)
                 {
                     Mount.Say(no);
+                    StepTrace.Mark("BringCart: the refusal said (Mount.Say)");
                     return no;
                 }
             }
@@ -909,7 +920,9 @@ namespace GK2DonkeyAPI.Api
                 }
                 ApplyLook();
             }
+            StepTrace.Mark("BringCart: the cart found or spawned");
             MountResult come = Cart.ComeToKeeper(to.FacingRight);
+            StepTrace.Mark("BringCart: the cart came (ComeToKeeper)");
             if (!come.Ok)
             {
                 return come.Reason;
@@ -925,6 +938,7 @@ namespace GK2DonkeyAPI.Api
                 return tooMuch;
             }
             MountResult hitched = Mounts.Hitch(to, Cart);
+            StepTrace.Mark("BringCart: hitched (Mounts.Hitch)");
             return hitched.Ok ? null : hitched.Reason;
         }
 
@@ -1499,15 +1513,19 @@ namespace GK2DonkeyAPI.Api
         private void Tick()
         {
             TakeDeferred();
+            StepTrace.Mark("companion: deferred taken");
             SendLeftHomeWhileOff();
+            StepTrace.Mark("companion: left mounts sent home");
             if (pending.HasValue)
             {
                 ContinuePending();
+                StepTrace.Mark("companion: the call went on (ContinuePending)");
             }
             if (Time.unscaledTime >= nextFoalCheck)
             {
                 nextFoalCheck = Time.unscaledTime + 1f;
                 UpdateFoal();
+                StepTrace.Mark("companion: the babies checked (UpdateFoal)");
             }
         }
 

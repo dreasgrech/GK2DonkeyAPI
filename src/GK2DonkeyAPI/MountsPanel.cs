@@ -1318,6 +1318,11 @@ namespace GK2DonkeyAPI
 
         // ---- the gamepad, every frame (from Tick) ----
 
+        // TickGamepad's first-focus callback, made once: the window shown this frame in a field (a lambda capturing it made
+        // a closure on every Tick, the panel closed too; docs/performance.md row 22).
+        private static GameObject focusWindow;
+        private static readonly Action<GamepadNavigationController> focusShown = nav => FocusStart(nav, focusWindow);
+
         // The first focus: the chosen mount's row in the journal, the first row in the colours window.
         private static void FocusStart(GamepadNavigationController nav, GameObject window)
         {
@@ -1536,7 +1541,11 @@ namespace GK2DonkeyAPI
                 controls.TrackTyping();
                 Wheel();
                 if (GameWindowAside.ControlsTaken) GameWindowAside.TakeControls("the Mounts panel"); // re-asserted: a game popup closing gives ByUI back
-                if (GameWindowAside.ControlsTaken) controls.TickGamepad(shown, nav => FocusStart(nav, shown));
+                if (GameWindowAside.ControlsTaken)
+                {
+                    focusWindow = shown;
+                    controls.TickGamepad(shown, focusShown);
+                }
                 // Escape steps back: out of the search box first (the field already put its text back), then the colours
                 // window to the journal, then the journal closed (keeping what was chosen). The game reads the same press
                 // and would open its pause menu: consumed (the user, 2026-10-21: Escape must not fall through to the pause menu).

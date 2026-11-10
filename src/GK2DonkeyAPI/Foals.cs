@@ -28,6 +28,17 @@ namespace GK2DonkeyAPI
         // player's report needs (a spawn, a foal stuck or caught up) stay.
         internal static bool DevDiag => DevTools.Unlocked;
 
+        // Room in this second's budget for a DiagLog line? Asked before a line is built that a player's game writes too
+        // (counted as skipped when there is none, as DiagLog counts it; docs/performance.md row 22).
+        internal static bool DiagRoom()
+        {
+            float now = Time.unscaledTime;
+            if (now - diagWindow >= 1f) return true;
+            if (diagInWindow < 4) return true;
+            diagSkipped++;
+            return false;
+        }
+
         internal static void DiagLog(string line)
         {
             float now = Time.unscaledTime;

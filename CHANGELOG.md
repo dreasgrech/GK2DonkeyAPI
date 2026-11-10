@@ -147,6 +147,27 @@ Development:
   journal survey checks that picks keep the rows and that every kept row reads the picked mount's own setting.
   After (F11 2054/0/0): a pick 0.63-0.89 ms and 8-12 KB in all (56 rows kept, 0 made over 7 picks); Hellfire 4.1 ->
   0.4-0.5 MB a build, Larry 6.2 -> 0.2-0.3 MB.
+- **The review's small rows** (2026-11-10, docs/performance.md "The small rows, fixed"): row 11, the flight's "is
+  this one of our views?" for every cast hit keeps the views in use as a set (made again when a view or the instances
+  change: `Instance.ViewsChanged`) and looks the hit's Wgos up in it, instead of walking every instance with
+  `IsChildOf`; `ObjectTop` reads its cache before looking for the Wgo. Row 15, `Looks.StandIn` and the new
+  `FindWanted` (`Find(StandIn(id))`) keep their answer per id until a skin or mount is registered or withdrawn
+  (`Looks.RegistryVersion`): a skin that isn't installed took the slow path 2-3 times a frame per mount. Row 17,
+  `KeyCapture.ClashKept`: each key row's clash kept until a key row's key or the language changes (compared without
+  allocating on every call), for the options window and the journal (`Clash` itself unchanged). Row 22: the journal's
+  gamepad callback made once (a closure every frame, the journal closed too); `KeeperMask` once a frame per layer;
+  `DropCartIfRefused` waits for its retry before making its words; `AllSlotsLut` reads the materials into a kept
+  list; the feature rules copied once a poll instead of once per feature; a behaviour override marks each mount's
+  colours once instead of every mount's once per mount; the colours' "attached" line built only with room in the
+  log budget (`Mount.DiagRoom`). Not taken: row 19, the lantern's writes (see the doc). The cart and ride keys start
+  the dev `[pick]` trace (a 25.8 ms frame was seen once on the cart key). F11 2057/0/0. Riding through the herd: 7-16 KB
+  a frame (53.6 on 2026-11-09), skin builds no longer among it.
+- **Colours: no 128 KB copy per LUT** (2026-11-10): `Colors.BuildLut` copies the identity table into one kept array
+  instead of cloning it for every LUT built (124-136 KB a view made with colours, and a colour change).
+- **Dev step traces for one-off frames** (2026-11-10, docs/performance.md): a mod's key (`KeyActions`, over 2 ms),
+  the companion's frame and the ridden frame during a pick trace (over 3 ms) write `[steps]` lines; the cart and ride
+  paths (`Use`, `BringCart`, `Hitch`, `RideFromWorld`, the ridden tick, the seat check, `Mount.Say`) and the colours
+  attach (views probe) mark their steps. `StepTrace.Begin` returns whether it began; `StepTrace.End(minMs)`.
 - **The other skins' colour rows biggest part first too** (2026-11-08; the Donkey Skin Pack's CHANGELOG): judged on
   the pictures, a part that sits on another right after it. Royal Parade: Saddle cloth, Trim and fringe, Emblem,
   Crown, Jewels. Armored: Body armour, Skirt, Helmet, Plume, Brass (trim over both helmet and armour, last).

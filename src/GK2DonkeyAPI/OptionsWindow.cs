@@ -115,7 +115,7 @@ namespace GK2DonkeyAPI
             foreach (MountSettingsPage.Row r in p.Rows)
             {
                 if (r.RowKind != MountSettingsPage.RowKind.Key || !p.InOptions(r)) continue;
-                string c = KeyCapture.Clash(r);
+                string c = KeyCapture.ClashKept(r);
                 if (c != null) parts.Add($"{r.Label} ({KeyCapture.Words((BepInEx.Configuration.KeyboardShortcut)r.Entry.BoxedValue)}): {c}");
             }
             string said = parts.Count == 0 ? "none" : string.Join("; ", parts);
@@ -362,7 +362,7 @@ namespace GK2DonkeyAPI
             {
                 if (r.Section != section || !page.InOptions(r)) continue;
                 sig.Append(r.Visible == null || r.Visible() ? '1' : '0');
-                if (r.RowKind == MountSettingsPage.RowKind.Key) sig.Append(KeyCapture.Clash(r) ?? "").Append('|');
+                if (r.RowKind == MountSettingsPage.RowKind.Key) sig.Append(KeyCapture.ClashKept(r) ?? "").Append('|');
             }
             return sig.ToString();
         }

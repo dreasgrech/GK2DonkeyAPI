@@ -138,6 +138,7 @@ namespace GK2DonkeyAPI
                     }
                     continue;
                 }
+                bool began = StepTrace.On && StepTrace.Begin("a mod's key (" + e.Key.Definition.Key + ")"); // dev only: its work split (MountCompanion.Use marks it; 2026-11-10)
                 try
                 {
                     e.Pressed();
@@ -146,6 +147,7 @@ namespace GK2DonkeyAPI
                 {
                     Plugin.Log.LogError($"{e.Owner}: the action of its key {e.Key.Definition.Key} failed. {ex}");
                 }
+                if (began) StepTrace.End(2.0);
             }
         }
 

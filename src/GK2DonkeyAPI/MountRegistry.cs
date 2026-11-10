@@ -521,11 +521,14 @@ namespace GK2DonkeyAPI
                 Instance r = Ridden;
                 using (Bind(r))
                 {
+                    bool trace = Perf.Tracing && StepTrace.On; // dev only: a heavy ridden frame in a pick trace split (8.7 ms the frame after mounting, 2026-11-10)
+                    bool began = trace && StepTrace.Begin("the ridden frame");
                     try
                     {
                         using (Perf.Measure(Perf.S.Ride))
                         {
                             r.WakeForRide();
+                            StepTrace.Mark("ride: woken for the ride");
                             r.Tick(pc, scene);
                         }
                     }
@@ -536,6 +539,7 @@ namespace GK2DonkeyAPI
                         Plugin.Log.LogError($"Mount update failed; dismounting. {e}");
                         EndRideOnly("error");
                     }
+                    if (began) StepTrace.End(3.0);
                 }
             }
             using (Perf.Measure(Perf.S.Doors))

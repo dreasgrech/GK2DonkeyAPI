@@ -930,6 +930,100 @@ asynchronous read-back (`AsyncGPUReadback`), Round 2's "async read-backs", not d
   lifetime and is not done. The journal survey counts rows kept and made on each pick and checks that every kept row
   reads the row it is listed for (`MountsPanel.TestRowsBoundWrong`).
 
+### The small rows, fixed (2026-11-10)
+
+The rest of the review's table that a player can reach, written together (no in-game numbers measured them; the
+code says what they did). Each keeps what it answers the same.
+
+- **Row 11, flying among many mounts:** `IsModView` (is a cast hit one of our views?) walked every instance with
+  `IsChildOf` for every hit, every frame and physics step in the air. Now the views in use are a set, made again only
+  when a view changes (`Instance.donkey` is a property counting its changes, `ViewsChanged`) or the instances do
+  (`All.Count`), and the hit's Wgos up its parents are looked up in it (a cargo item or the chest's stand-in is a Wgo
+  under the view: the walk goes on past it). `ObjectTop` reads its per-collider cache before `GetComponentInParent`
+  (its callers in flight never used the Wgo).
+- **Row 15, a skin that isn't installed:** `Looks.StandIn` and `FindWanted` (= `Find(StandIn(id))`) keep their answer
+  per id, cleared when a skin or a mount is registered or withdrawn (`Looks.RegistryVersion`, bumped where the two
+  registries change) or past 512 ids. The miss path (Substrings, a joined key, a walk of every skin) ran 2-3 times a
+  frame per mount wearing a skin from a removed pack. `WantedDef`, the warm look and the rig's still-building check
+  use `FindWanted`.
+- **Row 17, the options window open:** twice a second its signature asked every key row's clash, and each answer went
+  through every row of every page and every other mod's key (BepInEx's LINQ `Modifiers`, `Format`ted words).
+  `KeyCapture.ClashKept` keeps each row's answer until a key row's key changes (all key rows compared on every call
+  with `SameKey`, no allocation), the list of key rows changes, the language changes, or `Snapshot` reads the other
+  mods' keys again (the window opening). A key just set is seen by the very next call. The self-tests still call
+  `Clash` itself.
+- **Row 19, the lantern's writes: not taken.** About 12 light and sprite properties a cart a frame, no garbage. Writing
+  only on change needs a stamp of some 15 inputs, among them the colours tab and the daylight (a little different every
+  frame at dusk and dawn): more to get wrong than the setter calls cost.
+- **Row 22, smaller:** the journal's gamepad callback is made once (a lambda capturing the shown window made a
+  closure on every `MountsPanel.Tick`, the journal closed too); `KeeperMask` (32 Unity calls) once a frame per layer;
+  `DropCartIfRefused` checks its once-a-second retry before making the overload words; `AllSlotsLut` reads the
+  materials into a kept list (`sharedMaterials` is a new array; once a second per cart part); `MountRules.Poll` copies
+  the rules once a poll into a kept list (copied again after a feature changed; a poll from inside a handler takes its
+  own) instead of once per feature; `Instance.OnTuningChanged(null)` marks its own colours (the global path marks every
+  instance once and then calls each: each marked all, n x n); the colours' "attached" line (every view made) is built
+  only with room in the 4-a-second budget (`Mount.DiagRoom`), its text said from the counts when read.
+  `Sounds.EmitInner`'s last-event text was done before (lazy `LastEvent`).
+
+**Measured in the same session:** the cart and ride keys start the dev `[pick]` trace (`MountCompanion.Use`), for the
+25.8 ms frame seen once on the cart key; riding through the herd again (the crowd scenario's phase 4) for what
+`LooksBuild` costs now that a build makes about a tenth of its garbage.
+
+**The user's session (2026-11-10 01:40; F11 Run all 2057 passed, 0 failed, 0 warnings):**
+- **Riding through the herd at 100%:** 7.1-16.3 KB a frame across the day's three runs (53.6 on 2026-11-09, 32 of it
+  `LooksBuild`); `LooksBuild` is no longer among the parts. What is left is views made and released: `Spawn` 9.98
+  (`Prepare` 4.62, `Release` 3.22, `ColorBuild` 2.98, `SpawnView` 2.68). The grace period before a sleeping wearer's
+  sheet is let go is not needed. In the views survey, a view's "parts prepared" was 139 KB a run, 133 KB of it
+  "colours attached" (`Colors.Rig.AttachTo`: two `GetComponentsInChildren` arrays and a walk by `name`, which makes a
+  string per read).
+- **The cart key, refused** (the dragon picked, "can't pull the cart"): one 22 ms frame, `Keys` 13.8 ms and 1376 KB,
+  none of it inside a part of ours.
+- **The cart key while riding the donkey** (the cart comes and is hitched): 21 ms, `Keys` 8.6 (the cart's view made
+  and prepared about 5 of it: "parts prepared (with a cart)" 3.36 ms, its cargo, chest, parts and lantern 2.42),
+  `Tick` 3.8, `Ride` 3.5, `LandGrid` 1.6. Later presses (dismounting the cart style, calling again) 9-11 ms.
+- **The ride key, mounting** (the donkey with 5 babies, left far away, called): frame #5 26 ms with `Companion` 8.7
+  (the call going on: the mount happens there), frame #6 25 ms with `Ride` 8.7 (the first ridden frame).
+- `Window`/`WinTab` (2 ms every few frames) are the dev panel's own, not a player's.
+
+**Split for the next session (dev-only step traces, `[steps]` lines):** a mod's key (`KeyActions`, written over
+2 ms; `MountCompanion.Use`/`UseNow`/`BringCart` mark their steps: the cart asked, the refusal said by `Mount.Say`, the
+cart spawned or found, come, hitched); the companion's frame and the ridden frame while a pick trace runs (written
+over 3 ms; `Tick`'s steps, the mount routine's steps in `RideFromWorld`, the ridden tick's steps); the colours attach
+split into its walks in the views probe. `StepTrace.Begin` says whether it began, so a trace ends only its own run.
+
+**The split (the user's session, 2026-11-10 01:48):**
+- **The cart key refused, the session's first time:** 13.7 ms and 1140 KB, of it `Mount.Say` 12.3 ms and 1140 KB (the
+  cart asked 1.3). The second refusal: the whole key 1.4 ms. The first speech bubble of the session is the cost.
+  `Say` is the words in the player's language (`UiWords.Shown`) and the game's `Bubble.Talk`: split next time.
+- **The cart brought while riding:** the key 8.2 ms and 188 KB, all of it `Mounts.Hitch` (8.05 ms); the next ridden
+  frame "parts prepared" 3.2 ms (the new view's). `Hitch` asks the rules, checks the keeper's seat
+  (`WhyKeeperCannotStandAt`) and makes the view again with the cart (`Restyle`): split next time.
+- **Mounting:** the companion's frame 3.8 ms the first time (the rider attached 1.6, the checks 0.9); the second time
+  5.6 ms, of it "the keeper on the seat" 5.05 (the seat check: the navmesh, ground the whole way, his body's way and
+  fit, the game's walk grid, the walkable mesh: the lock-in protection of 2026-10-04, `docs/safe-ground.md`; split
+  next time). The first ridden frame 6.4 ms (the dismount checks 2.2, follow 2.1).
+- **Colours, 124-136 KB a build:** `BuildLut` cloned the whole 1024 x 32 identity table (128 KB) for every LUT built,
+  then wrote a few cells. **Fixed:** the identity copied into one kept array (`lutScratch`), `SetPixels32` copies it
+  into the texture. The walks that find the sprites and meshes cost 0.03-0.07 ms and nothing.
+- **The journal's first opening of a session: 63 ms and 3.3 MB** (later openings 8.8 ms): "the list's cards" 23.6 ms
+  and 2.5 MB (each mount's icon made the first time it is shown: a pack's standing picture decoded and cropped, an
+  over-default skin composed; `MountIcons`, kept after), "the journal's 8 rows built" 14.8 (2.8 later), "the game's
+  look read" 4.6 (0.2 later), "the list's frame" 4.8 (0.3 later).
+
+**The last split (the user's session, 2026-11-10 01:57):**
+- **The first refusal:** `Bubble.Talk` 10.3 ms and 1416 KB, the words 0.3. The game's own first speech bubble of
+  the session (the keeper's first thought pays the same); nothing of ours. **Left as it is:** warming it would show a
+  bubble.
+- **The cart brought while riding (8.7 ms):** the seat check's "the game's walk grid" (`WhyNotOnGameGrid`: the game's
+  `PlayerLocalAreaMovement` grid rescanned around him) 3.2 ms and 136 KB, the view made again with the cart
+  (`Restyle`) 1.9 ms, the hitch's own asking 0.7, the rest of the seat check under 0.5 each; the next ridden frame
+  3.1 ms (the new view's parts). **Left as it is:** the walk grid is the lock-in protection (`docs/safe-ground.md`)
+  and the game's own scan; the view must be made again (another prefab).
+- **Mounting:** the companion's frame 3.0 ms; the first ridden frame 7.5 ms (flight 2.6, follow 2.5, the dismount
+  checks 1.1), the later ones under 1.
+- **The journal's first opening:** 52.6 ms and 3.8 MB again ("the list's cards" 19.1 ms and 2988 KB, the rows 12.1,
+  the game's look read 3.6, the list's frame 3.7); later openings 7.7 ms.
+
 ### What can't be measured here
 
 The GPU: the game's build keeps no frame timing (`FrameTimingManager` off), and the colour-swap table above showed

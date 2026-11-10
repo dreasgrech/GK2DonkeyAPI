@@ -166,7 +166,7 @@ namespace GK2DonkeyAPI
             // as tall as its label needs (a long label wraps onto a second line), the control centred on it
             float labelH = Mathf.Ceil(label.GetPreferredValues(labelText, labelW, 0f).y);
             // a key another row has too: said under the label (KeyCapture.Clash), the row as tall as both lines
-            string clash = kind == MountSettingsPage.RowKind.Key ? KeyCapture.Clash(r) : null;
+            string clash = kind == MountSettingsPage.RowKind.Key ? KeyCapture.ClashKept(r) : null;
             TextMeshProUGUI clashLine = null;
             float clashH = 0f;
             if (clash != null)
@@ -432,7 +432,7 @@ namespace GK2DonkeyAPI
             UiKit.Rect(b, x, y, w, CtrlH);
             Image face = b.GetComponent<Image>();
             TextMeshProUGUI label = b.GetComponentInChildren<TextMeshProUGUI>(true);
-            bool clash = KeyCapture.Clash(bd.Row) != null;
+            bool clash = KeyCapture.ClashKept(bd.Row) != null;
             return () =>
             {
                 bool setting = KeyCapture.Row == bd.Row;
