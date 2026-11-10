@@ -263,7 +263,20 @@ the window, each tab's rows filling both columns below it (`MountsPanel.MakeColo
   come out nearest in height. A row and the rows shown under it with a preset (its custom colour, its lightness)
   stay in one column: a unit starts at every row but a swatch row and the slider after it (the first cut went by
   `Visible`, which every per-skin row has, and drew the whole tab in one column). Opening a custom colour builds the
-  tab again (its signature), and may move the split.
+  tab again (its signature) and never moves the split (2026-11-10, the user: a row went from the left column to the
+  right when another was set to Custom): the heights are each unit's first row as the mount and skin show it, the
+  custom colour and lightness rows a choice opens weigh nothing, so the column that opens them grows instead.
+  (A page whose first row of a unit has a `visible:` of its own that follows a value could still move it; no page
+  does: only the custom colour rows follow a value.)
+- **The picture.** The mount alone, larger, on a tab without the cart's rows; with its cart on the cart's tab (the
+  user, 2026-11-10: "only show cart in preview when the cart tab is selected"). The cart's tab is the one with a row
+  the page marked with `CartRow` (`Row.CartPart`), so no tab is known by its name; a page that marks no row keeps the
+  cart on every tab. The photo shown stays until the other view has the look, so a tab switch doesn't flash. The
+  mount alone is drawn up to 4 per art pixel where the stage has room (the cart picture keeps 3): at 3 the donkey alone
+  was no bigger than with its cart (224x147 in the 440x236 stage). The size is a whole number of
+  screen pixels per art pixel, not of the panel's units (one unit is about 2 screen pixels at 2560x1440, 1.5 at
+  1920x1080): rounded to whole units, the dragon (119x78 art, room for 2.82) was drawn at 2, half the donkey's 4. The
+  stage is 256 tall (236 until 2026-11-10), so the dragon fits at 3, as big as in the journal.
 - **Looks.** The tabs are the options window's section cards laid side by side: flat, the chosen one in the game's
   red with its name bold, each as wide as its name (120 to 260), a rule under the strip.
 - **The gamepad.** The tabs are a navigation group over the rows: up from the rows reaches them, down goes back.

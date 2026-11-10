@@ -64,6 +64,9 @@ namespace GK2DonkeyAPI.Api
             // A row of a skin's own part (ToneRows: its choice, custom colour and lightness): the Mounts panel's colours
             // window shows them on a tab of their own, named by the skin (2026-11-08).
             internal bool SkinPart;
+            // A row of the cart (CartRow): the colours window shows the mount with its cart only on a tab that has one, the mount
+            // alone (larger) on the others (the user, 2026-11-10: "only show cart in preview when the cart tab is selected").
+            internal bool CartPart;
             // A region's row (RegionRows): labelled by the look's name for the part where it has one, its own label where
             // the look names none (a pack from before names, another mod's mount): that label stays the page's to translate.
             internal bool OwnLabelToo;
@@ -1132,6 +1135,7 @@ namespace GK2DonkeyAPI.Api
             foreach (Row r in Rows)
             {
                 if (r.Entry == null || r.Entry.Definition.Section != cfgSection || (r.Entry.Definition.Key != key && r.Entry.Definition.Key != LightnessKey(key))) continue;
+                r.CartPart = true; // the Mounts panel's colours window draws the cart only on a tab with such rows
                 string id = r.MountId;
                 Func<bool> pulls = () => MountPullsCart(id ?? mountRow?.Value);
                 Func<bool> shown = r.Shown, visible = r.Visible;

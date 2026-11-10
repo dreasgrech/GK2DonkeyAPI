@@ -1176,7 +1176,7 @@ namespace GK2DonkeyAPI
 
         // DecodePng into the caller's buffer, reused when it is the picture's size (else made anew and handed back in
         // it): a skin's build decodes its pictures one after another into one array, put in the sheet before the next.
-        // The build's garbage was nearly all a new pixel array per picture (the dragon 15.7 of 16 MB, the Mecha 31.5 of
+        // The build's garbage was nearly all a new pixel array per picture (a big winged mount 15.7 of 16 MB, a skin of it 31.5 of
         // 33; 2026-11-09, docs/performance.md "Skin sheets let go and built again"). The array is the caller's until its
         // next call: a caller that keeps pixels (an icon, a test) passes a buffer of its own or calls DecodePng.
         internal static Color32[] DecodePngInto(byte[] png, ref Color32[] buffer, out int w, out int h, out string why, int maxW = MaxPictureSide, int maxH = MaxPictureSide, long maxPixels = (long)MaxPictureSide * MaxPictureSide)

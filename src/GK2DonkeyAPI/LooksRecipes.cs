@@ -142,8 +142,8 @@ namespace GK2DonkeyAPI
         // shared: the build's one reader into kept memory (ReadFrameShared): one texture, one crop, one canvas and one frame,
         // each picture read into them; for a builder that is done with the frame before it reads the next (the erase of an
         // over skin, a game-source skin's frames). A recipe (another mod's code, which may keep the frame), the donkey
-        // frames' check, the face pixels and the export read with copies of their own, as before. Hellfire's build made
-        // about 3.5 MB of these per build, Larry's about 6 (2026-11-10, docs/performance.md).
+        // frames' check, the face pixels and the export read with copies of their own, as before. A skin drawn over the donkey made
+        // about 3.5 MB of these per build, a mount's own skin about 6 (2026-11-10, docs/performance.md).
         private static Texture2D sharedReadTex;
         private static Color32[] sharedCrop, sharedCanvas;
         private static readonly SkinFrame sharedFrame = new SkinFrame();

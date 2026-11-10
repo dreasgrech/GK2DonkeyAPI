@@ -52,7 +52,13 @@ namespace GK2DonkeyAPI
         // last swatch ran under it)
         private const float ColoursScrollGap = 10f;
         private const float EdgeGap = 24f; // the least room left at the screen's edges before a window is scaled down
-        private const float CW = 800f, CH = 640f, CStageW = StageW, CStageH = 236f, CPictureScale = PictureScale; // the colours window and its picture: the journal's stage and size, so the mount is drawn as big in both (the user, 2026-10-22: smaller in the colours window)
+        private const float CW = 800f, CH = 640f, CStageW = StageW, CStageH = 256f, CPictureScale = PictureScale; // the colours window and its picture: the journal's stage and size, so the mount is drawn as big in both (the user, 2026-10-22: smaller in the colours window); 256 tall (236 until 2026-11-10): the dragon's picture, 78 art pixels tall, fits at 3 as in the journal (2.5 at 236, the user's screenshots)
+        // the mount alone in the colours window (a tab without the cart's rows) up to 4 per art pixel where the stage has room: the
+        // user, 2026-11-10, "its image is larger and you can see it better without the cart" (at 3 the donkey alone was
+        // drawn 224x147 in the 440x236 stage, as big as with the cart). Each art pixel is 3 of the picture's, so at 4 it
+        // is still 4 whole units; capped, so a small mount isn't blown up 6 or 7 times.
+        private const float CAloneScale = 4f;
+        private static float ColoursScale(Texture pic) => PreviewStage.IsAloneView(pic) ? CAloneScale : CPictureScale;
 
         private static GameObject panel, colours;
         private static MountSettingsPage page;
@@ -775,7 +781,8 @@ namespace GK2DonkeyAPI
 
         // A tab's rows in two columns, the order kept (down the left, then down the right), split where the two come out
         // nearest in height: a choice with its custom colour's swatches and the lightness row after them stays whole, in
-        // one column. Heights by what shows now (a swatch row two rows' worth). One column for one such unit. A unit
+        // one column. Heights by each unit's first row as the mount and skin show it, never by a value (below). One
+        // column for one such unit. A unit
         // starts at every row but a swatch row and the slider right after one: not by Visible, which every row a page
         // keeps per skin has (its skin shown), so the whole tab was one unit in one column (the user's screenshot,
         // 2026-11-08).
@@ -794,7 +801,13 @@ namespace GK2DonkeyAPI
                     weights.Add(0);
                 }
                 units[units.Count - 1].Add(r);
-                if (r.Visible == null || r.Visible()) weights[weights.Count - 1] += IsPalette(r) ? 2 : 1;
+                // weighed by its first row alone, by what the mount and skin show (the user, 2026-11-10: a row went from the
+                // left column to the right when another was set to Custom): the swatches and lightness a choice opens weigh
+                // nothing, so no value moves the split; the column that opens them grows instead
+                if (units[units.Count - 1].Count == 1 && (IsPalette(r) ? r.Shown == null || r.Shown() : r.Visible == null || r.Visible()))
+                {
+                    weights[weights.Count - 1] += IsPalette(r) ? 2 : 1;
+                }
             }
             var cols = new List<(string Group, List<MountSettingsPage.Row> Rows)>();
             if (units.Count == 0) return cols;
@@ -885,6 +898,40 @@ namespace GK2DonkeyAPI
             BuildColourTab();
             if (coloursScroll != null) coloursScroll.verticalNormalizedPosition = 1f;
             Refresh();
+            nextPicture = 0f; // the picture follows the tab at once (with the cart or the mount alone)
+        }
+
+        // The picture with the cart, or the mount alone (the user, 2026-11-10: "only show cart in preview when the cart tab
+        // is selected ... its image is larger and you can see it better without the cart"): the colours window shows the
+        // cart only on a tab with a row the page marked as the cart's (CartRow); the journal always. A page that marks no
+        // row of its tabs as the cart's keeps the cart on every tab, as before.
+        private static bool ColoursWantCart()
+        {
+            if (colours == null) return true;
+            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            if (tabRows == null) return true;
+            if (HasCartRow(tabRows)) return true;
+            for (int i = 0; i < colourTabs.Count; i++) if (HasCartRow(colourTabs[i].Rows)) return false;
+            return true;
+        }
+
+        private static bool HasCartRow(List<MountSettingsPage.Row> rows)
+        {
+            for (int i = 0; i < rows.Count; i++) if (rows[i].CartPart) return true;
+            return false;
+        }
+
+        // The picture on screen: the colours window's while it is open (the journal waits hidden under it).
+        private static RawImage ShownPicture() => colours != null && coloursPicture != null ? coloursPicture : picture;
+
+        internal static bool TestColourTabHasCart => ColoursWantCart();
+        // the colours picture's drawn size per art pixel, and the most the stage has room for (the self-tests)
+        internal static (float Scale, float Room, float Px) TestColoursScale()
+        {
+            if (coloursPicture == null || coloursPicture.texture == null || coloursStage == null) return (0f, 0f, 0f);
+            Vector2 art = PreviewStage.ArtSize(coloursPicture.texture);
+            float room = Mathf.Min((coloursStage.rect.width - 16f) / Mathf.Max(1f, art.x), (coloursStage.rect.height - 16f) / Mathf.Max(1f, art.y));
+            return (((RectTransform)coloursPicture.transform).sizeDelta.x / Mathf.Max(1f, art.x), room, ScreenPixelsPerUnit(coloursStage));
         }
 
         private static void AddTo(List<(string Group, List<MountSettingsPage.Row> Rows)> groups, string group, MountSettingsPage.Row r)
@@ -1420,6 +1467,52 @@ namespace GK2DonkeyAPI
             ShowColourTab(colourTabs[i].Key);
             return colourTab == colourTabs[i].Key;
         }
+        // the chosen tab's rows by column as TabColumns splits them ('L' or 'R' a row, shown or not): the same whatever a
+        // value opens (the user, 2026-11-10: a row moved from one column to the other when another was set to Custom)
+        internal static string TestColourColumns()
+        {
+            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            if (tabRows == null) return "";
+            var cols = TabColumns(tabRows);
+            var sb = new StringBuilder(tabRows.Count);
+            foreach (MountSettingsPage.Row r in tabRows) sb.Append(cols.Count > 1 && cols[1].Rows.Contains(r) ? 'R' : 'L');
+            return sb.ToString();
+        }
+        // every choice of the chosen tab that has a custom colour after it, shown now, set to its "Custom" value (on), or
+        // each put back as it was (off); how many were set or put back
+        private static readonly List<(BepInEx.Configuration.ConfigEntryBase Entry, object Was)> testCustomWas = new List<(BepInEx.Configuration.ConfigEntryBase, object)>();
+        internal static int TestCustomAll(bool on)
+        {
+            int n = 0;
+            if (!on)
+            {
+                foreach (var w in testCustomWas) { w.Entry.BoxedValue = w.Was; n++; }
+                testCustomWas.Clear();
+                if (n > 0) Refresh(); // as the row's control does after a pick
+                return n;
+            }
+            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            if (tabRows == null) return 0;
+            for (int i = 0; i + 1 < tabRows.Count; i++)
+            {
+                MountSettingsPage.Row r = tabRows[i];
+                if (r.RowKind != MountSettingsPage.RowKind.Choice || r.Entry == null || r.ChoiceValues == null || !IsPalette(tabRows[i + 1])) continue;
+                if (r.Visible != null && !r.Visible()) continue;
+                foreach (object v in r.ChoiceValues)
+                {
+                    if (v == null || v.ToString() != "Custom") continue;
+                    if (!Equals(r.Entry.BoxedValue, v))
+                    {
+                        testCustomWas.Add((r.Entry, r.Entry.BoxedValue));
+                        r.Entry.BoxedValue = v;
+                        n++;
+                    }
+                    break;
+                }
+            }
+            if (n > 0) Refresh(); // as the row's control does after a pick: the preset's rows come
+            return n;
+        }
         // whether every row of the chosen tab that shows was built, and only those (the two columns hold the tab whole)
         internal static bool TestColourTabWhole()
         {
@@ -1579,7 +1672,7 @@ namespace GK2DonkeyAPI
             {
                 Mount.Instance paper = PaperOf(page);
                 Texture pic;
-                using (Perf.Measure(Perf.S.Preview)) pic = PreviewStage.Picture(paper);
+                using (Perf.Measure(Perf.S.Preview)) pic = PreviewStage.Picture(paper, withCart: ColoursWantCart());
                 if (paper != null && !paper.LooksRig.Settling)
                 {
                     Looks.HoldForPanel(paper.LooksRig.Wearing); // picked again: there at once
@@ -1593,15 +1686,16 @@ namespace GK2DonkeyAPI
                 // switching between the two views (a mount that can't pull the cart and one that can): the photo shown stays
                 // until the other view has the new look whole (its stale photo is an older mount's), asked again each frame
                 // meanwhile (the user, 2026-10-25: the new mount "large and without a cart" for a few frames)
-                else if (!PreviewStage.Failed && picture != null && picture.texture != null && picture.texture != pic && picture.gameObject.activeSelf
+                // (and the colours window's tabs, 2026-11-10: the mount alone on a tab without cart rows; its photo is the one shown there)
+                else if (!PreviewStage.Failed && ShownPicture() is RawImage held && held.texture != null && held.texture != pic && held.gameObject.activeSelf
                     && !PreviewStage.ShowsLookNow(pic, paper))
                 {
-                    pic = picture.texture;
+                    pic = held.texture;
                     nextPicture = 0f;
                 }
                 // as large as the stage allows, up to the scale, centred in it (the stage renders at 3x detail: a fraction of that is a smooth downscale)
                 if (panel.activeSelf && !ChosenMissing) Fit(picture, stage, pic, PictureScale);
-                if (colours != null && coloursPicture != null) Fit(coloursPicture, coloursStage, pic, CPictureScale);
+                if (colours != null && coloursPicture != null) Fit(coloursPicture, coloursStage, pic, ColoursScale(pic), screenWhole: true);
             }
             catch (Exception e)
             {
@@ -1628,7 +1722,10 @@ namespace GK2DonkeyAPI
         internal static void TestStepBack() => StepBack();
         internal static bool TestControlsTaken => GameWindowAside.ControlsTaken;
 
-        private static void Fit(RawImage img, RectTransform box, Texture pic, float maxScale)
+        // screenWhole: a whole number of screen pixels per art pixel (the colours window, the user, 2026-11-10: the dragon
+        // drawn at 2 where the stage had room for 2.82, half the donkey's 4), else of the panel's own units (the journal).
+        // A unit is about 2 screen pixels at 2560x1440 and 1.5 at 1920x1080, so whole units were not whole pixels there.
+        private static void Fit(RawImage img, RectTransform box, Texture pic, float maxScale, bool screenWhole = false)
         {
             if (img == null || box == null) return;
             if (pic != null)
@@ -1642,10 +1739,25 @@ namespace GK2DonkeyAPI
                 }
                 Vector2 art = PreviewStage.ArtSize(pic);
                 float k = Mathf.Min(maxScale, (box.rect.width - 16f) / Mathf.Max(1f, art.x), (box.rect.height - 16f) / Mathf.Max(1f, art.y));
-                if (k >= 1f) k = Mathf.Floor(k); // the stage is point-filtered: a whole number of screen pixels per art pixel, no shimmer
+                // the stage is point-filtered: a whole number of pixels per art pixel, no shimmer
+                float px = screenWhole ? ScreenPixelsPerUnit(box) : 0f;
+                float whole = px > 0.01f ? Mathf.Floor(k * px + 0.001f) : 0f;
+                if (whole >= 1f) k = whole / px;
+                else if (k >= 1f) k = Mathf.Floor(k);
                 ((RectTransform)img.transform).sizeDelta = new Vector2(art.x * k, art.y * k);
             }
             img.gameObject.SetActive(pic != null);
+        }
+
+        // Screen pixels per unit of the panel at the box (the canvas's scale and the window's own, when it is scaled down to
+        // fit a small screen); 0 when there is no canvas.
+        private static float ScreenPixelsPerUnit(RectTransform box)
+        {
+            Canvas c = box.GetComponentInParent<Canvas>();
+            if (c == null) return 0f;
+            Canvas root = c.rootCanvas;
+            float rootScale = root.transform.lossyScale.x;
+            return rootScale > 0.0001f ? root.scaleFactor * box.lossyScale.x / rootScale : 0f;
         }
 
         // The stage frames a new mount's picture in the same frame the mount changes and resizes its texture in place
@@ -1661,7 +1773,7 @@ namespace GK2DonkeyAPI
             try
             {
                 if (picture != null && stage != null) RefitOne(picture, stage, PictureScale);
-                if (coloursPicture != null && coloursStage != null) RefitOne(coloursPicture, coloursStage, CPictureScale);
+                if (coloursPicture != null && coloursStage != null) RefitOne(coloursPicture, coloursStage, ColoursScale(coloursPicture.texture), screenWhole: true);
             }
             catch (Exception e)
             {
@@ -1670,12 +1782,12 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void RefitOne(RawImage img, RectTransform box, float maxScale)
+        private static void RefitOne(RawImage img, RectTransform box, float maxScale, bool screenWhole = false)
         {
             if (!img || !box || !img.gameObject.activeInHierarchy) return;
             Texture t = img.texture;
             if (t == null || !fitted.TryGetValue(img, out (int W, int H) was) || (was.W == t.width && was.H == t.height)) return;
-            Fit(img, box, t, maxScale);
+            Fit(img, box, t, maxScale, screenWhole);
         }
 
         // A skin or mount registered, reloaded or withdrawn while the panel is open (the Mounts tab, the pack watch): the

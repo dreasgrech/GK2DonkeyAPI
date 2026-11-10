@@ -124,6 +124,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupCore, Name = "kept with save: a gone mod's lines set aside and written back, an ability's dropped", Body = AsideLines },
             new Scenario { Group = GroupCore, Name = "the start's check of the game's code: the A* pathfinding's module id read, found and counted", Body = GateTests.Scopes },
             new Scenario { Group = GroupCore, Name = "hitch and unhitch", Body = HitchUnhitch },
+            new Scenario { Group = GroupCore, Name = "from the saddle onto another mount (offered by it, the first left standing with its cart; a refusal keeps the ride); loading only facing the cart", Body = RideFromSaddleAndFacing },
             new Scenario { Group = GroupCore, Name = "unhitch without a view (a parked cart stays)", Body = UnhitchWithoutView },
             new Scenario { Group = GroupCore, Name = "mounts left in the world: another mount chosen while riding (the one ridden stays with its babies, steps aside, the new one ridden; chosen again, the same one back; the journal's babies, name and colours reach it; one cart, left standing and fetched, taken off the mount that has it)", Body = LeaveMountsTests.Switch },
             new Scenario { Group = GroupCore, Name = "mounts left in the world: off (switched off, the ones left go home, one ridden by hand once he is off it; chosen while ridden, one left is his again and the one out goes home; none left, changed in place as before), a load (found by their keys; a save's other mount left; with the option off, sent home), the side file's keys and parents", Body = LeaveMountsTests.OffAndLoad },
@@ -1060,6 +1061,67 @@ namespace GK2DonkeyAPI
             Check(cr != null && cr.Sets.Exists(x => x[0] == "Skin" && x.Length > 1 && x[x.Length - 1] == gapSkin), $"the skin id is in the record (Skin = {gapSkin})");
             Check(cartDonkey.Tuning.IsSet("HitchGapPx") && cartDonkey.Tuning.SetBy("HitchGapPx") == Looks.TuningOwner && cr != null && !cr.Sets.Exists(x => x[0] == "HitchGapPx"), "the skin's own hitch gap is on the wearer (cart style) but not in the record");
             LeftOver(gapOwner, gapSkin, gapRoot);
+        }
+
+        // Riding one mount, another next to him (the user, 2026-11-10): the key's "Ride" is offered by it, and taken the
+        // first stays where he got off, with its cart, and he rides the other; asked of the one he rides, refused, the ride
+        // goes on. Then the cart left standing: "Load on cart" only facing it (the same day): towards its body yes, away no,
+        // over it yes.
+        internal static IEnumerator RideFromSaddleAndFacing()
+        {
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, right: homeFacing > 0f, withCart: true);
+            if (a == null)
+            {
+                Fail("could not spawn");
+                yield break;
+            }
+            yield return Until(() => a.IsReady, 6f);
+            MountResult ride = a.Ride(showMessage: false);
+            Check(ride.Ok, $"riding the first, with its cart{(ride.Ok ? "" : " (" + ride.Reason + ")")}");
+            if (!ride.Ok) yield break;
+            yield return Frames(4);
+            // the second right by him (towards the camera's other side, a little): within the reach of a ride on foot
+            MountHandle b = Spawn(Keeper() + new Vector3(0f, 0f, 0.7f), right: homeFacing > 0f);
+            if (b == null)
+            {
+                Fail("could not spawn the second");
+                yield break;
+            }
+            yield return Until(() => b.IsReady, 6f);
+            yield return Until(() => InstanceControls.TestRideOffered && InstanceControls.TestTarget == b.I, 2f);
+            Vector3 bb = b.I.BodyPoint() - Keeper();
+            bb.y = 0f;
+            Check(waited, $"riding, the second {bb.magnitude:F2} from him: \"Ride\" offered by it ({InstanceControls.TestLabel ?? "no label"}; target {(InstanceControls.TestTarget != null ? InstanceControls.TestTarget.Describe() : "none")})");
+            if (!waited) yield break;
+            Vector3 aAt = a.Position;
+            int aCargo = a.I.CargoRig.Count;
+            string why = InstanceControls.RideFromSaddle(PC, b.I, showMessage: false);
+            yield return Frames(3);
+            Check(why == null && Mounts.IsMounted && Mounts.Riding?.I == b.I, $"the key: riding the second now ({why ?? "taken"}; riding {Mounts.Riding?.FullId ?? "nothing"})");
+            Vector3 moved = a.Position - aAt;
+            moved.y = 0f;
+            Check(a.Exists && !a.I.IsRidden && a.HasCart && a.I.CargoRig.Count == aCargo && moved.magnitude < 0.3f, $"the first stands where he got off, with its cart and its {aCargo} item(s) ({moved.magnitude:F2} from there, cart {a.HasCart})");
+            string again = InstanceControls.RideFromSaddle(PC, b.I, showMessage: false);
+            yield return Frames(2);
+            Check(again != null && Mounts.IsMounted && Mounts.Riding?.I == b.I, $"asked of the one he rides: refused ({again ?? "taken"}), still riding it");
+            Mounts.Dismount("self-test");
+            yield return Until(() => !Mounts.IsMounted, 5f);
+            yield return Until(() => a.IsReady, 4f);
+
+            // facing the cart left standing (its body as the load areas measure it)
+            if (!InstanceControls.TryZones(a.I, out InstanceControls.CartZones z))
+            {
+                Fail("the cart's areas could not be measured");
+                yield break;
+            }
+            float front = z.Split - Plugin.CartZoneFrontShift.Value, end = z.CartEnd - Plugin.CartZoneRear.Value;
+            float mid = (z.Left + z.Right) / 2f;
+            Vector3 behind = z.Origin + z.Back * (end + 0.5f) + z.Side * mid, over = z.Origin + z.Back * ((front + end) / 2f) + z.Side * mid;
+            var towards = new Vector2(-z.Back.x, -z.Back.z);
+            var away = new Vector2(z.Back.x, z.Back.z);
+            bool yes = InstanceControls.FacesCart(a.I, behind, towards), no = InstanceControls.FacesCart(a.I, behind, away), onIt = InstanceControls.FacesCart(a.I, over, away);
+            Check(yes && !no && onIt, $"behind the cart facing it: load ({yes}); facing away: not, the item the game's ({!no}); over its body either way: load ({onIt})");
         }
 
         // A donkey takes a free cart and leaves it again: one instance with the cart (the cart's data merged, its parts
@@ -3416,6 +3478,51 @@ namespace GK2DonkeyAPI
                     Check(shownTab && MountsPanel.TestColourTabWhole() && MountsPanel.TestColourRows > 0, $"... tab {ti + 1} chosen: {MountsPanel.TestColourTabs()}, its {MountsPanel.TestColourRows} rows built whole");
                     string narrowTab = MountsPanel.TestNarrowLabel(coloursWindow: true);
                     Check(narrowTab == null, $"... and every label on it has room{(narrowTab != null ? " (NOT: " + narrowTab + ")" : "")}");
+                }
+                // every choice with a custom colour set to Custom, tab by tab: no row changes column (the user, 2026-11-10:
+                // a row moved from the left to the right when another was set to Custom), the swatches built; the
+                // picture: the mount alone on a tab without cart rows, with its cart on the cart's tab (b, same day)
+                for (int ti = 0; ti < tabCount; ti++)
+                {
+                    if (tabCount > 1 && !MountsPanel.TestShowColourTab(ti)) continue;
+                    yield return Frames(2);
+                    yield return Until(() => !PreviewStage.TestAloneMeasuring && !PreviewStage.TestCartMeasuring, 5f);
+                    yield return Frames(2);
+                    bool cartTab = MountsPanel.TestColourTabHasCart;
+                    string pic = MountsPanel.TestColoursPicture();
+                    bool pulls = MountSettingsPage.MountPullsCart(page.MountChosen ?? MountCatalog.DonkeyId);
+                    Check(!pulls || (cartTab ? pic.Contains("the cart view") : pic.Contains("the alone view")), $"... tab {ti + 1} ({(cartTab ? "the cart's" : "no cart rows")}): the picture {(cartTab || !pulls ? "as the mount is drawn" : "the mount alone")} ({pic})");
+                    // as large as the stage allows, capped (3 with the cart, 4 alone), at a whole number of screen pixels per art
+                    // pixel (the user, 2026-11-10: the dragon drawn at 2 where it had room for 2.82)
+                    var (scale, room, px) = MountsPanel.TestColoursScale();
+                    float cap = cartTab && pulls ? 3f : 4f;
+                    float wantPx = px > 0.01f ? Mathf.Floor(Mathf.Min(cap, room) * px + 0.001f) : 0f;
+                    float wantScale = wantPx >= 1f ? wantPx / px : Mathf.Min(cap, room);
+                    float onScreen = scale * px;
+                    Check(Mathf.Abs(scale - wantScale) < 0.02f && Mathf.Abs(onScreen - Mathf.Round(onScreen)) < 0.02f,
+                        $"... and drawn {scale:F2} per art pixel, {onScreen:F2} screen pixels ({px:F2} a unit; {(cartTab && pulls ? "3 with the cart" : "up to 4 alone")}, the stage has room for {room:F2})");
+                    string colsBefore = MountsPanel.TestColourColumns();
+                    int rowsBefore = MountsPanel.TestColourRows;
+                    int set = 0, rowsCustom = 0;
+                    string colsCustom = "";
+                    try
+                    {
+                        set = MountsPanel.TestCustomAll(on: true);
+                        if (set > 0)
+                        {
+                            yield return Until(() => MountsPanel.TestColourRows > rowsBefore && MountsPanel.TestColourTabWhole(), 3f);
+                            colsCustom = MountsPanel.TestColourColumns();
+                            rowsCustom = MountsPanel.TestColourRows;
+                        }
+                    }
+                    finally
+                    {
+                        MountsPanel.TestCustomAll(on: false); // the player's values back, whatever happened
+                    }
+                    if (set == 0) continue;
+                    yield return Until(() => MountsPanel.TestColourRows == rowsBefore && MountsPanel.TestColourTabWhole(), 3f);
+                    Check(colsCustom == colsBefore && MountsPanel.TestColourColumns() == colsBefore && rowsCustom > rowsBefore,
+                        $"... tab {ti + 1}: {set} choice(s) set to Custom ({rowsBefore} -> {rowsCustom} rows built): every row in its column ({colsBefore} -> {colsCustom}), and back ({MountsPanel.TestColourColumns()})");
                 }
                 if (tabCount > 1) MountsPanel.TestShowColourTab(0);
                 MountsPanel.TestCloseColours(keep: true);

@@ -12,6 +12,13 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Ride another mount without getting off first** (2026-11-10): riding next to another mount you could ride, "Ride"
+  shows over it and the interact key takes you onto it. The one you were on stays where you got off, with its cart.
+- **Load on cart only when facing the cart** (2026-11-10): with an item in your hands, "Load on cart" shows only when
+  you face the cart. Facing away, the key sets the item down in front of you, as the game does.
+- **The colours window shows the mount larger** (2026-11-10): the cart is in the picture only on the Cart tab.
+- **Colour rows stay in their column** (2026-11-10): setting a colour to Custom in the colours window moved other rows
+  from one column to the other.
 - **The donkey's own voice in the Mount Journal** (2026-11-10): picking the donkey after another mount played that other
   mount's call.
 - **Smoother on slower PCs** (2026-11-09): changing a setting in the Mount Journal or the options window no longer
@@ -69,6 +76,29 @@ For mod authors:
 
 Development:
 
+- **Four changes from the user's list** (2026-11-10, docs/mounts-panel-design.md, docs/instances.md):
+  - the colours window's two columns are balanced on each unit's first row as the mount and skin show it
+    (`MountsPanel.TabColumns`): the custom colour and lightness rows a choice opens weigh nothing, so no value moves
+    the split. The self-test sets every choice of every tab to Custom and compares the column map (`TestColourColumns`,
+    `TestCustomAll`);
+  - the colours window asks the stage for the mount alone on a tab without a row the page marked with `CartRow`
+    (new `Row.CartPart`), with the cart on the cart's tab; a page that marks none keeps the cart everywhere. The mount alone
+    is drawn up to 4 per art pixel there (`CAloneScale`; at 3, the cap the cart picture keeps, the donkey alone was no
+    bigger than with its cart: 224x147 in the 440x236 stage, the first F11). The colours
+    picture is sized to a whole number of screen pixels per art pixel (`Fit(screenWhole)`, `ScreenPixelsPerUnit`), not
+    of the panel's units: the dragon, 119x78 art in a stage with room for 2.82, was rounded down to 2 (the donkey 4;
+    the user's screenshots), now 5 screen pixels at 2560x1440 (2.49 units). The colours
+    window's stage is 256 tall (was 236): the dragon fits at 3 there, as in the journal (2.5 at 236). The photo
+    shown is held until the other view has the look (`ShownPicture`: the colours window's image while it is open). The
+    self-test checks the view on every tab;
+  - from the saddle: `InstanceControls.FindFromSaddle` offers "Ride" by a mount as on foot (hands empty; not in the air,
+    not from the old summon; a free cart in reach stays the hitch's). `RideFromSaddle` asks
+    `Instance.WhyNotRideFromSaddle` (RideFromWorld's checks without the ride he is on) before getting him off, then
+    `RideFromWorld` as on foot (seat and reach safety unchanged). Driving the cart, the key by a mount now rides it
+    instead of setting the cart's top item down;
+  - loading on foot only facing the cart: `InstanceControls.FacesCart`, the cart body's nearest point within 90 degrees
+    of `PlayerData.Direction` (over the body counts); "Cart is full" too. New scenario "from the saddle onto another
+    mount ... loading only facing the cart".
 - **Performance pass, measuring first** (2026-11-09, docs/performance.md "The pass of 2026-11-09"): the profiler
   times the frame's steps that had no part: `Companion` (MountCompanion.TickAll), `HeadWatch`, `Doors` (foals
   indoors, the morgue hand-over), `Scenes` (the by-scene lists and the frame's snapshot) and `Warm` (translations,

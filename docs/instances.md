@@ -64,6 +64,13 @@ Each one says why.
   A "[E] Ride" or "[E] Drive" label shows above the nearest one in reach.
   - The keeper is put on its seat (`PlayerController.SetPosition`), so the donkey doesn't jump.
   - Its view is taken over as it is, so the cargo, colours and lantern stay.
+- **From the saddle onto another mount** (2026-11-10, the user: "ride a mount from another mount when going near
+  it"): riding, "[E] Ride" shows over a mount he could ride on foot (found the same way, hands empty), and the key
+  takes him onto it (`InstanceControls.FindFromSaddle`, `RideFromSaddle`). Every check of that ride is asked first
+  (`WhyNotRideFromSaddle`), so a refusal leaves him riding on; then he gets off as by hand (the mount left stands
+  where it is, with its cart and cargo) and gets on as on foot (the seat only where he can stand). Not offered in the
+  air (land first) or from the old summon; a free cart in reach is the hitch's. Driving the cart, the key by a mount
+  rides it rather than setting the cart's top item down (the label says Ride).
 - **Dismounting an instance** (any dismount: the showcase's key, `Mounts.Dismount`, a rule, indoors): the donkey
   stays where it is, with its cart and cargo. Nothing is handed back to the keeper.
 - **Hitching:** riding a donkey without a cart, press the hitch key (General.HitchKey, J) or the interact key near

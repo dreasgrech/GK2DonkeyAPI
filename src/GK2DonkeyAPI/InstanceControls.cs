@@ -304,6 +304,10 @@ namespace GK2DonkeyAPI
                         label = HintText(UiWords.PromptHitch.Text);
                     }
                 }
+                if (!gameTarget && target == null)
+                {
+                    FindFromSaddle(pc, r);
+                }
                 KeyCode k = Plugin.HitchKey.Value;
                 if (k != KeyCode.None && UnityInput.Current.GetKeyDown(k) && pc.IsControlsEnabled)
                 {
@@ -324,7 +328,7 @@ namespace GK2DonkeyAPI
             if (pd.HasOverheadItem)
             {
                 // Only what the cart takes (Cargo.Allowed: zombies only with CargoZombies): anything else keeps the game's own key (set it down).
-                if (cart != null && MountRules.Allowed(MountFeature.Cargo) && pd.TryGetOverheadItem(Cargo.Rig.AllowedItem, out _))
+                if (cart != null && MountRules.Allowed(MountFeature.Cargo) && pd.TryGetOverheadItem(Cargo.Rig.AllowedItem, out _) && FacesCart(cart, pd.position.Value, pd.Direction))
                 {
                     bool fits = cart.CargoRig.HeldItemFits(pd);
                     Set(cart, fits ? FootAction.Load : FootAction.Full, fits ? UiWords.PromptLoad.Text : UiWords.PromptCartFull.Text, atCart: true);
@@ -351,6 +355,107 @@ namespace GK2DonkeyAPI
                 Set(d, FootAction.Ride, Named(d), atCart: false);
             }
         }
+
+        // Riding, by another mount he could ride on foot: "Ride", the key gets him from the one onto the other (the user,
+        // 2026-11-10: "ride a mount from another mount when going near it"). The mounts on foot would offer, found the same
+        // way (the donkey's area of a standing cart, a mount alone within reach of him), with his hands empty. Not in the
+        // air (a flight or a jump lands first), not from the old summon (its dismount hands its cargo back into his hands
+        // and takes it away), not while the ridden one isn't ready. A free cart in reach is the hitch's (Find, first).
+        private static void FindFromSaddle(PlayerController pc, Mount.Instance r)
+        {
+            PlayerData pd = pc.PlayerData;
+            if (r.Ephemeral || !r.Ready || Flight.InAir || pd.HasOverheadItem)
+            {
+                return;
+            }
+            Vector3 k = pd.position.Value;
+            Mount.Instance cart = CartAround(pc, k, out Zone zone);
+            if (cart != null && zone == Zone.Donkey && cart.Rideable)
+            {
+                Set(cart, FootAction.Ride, Named(cart), atCart: false);
+                return;
+            }
+            Mount.Instance d = Nearest(pc, k, RideReach, i => i.HasDonkey && !i.HasCart && i.Rideable);
+            if (d != null)
+            {
+                Set(d, FootAction.Ride, Named(d), atCart: false);
+            }
+        }
+
+        // From the mount he rides onto another: everything the new ride would refuse is asked first (WhyNotRideFromSaddle),
+        // so a refusal leaves him riding on, said as a refused ride is; then he gets off as by hand (the mount left stands
+        // where it is, with its cart and cargo) and onto the other as on foot (RideFromWorld: its seat only where he can
+        // stand, else it comes to him; SafeGround.cs). Null: riding the other one now.
+        internal static string RideFromSaddle(PlayerController pc, Mount.Instance t, bool showMessage)
+        {
+            Mount.Instance r = Mount.Ridden;
+            string why = r == null ? null : r.Ephemeral || Flight.InAir || !r.Ready ? UiWords.SayNotRightNow.English : null;
+            if (why == null && r != null)
+            {
+                using (Mount.Bind(t))
+                {
+                    why = t.WhyNotRideFromSaddle(pc);
+                }
+            }
+            if (why != null)
+            {
+                Plugin.Log.LogInfo($"Mount: {t.Describe()} not ridden from the saddle: {why}");
+                if (showMessage)
+                {
+                    Mount.Say(why);
+                }
+                return why;
+            }
+            if (r != null)
+            {
+                Plugin.Log.LogInfo($"Mount: from {r.Describe()} onto {t.Describe()}.");
+                Mounts.Dismount("onto another mount");
+                if (Mount.IsMounted)
+                {
+                    // held (a landing) or refused by the game: still on the first one, nothing else done
+                    Plugin.Log.LogInfo("Mount: still riding after the dismount for another mount; it waits.");
+                    return UiWords.SayNotRightNow.English;
+                }
+            }
+            using (Mount.Bind(t))
+            {
+                why = t.RideFromWorld(pc, showMessage);
+            }
+            if (why != null)
+            {
+                Plugin.Log.LogWarning($"Mount: off the first mount, but {t.Describe()} refused the ride ({why}); he is on foot beside it.");
+            }
+            return why;
+        }
+
+        // Whether the keeper faces a standing cart's body (the user, 2026-11-10: with an item in his hands, "Load on cart"
+        // only when he isn't looking away from the cart): the point of the body nearest him within 90 degrees of the way he
+        // faces (PlayerData.Direction, x and z, as the game's drop puts an item in front of him); over the body counts, and
+        // so does a cart not measured (as before). Otherwise the key is the game's: the item set down in front of him.
+        internal static bool FacesCart(Mount.Instance cart, Vector3 k, Vector2 facing)
+        {
+            if (cart == null || !ZonesOf(cart, out CartZones z) || facing.sqrMagnitude < 0.0001f)
+            {
+                return true;
+            }
+            Vector3 rel = k - z.Origin;
+            rel.y = 0f;
+            float along = Vector3.Dot(rel, z.Back), across = Vector3.Dot(rel, z.Side);
+            float front = z.Split - Plugin.CartZoneFrontShift.Value, end = z.CartEnd - Plugin.CartZoneRear.Value;
+            float left = z.Left - Plugin.CartZoneSide.Value, right = z.Right + Plugin.CartZoneSide.Value; // across: right < left
+            Vector3 to = z.Back * (Mathf.Clamp(along, front, end) - along) + z.Side * (Mathf.Clamp(across, Mathf.Min(right, left), Mathf.Max(right, left)) - across);
+            to.y = 0f;
+            if (to.sqrMagnitude < 0.0025f)
+            {
+                return true; // over the body
+            }
+            return to.x * facing.x + to.z * facing.y >= 0f;
+        }
+
+        // The self-tests: what the key would do here now (the target and its label), as Find left it this frame.
+        internal static Mount.Instance TestTarget => target;
+        internal static string TestLabel => label;
+        internal static bool TestRideOffered => target != null && action == FootAction.Ride;
 
         // "Ride Bella" when the owner named it (MountHandle.SetDisplayName; the name as typed), else just the verb. Asked every
         // frame on foot by a mount: made again only when the name or the language changes.
@@ -582,6 +687,11 @@ namespace GK2DonkeyAPI
             if (!t.HasDonkey)
             {
                 Hitch(pc, Mount.Ridden, t);
+                return true;
+            }
+            if (action == FootAction.Ride)
+            {
+                RideFromSaddle(pc, t, showMessage: true);
                 return true;
             }
             return false;

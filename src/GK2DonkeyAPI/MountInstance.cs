@@ -559,6 +559,18 @@ namespace GK2DonkeyAPI
                 return reason;
             }
 
+            // What RideFromWorld would refuse if he weren't riding (its own checks in its order, but the ride he is on): asked
+            // before he gets off one mount to ride this one from the saddle (InstanceControls.RideFromSaddle; the user,
+            // 2026-11-10), so a refusal leaves him on the mount he has, never on foot. Nothing said or logged here.
+            internal string WhyNotRideFromSaddle(PlayerController pc)
+            {
+                if (!HasDonkey) return UiWords.SayCartWithoutMount.English;
+                if (!Rideable) return UiWords.SayTooSmallToRide.English;
+                if (Ridden == this) return UiWords.SayAlreadyMounted.English;
+                if (!Ready || SceneId != pc.PlayerData.currentGameSceneId) return UiWords.SayNotHereNow.English;
+                return WhyCannotMount(pc) ?? (activeStyle == MountStyle.Cart ? WhyNotCart(pc) : null) ?? MountRules.WhyCannotMount(activeStyle);
+            }
+
             internal string RideFromWorld(PlayerController pc, bool showMessage)
             {
                 if (!HasDonkey)

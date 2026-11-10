@@ -725,6 +725,7 @@ namespace GK2DonkeyAPI
         internal enum TestHide { Nothing, Lamp, Glow }
 
         // The self-tests: which of the stage's pictures a texture is.
+        internal static bool IsAloneView(Texture t) => t != null && t == donkeyView.Rt; // the picture of the mount without its cart
         internal static bool TestIsAloneView(Texture t) => t != null && t == donkeyView.Rt;
         internal static string TestViewOf(Texture t) => t == null ? "no texture" : t == cartView.Rt ? "the cart view" : t == donkeyView.Rt ? "the alone view" : "no view of the stage's";
 
