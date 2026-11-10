@@ -34,6 +34,46 @@ namespace GK2DonkeyAPI
         private static readonly HashSet<string> failedLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private const string RestKey = "bdy_static_left";
 
+        // The journal's list icons made ahead, one mount a frame, a few seconds after a game is loaded: its first opening
+        // made them all at once (19-24 ms and 2.5-3 MB in one frame: a scan of every sprite in memory per game sprite's
+        // name, the packs' standing pictures decoded; docs/performance.md, 2026-11-10). Each is kept as before, so the
+        // opening finds them made. Started again when a mount or skin is registered or withdrawn. A game sprite not found
+        // while warming is not remembered as missing: the journal looks again, as it did (it may be in memory by then).
+        private const float WarmAfterSeconds = 3f;
+        private static readonly List<Catalog.Entry> warmList = new List<Catalog.Entry>();
+        private static int warmFor = -1, warmNext;
+        private static float warmFrom = -1f;
+        private static bool warming;
+
+        internal static void TickWarm()
+        {
+            if (!Mount.IsGameReady)
+            {
+                warmFrom = -1f;
+                return;
+            }
+            if (warmFrom < 0f) warmFrom = Time.unscaledTime + WarmAfterSeconds; // the load's own frames first
+            if (Time.unscaledTime < warmFrom) return;
+            if (warmFor != Looks.RegistryVersion)
+            {
+                warmFor = Looks.RegistryVersion;
+                warmNext = 0;
+                warmList.Clear();
+                foreach (Catalog.Entry k in Catalog.All) warmList.Add(k);
+            }
+            if (warmNext >= warmList.Count) return;
+            Catalog.Entry e = warmList[warmNext++];
+            warming = true;
+            try
+            {
+                Of(e);
+            }
+            finally
+            {
+                warming = false;
+            }
+        }
+
         internal static Icon Of(Catalog.Entry k)
         {
             if (k == null) return default;
@@ -217,7 +257,7 @@ namespace GK2DonkeyAPI
                     if (found == null || !clone) found = s;
                     if (!clone) break;
                 }
-                gameSprites[name] = found;
+                if (found != null || !warming) gameSprites[name] = found; // a miss while warming ahead isn't kept (TickWarm)
             }
             return found != null ? FromSprite(found) : default;
         }

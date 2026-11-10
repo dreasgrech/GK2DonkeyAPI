@@ -21,8 +21,8 @@ For players:
   items on the cart and taking them off costs less, and so do mounts coming back into view (riding through a herd,
   going through a door).
   Browsing the Mount Journal again no longer builds every mount's look again, and building a look makes far less
-  memory garbage (the dragons most). Picking a mount in the Mount Journal is quicker, and babies finding their way
-  around things make less memory garbage.
+  memory garbage (the dragons most). Picking a mount in the Mount Journal is quicker, the first opening of the journal
+  in a session too, and babies finding their way around things make less memory garbage.
 - **The skull is Larry** (2026-11-08): Saddle Up's skull mount is called Larry, as in the game. Gerry was the skull
   in the first game. Your skull keeps his colours, babies and settings, and a name you gave him yourself stays.
 - **The colours window has tabs** (2026-11-08): Mount, the worn skin's own parts on a tab named after the skin, and
@@ -162,6 +162,14 @@ Development:
   log budget (`Mount.DiagRoom`). Not taken: row 19, the lantern's writes (see the doc). The cart and ride keys start
   the dev `[pick]` trace (a 25.8 ms frame was seen once on the cart key). F11 2057/0/0. Riding through the herd: 7-16 KB
   a frame (53.6 on 2026-11-09), skin builds no longer among it.
+- **The proof run** (2026-11-10, docs/performance.md "The proof run"): three runner suites, dev panel off, against
+  2026-11-09's: worst frames walk 3.40 -> 0.71 ms, idle 3.84 -> 0.67, hitch 17.45 -> 14.48; garbage 50-90% lower
+  (52-195 B a frame); memory flat. The milliseconds a frame read higher with 18-19 mounts in the save against 14: not
+  comparable. F11 2057/0/0 with the icon warm-up and the LUT fix.
+- **The journal's icons made ahead** (2026-11-10, docs/performance.md): `MountIcons.TickWarm` (the `Warm` part) makes
+  one mount's list icon a frame, 3 s after a game is loaded, again when a mount or skin is registered or withdrawn; the
+  first opening made them all in one frame (19-24 ms and 2.5-3 MB: a scan of every sprite in memory per game sprite's
+  name, the packs' pictures decoded). A game sprite not found while warming isn't remembered as missing.
 - **Colours: no 128 KB copy per LUT** (2026-11-10): `Colors.BuildLut` copies the identity table into one kept array
   instead of cloning it for every LUT built (124-136 KB a view made with colours, and a colour change).
 - **Dev step traces for one-off frames** (2026-11-10, docs/performance.md): a mod's key (`KeyActions`, over 2 ms),

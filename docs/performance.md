@@ -1022,7 +1022,41 @@ split into its walks in the views probe. `StepTrace.Begin` says whether it began
 - **Mounting:** the companion's frame 3.0 ms; the first ridden frame 7.5 ms (flight 2.6, follow 2.5, the dismount
   checks 1.1), the later ones under 1.
 - **The journal's first opening:** 52.6 ms and 3.8 MB again ("the list's cards" 19.1 ms and 2988 KB, the rows 12.1,
-  the game's look read 3.6, the list's frame 3.7); later openings 7.7 ms.
+  the game's look read 3.6, the list's frame 3.7); later openings 7.7 ms. **Fixed (the user's yes):** the list's
+  icons are made ahead, one mount a frame, 3 s after a game is loaded (`MountIcons.TickWarm`, in the `Warm` part),
+  again after a mount or skin is registered or withdrawn (`Looks.RegistryVersion`). Each was kept already; only when
+  it is made changes. A game sprite not found while warming isn't remembered as missing (the journal looks again, as
+  before). The cost moves to those frames: at most one sprite scan or one picture decoded a frame (the proof run's
+  `Warm` part says how much). **After (2026-11-10 02:24, F11 2057/0/0):** the first opening 48.8 ms and 1196 KB
+  (52.6 ms and 3848 KB before); "the list's cards" 9.6 ms and 156 KB (19.1 and 2988); the warm frames' `Warm` 1.1-2.4
+  ms. Still the session's first opening's own: the rows 13.2 (first-time UI and fonts; 2.9 on later openings), the
+  list's frame 4.3, the game's look read 3.8, the title bar 3.5.
+
+### The proof run (2026-11-10 02:34-03:05)
+
+Three suites in a row (`tools/GK2PerfRunner`, the donkey, night, 100% zoom, the dev panel off: player numbers), the
+same as the after-run of 2026-11-09 13:40-14:52. The third suite of each (the first is the warm-up):
+
+| Suite | API ms a frame, 11-09 -> 11-10 | Worst frame | Garbage a frame |
+|---|---|---|---|
+| walk | 0.218 -> 0.328 | 3.40 -> **0.71** | 363 -> **172 B** |
+| ride | 0.258 -> 0.379 | 1.52 -> **0.90** | 482 -> **195 B** |
+| cart | 0.245 -> 0.380 | 1.40 -> **0.83** | 341 -> **97 B** |
+| idle | 0.249 -> 0.313 | 3.84 -> **0.67** | 497 -> **52 B** |
+| hitch (the cart called 5 times) | 0.278 -> 0.348 | 17.45 -> **14.48** | 822 -> **190 B** |
+
+- **Worst frames and garbage:** every worst frame lower (the 3-4 ms ones under 1 ms), garbage 50-90% lower; no
+  collection started in the API's code; memory flat (-48 B, +168 B between suites; the census: only bounded caches
+  grew, by one).
+- **The milliseconds a frame are higher, and not comparable:** the world isn't the same. The save now holds 18-19
+  mounts (`Mount.byFullId` 18 -> 19 in the census; 15 babies, the mounts left with five babies each in the sessions of
+  2026-11-09/10) against 14 on 2026-11-09, and every standing mount and baby has its frame (stand, shuffle, follow).
+  The steady cost per mount is unchanged code since the 11-09 run but for the cheap batch (which only removes work).
+  A like-for-like figure needs the same save: kept for the next pass (a fixed test save, or the crowd scenario's
+  phases, which are the same every run).
+- The series table of `perfhog-report.py --series` prints the hitch suite's worst frame (ms) in its "alloc/frame"
+  row ("13.71 !!"): the reports themselves say 190 B a frame.
+- The log lines in a suite 1236 -> 776 (the cheaper logging of the pass).
 
 ### What can't be measured here
 

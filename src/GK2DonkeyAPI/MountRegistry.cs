@@ -447,6 +447,7 @@ namespace GK2DonkeyAPI
                 DonkeyFrames.Tick();   // the game's donkey art against the art the skins were drawn on: once a session, a frame a tick
                 FacePixels.Tick();     // then the donkey's eye and nostril pixels repainted in the game's atlas, a frame a tick
                 SoundBank.Advance();   // a pack's sound file started, one a frame
+                MountIcons.TickWarm(); // the journal's list icons made ahead, one mount a frame (its first opening made them all at once)
                 DeferredSave.Tick();   // a setting changed in a window written to its cfg file once the changing pauses
                 Looks.TickPackWatch(); // dev only: Debug.SkinPackAutoReload
                 Looks.RecheckAsideSkins(); // a set-aside game-source skin nobody wears: offered again when its frames arrive (once a minute)
