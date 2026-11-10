@@ -1636,10 +1636,7 @@ namespace GK2DonkeyAPI
             var slots = new List<(int Kind, PaletteColor Colour, float X, float Y, float W, float H, Image Outer)>();
             GameObject keptSlot = null; // shown only while the part is still that colour (KeptNow)
             float y = 0f, x = 0f;
-            TextMeshProUGUI head = ui.Text(host.transform, "part name", Texts.Label(p.Choice) ?? "", 0.95f, TextAlignmentOptions.Left, false, 0f, 0f, 150f, SlotPx);
-            float headW = Mathf.Min(150f, Mathf.Ceil(head.GetPreferredValues(head.text).x));
-            UiKit.Rect(head.gameObject, 0f, 0f, headW, SlotPx);
-            x = headW + 10f;
+            // no part name over it (the user, 2026-11-10: the chosen row on the left says it): Original first
             Image outer = WideSlot(host.transform, "swatch default", p.OrigHex, UiWords.ColourOriginal.Text, x, y, () => SetPart(p, 0, default), out float w);
             slots.Add((0, default, x, y, w, SlotPx, outer));
             x += w + SlotGap;

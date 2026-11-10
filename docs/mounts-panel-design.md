@@ -274,7 +274,7 @@ end greyed) and its zombie screen (item slots, the chosen one in yellow corner b
   it like that"): the parts' list 330 wide and the palette the rest; a part row 32 tall (more for a label on two
   lines), the stepper compact on its right (the arrows with an edge, a 108 wide field framed dark with a faint sheen);
   every field named: Original, a kept named colour, or the palette colour (`UiWords.PaletteNames`, 24 words, 11
-  languages); the palette headed by the part's name, then Original and the kept colour; the 24 in three even rows of
+  languages); the palette starting with Original and the kept colour (the part's name over it until the user, the same day: the chosen row says it); the 24 in three even rows of
   eight, 38 px slots 8 apart; the lightness row says just "Lightness" (`UiWords.ColourLightness`).
 - **A named colour from before shows only while it is the part's colour** (`KeptNow`; the user, 2026-11-10: an old
   "Rose" beside Original read as one colour too many): picked away from, its slot and its step are gone; Cancel or
