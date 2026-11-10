@@ -2181,6 +2181,36 @@ namespace GK2DonkeyAPI.Api
             return null;
         }
 
+        // A named choice that darkens or fades the drawn art instead (Dark, Black, Dark wood): how much (its Brightness
+        // and Saturation, 1 where it says none). False for one that paints a colour, Game, Custom and no API enum. The
+        // Mounts panel shows such a choice as the part's own colour changed so (the user, 2026-11-10: "Black" in a
+        // brown field).
+        internal static bool PresetShade(object value, out float brightness, out float saturation)
+        {
+            brightness = saturation = 1f;
+            if (value == null || PresetSwatchHex(value) != null) return false;
+            Dictionary<string, object> d;
+            switch (value)
+            {
+                case CoatColor c when c != CoatColor.Game && c != CoatColor.Custom: d = CoatPreset(c, null, "", null); break;
+                case HarnessColor c when c != HarnessColor.Game && c != HarnessColor.Custom: d = HarnessPreset(c, null, "", null); break;
+                case MuzzleColor c when c != MuzzleColor.Game && c != MuzzleColor.Custom: d = MuzzlePreset(c, null, "", null); break;
+                case CartPaint c when c != CartPaint.Game && c != CartPaint.Custom: d = PaintPreset(c, null, ""); break;
+                case WheelColor c when c != WheelColor.Game && c != WheelColor.Custom: d = WheelPreset(c, null, ""); break;
+                case HubColor c when c != HubColor.Game && c != HubColor.Custom: d = HubPreset(c, null, ""); break;
+                default: return false;
+            }
+            if (d == null) return false;
+            bool any = false;
+            foreach (KeyValuePair<string, object> kv in d)
+            {
+                if (!(kv.Value is float f)) continue;
+                if (kv.Key.EndsWith("Brightness", StringComparison.Ordinal)) { brightness = f; any = true; }
+                else if (kv.Key.EndsWith("Saturation", StringComparison.Ordinal)) { saturation = f; any = true; }
+            }
+            return any;
+        }
+
         private static Dictionary<string, object> CoatPreset(CoatColor c, string custom, string what, string skinId)
         {
             switch (c)

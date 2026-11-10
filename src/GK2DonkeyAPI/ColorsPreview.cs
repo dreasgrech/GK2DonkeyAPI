@@ -43,17 +43,26 @@ namespace GK2DonkeyAPI
         // reaches white (SkinTones.RegionValues, as a skin's own part's). 0.5 and 1 for none.
         internal static void ArtRange(string regionKey, string skinId, out float average, out float top)
         {
+            List<Color32> cols = ArtColours(regionKey, skinId);
+            if (cols != null)
+            {
+                ValueRange(cols, out average, out top);
+                return;
+            }
+            average = 0.5f;
+            top = 1f;
+        }
+
+        // The colours a region's art is drawn in, as the lightness above reads them; null for none (no such region).
+        private static List<Color32> ArtColours(string regionKey, string skinId)
+        {
             Looks.Loaded look = Looks.LoadedOwnColours(skinId);
             if (look != null && !look.Def.Over)
             {
                 // the region's own colours, and those of the skin's tones that follow it (the parts that were the region's
                 // before they were tones: they count as they did)
                 List<Color32> all = look.ColoursReachedBy(regionKey);
-                if (all != null && all.Count > 0)
-                {
-                    ValueRange(all, out average, out top);
-                    return;
-                }
+                if (all != null && all.Count > 0) return all;
             }
             // a skin over the donkey that names colours of its own under the region ([Colors] Harness = ...): those, the
             // part of it the row is for. A skin drawing its own harness and hiding the donkey's (2026-11-08): against the
@@ -62,8 +71,7 @@ namespace GK2DonkeyAPI
             // a skin keeps the donkey's average.
             else if (look != null && look.ColoursByRegion.TryGetValue(regionKey, out List<Color32> named) && named.Count > 0)
             {
-                ValueRange(named, out average, out top);
-                return;
+                return named;
             }
             foreach (RegionDef d in Regions)
             {
@@ -73,11 +81,29 @@ namespace GK2DonkeyAPI
                 }
                 var hexes = new List<string>();
                 foreach (var part in d.Parts) hexes.AddRange(part.Colors);
-                ValueRange(ColoursOfHexes(hexes), out average, out top);
-                return;
+                return ColoursOfHexes(hexes);
             }
-            average = 0.5f;
-            top = 1f;
+            return null;
+        }
+
+        // The one colour that stands for a region's art (the Mounts panel's "Original", 2026-11-10): of its colours, the
+        // one whose value is nearest their average; null for none.
+        internal static string ArtSampleHex(string regionKey, string skinId) => SampleOf(ArtColours(regionKey, skinId));
+
+        // The same over any colours (a skin's own part's: SkinTones.ColoursOf).
+        internal static string SampleOf(List<Color32> cols)
+        {
+            if (cols == null || cols.Count == 0) return null;
+            ValueRange(cols, out float average, out _);
+            Color32 best = cols[0];
+            float bestD = float.MaxValue;
+            foreach (Color32 c in cols)
+            {
+                Color.RGBToHSV(c, out _, out _, out float v);
+                float d = Mathf.Abs(v - average);
+                if (d < bestD) { bestD = d; best = c; }
+            }
+            return ColorUtility.ToHtmlStringRGB(best);
         }
 
         // The average HSV value (0..1) of colours: how light an art is, a region's above or a skin's tone's

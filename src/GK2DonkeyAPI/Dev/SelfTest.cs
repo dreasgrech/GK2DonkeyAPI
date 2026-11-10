@@ -3529,9 +3529,37 @@ namespace GK2DonkeyAPI
                     float onScreen = scale * px;
                     Check(Mathf.Abs(scale - wantScale) < 0.02f && Mathf.Abs(onScreen - Mathf.Round(onScreen)) < 0.02f,
                         $"... and drawn {scale:F2} per art pixel, {onScreen:F2} screen pixels ({px:F2} a unit; {(cartTab && pulls ? "3 with the cart" : "up to 4 alone")}, the stage has room for {room:F2})");
+                    int set = 0;
+                    if (MountsPanel.TestColourPartCount > 0)
+                    {
+                        Check(!MountsPanel.TestColoursScroll, $"... tab {ti + 1}: its {MountsPanel.TestColourPartCount} part(s) and rows fit without scrolling (the user's screenshot, 2026-11-10: a scrollbar for a few pixels)");
+                        // a tab of parts (direction E, the user, 2026-11-10: "i prefer disabling the control instead of hiding
+                        // it because it moves stuff up and down"): every part set to a colour, nothing moves or appears
+                        string layoutBefore = MountsPanel.TestColourLayout(), layoutCustom = "";
+                        int partRows = MountsPanel.TestColourRows, partRowsCustom = 0;
+                        try
+                        {
+                            set = MountsPanel.TestCustomAll(on: true);
+                            yield return Frames(3);
+                            layoutCustom = MountsPanel.TestColourLayout();
+                            partRowsCustom = MountsPanel.TestColourRows;
+                        }
+                        finally
+                        {
+                            MountsPanel.TestCustomAll(on: false); // the player's values back, whatever happened
+                        }
+                        yield return Frames(3);
+                        if (set > 0)
+                        {
+                            Check(layoutCustom == layoutBefore && partRowsCustom == partRows && MountsPanel.TestColourLayout() == layoutBefore && MountsPanel.TestColourTabWhole(),
+                                $"... tab {ti + 1}: {set} part(s) set to a colour and back: nothing moved or appeared ({partRows} rows; {layoutBefore} -> {layoutCustom})");
+                        }
+                        continue;
+                    }
                     string colsBefore = MountsPanel.TestColourColumns();
                     int rowsBefore = MountsPanel.TestColourRows;
-                    int set = 0, rowsCustom = 0;
+                    set = 0;
+                    int rowsCustom = 0;
                     string colsCustom = "";
                     try
                     {
@@ -3572,7 +3600,17 @@ namespace GK2DonkeyAPI
                         pressed &= MountsPanel.TestPressSwatch(0, "swatch default");
                         yield return Frames(2);
                         bool asDrawn = Equals(partChoice.Entry.BoxedValue, partChoice.ChoiceValues.GetValue(0)) && Equals(partColour.Entry.BoxedValue, PaletteColor.Teal);
-                        Check(pressed && custom && asDrawn, $"a square: Custom with its colour ({custom}); Game default: the first value, the custom colour kept ({asDrawn}) ({partChoice.Entry.Definition.Key})");
+                        bool greyed = !MountsPanel.TestColourLightLive(0);
+                        bool stepped = MountsPanel.TestPressSwatch(0, "arrow next");
+                        yield return Frames(2);
+                        bool stepOn = stepped && !Equals(partChoice.Entry.BoxedValue, partChoice.ChoiceValues.GetValue(0));
+                        bool stepBack = MountsPanel.TestPressSwatch(0, "arrow prev");
+                        yield return Frames(2);
+                        stepBack &= Equals(partChoice.Entry.BoxedValue, partChoice.ChoiceValues.GetValue(0)) && !MountsPanel.TestPressSwatch(0, "arrow prev");
+                        string originalWord = MountsPanel.TestColourPartValue(0);
+                        Check(pressed && custom && asDrawn, $"a slot: Custom with its colour ({custom}); Original: the first value, the custom colour kept ({asDrawn}) ({partChoice.Entry.Definition.Key})");
+                        Check(greyed && stepOn && stepBack && originalWord == UiWords.ColourOriginal.Text,
+                            $"Original: the lightness greyed, not hidden ({greyed}), the field says \"{originalWord}\"; the arrows step on and back ({stepOn}, {stepBack}), the left one greyed at Original");
                         if (named != null)
                         {
                             // a player's named colour from before: the window opened on it keeps it in a slot of its own
@@ -3581,14 +3619,13 @@ namespace GK2DonkeyAPI
                             yield return Frames(2);
                             MountsPanel.TestOpenColours();
                             yield return Frames(3);
-                            string label = MountsPanel.TestColourPartLabel(0) ?? "";
-                            bool keptShown = label.Contains("·") && Equals(partChoice.Entry.BoxedValue, named);
+                            string label = MountsPanel.TestColourPartValue(0) ?? "";
+                            bool keptShown = label == Texts.Choice(partChoice, Array.IndexOf(partChoice.ChoiceValues, named)) && Equals(partChoice.Entry.BoxedValue, named);
                             bool away = MountsPanel.TestPressSwatch(0, "swatch default");
                             yield return Frames(2);
-                            bool back = MountsPanel.TestPressSwatch(0, "swatch kept");
-                            yield return Frames(2);
-                            Check(keptShown && away && back && Equals(partChoice.Entry.BoxedValue, named),
-                                $"a named colour from before ({named}): as it was, named after the label (\"{label}\"), and taken again from its own slot after Game default ({partChoice.Entry.BoxedValue})");
+                            bool gone = !MountsPanel.TestPressSwatch(0, "swatch kept");
+                            Check(keptShown && away && gone && Equals(partChoice.Entry.BoxedValue, partChoice.ChoiceValues.GetValue(0)),
+                                $"a named colour from before ({named}): as it was, named in its field (\"{label}\"); Original picked, its slot is gone ({gone}; now {partChoice.Entry.BoxedValue})");
                         }
                     }
                     finally

@@ -12,10 +12,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
-- **Colours are swatches** (2026-11-10): the colours window has no colour dropdowns any more. The colours sit in a box
-  like the window's other controls. Each part shows Game
-  default and the 24 colours, with a lightness slider once you pick one. The colours you already chose stay exactly as
-  they are; a named colour like Brown or Dark wood keeps a square of its own until you pick another.
+- **A new colours window** (2026-11-10): no more colour dropdowns. Pick a part on the left and colour it from one
+  palette on the right, or step through its colours with the arrows. Every colour has its name, in your language. Original is the part as the skin draws it. The
+  lightness slider is always there, greyed out when it does nothing. The colours you already chose stay exactly as
+  they are; a named colour like Brown or Dark wood shows by its name until you pick another.
 - **Ride another mount without getting off first** (2026-11-10): riding next to another mount you could ride, "Ride"
   shows over it and the interact key takes you onto it. The one you were on stays where you got off, with its cart.
 - **Load on cart only when facing the cart** (2026-11-10): with an item in your hands, "Load on cart" shows only when

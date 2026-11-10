@@ -67,6 +67,9 @@ namespace GK2DonkeyAPI.Api
             // A row of the cart (CartRow): the colours window shows the mount with its cart only on a tab that has one, the mount
             // alone (larger) on the others (the user, 2026-11-10: "only show cart in preview when the cart tab is selected").
             internal bool CartPart;
+            // What a colour row colours (the Mounts panel's "Original" square shows that art's colour): a mount region
+            // (RegionRows, the region parts) or a skin's own part (ToneRows); null: known by its kind, or none.
+            internal string ArtRegion, ArtTone;
             // A region's row (RegionRows): labelled by the look's name for the part where it has one, its own label where
             // the look names none (a pack from before names, another mod's mount): that label stays the page's to translate.
             internal bool OwnLabelToo;
@@ -1167,6 +1170,7 @@ namespace GK2DonkeyAPI.Api
                 bool isChoice = k == choiceKey, isCustom = customKey != null && k == customKey, isLight = customKey != null && k == LightnessKey(customKey);
                 if (!isChoice && !isCustom && !isLight) continue;
                 row.OwnLabelToo = true;
+                if (isChoice) row.ArtRegion = r;
                 if (name != null)
                 {
                     if (isChoice) row.LabelOf = () => name.Text;
@@ -1311,6 +1315,7 @@ namespace GK2DonkeyAPI.Api
                     choiceRow.LabelOf = () => name.Text;
                     choiceRow.ChoiceWords = words;
                     choiceRow.SkinPart = true;
+                    choiceRow.ArtTone = t.Id;
                 }
                 if (customRow != null)
                 {
@@ -1353,6 +1358,7 @@ namespace GK2DonkeyAPI.Api
             {
                 choiceRow.LabelOf = () => name.Text;
                 choiceRow.ChoiceWords = words;
+                choiceRow.ArtRegion = region;
             }
             if (customRow != null) customRow.LabelOf = () => UiWords.ToneCustom.Format(name);
             if (lightRow != null) lightRow.LabelOf = () => UiWords.ToneLightness.Format(name);

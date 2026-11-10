@@ -56,6 +56,32 @@ mount.donkey.description,Najcierpliwszy pracownik cmentarza. Przewiózł więcej
 colours.title,Kolory: {0},Colours: {0},the colours window's title; {0}: the mount's name
 colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
 colours.tone_game,Jak w grze,Game default,a colour for a part of a skin (one of its own tones): the skin as drawn
+colours.original,Oryginalny,Original,"the colours window: a part's colour as the skin draws it (the first square of its colours, and the colour's name while it is chosen); the player's pick undone"
+colours.palette_chestnut,Kasztan,Chestnut,"a colour of the colours window's palette (8B4A2B): its name in the field of the part painted with it"
+colours.palette_sand,Piasek,Sand,"a colour of the colours window's palette (C8A26B): its name in the field of the part painted with it"
+colours.palette_cream,Krem,Cream,"a colour of the colours window's palette (E6D8B4): its name in the field of the part painted with it"
+colours.palette_snow,Śnieg,Snow,"a colour of the colours window's palette (E8E6E0): its name in the field of the part painted with it"
+colours.palette_ash,Popiel,Ash,"a colour of the colours window's palette (8E8B85): its name in the field of the part painted with it"
+colours.palette_slate,Łupek,Slate,"a colour of the colours window's palette (5A6670): its name in the field of the part painted with it"
+colours.palette_charcoal,Grafit,Charcoal,"a colour of the colours window's palette (3A3A3A): its name in the field of the part painted with it"
+colours.palette_black,Czerń,Black,"a colour of the colours window's palette (1E1E1E): its name in the field of the part painted with it"
+colours.palette_rust,Rdza,Rust,"a colour of the colours window's palette (A0461E): its name in the field of the part painted with it"
+colours.palette_brick,Cegła,Brick,"a colour of the colours window's palette (9C4A3A): its name in the field of the part painted with it"
+colours.palette_wine,Wino,Wine,"a colour of the colours window's palette (7A2232): its name in the field of the part painted with it"
+colours.palette_coral,Koral,Coral,"a colour of the colours window's palette (D9765F): its name in the field of the part painted with it"
+colours.palette_rose,Róż,Rose,"a colour of the colours window's palette (C77B8F): its name in the field of the part painted with it"
+colours.palette_plum,Śliwka,Plum,"a colour of the colours window's palette (6B3A5E): its name in the field of the part painted with it"
+colours.palette_lavender,Lawenda,Lavender,"a colour of the colours window's palette (9A86C2): its name in the field of the part painted with it"
+colours.palette_navy,Granat,Navy,"a colour of the colours window's palette (2B3F6B): its name in the field of the part painted with it"
+colours.palette_sky,Błękit,Sky,"a colour of the colours window's palette (6FA8DC): its name in the field of the part painted with it"
+colours.palette_teal,Morski,Teal,"a colour of the colours window's palette (2F7F7A): its name in the field of the part painted with it"
+colours.palette_mint,Mięta,Mint,"a colour of the colours window's palette (8FC9A3): its name in the field of the part painted with it"
+colours.palette_moss,Mech,Moss,"a colour of the colours window's palette (5E6B34): its name in the field of the part painted with it"
+colours.palette_forest,Las,Forest,"a colour of the colours window's palette (2F5233): its name in the field of the part painted with it"
+colours.palette_olive,Oliwka,Olive,"a colour of the colours window's palette (7A7A3A): its name in the field of the part painted with it"
+colours.palette_mustard,Musztarda,Mustard,"a colour of the colours window's palette (C4A23A): its name in the field of the part painted with it"
+colours.palette_gold,Złoto,Gold,"a colour of the colours window's palette (C99A2E): its name in the field of the part painted with it"
+colours.lightness,Jasność,Lightness,"the colours window: the slider that makes a part's colour lighter or darker (greyed while the part is Original)"
 colours.tone_red,Czerwony,Red,a colour for a part of a skin
 colours.tone_gold,Złoty,Gold,a colour for a part of a skin
 colours.tone_green,Zielony,Green,a colour for a part of a skin

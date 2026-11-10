@@ -138,6 +138,35 @@ namespace GK2DonkeyAPI
         internal static readonly Word ColoursTitleSkin = new Word("colours.title_skin", "{0} - {1}", "the colours window's title with a skin; {0}: the title above, {1}: the skin's name");
         // a skin's own tones (MountSettingsPage.ToneRows): the choices, in ToneColor's order, and the custom rows' labels
         internal static readonly Word ToneGame = new Word("colours.tone_game", "Game default", "a colour for a part of a skin (one of its own tones): the skin as drawn");
+        internal static readonly Word ColourOriginal = new Word("colours.original", "Original", "the colours window: a part's colour as the skin draws it (the first square of its colours, and the colour's name while it is chosen); the player's pick undone");
+        // The palette's 24 colours by name, in PaletteColor's order (the colours window's part fields, 2026-11-10: the user's
+        // pick, direction E, names every colour), and the plain word over a part's lightness slider.
+        internal static readonly Word PaletteChestnut = new Word("colours.palette_chestnut", "Chestnut", "a colour of the colours window's palette (8B4A2B): its name in the field of the part painted with it");
+        internal static readonly Word PaletteSand = new Word("colours.palette_sand", "Sand", "a colour of the colours window's palette (C8A26B): its name in the field of the part painted with it");
+        internal static readonly Word PaletteCream = new Word("colours.palette_cream", "Cream", "a colour of the colours window's palette (E6D8B4): its name in the field of the part painted with it");
+        internal static readonly Word PaletteSnow = new Word("colours.palette_snow", "Snow", "a colour of the colours window's palette (E8E6E0): its name in the field of the part painted with it");
+        internal static readonly Word PaletteAsh = new Word("colours.palette_ash", "Ash", "a colour of the colours window's palette (8E8B85): its name in the field of the part painted with it");
+        internal static readonly Word PaletteSlate = new Word("colours.palette_slate", "Slate", "a colour of the colours window's palette (5A6670): its name in the field of the part painted with it");
+        internal static readonly Word PaletteCharcoal = new Word("colours.palette_charcoal", "Charcoal", "a colour of the colours window's palette (3A3A3A): its name in the field of the part painted with it");
+        internal static readonly Word PaletteBlack = new Word("colours.palette_black", "Black", "a colour of the colours window's palette (1E1E1E): its name in the field of the part painted with it");
+        internal static readonly Word PaletteRust = new Word("colours.palette_rust", "Rust", "a colour of the colours window's palette (A0461E): its name in the field of the part painted with it");
+        internal static readonly Word PaletteBrick = new Word("colours.palette_brick", "Brick", "a colour of the colours window's palette (9C4A3A): its name in the field of the part painted with it");
+        internal static readonly Word PaletteWine = new Word("colours.palette_wine", "Wine", "a colour of the colours window's palette (7A2232): its name in the field of the part painted with it");
+        internal static readonly Word PaletteCoral = new Word("colours.palette_coral", "Coral", "a colour of the colours window's palette (D9765F): its name in the field of the part painted with it");
+        internal static readonly Word PaletteRose = new Word("colours.palette_rose", "Rose", "a colour of the colours window's palette (C77B8F): its name in the field of the part painted with it");
+        internal static readonly Word PalettePlum = new Word("colours.palette_plum", "Plum", "a colour of the colours window's palette (6B3A5E): its name in the field of the part painted with it");
+        internal static readonly Word PaletteLavender = new Word("colours.palette_lavender", "Lavender", "a colour of the colours window's palette (9A86C2): its name in the field of the part painted with it");
+        internal static readonly Word PaletteNavy = new Word("colours.palette_navy", "Navy", "a colour of the colours window's palette (2B3F6B): its name in the field of the part painted with it");
+        internal static readonly Word PaletteSky = new Word("colours.palette_sky", "Sky", "a colour of the colours window's palette (6FA8DC): its name in the field of the part painted with it");
+        internal static readonly Word PaletteTeal = new Word("colours.palette_teal", "Teal", "a colour of the colours window's palette (2F7F7A): its name in the field of the part painted with it");
+        internal static readonly Word PaletteMint = new Word("colours.palette_mint", "Mint", "a colour of the colours window's palette (8FC9A3): its name in the field of the part painted with it");
+        internal static readonly Word PaletteMoss = new Word("colours.palette_moss", "Moss", "a colour of the colours window's palette (5E6B34): its name in the field of the part painted with it");
+        internal static readonly Word PaletteForest = new Word("colours.palette_forest", "Forest", "a colour of the colours window's palette (2F5233): its name in the field of the part painted with it");
+        internal static readonly Word PaletteOlive = new Word("colours.palette_olive", "Olive", "a colour of the colours window's palette (7A7A3A): its name in the field of the part painted with it");
+        internal static readonly Word PaletteMustard = new Word("colours.palette_mustard", "Mustard", "a colour of the colours window's palette (C4A23A): its name in the field of the part painted with it");
+        internal static readonly Word PaletteGold = new Word("colours.palette_gold", "Gold", "a colour of the colours window's palette (C99A2E): its name in the field of the part painted with it");
+        internal static readonly Word[] PaletteNames = { PaletteChestnut, PaletteSand, PaletteCream, PaletteSnow, PaletteAsh, PaletteSlate, PaletteCharcoal, PaletteBlack, PaletteRust, PaletteBrick, PaletteWine, PaletteCoral, PaletteRose, PalettePlum, PaletteLavender, PaletteNavy, PaletteSky, PaletteTeal, PaletteMint, PaletteMoss, PaletteForest, PaletteOlive, PaletteMustard, PaletteGold };
+        internal static readonly Word ColourLightness = new Word("colours.lightness", "Lightness", "the colours window: the slider that makes a part's colour lighter or darker (greyed while the part is Original)");
         internal static readonly Word ToneRed = new Word("colours.tone_red", "Red", "a colour for a part of a skin");
         internal static readonly Word ToneGold = new Word("colours.tone_gold", "Gold", "a colour for a part of a skin");
         internal static readonly Word ToneGreen = new Word("colours.tone_green", "Green", "a colour for a part of a skin");

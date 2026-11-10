@@ -236,7 +236,7 @@ the chosen one framed in white, hover brightens, a click sets the row's value (t
 the lightness and applies the hex). The lightness row stays the game's steps row under it. The journal's rows and
 every other row are still the game's own.
 
-**No dropdown of named colours (2026-11-10).** The user: "get rid of the predefined dropdown list of colours and have
+**No dropdown of named colours (2026-11-10).** (Its first cut, below, was replaced the same day by direction E, further down.) The user: "get rid of the predefined dropdown list of colours and have
 'custom' just be the one provided". A colour choice whose next row is its custom colour and which has a value named
 `Custom` (`IsColourPart`) is drawn as one part (`ColourPart`): its label, then thirteen squares in two rows:
 
@@ -248,14 +248,41 @@ every other row are still the game's own.
   ones that darken or fade the drawn art (Dark, Black, Dark wood: no one colour), and its name after the label while
   it is chosen ("Scales · Dark"). It stays until the window closes, so a player can go back to it.
 
-**The look** (the user, the same day: "it looks like a quick poc instead of production"; "where there's empty space,
-use it wisely"): the squares sit in the window's dark box with the faint edge (as the slider track and the switches),
-across the controls' span, so its edges line up with the dropdowns' and the sliders' down the column. Left of a thin
-divider the column of the squares that aren't palette colours: Game default, the whole column, or its top half over
-the kept named colour; right of it the 24 colours, twelve a row, 13 px squares 2 apart. Every square has a faint
-edge (Black and Charcoal on the dark box); the chosen one a white ring in the gap around it, drawn under the squares
-and over the edges (three layers). The lightness row sits close under its part, its label quieter; 12 of room after
-the part (and its lightness) before the next.
+**The look: direction E** (the user, the same day: the inline swatch boxes looked "like a quick poc instead of
+production", the crossed Game default square and the slider that came and went were disliked; the board "Colours
+window directions" offered five mock-ups, the user picked E and kept "Original"). References: the game's own
+Customization window (the dresser's: square ◀ ▶ buttons around a value field tinted with the colour, an arrow at the
+end greyed) and its zombie screen (item slots, the chosen one in yellow corner brackets). A tab with colour parts
+(`HasColourParts`) is built by `BuildPartsTab`:
+
+- **Left column, the parts:** one row each (`PartRow`): the row a button that chooses the part (the chosen one in the
+  game's red), its label, and on the controls' span the arrows around a field in its colour. The field names
+  **Original** (`UiWords.ColourOriginal`, 11 languages) or a kept named colour (the page's own translated choice word);
+  a palette colour shows as its colour (the 24 have no translated names). The arrows step Original, the kept named
+  colour, then the 24; each greys at its end. The tab's other rows (the lantern switches) under the parts.
+- **Right column, the chosen part's palette** (`BuildPartPanel`): Original and the kept named colour as wide slots
+  with their names, the 24 colours as 34 px slots eight a row, the chosen slot's frame yellow and the game's corner
+  brackets around it, then the part's lightness row: always there, greyed while the part is Original or a kept named
+  colour (the user: "i prefer disabling the control instead of hiding it because it moves stuff up and down").
+- **Original's colour** is the part's art as drawn (`Colors.ArtSampleHex`: of the region's colours as the lightness
+  rule reads them, the one nearest their average; a skin's own part's from `SkinTones.ColoursOf`). Rows say what they
+  colour (`Row.ArtRegion`, `Row.ArtTone`, set by `RegionRows`, the region parts and `ToneRows`); the page's colour
+  kinds without a mark by their kind (paint: CartBody, wheels, hubs; the lantern's light: its warm glow).
+- **Nothing moves on a pick:** a part's own rows (its custom colour, its lightness) don't count in the tab's signature,
+  so a pick refreshes in place; choosing another part builds only the right column again.
+- **As the board drew it** (the user, 2026-11-10: "the html version looks a lot more polished in every way so lets make
+  it like that"): the parts' list 330 wide and the palette the rest; a part row 32 tall (more for a label on two
+  lines), the stepper compact on its right (the arrows with an edge, a 108 wide field framed dark with a faint sheen);
+  every field named: Original, a kept named colour, or the palette colour (`UiWords.PaletteNames`, 24 words, 11
+  languages); the palette headed by the part's name, then Original and the kept colour; the 24 in three even rows of
+  eight, 38 px slots 8 apart; the lightness row says just "Lightness" (`UiWords.ColourLightness`).
+- **A named colour from before shows only while it is the part's colour** (`KeptNow`; the user, 2026-11-10: an old
+  "Rose" beside Original read as one colour too many): picked away from, its slot and its step are gone; Cancel or
+  Escape still bring it back. The fields' text is light on every colour: the game's font draws its own dark outline
+  (dark letters ran into it).
+- **Room:** the window 660 tall (640 until 2026-11-10), part rows 30, slots 6 apart: six parts, or the cart's four and
+  the two lantern switches, fit without a scrollbar (a self-test check). A named colour that darkens the art (Dark,
+  Black, Dark wood) shows as the part's own colour darkened and faded by its preset (`MountCompanion.PresetShade`).
 
 **Nothing saved changes** (the user: "can we keep 100% backwards compatibility regarding colours?"). The rows, their
 keys and values are the page's as before; drawing or refreshing a part writes nothing; the colouring code is the same.

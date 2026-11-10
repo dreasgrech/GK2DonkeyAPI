@@ -56,6 +56,32 @@ mount.donkey.description,Mezarlığın en sabırlı işçisi. Köyde herkesten �
 colours.title,Renkler: {0},Colours: {0},the colours window's title; {0}: the mount's name
 colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
 colours.tone_game,Oyun varsayılanı,Game default,a colour for a part of a skin (one of its own tones): the skin as drawn
+colours.original,Orijinal,Original,"the colours window: a part's colour as the skin draws it (the first square of its colours, and the colour's name while it is chosen); the player's pick undone"
+colours.palette_chestnut,Kestane,Chestnut,"a colour of the colours window's palette (8B4A2B): its name in the field of the part painted with it"
+colours.palette_sand,Kum,Sand,"a colour of the colours window's palette (C8A26B): its name in the field of the part painted with it"
+colours.palette_cream,Krem,Cream,"a colour of the colours window's palette (E6D8B4): its name in the field of the part painted with it"
+colours.palette_snow,Kar,Snow,"a colour of the colours window's palette (E8E6E0): its name in the field of the part painted with it"
+colours.palette_ash,Kül,Ash,"a colour of the colours window's palette (8E8B85): its name in the field of the part painted with it"
+colours.palette_slate,Arduvaz,Slate,"a colour of the colours window's palette (5A6670): its name in the field of the part painted with it"
+colours.palette_charcoal,Kömür,Charcoal,"a colour of the colours window's palette (3A3A3A): its name in the field of the part painted with it"
+colours.palette_black,Siyah,Black,"a colour of the colours window's palette (1E1E1E): its name in the field of the part painted with it"
+colours.palette_rust,Pas,Rust,"a colour of the colours window's palette (A0461E): its name in the field of the part painted with it"
+colours.palette_brick,Tuğla,Brick,"a colour of the colours window's palette (9C4A3A): its name in the field of the part painted with it"
+colours.palette_wine,Şarap,Wine,"a colour of the colours window's palette (7A2232): its name in the field of the part painted with it"
+colours.palette_coral,Mercan,Coral,"a colour of the colours window's palette (D9765F): its name in the field of the part painted with it"
+colours.palette_rose,Gül,Rose,"a colour of the colours window's palette (C77B8F): its name in the field of the part painted with it"
+colours.palette_plum,Erik,Plum,"a colour of the colours window's palette (6B3A5E): its name in the field of the part painted with it"
+colours.palette_lavender,Lavanta,Lavender,"a colour of the colours window's palette (9A86C2): its name in the field of the part painted with it"
+colours.palette_navy,Lacivert,Navy,"a colour of the colours window's palette (2B3F6B): its name in the field of the part painted with it"
+colours.palette_sky,Gök,Sky,"a colour of the colours window's palette (6FA8DC): its name in the field of the part painted with it"
+colours.palette_teal,Petrol,Teal,"a colour of the colours window's palette (2F7F7A): its name in the field of the part painted with it"
+colours.palette_mint,Nane,Mint,"a colour of the colours window's palette (8FC9A3): its name in the field of the part painted with it"
+colours.palette_moss,Yosun,Moss,"a colour of the colours window's palette (5E6B34): its name in the field of the part painted with it"
+colours.palette_forest,Orman,Forest,"a colour of the colours window's palette (2F5233): its name in the field of the part painted with it"
+colours.palette_olive,Zeytin,Olive,"a colour of the colours window's palette (7A7A3A): its name in the field of the part painted with it"
+colours.palette_mustard,Hardal,Mustard,"a colour of the colours window's palette (C4A23A): its name in the field of the part painted with it"
+colours.palette_gold,Altın,Gold,"a colour of the colours window's palette (C99A2E): its name in the field of the part painted with it"
+colours.lightness,Parlaklık,Lightness,"the colours window: the slider that makes a part's colour lighter or darker (greyed while the part is Original)"
 colours.tone_red,Kırmızı,Red,a colour for a part of a skin
 colours.tone_gold,Altın,Gold,a colour for a part of a skin
 colours.tone_green,Yeşil,Green,a colour for a part of a skin
