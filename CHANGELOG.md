@@ -12,6 +12,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Colours are swatches** (2026-11-10): the colours window has no colour dropdowns any more. The colours sit in a box
+  like the window's other controls. Each part shows Game
+  default and the 24 colours, with a lightness slider once you pick one. The colours you already chose stay exactly as
+  they are; a named colour like Brown or Dark wood keeps a square of its own until you pick another.
 - **Ride another mount without getting off first** (2026-11-10): riding next to another mount you could ride, "Ride"
   shows over it and the interact key takes you onto it. The one you were on stays where you got off, with its cart.
 - **Load on cart only when facing the cart** (2026-11-10): with an item in your hands, "Load on cart" shows only when
@@ -56,6 +60,10 @@ For players:
 
 For mod authors:
 
+- **The colours window draws a colour choice as swatches** (2026-11-10): a `Choice` whose next row is its `Color`
+  (custom colour) and which has a value named `Custom` is drawn as one part: Game default (the choice's first value),
+  the 24 `PaletteColor`s (Custom with that colour) and the value it had if it was another. Nothing saved changes; a
+  choice made otherwise stays a dropdown.
 - **A variant's tone rows in its own order** (2026-11-10): a skin built on its mount's default lists the tones it
   declares (`[Tone.*]`, `MountSkinDef.Tones`) in its own order, a default's it re-declares too, then the default's it
   doesn't mention. Before, the default's came first and a re-declared one kept the default's place
@@ -92,7 +100,10 @@ Development:
     picture is sized to a whole number of screen pixels per art pixel (`Fit(screenWhole)`, `ScreenPixelsPerUnit`), not
     of the panel's units: the dragon, 119x78 art in a stage with room for 2.82, was rounded down to 2 (the donkey 4;
     the user's screenshots), now 5 screen pixels at 2560x1440 (2.49 units). The colours
-    window's stage is 256 tall (was 236): the dragon fits at 3 there, as in the journal (2.5 at 236). The photo
+    window's stage is 256 tall (was 236): the dragon fits at 3 there, as in the journal (2.5 at 236). The colours
+    window shows only a photo of the look it colours (`coloursLook`): the last mount's photo in the alone view showed
+    under another mount's title for the 2 s its alone picture was first framed (the Measurements screenshots); the
+    stage is empty until its own is whole, another tab of the same look keeps the photo shown. The photo
     shown is held until the other view has the look (`ShownPicture`: the colours window's image while it is open). The
     self-test checks the view on every tab;
   - from the saddle: `InstanceControls.FindFromSaddle` offers "Ride" by a mount as on foot (hands empty; not in the air,

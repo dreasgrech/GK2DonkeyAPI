@@ -52,7 +52,7 @@ namespace GK2DonkeyAPI
         // last swatch ran under it)
         private const float ColoursScrollGap = 10f;
         private const float EdgeGap = 24f; // the least room left at the screen's edges before a window is scaled down
-        private const float CW = 800f, CH = 640f, CStageW = StageW, CStageH = 256f, CPictureScale = PictureScale; // the colours window and its picture: the journal's stage and size, so the mount is drawn as big in both (the user, 2026-10-22: smaller in the colours window); 256 tall (236 until 2026-11-10): the dragon's picture, 78 art pixels tall, fits at 3 as in the journal (2.5 at 236, the user's screenshots)
+        private const float CW = 800f, CH = 640f, CStageW = StageW, CStageH = 256f, CPictureScale = PictureScale; // the colours window and its picture: the journal's stage and size, so the mount is drawn as big in both (the user, 2026-10-22: smaller in the colours window); 256 tall (236 until 2026-11-10): a tall mount's picture, 78 art pixels, fits at 3 as in the journal (2.5 at 236, the user's screenshots)
         // the mount alone in the colours window (a tab without the cart's rows) up to 4 per art pixel where the stage has room: the
         // user, 2026-11-10, "its image is larger and you can see it better without the cart" (at 3 the donkey alone was
         // drawn 224x147 in the 440x236 stage, as big as with the cart). Each art pixel is 3 of the picture's, so at 4 it
@@ -922,6 +922,8 @@ namespace GK2DonkeyAPI
         }
 
         // The picture on screen: the colours window's while it is open (the journal waits hidden under it).
+        private static string coloursLook; // the look the colours window's photo shows (null: none yet)
+
         private static RawImage ShownPicture() => colours != null && coloursPicture != null ? coloursPicture : picture;
 
         internal static bool TestColourTabHasCart => ColoursWantCart();
@@ -1011,13 +1013,34 @@ namespace GK2DonkeyAPI
                         line.GetComponent<Image>().raycastTarget = false;
                         cy += step + 2f;
                     }
-                    foreach (MountSettingsPage.Row r in group.Rows)
+                    for (int ri = 0; ri < group.Rows.Count; ri++)
                     {
+                        MountSettingsPage.Row r = group.Rows[ri];
                         bool visible = r.Visible == null || r.Visible();
                         sig.Append(visible ? '1' : '0');
                         if (!visible) continue; // shown only with a preset: not now
                         GameObject go;
                         Action refresh;
+                        // a colour choice with its custom colour after it: one part, its swatches always out (the user,
+                        // 2026-11-10: no dropdown of named colours); the custom colour's row is the same part
+                        MountSettingsPage.Row pal = ri + 1 < group.Rows.Count ? group.Rows[ri + 1] : null;
+                        if (!journal && IsColourPart(r, pal, out object customValue))
+                        {
+                            go = ColourPart(root, r, pal, customValue, lay, out refresh, out float ph);
+                            UiKit.Place(go, cx, cy);
+                            // its lightness slider close under it, as one; room after the whole before the next part
+                            MountSettingsPage.Row light = ri + 2 < group.Rows.Count ? group.Rows[ri + 2] : null;
+                            bool lightNext = light != null && light.RowKind == MountSettingsPage.RowKind.Steps && (light.Visible == null || light.Visible());
+                            cy += ph + (lightNext ? 3f : PartAfter);
+                            CanvasGroup cg = null;
+                            if (r.Enabled != null) cg = go.AddComponent<CanvasGroup>(); // greyed by the choice's own condition (a skin without the region)
+                            into.Add((r, go, refresh, cg));
+                            ri++;
+                            bool palShown = pal.Visible == null || pal.Visible();
+                            sig.Append(palShown ? '1' : '0');
+                            if (palShown) into.Add((pal, go, null, null)); // its row is the part's (not greyed by its Custom condition)
+                            continue;
+                        }
                         if (IsPalette(r))
                         {
                             go = SwatchRow(root, r, lay, out refresh, out float sh); // the named colours as squares across the controls' span
@@ -1042,6 +1065,18 @@ namespace GK2DonkeyAPI
                         {
                             Plugin.Log.LogInfo($"Settings: {page.Title}'s row '{r.Label}' has nothing to choose from; left out of the Mounts panel.");
                             continue; // a list with no choices (every control is our own: no game row to fall back on)
+                        }
+                        if (!journal && ri > 1 && r.RowKind == MountSettingsPage.RowKind.Steps && IsColourPart(group.Rows[ri - 2], group.Rows[ri - 1], out _))
+                        {
+                            // a colour part's lightness: its label quieter (it belongs to the part above), the room after the part
+                            cy += PartAfter - 4f;
+                            foreach (TextMeshProUGUI t in go.GetComponentsInChildren<TextMeshProUGUI>(true))
+                            {
+                                if (!t.name.EndsWith("label", StringComparison.Ordinal)) continue;
+                                Color lc = t.color;
+                                t.color = new Color(lc.r, lc.g, lc.b, 0.7f);
+                                break;
+                            }
                         }
                         CanvasGroup grp = null;
                         if (r.Enabled != null)
@@ -1179,6 +1214,196 @@ namespace GK2DonkeyAPI
             return go;
         }
 
+        // A colour choice drawn as swatches (ColourPart): a choice whose next row is its custom colour (a PaletteColor row)
+        // and with a value named Custom; the first value is the choice's default (Game default: as the look draws it).
+        // Anything else stays a dropdown (another mod's page made otherwise).
+        private static bool IsColourPart(MountSettingsPage.Row r, MountSettingsPage.Row next, out object customValue)
+        {
+            customValue = null;
+            if (r == null || r.RowKind != MountSettingsPage.RowKind.Choice || r.Entry == null || r.ChoiceValues == null || r.ChoiceValues.Length < 2 || !IsPalette(next)) return false;
+            foreach (object v in r.ChoiceValues)
+            {
+                if (v != null && v.ToString() == "Custom") { customValue = v; return true; }
+            }
+            return false;
+        }
+
+        // The named colour each colour choice had when the colours window first showed it (null: none, Game default or
+        // Custom), kept in a slot of its own until the window closes, so a player can go back to it (the user, 2026-11-10:
+        // the swatches can't make Dark, Black or Dark wood, which darken the drawn art; a player's stays theirs).
+        private static readonly Dictionary<BepInEx.Configuration.ConfigEntryBase, object> keptNamed = new Dictionary<BepInEx.Configuration.ConfigEntryBase, object>();
+
+        // A colour choice and its custom colour as one part (the user, 2026-11-10: "get rid of the predefined dropdown list
+        // of colours"), drawn as the window's other controls (the user, the same day: "it looks like a quick poc instead
+        // of production"): its label, then a dark box with the faint edge across the controls' span (where the dropdowns
+        // and the sliders are, so the edges line up down the column). In the box, left of a thin divider, the column of
+        // the squares that aren't a colour of the palette: Game default (crossed: as the look draws it), taking the whole
+        // column, or its top half over the player's named colour from before when they had one (filled with its colour,
+        // or crossed in grey for one that darkens the art; its name after the label while it is chosen); right of it the
+        // 24 named colours, twelve a row. Every square has a faint edge (Black and Charcoal on the dark box); the chosen
+        // one a white ring in the gap around it. A square sets the custom colour, then the choice to Custom; Game default
+        // and the kept one set the choice. Nothing is written by drawing or refreshing it: the values stay as saved (the
+        // user: "100% backwards compatibility"), and the lightness row under it is the page's own.
+        private const float PartPad = 4f, PartGap = 2f, PartDivider = 5f; // in the box: its padding, between squares, the divider's room (2 + 1 + 2)
+        private const float PartAfter = 12f; // the room after a colour part (and its lightness), before the next
+        private static readonly Color SquareEdge = new Color(1f, 1f, 1f, 0.16f);
+
+        private static GameObject ColourPart(Transform parent, MountSettingsPage.Row choice, MountSettingsPage.Row pal, object customValue, RowLayout lay, out Action refresh, out float height)
+        {
+            BepInEx.Configuration.ConfigEntryBase entry = choice.Entry;
+            var colourEntry = (BepInEx.Configuration.ConfigEntry<PaletteColor>)pal.Entry;
+            object defaultValue = choice.ChoiceValues.GetValue(0);
+            if (!keptNamed.TryGetValue(entry, out object kept))
+            {
+                object now = entry.BoxedValue;
+                kept = Equals(now, defaultValue) || Equals(now, customValue) ? null : now;
+                keptNamed[entry] = kept;
+            }
+            int keptIndex = kept != null ? Array.IndexOf(choice.ChoiceValues, kept) : -1;
+            string keptName = keptIndex >= 0 ? Texts.Choice(choice, keptIndex) : null;
+            string keptHex = kept != null ? MountCompanion.PresetSwatchHex(kept) : null;
+            Array colours = Enum.GetValues(typeof(PaletteColor));
+            int perRow = (colours.Length + 1) / 2; // twelve
+            // the box on the controls' span; the squares as large as it allows (the special column one square wide), the
+            // rounding's slack split on both sides
+            float boxX = lay.CtrlLeft, boxW = lay.CtrlRight - lay.CtrlLeft;
+            float inner = boxW - 2f * PartPad - PartDivider - (perRow - 1) * PartGap;
+            float px = Mathf.Max(8f, Mathf.Floor(inner / (perRow + 1)));
+            float slack = Mathf.Floor((inner - (perRow + 1) * px) / 2f);
+            float gridH = 2f * px + PartGap, boxH = gridH + 2f * PartPad;
+            GameObject go = ui.Node("colour " + entry.Definition.Key, parent);
+            float labelW = Mathf.Max(40f, boxX - 10f - lay.LabelX);
+            string baseText = Texts.Label(choice) ?? "";
+            string longest = keptName != null ? baseText + " · " + keptName : baseText;
+            TextMeshProUGUI label = ui.Text(go.transform, "label", baseText, 0.95f, TextAlignmentOptions.Left, true, lay.LabelX, 0f, labelW, 30f);
+            height = Mathf.Max(boxH, Mathf.Ceil(label.GetPreferredValues(longest, labelW, 0f).y) + 8f);
+            UiKit.Rect(go, 0f, 0f, lay.ColW, height);
+            UiKit.Rect(label.gameObject, lay.LabelX, 0f, labelW, height);
+            float boxY = Mathf.Round((height - boxH) / 2f);
+            ui.Box(go.transform, "box", boxX, boxY, boxW, boxH);
+            float x0 = boxX + PartPad + slack, y0 = boxY + PartPad;
+            float gridX = x0 + px + PartDivider;
+            GameObject divider = ui.Node("divider", go.transform, typeof(Image));
+            UiKit.Rect(divider, x0 + px + 2f, boxY + 3f, 1f, boxH - 6f);
+            divider.GetComponent<Image>().color = UiKit.EdgeColor;
+            divider.GetComponent<Image>().raycastTarget = false;
+            // three layers, so a ring is never under a neighbour's edge: the rings, then the edges, then the squares
+            Transform ringLayer = Layer(go, "rings", lay.ColW, height), edgeLayer = Layer(go, "edges", lay.ColW, height), squareLayer = Layer(go, "squares", lay.ColW, height);
+            var frames = new List<(int Kind, PaletteColor Colour, GameObject Frame)>(); // Kind: 0 Game default, 1 a named colour, 2 the kept one
+            int slots = colours.Length + 1 + (kept != null ? 1 : 0);
+            for (int i = 0; i < slots; i++)
+            {
+                int kind = i == 0 ? 0 : i <= colours.Length ? 1 : 2;
+                PaletteColor colour = kind == 1 ? (PaletteColor)colours.GetValue(i - 1) : default;
+                float sx, sy, sw = px, sh = px;
+                if (kind == 1)
+                {
+                    sx = gridX + ((i - 1) % perRow) * (px + PartGap);
+                    sy = y0 + ((i - 1) / perRow) * (px + PartGap);
+                }
+                else
+                {
+                    sx = x0;
+                    sy = kind == 2 ? y0 + px + PartGap : y0;
+                    if (kind == 0 && kept == null) sh = gridH; // the whole column: Game default alone in it
+                }
+                // the ring when chosen: white, in the gap around the square (it meets its neighbours, never covers them)
+                GameObject frame = ui.Node("frame " + i, ringLayer, typeof(Image));
+                UiKit.Rect(frame, sx - 2f, sy - 2f, sw + 4f, sh + 4f);
+                frame.GetComponent<Image>().color = Color.white;
+                frame.GetComponent<Image>().raycastTarget = false;
+                frame.SetActive(false);
+                // a faint edge, so a dark colour stays a square on the dark box
+                GameObject edge = ui.Node("edge " + i, edgeLayer, typeof(Image));
+                UiKit.Rect(edge, sx - 1f, sy - 1f, sw + 2f, sh + 2f);
+                edge.GetComponent<Image>().color = SquareEdge;
+                edge.GetComponent<Image>().raycastTarget = false;
+                string name = kind == 0 ? "swatch default" : kind == 1 ? "swatch " + colour : "swatch kept";
+                GameObject sq = ui.Node(name, squareLayer, typeof(Image), typeof(UnityEngine.UI.Button), typeof(GamepadNavigationItem));
+                UiKit.Rect(sq, sx, sy, sw, sh);
+                GameObject sqFocus = ui.Node("focus", sq.transform, typeof(Image), typeof(Outline));
+                UiKit.Rect(sqFocus, -3f, -3f, sw + 6f, sh + 6f);
+                sqFocus.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
+                sqFocus.GetComponent<Image>().raycastTarget = false;
+                var sqo = sqFocus.GetComponent<Outline>();
+                sqo.effectColor = new Color(1f, 0.85f, 0.3f, 1f);
+                sqo.effectDistance = new Vector2(2f, -2f);
+                sqFocus.SetActive(false);
+                sq.GetComponent<GamepadNavigationItem>().focusFrame = sqFocus;
+                var img = sq.GetComponent<Image>();
+                Color fill;
+                if (kind == 1) ColorUtility.TryParseHtmlString("#" + MountPalette.Hex(colour), out fill);
+                else if (kind == 2 && keptHex != null) ColorUtility.TryParseHtmlString("#" + keptHex, out fill);
+                else fill = kind == 0 ? new Color(0.10f, 0.10f, 0.12f, 1f) : new Color(0.42f, 0.42f, 0.44f, 1f);
+                img.color = fill;
+                if (kind == 0 || (kind == 2 && keptHex == null)) Cross(sq.transform, sw, sh); // no one colour: as drawn, or darkened
+                var b = sq.GetComponent<UnityEngine.UI.Button>();
+                b.targetGraphic = img;
+                ColorBlock cb = b.colors;
+                cb.normalColor = Color.white;
+                cb.highlightedColor = new Color(1.3f, 1.3f, 1.3f, 1f);
+                cb.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+                cb.selectedColor = Color.white;
+                cb.fadeDuration = 0.05f;
+                b.colors = cb;
+                object keptValue = kept;
+                b.onClick.AddListener(() =>
+                {
+                    if (kind == 1)
+                    {
+                        if (colourEntry.Value != colour) colourEntry.Value = colour; // the colour first, then the choice: Custom applies it
+                        if (!Equals(entry.BoxedValue, customValue)) entry.BoxedValue = customValue;
+                    }
+                    else
+                    {
+                        object want = kind == 0 ? defaultValue : keptValue;
+                        if (!Equals(entry.BoxedValue, want)) entry.BoxedValue = want;
+                    }
+                    Refresh();
+                });
+                frames.Add((kind, colour, frame));
+                UnityEngine.UI.Button sqButton = b;
+                sq.GetComponent<GamepadNavigationItem>().SetCallbacks(null, null, () => sqButton.onClick.Invoke());
+            }
+            refresh = () =>
+            {
+                object now = entry.BoxedValue;
+                bool isDefault = Equals(now, defaultValue), isCustom = Equals(now, customValue);
+                PaletteColor picked = colourEntry.Value;
+                bool keptOn = kept != null && Equals(now, kept);
+                foreach ((int kind, PaletteColor colour, GameObject frame) in frames)
+                {
+                    if (frame != null) frame.SetActive(kind == 0 ? isDefault : kind == 1 ? isCustom && colour == picked : keptOn);
+                }
+                if (label != null) label.text = keptOn ? baseText + " · " + keptName : baseText;
+            };
+            refresh();
+            return go;
+        }
+
+        private static Transform Layer(GameObject go, string name, float w, float h)
+        {
+            GameObject l = ui.Node(name, go.transform);
+            UiKit.Rect(l, 0f, 0f, w, h);
+            return l.transform;
+        }
+
+        // A thin light line corner to corner over a square (or the taller Game default cell): no one colour (Game default,
+        // a kept named colour that darkens).
+        private static void Cross(Transform square, float w, float h)
+        {
+            GameObject line = ui.Node("cross", square, typeof(Image));
+            var rt = (RectTransform)line.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(Mathf.Sqrt(w * w + h * h) * 0.8f, Mathf.Max(1f, Mathf.Round(Mathf.Min(w, h) / 7f)));
+            rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(h, w) * Mathf.Rad2Deg);
+            Image im = line.GetComponent<Image>();
+            im.color = new Color(0.85f, 0.85f, 0.85f, 0.9f);
+            im.raycastTarget = false;
+        }
+
         private static string Signature(List<(string Group, List<MountSettingsPage.Row> Rows)> groups)
         {
             var sig = new StringBuilder();
@@ -1194,6 +1419,8 @@ namespace GK2DonkeyAPI
         private static void OpenColours()
         {
             if (panel == null || colours != null) return;
+            keptNamed.Clear(); // each opening keeps what the choices are then (ColourPart)
+            coloursLook = null;
             try
             {
                 UIGameSettingsWindow settings = LazyUI.GetWindow<UIGameSettingsWindow>();
@@ -1249,6 +1476,7 @@ namespace GK2DonkeyAPI
 
         private static void CloseColours(bool keep, bool reshow = true)
         {
+            keptNamed.Clear();
             try
             {
                 if (!keep)
@@ -1466,6 +1694,46 @@ namespace GK2DonkeyAPI
             if (colours == null || i < 0 || i >= colourTabs.Count) return false;
             ShowColourTab(colourTabs[i].Key);
             return colourTab == colourTabs[i].Key;
+        }
+        // the colours window's colour parts (ColourPart) on the chosen tab, in order: each its choice row and its part
+        private static List<(MountSettingsPage.Row Choice, GameObject Go)> TestParts()
+        {
+            var parts = new List<(MountSettingsPage.Row, GameObject)>();
+            foreach (var x in colourRows)
+            {
+                if (x.Go != null && x.Row.RowKind == MountSettingsPage.RowKind.Choice && x.Row.Entry != null && x.Go.name.EndsWith("colour " + x.Row.Entry.Definition.Key, StringComparison.Ordinal)) parts.Add((x.Row, x.Go));
+            }
+            return parts;
+        }
+        internal static int TestColourPartCount => TestParts().Count;
+        internal static MountSettingsPage.Row TestColourPartRow(int i) { var p = TestParts(); return i >= 0 && i < p.Count ? p[i].Choice : null; }
+        internal static MountSettingsPage.Row TestColourPartPalette(int i)
+        {
+            MountSettingsPage.Row c = TestColourPartRow(i);
+            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            int at = c != null && tabRows != null ? tabRows.IndexOf(c) : -1;
+            return at >= 0 && at + 1 < tabRows.Count ? tabRows[at + 1] : null;
+        }
+        // a square of the i-th part pressed as a click or the gamepad's select would ("swatch default", "swatch kept",
+        // "swatch <PaletteColor>"); false: no such part or square
+        internal static bool TestPressSwatch(int i, string square)
+        {
+            var p = TestParts();
+            if (i < 0 || i >= p.Count) return false;
+            Transform t = null; // by the end of its name (the panel puts its prefix before every name)
+            foreach (UnityEngine.UI.Button c in p[i].Go.GetComponentsInChildren<UnityEngine.UI.Button>(true)) if (c.name.EndsWith(square, StringComparison.Ordinal)) { t = c.transform; break; }
+            UnityEngine.UI.Button b = t != null ? t.GetComponent<UnityEngine.UI.Button>() : null;
+            if (b == null) return false;
+            b.onClick.Invoke();
+            return true;
+        }
+        // the i-th part's label as drawn (its kept named colour's name after it while that is chosen)
+        internal static string TestColourPartLabel(int i)
+        {
+            var p = TestParts();
+            if (i < 0 || i >= p.Count) return null;
+            TextMeshProUGUI l = p[i].Go.GetComponentInChildren<TextMeshProUGUI>(true);
+            return l != null ? l.text : null;
         }
         // the chosen tab's rows by column as TabColumns splits them ('L' or 'R' a row, shown or not): the same whatever a
         // value opens (the user, 2026-11-10: a row moved from one column to the other when another was set to Custom)
@@ -1695,7 +1963,23 @@ namespace GK2DonkeyAPI
                 }
                 // as large as the stage allows, up to the scale, centred in it (the stage renders at 3x detail: a fraction of that is a smooth downscale)
                 if (panel.activeSelf && !ChosenMissing) Fit(picture, stage, pic, PictureScale);
-                if (colours != null && coloursPicture != null) Fit(coloursPicture, coloursStage, pic, ColoursScale(pic), screenWhole: true);
+                // the colours window shows only a photo of the look it colours (2026-11-10: one mount's colours opened over the
+                // last mount's photo for the 2 s its alone picture was first framed, the journal having shown that one): its
+                // own as soon as it is whole; another tab of the same look keeps the photo shown meanwhile; else nothing
+                if (colours != null && coloursPicture != null)
+                {
+                    string look = paper != null ? paper.LooksRig.Wearing ?? "" : "";
+                    if (PreviewStage.Failed || PreviewStage.ShowsLookNow(pic, paper))
+                    {
+                        coloursLook = look;
+                        Fit(coloursPicture, coloursStage, pic, ColoursScale(pic), screenWhole: true);
+                    }
+                    else
+                    {
+                        if (coloursLook != look) Fit(coloursPicture, coloursStage, null, CPictureScale);
+                        nextPicture = 0f; // asked again each frame until it is
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -1722,7 +2006,7 @@ namespace GK2DonkeyAPI
         internal static void TestStepBack() => StepBack();
         internal static bool TestControlsTaken => GameWindowAside.ControlsTaken;
 
-        // screenWhole: a whole number of screen pixels per art pixel (the colours window, the user, 2026-11-10: the dragon
+        // screenWhole: a whole number of screen pixels per art pixel (the colours window, the user, 2026-11-10: a tall mount
         // drawn at 2 where the stage had room for 2.82, half the donkey's 4), else of the panel's own units (the journal).
         // A unit is about 2 screen pixels at 2560x1440 and 1.5 at 1920x1080, so whole units were not whole pixels there.
         private static void Fit(RawImage img, RectTransform box, Texture pic, float maxScale, bool screenWhole = false)

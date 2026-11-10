@@ -2154,6 +2154,33 @@ namespace GK2DonkeyAPI.Api
 
         // ------------------------------------------------------------------ the presets (the API's, so every player mod looks the same)
 
+        // The one colour a named choice paints (its Colorize, the lantern's light), for the Mounts panel's colours window:
+        // a player's named colour from before the swatches (the user, 2026-11-10: the dropdowns gave way to them) is kept
+        // in a slot of its own, filled with it. Null for one that darkens or fades the drawn art instead (Dark, Black, Dark
+        // wood: no one colour), for Game and Custom, and for a value of no API colour enum.
+        internal static string PresetSwatchHex(object value)
+        {
+            Dictionary<string, object> d;
+            switch (value)
+            {
+                case CoatColor c when c != CoatColor.Game && c != CoatColor.Custom: d = CoatPreset(c, null, "", null); break;
+                case HarnessColor c when c != HarnessColor.Game && c != HarnessColor.Custom: d = HarnessPreset(c, null, "", null); break;
+                case MuzzleColor c when c != MuzzleColor.Game && c != MuzzleColor.Custom: d = MuzzlePreset(c, null, "", null); break;
+                case CartPaint c when c != CartPaint.Game && c != CartPaint.Custom: d = PaintPreset(c, null, ""); break;
+                case WheelColor c when c != WheelColor.Game && c != WheelColor.Custom: d = WheelPreset(c, null, ""); break;
+                case HubColor c when c != HubColor.Game && c != HubColor.Custom: d = HubPreset(c, null, ""); break;
+                case LanternColor c when c != LanternColor.Game && c != LanternColor.Custom: d = LanternPreset(c, null, ""); break;
+                case ToneColor t when t != ToneColor.Game && t != ToneColor.Custom: return SkinTones.PresetHex(t);
+                default: return null;
+            }
+            if (d == null) return null;
+            foreach (KeyValuePair<string, object> kv in d)
+            {
+                if (kv.Value is string hex && (kv.Key.EndsWith("Colorize", StringComparison.Ordinal) || kv.Key == "LanternLightColor")) return hex;
+            }
+            return null;
+        }
+
         private static Dictionary<string, object> CoatPreset(CoatColor c, string custom, string what, string skinId)
         {
             switch (c)

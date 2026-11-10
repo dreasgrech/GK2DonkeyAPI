@@ -236,6 +236,35 @@ the chosen one framed in white, hover brightens, a click sets the row's value (t
 the lightness and applies the hex). The lightness row stays the game's steps row under it. The journal's rows and
 every other row are still the game's own.
 
+**No dropdown of named colours (2026-11-10).** The user: "get rid of the predefined dropdown list of colours and have
+'custom' just be the one provided". A colour choice whose next row is its custom colour and which has a value named
+`Custom` (`IsColourPart`) is drawn as one part (`ColourPart`): its label, then thirteen squares in two rows:
+
+- **Game default** first, a dark square crossed: the part as the look draws it (the choice's first value);
+- **the 24 named colours**: a click sets the custom colour, then the choice to `Custom` (the lightness row shows under
+  the part, the page's own row, as before);
+- **the player's named colour from before**, if the choice was one when the window opened (Brown, Dark wood...): a
+  slot of its own after them, filled with its colour (`MountCompanion.PresetSwatchHex`), or crossed in grey for the
+  ones that darken or fade the drawn art (Dark, Black, Dark wood: no one colour), and its name after the label while
+  it is chosen ("Scales · Dark"). It stays until the window closes, so a player can go back to it.
+
+**The look** (the user, the same day: "it looks like a quick poc instead of production"; "where there's empty space,
+use it wisely"): the squares sit in the window's dark box with the faint edge (as the slider track and the switches),
+across the controls' span, so its edges line up with the dropdowns' and the sliders' down the column. Left of a thin
+divider the column of the squares that aren't palette colours: Game default, the whole column, or its top half over
+the kept named colour; right of it the 24 colours, twelve a row, 13 px squares 2 apart. Every square has a faint
+edge (Black and Charcoal on the dark box); the chosen one a white ring in the gap around it, drawn under the squares
+and over the edges (three layers). The lightness row sits close under its part, its label quieter; 12 of room after
+the part (and its lightness) before the next.
+
+**Nothing saved changes** (the user: "can we keep 100% backwards compatibility regarding colours?"). The rows, their
+keys and values are the page's as before; drawing or refreshing a part writes nothing; the colouring code is the same.
+A named colour from before is applied as it was and stays until the player picks another square. Picking one new is no
+longer offered (decided with the user: option A, no new setting); the cfg still takes every name. Another mod's choice
+made otherwise stays a dropdown. Self-tests (the Mounts panel scenario): every saved value of the page the same after
+walking every tab and closing; a square sets Custom with its colour, Game default the first value; a named colour kept,
+named after the label, and taken again from its slot.
+
 ## What stays from the first panel
 
 Open/toggle (the key toggles, the button brings forward with the menus out of the way), `Entries()` from the
@@ -244,7 +273,7 @@ picture tick, the test hooks (`TestMeasure` reports the window's size and scale)
 
 ## Later (what is left)
 
-Colour swatches with a lightness slider instead of the custom-colour dropdowns (direction A's second half), a
+~~Colour swatches with a lightness slider instead of the custom-colour dropdowns~~ (done 2026-11-10: Swatches), a
 search box once the list passes eight mounts, a Call button that summons the chosen mount, gamepad navigation.
 
 ## The colours window's tabs (2026-11-08)

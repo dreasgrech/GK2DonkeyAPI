@@ -637,6 +637,30 @@ namespace GK2DonkeyAPI
             return false;
         }
 
+        // Every saved value of a page's rows (section/key: the value as text), and the first that differs between two of
+        // them (null: none). The colours window's swatches must leave every one as it was (the user, 2026-11-10).
+        internal static Dictionary<string, string> PageValues(MountSettingsPage p)
+        {
+            var d = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (p == null) return d;
+            foreach (MountSettingsPage.Row r in p.Rows)
+            {
+                if (r.Entry == null) continue;
+                d[r.Entry.Definition.Section + "/" + r.Entry.Definition.Key] = Convert.ToString(r.Entry.BoxedValue, System.Globalization.CultureInfo.InvariantCulture);
+            }
+            return d;
+        }
+
+        internal static string PageDiff(Dictionary<string, string> before, Dictionary<string, string> after)
+        {
+            foreach (KeyValuePair<string, string> kv in before)
+            {
+                if (!after.TryGetValue(kv.Key, out string now)) return kv.Key + " gone";
+                if (!string.Equals(now, kv.Value, StringComparison.Ordinal)) return $"{kv.Key} {kv.Value} -> {now}";
+            }
+            return after.Count != before.Count ? $"{after.Count - before.Count} new value(s)" : null;
+        }
+
         // A method's patches hold a prefix of this Harmony id.
         internal static bool HasPrefixOf(HarmonyLib.Patches info, string owner)
         {
@@ -3463,6 +3487,10 @@ namespace GK2DonkeyAPI
                 yield return Frames(2);
                 yield return PanelShot("colours-" + (page.MountChosen ?? "donkey"));
                 Check(MountsPanel.IsColoursOpen && MountsPanel.TestColourRows > 0, $"the colours window opens over the journal with {MountsPanel.TestColourRows} rows (the colours)");
+                // every saved value of the page as the window found it (the user, 2026-11-10: "100% backwards compatibility"
+                // for the swatches that replaced the dropdowns): looking, walking the tabs, closing change none of them
+                Dictionary<string, string> savedBefore = PageValues(page);
+                Check(MountsPanel.TestColourPartCount > 0, $"the colours are swatches: {MountsPanel.TestColourPartCount} colour part(s) on the first tab, no dropdown of named colours");
                 TextRoom.Measure(MountsPanel.TestRoot(coloursWindow: true), "colours window: " + (page.MountChosen ?? "donkey"));
                 string narrowColours = MountsPanel.TestNarrowLabel(coloursWindow: true);
                 Check(narrowColours == null, $"the colours window: every label has room (100 or more){(narrowColours != null ? " (NOT: " + narrowColours + ")" : "")}");
@@ -3493,7 +3521,7 @@ namespace GK2DonkeyAPI
                     bool pulls = MountSettingsPage.MountPullsCart(page.MountChosen ?? MountCatalog.DonkeyId);
                     Check(!pulls || (cartTab ? pic.Contains("the cart view") : pic.Contains("the alone view")), $"... tab {ti + 1} ({(cartTab ? "the cart's" : "no cart rows")}): the picture {(cartTab || !pulls ? "as the mount is drawn" : "the mount alone")} ({pic})");
                     // as large as the stage allows, capped (3 with the cart, 4 alone), at a whole number of screen pixels per art
-                    // pixel (the user, 2026-11-10: the dragon drawn at 2 where it had room for 2.82)
+                    // pixel (the user, 2026-11-10: a tall mount drawn at 2 where it had room for 2.82)
                     var (scale, room, px) = MountsPanel.TestColoursScale();
                     float cap = cartTab && pulls ? 3f : 4f;
                     float wantPx = px > 0.01f ? Mathf.Floor(Mathf.Min(cap, room) * px + 0.001f) : 0f;
@@ -3525,9 +3553,57 @@ namespace GK2DonkeyAPI
                         $"... tab {ti + 1}: {set} choice(s) set to Custom ({rowsBefore} -> {rowsCustom} rows built): every row in its column ({colsBefore} -> {colsCustom}), and back ({MountsPanel.TestColourColumns()})");
                 }
                 if (tabCount > 1) MountsPanel.TestShowColourTab(0);
+                yield return Frames(2);
+                string walked = PageDiff(savedBefore, PageValues(page));
+                Check(walked == null, $"every tab walked, each set to Custom and back: every saved value as it was{(walked != null ? " (NOT: " + walked + ")" : "")}");
+                // the squares (the first part of the first tab): a colour sets Custom with it, Game default the first value;
+                // then a named colour from before the swatches, kept in a slot of its own and named after the label
+                MountSettingsPage.Row partChoice = MountsPanel.TestColourPartRow(0), partColour = MountsPanel.TestColourPartPalette(0);
+                if (partChoice != null && partColour != null)
+                {
+                    object choiceWas = partChoice.Entry.BoxedValue, colourWas = partColour.Entry.BoxedValue;
+                    object named = null;
+                    foreach (object v in partChoice.ChoiceValues) if (!Equals(v, partChoice.ChoiceValues.GetValue(0)) && v.ToString() != "Custom") { named = v; break; }
+                    try
+                    {
+                        bool pressed = MountsPanel.TestPressSwatch(0, "swatch " + PaletteColor.Teal);
+                        yield return Frames(2);
+                        bool custom = partChoice.Entry.BoxedValue.ToString() == "Custom" && Equals(partColour.Entry.BoxedValue, PaletteColor.Teal);
+                        pressed &= MountsPanel.TestPressSwatch(0, "swatch default");
+                        yield return Frames(2);
+                        bool asDrawn = Equals(partChoice.Entry.BoxedValue, partChoice.ChoiceValues.GetValue(0)) && Equals(partColour.Entry.BoxedValue, PaletteColor.Teal);
+                        Check(pressed && custom && asDrawn, $"a square: Custom with its colour ({custom}); Game default: the first value, the custom colour kept ({asDrawn}) ({partChoice.Entry.Definition.Key})");
+                        if (named != null)
+                        {
+                            // a player's named colour from before: the window opened on it keeps it in a slot of its own
+                            partChoice.Entry.BoxedValue = named;
+                            MountsPanel.TestCloseColours(keep: true);
+                            yield return Frames(2);
+                            MountsPanel.TestOpenColours();
+                            yield return Frames(3);
+                            string label = MountsPanel.TestColourPartLabel(0) ?? "";
+                            bool keptShown = label.Contains("·") && Equals(partChoice.Entry.BoxedValue, named);
+                            bool away = MountsPanel.TestPressSwatch(0, "swatch default");
+                            yield return Frames(2);
+                            bool back = MountsPanel.TestPressSwatch(0, "swatch kept");
+                            yield return Frames(2);
+                            Check(keptShown && away && back && Equals(partChoice.Entry.BoxedValue, named),
+                                $"a named colour from before ({named}): as it was, named after the label (\"{label}\"), and taken again from its own slot after Game default ({partChoice.Entry.BoxedValue})");
+                        }
+                    }
+                    finally
+                    {
+                        partChoice.Entry.BoxedValue = choiceWas; // the player's values back, whatever happened
+                        partColour.Entry.BoxedValue = colourWas;
+                        MountsPanel.Refresh();
+                    }
+                    yield return Frames(2);
+                }
                 MountsPanel.TestCloseColours(keep: true);
                 yield return Frames(2);
                 Check(!MountsPanel.IsColoursOpen && MountsPanel.IsOpen, "closed: the journal is back");
+                string afterClose = PageDiff(savedBefore, PageValues(page));
+                Check(afterClose == null, $"closed: every saved value of the page as it was when the window opened{(afterClose != null ? " (NOT: " + afterClose + ")" : "")}");
                 // Done with another mount picked: his mount stays (the Mount row goes back), the skin he wore with it
                 MountCompanion meNow = page.TestCompanion;
                 string wore = meNow?.Skin;
