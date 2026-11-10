@@ -131,33 +131,42 @@ namespace GK2DonkeyAPI
             return d.ToneInfos;
         }
 
-        // A variant's tones (LooksInherit.Resolve): its default's, in their order, then its own, as new records every time
-        // (the declared ones are never changed, so a re-resolve or a default gone leaves nothing of the last one). One of
-        // its own with a default's id: its name if it gives one, else the default's (NameFromParent: a variant adding a
-        // shade keeps the default's name and translation); what it follows if it says, else the default's; the colours
-        // merge with the regions either way (MergeRegions). Standing alone, its own as declared.
+        // A variant's tones (LooksInherit.Resolve): the ones it declares in its own file's order, then its default's it
+        // doesn't mention, in the default's order (the user, 2026-11-10: the Mecha's file lists Armour, Gold trim, Horns and
+        // claws, biggest first, but the default's horns came first, its place kept, until then). A default's tone is a new
+        // record every time (the declared ones are never changed, so a re-resolve or a default gone leaves nothing of the
+        // last one). One of its own with a default's id: its name if it gives one, else the default's (NameFromParent: a
+        // variant adding a shade keeps the default's name and translation); what it follows if it says, else the
+        // default's; the colours merge with the regions either way (MergeRegions). Standing alone, its own as declared.
         internal static List<ToneDef> Merge(List<ToneDef> parent, List<ToneDef> own)
         {
             if (parent == null || parent.Count == 0) return own;
             var merged = new List<ToneDef>();
-            foreach (ToneDef p in parent)
-            {
-                ToneDef mine = Find(own, p.Id);
-                bool myName = mine != null && mine.NameGiven;
-                merged.Add(new ToneDef
-                {
-                    Id = p.Id, Name = myName ? mine.Name : p.Name, NameGiven = myName || p.NameGiven, NameFromParent = !myName,
-                    Follows = mine?.OwnFollows ?? p.Follows, OwnFollows = mine?.OwnFollows,
-                });
-            }
             if (own != null)
             {
                 foreach (ToneDef t in own)
                 {
-                    if (Find(merged, t.Id) == null) merged.Add(t);
+                    if (Find(merged, t.Id) != null) continue;
+                    ToneDef p = Find(parent, t.Id);
+                    merged.Add(p == null ? t : Combined(p, t));
                 }
             }
+            foreach (ToneDef p in parent)
+            {
+                if (Find(merged, p.Id) == null) merged.Add(Combined(p, null));
+            }
             return merged;
+        }
+
+        // A default's tone as its variant has it (mine: the variant's own of that id, or null).
+        private static ToneDef Combined(ToneDef p, ToneDef mine)
+        {
+            bool myName = mine != null && mine.NameGiven;
+            return new ToneDef
+            {
+                Id = p.Id, Name = myName ? mine.Name : p.Name, NameGiven = myName || p.NameGiven, NameFromParent = !myName,
+                Follows = mine?.OwnFollows ?? p.Follows, OwnFollows = mine?.OwnFollows,
+            };
         }
 
         private static ToneDef Find(List<ToneDef> list, string id)

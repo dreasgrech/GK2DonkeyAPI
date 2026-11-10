@@ -312,7 +312,15 @@ namespace GK2DonkeyAPI
             bool follows = merged[0].Follows == "Muzzle" && plainShade[0].Follows == "Harness" && alone[0].Follows == null;
             bool untouched = variantOwn[0].Follows == "Muzzle" && noFollow[0].Follows == null && fromDefault[0].Follows == "Harness" && merged[0] != variantOwn[0] && merged[0] != fromDefault[0];
             SelfTest.Check(names && follows && untouched,
-                $"a variant's tones: the default's in their order, one re-declared without a name keeps the default's name (its translation), one with a name renames it, its own new ones after ({string.Join(", ", merged.ConvertAll(t => t.Name))}); what it follows its own word, else the default's ({merged[0].Follows}, {plainShade[0].Follows}; alone {alone[0].Follows ?? "none"}); new records, the declared ones untouched ({untouched})");
+                $"a variant's tones: its own in its order, one re-declared without a name keeps the default's name (its translation), one with a name renames it ({string.Join(", ", merged.ConvertAll(t => t.Name))}); what it follows its own word, else the default's ({merged[0].Follows}, {plainShade[0].Follows}; alone {alone[0].Follows ?? "none"}); new records, the declared ones untouched ({untouched})");
+            // the order (the user, 2026-11-10: the Mecha's Armour, Gold trim, Horns and claws came Horns first, the default's
+            // place kept): the variant's file decides for every tone it declares, a default's it doesn't mention comes after
+            var parentOrder = new List<SkinTones.ToneDef> { new SkinTones.ToneDef { Id = "horns", Name = "Horns", NameGiven = true }, new SkinTones.ToneDef { Id = "belt", Name = "Belt", NameGiven = true } };
+            var ownOrder = new List<SkinTones.ToneDef> { new SkinTones.ToneDef { Id = "armour", Name = "Armour", NameGiven = true }, new SkinTones.ToneDef { Id = "gold", Name = "Gold", NameGiven = true }, new SkinTones.ToneDef { Id = "horns", Name = "Horns and claws", NameGiven = true } };
+            List<SkinTones.ToneDef> ordered = SkinTones.Merge(parentOrder, ownOrder);
+            string order = string.Join(", ", ordered.ConvertAll(t => t.Id));
+            SelfTest.Check(order == "armour, gold, horns, belt" && ordered[2].Name == "Horns and claws" && ordered[3].NameFromParent,
+                $"a variant's tones in its own file's order, a default's it doesn't mention after them ({order}; the re-declared one \"{ordered[2].Name}\")");
             // a code tone's follows comes with its factory, read only after
             var codeFollow = MountSkinTone.Following("Harness", "Cloth", "Cloth", new[] { "C41E38" });
             var mine = new List<string> { "2850B4" };

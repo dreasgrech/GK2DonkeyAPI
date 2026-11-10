@@ -56,6 +56,10 @@ For players:
 
 For mod authors:
 
+- **A variant's tone rows in its own order** (2026-11-10): a skin built on its mount's default lists the tones it
+  declares (`[Tone.*]`, `MountSkinDef.Tones`) in its own order, a default's it re-declares too, then the default's it
+  doesn't mention. Before, the default's came first and a re-declared one kept the default's place
+  (`SkinTones.Merge`; docs/skins.md).
 - **API 0.45.0: `MountCompanion.Ride()` and `Drive()`** (2026-11-07): the ride and cart keys' actions (`Use(Ride)`,
   `Use(Cart)`). Given to a page's `Key` as they are (`pressed: me.Ride`), the key also works in the Mount Journal of that
   companion's page, as the journal's Ride and Drive the cart buttons (`KeyActions` recognises the delegate;

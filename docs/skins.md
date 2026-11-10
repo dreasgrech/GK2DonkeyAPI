@@ -320,7 +320,9 @@ colours = 38121A 5E1C24 8A282A
   region's too: two regions' colours in one cell fail (a Mouth colour would repaint the outline beside it; shades of one
   region in a cell are fine). On the exact swap two colours one step apart in one channel are one colour (the swap's reach is 0.004,
   a step 0.0039): both fail a tone's colour one step from a colour of another place too.
-- A variant (see below) has its default's tones. A `[Tone.<id>]` of its own with a default's id adds its colours to
+- A variant (see below) has its default's tones. Its rows come in its own file's order for every tone it declares (a default's
+  one too), then the default's it doesn't mention, in the default's order (since 2026-11-10; the default's came first
+  before, so a re-declared tone kept the default's place: list a variant's tones biggest first, as a skin's own). A `[Tone.<id>]` of its own with a default's id adds its colours to
   that tone (the default's name stays, and what it follows unless it says `follows =` itself), or with a `name` of
   its own renames it (`colours` may then be left out). Listing those shades under the followed region in `[Colors]`
   as well (for an older API) needs its own `follows =` line: the default's isn't known while the variant's file is read.

@@ -282,7 +282,8 @@ colours = C14859 A03444 862633 641A2A 3E0A14
   usable colour is the tone as drawn (not the region it follows).
 - Palette skins (`colours = palette`) take the donkey's regions: their tones are reported and ignored; a variant that
   takes palette colours from its default says so once in the log (`LooksInherit.Resolve`).
-- A variant (a skin built on its mount's default) takes its default's tones. One of its own with a default's id adds
+- A variant (a skin built on its mount's default) takes its default's tones. Its rows: the tones it declares in its
+  file's order, then the default's it doesn't mention (2026-11-10; the default's first before). One of its own with a default's id adds
   its colours to that tone; with a `name` of its own it renames it (colours not needed), without one the default's
   name and translation stay. A colour it names elsewhere leaves the default's tone (`SkinTones.Merge`,
   `LooksInherit.MergeRegions`, the same as `[Colors]`). A row's label is translated by the skin whose name it shows.
