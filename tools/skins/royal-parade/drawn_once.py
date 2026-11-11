@@ -95,7 +95,52 @@ def swaying(cloth):
         for i, key in enumerate(k for k in ORDER if k.startswith(f"bdy_{clip}_left_")):
             dx, dy = stamp.body_move(key, cols)
             swung = swing(art, hangs_free, [pendulum(i, ph, 1, period) for ph in PHASES])
-            save({(x + dx, y + dy): c for (x, y), c in swung.items()}, os.path.join(SRC, f"body@{key}.png"))
+            placed = {(x + dx, y + dy): c for (x, y), c in swung.items()}
+            placed, fitted = hug_back(placed, art, cols, key, dx, dy)
+            if fitted:
+                print(f"   {key}: the cloth's top fitted to the back at " + " ".join(f"{x} ({d:+d})" for x, d in fitted))
+            save(placed, os.path.join(SRC, f"body@{key}.png"))
+
+
+BAND = 3   # the cloth's top band: its outline, the gold trim and the pink highlight (body.png's columns, top down)
+
+
+def hug_back(placed, art, cols, key, dx, dy):
+    """The cloth's top band moved, column by column, to lie on the back as it lies on the standing frame's: placed as
+    one (stamp.body_move), its top was a pixel off the back wherever the walk's back outline has a 1-px bump (stamp.py
+    moves lists them: walk 01, 07 and 08 a pixel under the back, the donkey's coat showing between them, white under a
+    Snow coat, the user's video of 2026-11-11; walk 04-06 a pixel over it). The band moves; the red under it grows or
+    shrinks by as much (its columns are one red, or a fold stripe running down), so the trim follows the back and no
+    pattern steps. Returns the cloth and [(frame column, rows moved: - up, + down)]."""
+    import stamp
+    top = {}
+    for x, y in art:
+        top[x] = min(y, top.get(x, y))
+    ts = stamp.held_top(stamp.STANDING, cols)
+    tf = stamp.held_top(key, [c + dx for c in cols])
+    out = dict(placed)
+    fitted = []
+    for x in cols:
+        if x not in ts or x + dx not in tf:
+            continue
+        want = tf[x + dx] + (top[x] - ts[x])   # the frame's back, as far above the cloth's top as on the standing frame
+        now = top[x] + dy
+        d = want - now
+        if not d:
+            continue
+        fx = x + dx
+        band = [placed.get((fx, now + k)) for k in range(BAND)]
+        under = placed.get((fx, now + BAND))
+        if any(c is None for c in band) or under is None:
+            continue   # not the cloth's top here (an edge column shorter than the band): left as placed
+        for k in range(BAND):
+            out.pop((fx, now + k), None)
+        for k in range(BAND):
+            out[(fx, want + k)] = band[k]
+        for y in range(want + BAND, now + BAND):   # raised: the red fills the rows the band left
+            out[(fx, y)] = under
+        fitted.append((fx, d))
+    return out, fitted
 
 
 def make():

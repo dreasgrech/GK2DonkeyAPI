@@ -162,14 +162,15 @@ namespace GK2DonkeyAPI.IntegrationTests
             Check(Live.CargoHolders == cargo0, $"crowd gone: cargo holders back ({cargo0} -> {Live.CargoHolders})");
         }
 
-        // Every world mount with a view wearing the look it wants, built and put on (Looks.Rig.Settling). A look let go
-        // while its mount slept and built again when it woke reaches the counters some frames after the levels settle: the
-        // colour textures read 60 -> 58 with the world's snail look loading again just after the count (2026-11-11).
+        // Every Active world mount with a view wearing the look it wants, built and put on (Looks.Rig.Settling); an Idle
+        // view is frozen off screen and builds its look only when it wakes (Looks.OnPreCull). A look let go while its
+        // mount slept and built again when it woke reaches the counters some frames after the levels settle: the colour
+        // textures read 60 -> 58 with the world's snail look loading again just after the count (2026-11-11).
         private static IEnumerator LooksSettled(float timeout)
         {
             yield return Until(() =>
             {
-                foreach (Mount.Instance i in Mount.All) if (i.HasView && i.LooksRig != null && i.LooksRig.Settling) return false;
+                foreach (Mount.Instance i in Mount.All) if (i.HasView && i.tier == Mount.Tier.Active && i.LooksRig != null && i.LooksRig.Settling) return false;
                 return true;
             }, timeout);
             if (!waited)
@@ -177,7 +178,7 @@ namespace GK2DonkeyAPI.IntegrationTests
                 var still = new StringBuilder();
                 foreach (Mount.Instance i in Mount.All)
                 {
-                    if (!i.HasView || i.LooksRig == null || !i.LooksRig.Settling) continue;
+                    if (!i.HasView || i.tier != Mount.Tier.Active || i.LooksRig == null || !i.LooksRig.Settling) continue;
                     if (still.Length > 0) still.Append("; ");
                     still.Append(i.FullId).Append(" (").Append(i.tier).Append(": ").Append(i.LooksRig.TestSettleReport).Append(')');
                 }

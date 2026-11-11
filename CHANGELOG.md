@@ -110,9 +110,15 @@ Development:
   game-code.txt), and `UiKit.Dim` behind each window with the Settings window's `BgShadow` look. Self-tests: the panel
   and options tests check paused, muffled (the game's answer and the mixer level) and dimmed while open, and the game as
   before after closing.
+- **Royal Parade's cloth follows the back in the walk** (2026-11-11, the user's video with a Snow coat):
+  `tools/skins/royal-parade/drawn_once.py` `hug_back` moves the cloth's top band (outline, gold trim, pink highlight)
+  in each walk and lips frame to lie on the back as on the standing frame, the red under it growing or shrinking by as
+  much: walk 01, 07, 08 (the coat showed above the cloth, `stamp.py moves`: "below") and 04-06 ("above"). Only those
+  six frames changed in the pack (Donkey Skins pack CHANGELOG).
 - **The crowd test waits for the world's looks** (2026-11-11): its counters read colour textures 60 -> 58 because the
   world's own snail look was being built again (its mount woke when the keeper came back) just as they were counted.
-  Before both counts it now waits until every world mount with a view wears its look (`Looks.Rig.Settling`).
+  Before both counts it now waits until every Active world mount wears its look (`Looks.Rig.Settling`; an Idle view
+  is frozen off screen and builds its look only when it wakes), and names any still settling after 10 s.
 - **Four changes from the user's list** (2026-11-10, docs/mounts-panel-design.md, docs/instances.md):
   - the colours window's two columns are balanced on each unit's first row as the mount and skin show it
     (`MountsPanel.TabColumns`): the custom colour and lightness rows a choice opens weigh nothing, so no value moves
