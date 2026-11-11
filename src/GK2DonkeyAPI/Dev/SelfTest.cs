@@ -637,6 +637,45 @@ namespace GK2DonkeyAPI
             return false;
         }
 
+        // A window's controls make the game's sounds (UiSounds, 2026-11-11): the mouse over one of each kind is that kind's
+        // hover, a greyed one is silent, a press and click on a tab (the one shown: nothing changes) is the tab click.
+        internal static void UiSoundChecks(Transform root, string what)
+        {
+            if (root == null) { Check(false, $"{what}: the window is there for its sound check"); return; }
+            var ev = UnityEngine.EventSystems.EventSystem.current;
+            if (ev == null) { Info($"{what}: no event system, the controls' sound check skipped"); return; }
+            UiSound[] all = root.GetComponentsInChildren<UiSound>(false);
+            var seen = new HashSet<UiSounds.Kind>();
+            UiSound greyed = null, tab = null;
+            int live = 0;
+            foreach (UiSound s in all)
+            {
+                bool on = s.Target == null || s.Target.IsInteractable();
+                if (!on) { if (greyed == null) greyed = s; continue; }
+                live++;
+                if (s.Kind == UiSounds.Kind.Tab && tab == null) tab = s;
+                if (!seen.Add(s.Kind)) continue;
+                int n = UiSounds.Played;
+                UnityEngine.EventSystems.ExecuteEvents.Execute(s.gameObject, new UnityEngine.EventSystems.PointerEventData(ev), UnityEngine.EventSystems.ExecuteEvents.pointerEnterHandler);
+                Check(UiSounds.Played == n + 1 && UiSounds.Last == UiSounds.HoverOf(s.Kind), $"{what}: the mouse over a {s.Kind.ToString().ToLowerInvariant()} ({s.name}) is the game's {UiSounds.HoverOf(s.Kind)} (played {UiSounds.Played - n}, last {UiSounds.Last})");
+            }
+            Check(live > 0, $"{what}: {live} control(s) with the game's sounds, {all.Length - live} greyed");
+            if (greyed != null)
+            {
+                int n = UiSounds.Played;
+                UnityEngine.EventSystems.ExecuteEvents.Execute(greyed.gameObject, new UnityEngine.EventSystems.PointerEventData(ev), UnityEngine.EventSystems.ExecuteEvents.pointerEnterHandler);
+                Check(UiSounds.Played == n, $"{what}: the mouse over a greyed one ({greyed.name}) is silent");
+            }
+            if (tab != null)
+            {
+                int n = UiSounds.Played;
+                var press = new UnityEngine.EventSystems.PointerEventData(ev) { button = UnityEngine.EventSystems.PointerEventData.InputButton.Left };
+                UnityEngine.EventSystems.ExecuteEvents.Execute(tab.gameObject, press, UnityEngine.EventSystems.ExecuteEvents.pointerDownHandler);
+                UnityEngine.EventSystems.ExecuteEvents.Execute(tab.gameObject, press, UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
+                Check(UiSounds.Played == n + 1 && UiSounds.Last == UiSounds.ClickOf(UiSounds.Kind.Tab), $"{what}: a click on a tab ({tab.name}) is the game's {UiSounds.ClickOf(UiSounds.Kind.Tab)} (last {UiSounds.Last})");
+            }
+        }
+
         // Every saved value of a page's rows (section/key: the value as text), and the first that differs between two of
         // them (null: none). The colours window's swatches must leave every one as it was (the user, 2026-11-10).
         internal static Dictionary<string, string> PageValues(MountSettingsPage p)
@@ -3345,10 +3384,14 @@ namespace GK2DonkeyAPI
             Info("if a \"the Mounts panel can't open\" warning follows, it is this test's finding: the Settings window could not be copied before it was ever opened this session");
             try
             {
+                int sounds0 = UiSounds.Played;
                 MountsPanel.Open(page, toggle: false);
+                // counted at once: a frame on, the mouse resting where a button lands is its hover too
+                Check(UiSounds.Played == sounds0 + 1 && UiSounds.Last == UiSounds.WindowOpenId, $"opening it is the game's window sound, once ({UiSounds.Played - sounds0} played, last {UiSounds.Last})");
                 yield return Frames(2);
                 Check(MountsPanel.IsOpen, "the panel opens over the game from a page with a Mount row");
                 if (!MountsPanel.IsOpen) yield break;
+                UiSoundChecks(MountsPanel.TestRoot(coloursWindow: false), "the journal");
                 var m = MountsPanel.TestMeasure();
                 Check(m.Scale >= 0.5f && m.W * m.Scale <= m.RoomW + 1f && m.H * m.Scale <= m.RoomH + 1f, $"it fits the screen ({m.W:0}x{m.H:0} at {m.Scale:0.##} in {m.RoomW:0}x{m.RoomH:0})");
                 // the buttons on the stage's edges (the user's screenshot, 2026-10-30)
@@ -3483,10 +3526,14 @@ namespace GK2DonkeyAPI
                     MountsPanel.TestSelect(was);
                     yield return Frames(2);
                 }
+                int sounds1 = UiSounds.Played;
                 MountsPanel.TestOpenColours();
+                Check(UiSounds.Played == sounds1 + 1 && UiSounds.Last == UiSounds.WindowOpenId, $"the colours window opening is the game's window sound, once ({UiSounds.Played - sounds1} played, last {UiSounds.Last})");
                 yield return Frames(2);
                 yield return PanelShot("colours-" + (page.MountChosen ?? "donkey"));
                 Check(MountsPanel.IsColoursOpen && MountsPanel.TestColourRows > 0, $"the colours window opens over the journal with {MountsPanel.TestColourRows} rows (the colours)");
+                UiSoundChecks(MountsPanel.TestRoot(coloursWindow: true), "the colours window");
+                yield return Frames(2); // the tab clicked was the one shown: drawn again as it was
                 // every saved value of the page as the window found it (the user, 2026-11-10: "100% backwards compatibility"
                 // for the swatches that replaced the dropdowns): looking, walking the tabs, closing change none of them
                 Dictionary<string, string> savedBefore = PageValues(page);
@@ -3636,7 +3683,9 @@ namespace GK2DonkeyAPI
                     }
                     yield return Frames(2);
                 }
+                int sounds2 = UiSounds.Played;
                 MountsPanel.TestCloseColours(keep: true);
+                Check(UiSounds.Played == sounds2 + 1 && UiSounds.Last == UiSounds.WindowCloseId, $"closing it is the game's window sound, once ({UiSounds.Played - sounds2} played, last {UiSounds.Last})");
                 yield return Frames(2);
                 Check(!MountsPanel.IsColoursOpen && MountsPanel.IsOpen, "closed: the journal is back");
                 string afterClose = PageDiff(savedBefore, PageValues(page));
@@ -3649,7 +3698,9 @@ namespace GK2DonkeyAPI
                     MountsPanel.TestSelect(other);
                     yield return Frames(2);
                 }
+                int sounds3 = UiSounds.Played;
                 MountsPanel.TestClose(keep: true);
+                Check(UiSounds.Played == sounds3 + 1 && UiSounds.Last == UiSounds.WindowCloseId, $"closing the journal is the game's window sound, once ({UiSounds.Played - sounds3} played, last {UiSounds.Last})");
                 yield return Frames(2);
                 Check(!MountsPanel.IsOpen && string.Equals(page.MountChosen ?? MountCatalog.DonkeyId, was, StringComparison.OrdinalIgnoreCase) && meNow?.Skin == wore, $"Done with {other ?? "the same mount"} picked: the mount is {was} again, the companion still wears \"{meNow?.Skin}\"");
                 // the commit below makes the pick his for two frames: with his mount pulling a cart, the pick must pull it

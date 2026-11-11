@@ -26,6 +26,7 @@ namespace GK2DonkeyAPI
 
         internal static bool ControlsTaken => controlsTaken;
         internal static string UnderText => under != null ? under.name : "the game";
+        internal static bool HasUnder => under != null; // Ride or Drive closes it with its own close sound (UiSounds)
 
         // The game window on top switched off, waiting under ours (nothing when ours opened over the game itself).
         internal static void SetAside(string who)

@@ -22,7 +22,7 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 - The audited game: the build embeds the dependency manifest against the installed game (`docs/dependency-check.md`;
   no pin to move). After any update `tests/GameDiff` and `DepManifest verify` give the audit its reading list, and
   `tools/game-asset-diff.py` the art and data the update changed, its donkey's-art line included (the audit notes are
-  `docs/game-update-*.md`; a changed donkey frame: `docs/skins-design.md` section 11); `tests/CecilScan-DonkeyAPI` must report the manifest identical and every
+  `docs/game-update-*.md`; a changed donkey frame: `docs/skins-design.md` section 11); `tools/ui-sounds-scan.py` that the window, button and tab sounds our windows play are still the game's (`UiSounds.cs`); `tests/CecilScan-DonkeyAPI` must report the manifest identical and every
   class sorted in `src/GK2DonkeyAPI/game-code.txt`.
 - The dev tools cannot reach a player by accident: the `[Debug]` keys exist only with the dev tools unlocked
   (`DevTools.cs`: the sources on this machine, or the marker file `BepInEx\config\dreas.gk2.dev`); a player's cfg

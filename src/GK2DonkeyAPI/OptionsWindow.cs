@@ -96,12 +96,13 @@ namespace GK2DonkeyAPI
                 if (overPanel) MountsPanel.HideUnderOptions(); // the journal waits underneath
                 else GameWindowAside.SetAside(Who); // the game window it was opened from (the Settings window) waits underneath, as it is
                 GameWindowAside.TakeControls(Who);
+                UiSounds.WindowOpened(); // as the game's windows (UiSounds)
                 Plugin.Log.LogInfo($"Settings: the options of {p.Title} opened over {(overPanel ? "the Mounts panel" : GameWindowAside.UnderText)} ({cards.Count} sections, {rows.Count} rows in the first{(window.transform.localScale.x < 1f ? $"; scaled to {window.transform.localScale.x:0.##} to fit the screen" : "")}).");
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Settings: the options window can't open (" + e.Message + "); the options are still in the cfg (BepInEx\\config).");
-                Close(back: true);
+                Close(back: true, sound: false); // it never opened: nothing to hear
             }
         }
 
@@ -144,7 +145,7 @@ namespace GK2DonkeyAPI
         }
 
         // back: to where it was opened from, as it was. Not back (the game left): only the windows go.
-        private static void Close(bool back)
+        private static void Close(bool back, bool sound = true)
         {
             DeferredSave.Soon(); // the rows changed in it: to their cfg files half a second on
             bool was = window != null;
@@ -152,6 +153,7 @@ namespace GK2DonkeyAPI
             string title = page?.Title;
             Teardown();
             if (!was) return;
+            if (back && sound) UiSounds.WindowClosed(); // not back: the game left, nothing to hear
             if (fromPanel)
             {
                 if (back)
@@ -221,7 +223,7 @@ namespace GK2DonkeyAPI
             foreach ((string sec, string name) in Sections(page))
             {
                 string s = sec;
-                GameObject go = ui.OwnButton(listContent, "section " + name, Texts.Section(page, name), ListW - 8f - UiKit.ScrollbarW, CardH, () => ShowSection(s), textLeft: 14f, flat: true);
+                GameObject go = ui.OwnButton(listContent, "section " + name, Texts.Section(page, name), ListW - 8f - UiKit.ScrollbarW, CardH, () => ShowSection(s), textLeft: 14f, flat: true, sound: UiSounds.Kind.Cell);
                 var le = go.AddComponent<LayoutElement>();
                 le.preferredWidth = ListW - 8f - UiKit.ScrollbarW;
                 le.preferredHeight = CardH;
@@ -444,11 +446,13 @@ namespace GK2DonkeyAPI
             UiKit.NavGroup(no, 4); // on their own while it is open: no way out of group 4 but Select and Back
             controls.FocusNext = no.GetComponent<GamepadNavigationItem>();
             controls.NavDirty = true;
+            UiSounds.WindowOpened(); // a small window of its own, as the game's dialog windows
         }
 
         private static void CloseConfirm()
         {
             if (confirm == null) return;
+            UiSounds.WindowClosed();
             confirm.SetActive(false);
             UnityEngine.Object.Destroy(confirm);
             confirm = null;

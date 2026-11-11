@@ -335,7 +335,7 @@ namespace GK2DonkeyAPI
                     }
                     return;
                 }
-                Close(keep: true, back: false);
+                Close(keep: true, back: false, sound: false); // another page's journal open: the one opening is the sound
                 page = p;
                 p.HoldMountForPanel(); // picking a row shows a mount, Ride or Drive the cart makes it his
                 StepTrace.Mark("the last one closed, the mount held");
@@ -349,11 +349,12 @@ namespace GK2DonkeyAPI
                 GameWindowAside.TakeControls("the Mounts panel");
                 Plugin.Log.LogInfo($"Settings: the Mounts panel opened over {(overOptions ? "the options window" : GameWindowAside.UnderText)}.");
                 StepTrace.Mark("the window underneath set aside");
+                UiSounds.WindowOpened(); // as the game's windows (the Settings window's own win_open)
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Settings: the Mounts panel can't open (" + e.Message + "); the mount and its colours are still in the cfg.");
-                Close(keep: true);
+                Close(keep: true, sound: false);
             }
             finally
             {
@@ -561,7 +562,7 @@ namespace GK2DonkeyAPI
                 shown++;
                 string id = e.Id;
                 bool fake = e.Fake;
-                GameObject go = ui.OwnButton(listContent, "card " + id, e.Label, ListW - 8f - ScrollbarW, CardH, () => { if (!fake) { Select(id); Sounds.Audition(page?.MountPaper); } }, textLeft: IconPx + 14f, flat: true);
+                GameObject go = ui.OwnButton(listContent, "card " + id, e.Label, ListW - 8f - ScrollbarW, CardH, () => { if (!fake) { Select(id); Sounds.Audition(page?.MountPaper); } }, textLeft: IconPx + 14f, flat: true, sound: UiSounds.Kind.Cell);
                 var le = go.AddComponent<LayoutElement>();
                 le.preferredWidth = ListW - 8f - ScrollbarW;
                 le.preferredHeight = CardH;
@@ -884,7 +885,7 @@ namespace GK2DonkeyAPI
             foreach (var t in colourTabs)
             {
                 string key = t.Key;
-                GameObject go = ui.OwnButton(coloursTabs, "tab " + t.Name, t.Name, TabMaxW, TabH, () => ShowColourTab(key), flat: true);
+                GameObject go = ui.OwnButton(coloursTabs, "tab " + t.Name, t.Name, TabMaxW, TabH, () => ShowColourTab(key), flat: true, sound: UiSounds.Kind.Tab);
                 TextMeshProUGUI label = go.GetComponentInChildren<TextMeshProUGUI>(true);
                 float w = Mathf.Clamp(Mathf.Ceil(label.GetPreferredValues(t.Name).x) + 36f, TabMinW, TabMaxW);
                 UiKit.Rect(go, x, 0f, w, TabH);
@@ -1192,6 +1193,7 @@ namespace GK2DonkeyAPI
                 frames.Add((colour, frame));
                 UnityEngine.UI.Button swButton = b;
                 sw.GetComponent<GamepadNavigationItem>().SetCallbacks(null, null, () => swButton.onClick.Invoke());
+                UiSounds.Add(sw, UiSounds.Kind.Cell); // a palette square: as the game's item cells
             }
             refresh = () =>
             {
@@ -1425,6 +1427,7 @@ namespace GK2DonkeyAPI
             b.onClick.AddListener(() => ChoosePart(p));
             FocusFrame(go, lay.ColW, p.Height);
             go.GetComponent<GamepadNavigationItem>().SetCallbacks(null, null, () => ChoosePart(p));
+            UiSounds.Add(go, UiSounds.Kind.Cell); // a part's row: a list's cell
             float top = Mathf.Round((p.Height - FieldH) / 2f);
             p.Prev = Arrow(go.transform, "arrow prev", stepperX, top, left: true, () => Step(p, -1), out p.PrevIcon);
             // the field: a dark frame, the colour inside it, its name over it
@@ -1499,6 +1502,7 @@ namespace GK2DonkeyAPI
             b.onClick.AddListener(() => click());
             FocusFrame(go, ArrowW, FieldH);
             go.GetComponent<GamepadNavigationItem>().SetCallbacks(null, null, () => { if (b.interactable) click(); });
+            UiSounds.Add(go, UiSounds.Kind.Cell); // a palette slot: as the game's item cells
             return b;
         }
 
@@ -1741,6 +1745,7 @@ namespace GK2DonkeyAPI
             b.onClick.AddListener(() => click());
             FocusFrame(go, w, h);
             go.GetComponent<GamepadNavigationItem>().SetCallbacks(null, null, () => click());
+            UiSounds.Add(go, UiSounds.Kind.Button); // an arrow: as the game's arrow buttons
             return outer;
         }
 
@@ -1819,16 +1824,19 @@ namespace GK2DonkeyAPI
                 // colours-window shots of 2026-11-04, the box empty for each mount's first look, its picture already built)
                 nextPicture = 0f;
                 Plugin.Log.LogInfo($"Settings: the colours window is open for {builtFor} ({colourRows.Count} rows on its first tab of {colourTabs.Count}).");
+                UiSounds.WindowOpened(); // a window over the journal, as the game's smaller windows (UiSounds)
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Settings: the colours window can't open (" + e.Message + ").");
-                CloseColours(keep: true);
+                CloseColours(keep: true, sound: false);
             }
         }
 
-        private static void CloseColours(bool keep, bool reshow = true)
+        // reshow false: the journal closes with it, and its close is the sound
+        private static void CloseColours(bool keep, bool reshow = true, bool sound = true)
         {
+            if (colours != null && reshow && sound) UiSounds.WindowClosed();
             keptNamed.Clear();
             try
             {
@@ -2263,7 +2271,7 @@ namespace GK2DonkeyAPI
             if (lastPage != null && lastPage != page) lastPage.SavePicked(now: false); // a pick written to the cfg file once the picking pauses (MountSettingsPage.SelectMount)
             if (panel != null && (!Mount.IsGameReady || (!panel.activeSelf && colours == null && !OptionsWindow.IsOverPanel)))
             {
-                Close(keep: true, back: false); // the game left (a load, the main menu): nothing to go back to (the game window is forgotten)
+                Close(keep: true, back: false, sound: false); // the game left (a load, the main menu): nothing to go back to (the game window is forgotten)
                 return;
             }
             // the game's language changed under the journal (normal play can't: the game's Settings window doesn't open over
@@ -2485,7 +2493,8 @@ namespace GK2DonkeyAPI
             });
         }
 
-        private static void Close(bool keep, bool back = true)
+        // sound: the game's win_close (UiSounds), unless the game window under it closes with its own (Ride, Drive)
+        private static void Close(bool keep, bool back = true, bool sound = true)
         {
             bool wasOpen = panel != null;
             try { controls.CommitFields(); } catch (Exception e) { Plugin.Log.LogWarning("Settings: a name being typed could not be kept: " + e.Message); } // a name still being typed is kept
@@ -2565,6 +2574,7 @@ namespace GK2DonkeyAPI
             bool fromOptions = overOptions;
             overOptions = false;
             if (!wasOpen) return;
+            if (sound && Mount.IsGameReady && (back || !GameWindowAside.HasUnder)) UiSounds.WindowClosed();
             if (OptionsWindow.IsOverPanel) OptionsWindow.Discard(); // the options opened from the journal go with it (the game left)
             if (fromOptions && OptionsWindow.IsOpen)
             {

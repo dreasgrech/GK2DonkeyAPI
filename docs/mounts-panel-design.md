@@ -228,6 +228,34 @@ steps back like Escape. Items are re-collected whenever the list or the rows are
 first focus is the chosen mount's row; a focused item in a scroll view is scrolled into view. The search box is not
 a gamepad item (no on-screen keyboard). Our rows in the game's Settings window got the game's key arrays too.
 
+## Sounds (2026-11-11, the game's own)
+
+Read from the game's prefabs (the Addressables bundles, UnityPy; the window and button code only plays what the
+prefab names): `LazyWindow` plays its `openSoundId` in `ShowWindow` and its `closeSoundId` in `HideWindow` (only when
+it was shown). About 55 windows name `win_open` / `win_close`: the Settings window, Character, Map, Customization,
+Craft and its selection, Notes, Pause, Vendor, Zombie worker, the item count and the dialog windows among them; chest
+windows `chest_open` / `chest_close`; the bag in the Character window `bag_open` / `bag_close` (in code). `LazyButton`
+plays its `on*Sound` fields: buttons (283, the Close buttons, arrows, red text buttons) hover `gui_hover` and click
+`gui_click`; item cells and list entries hover `gui_hover_light` and click `gui_click`; tabs (Character, Tech tree,
+Building, Folio, Talents) hover `gui_hover_light` and click `tab_click`. A greyed button's own fields are empty: silent.
+With the gamepad a button's focus is its hover and Select its click (`SetCallbacksIntoGamepadNavigationItem`:
+`ForceOnEnter`, `ForceOnClick`). All are flat (2D) at the game's sound-effects volume, and `LazyAudio` holds back an
+id played a moment ago.
+
+Ours (`UiSounds.cs`): the journal, the colours window, the options window and its Defaults question play
+`win_open` / `win_close`; one sound per change of window (the journal giving way to the colours or the options and
+coming back is the other window's sound; closing the journal with the colours open is one close). Ride and Drive the
+cart from a journal opened over a game window: that window's own close is the sound, not ours too. The game left (a
+load, the main menu): silent. Every control we build carries a `UiSound` beside its `Selectable`: a button
+(`OwnButton`, the title bar's close, a switch, the colour arrows) the button's pair, a list entry (the journal's
+mounts, the options' sections, a dropdown's choices, a colour part's row, a palette square) the cell's, a colours tab
+the tab's. The mouse: pointer enter and click (the click counted only when the press found it live: a click may grey
+or rebuild it). Unity sends an enter to every parent the mouse newly enters too, and a colour part's row holds its
+arrows: only the control nearest the mouse plays, so the mouse onto an arrow from the row below is one hover, not
+the row's and the arrow's. The gamepad: `RowControls` plays the newly focused item's hover after a move it made, and the
+focused item's click before Select; our own refocus after a rebuild is silent. Sliders and text boxes make none (the
+game's make none either). An id the game no longer has is skipped with one warning.
+
 ## Swatches
 
 In the colours window a custom-colour row (a `PaletteColor` choice, `MountSettingsPage.Color`) is drawn by the panel

@@ -95,10 +95,14 @@ namespace GK2DonkeyAPI
             Dictionary<ConfigEntryBase, object> was = Snapshot(page);
             try
             {
+                int sounds0 = UiSounds.Played;
                 OptionsWindow.Open(page);
+                // counted at once: a frame on, the mouse resting where a button lands is its hover too
+                SelfTest.Check(UiSounds.Played == sounds0 + 1 && UiSounds.Last == UiSounds.WindowOpenId, $"opening it is the game's window sound, once ({UiSounds.Played - sounds0} played, last {UiSounds.Last})");
                 yield return SelfTest.Frames(2);
                 SelfTest.Check(OptionsWindow.IsShown && GameWindowAside.ControlsTaken, "the options window opens over the game and holds the controls");
                 if (!OptionsWindow.IsShown) yield break;
+                SelfTest.UiSoundChecks(OptionsWindow.TestRoot, "the options window");
                 SelfTest.Check(OptionsWindow.TestScale >= 0.5f, $"it fits the screen (scale {OptionsWindow.TestScale:0.##})");
                 // GK2 Mod Framework installed: the page is in its Mods menu, and its Settings button opens this window
                 if (!FrameworkLink.Installed) SelfTest.Info("GK2 Mod Framework isn't installed: its Mods menu check skipped");
@@ -262,10 +266,14 @@ namespace GK2DonkeyAPI
                     OptionsWindow.TestShowSection(ShownName(changed));
                     yield return SelfTest.Frames(1);
                     changed.Entry.BoxedValue = !(bool)changed.Entry.DefaultValue;
+                    int sounds1 = UiSounds.Played;
                     OptionsWindow.TestOpenConfirm();
+                    SelfTest.Check(UiSounds.Played == sounds1 + 1 && UiSounds.Last == UiSounds.WindowOpenId, $"the question opens with the game's window sound, once ({UiSounds.Played - sounds1} played, last {UiSounds.Last})");
                     yield return SelfTest.Frames(1);
                     bool asked = OptionsWindow.TestConfirmOpen;
+                    int sounds1b = UiSounds.Played;
                     OptionsWindow.TestStepBack(); // Escape: the question goes, nothing changes
+                    SelfTest.Check(UiSounds.Played == sounds1b + 1 && UiSounds.Last == UiSounds.WindowCloseId, $"and goes with the game's window sound, once ({UiSounds.Played - sounds1b} played, last {UiSounds.Last})");
                     yield return SelfTest.Frames(1);
                     SelfTest.Check(asked && !OptionsWindow.TestConfirmOpen && OptionsWindow.IsShown && !Equals(changed.Entry.BoxedValue, changed.Entry.DefaultValue),
                         $"Defaults asks first; a step back from the question keeps '{changed.Label}' as set and the window open");
@@ -280,7 +288,9 @@ namespace GK2DonkeyAPI
                 }
 
                 // a step back closes it into the game
+                int sounds2 = UiSounds.Played;
                 OptionsWindow.TestStepBack();
+                SelfTest.Check(UiSounds.Played == sounds2 + 1 && UiSounds.Last == UiSounds.WindowCloseId, $"closing it is the game's window sound, once ({UiSounds.Played - sounds2} played, last {UiSounds.Last})");
                 yield return SelfTest.Frames(2);
                 SelfTest.Check(!OptionsWindow.IsOpen && LazyWindowsStackController.ActiveWindow == null && MainGame.PlayerController.IsControlEnabledByType(TakenControlType.ByUI),
                     "a step back: closed into the game, the controls given back");

@@ -297,6 +297,7 @@ namespace GK2DonkeyAPI
             Action flip = () => SetValue(bd.Row, !(bd.Row.Entry.BoxedValue is bool on && on));
             b.onClick.AddListener(() => flip());
             NavItem(sw, flip);
+            UiSounds.Add(sw, UiSounds.Kind.Button);
             float kw = Mathf.Round(SwitchW / 2f);
             return () =>
             {
@@ -546,7 +547,7 @@ namespace GK2DonkeyAPI
             {
                 object v = r.ChoiceValues.GetValue(i);
                 float iw = w - 4f - UiKit.ScrollbarW - 10f;
-                GameObject c = ui.OwnButton(content, "choice " + i, Texts.Choice(r, i), iw, ChoiceH, () => { CloseDropdown(refocus: true); SetValue(r, v); }, textLeft: 8f, flat: true);
+                GameObject c = ui.OwnButton(content, "choice " + i, Texts.Choice(r, i), iw, ChoiceH, () => { CloseDropdown(refocus: true); SetValue(r, v); }, textLeft: 8f, flat: true, sound: UiSounds.Kind.Cell);
                 var le = c.AddComponent<LayoutElement>();
                 le.preferredWidth = iw;
                 le.preferredHeight = ChoiceH;
@@ -668,7 +669,12 @@ namespace GK2DonkeyAPI
             else if (Pressed(GameKey.Down) || Pressed(GameKey.DpadDown)) Move(nav, GUIDirection.Down);
             else if (!onValueRow && (Pressed(GameKey.Left) || Pressed(GameKey.DpadLeft))) Move(nav, GUIDirection.Left);
             else if (!onValueRow && (Pressed(GameKey.Right) || Pressed(GameKey.DpadRight))) Move(nav, GUIDirection.Right);
-            else if (!onValueRow && Pressed(GameKey.Select)) { LazyInput.ClearKeyDown(GameKey.Select); nav.SelectFocusedItem(); }
+            else if (!onValueRow && Pressed(GameKey.Select))
+            {
+                LazyInput.ClearKeyDown(GameKey.Select);
+                if (focused != null) focused.GetComponent<UiSound>()?.Pressed(); // the game's click, before the press greys or rebuilds it (UiSounds)
+                nav.SelectFocusedItem();
+            }
         }
 
         private static bool Pressed(GameKey k) => LazyInput.GetKeyDown(k);
@@ -676,8 +682,11 @@ namespace GK2DonkeyAPI
         private static void Move(GamepadNavigationController nav, GUIDirection dir)
         {
             foreach (GameKey k in new[] { GameKey.Up, GameKey.DpadUp, GameKey.Down, GameKey.DpadDown, GameKey.Left, GameKey.DpadLeft, GameKey.Right, GameKey.DpadRight }) LazyInput.ClearKeyDown(k);
+            GamepadNavigationItem from = nav.FocusedItem;
             nav.Navigate(dir);
-            UiKit.KeepInView(nav.FocusedItem);
+            GamepadNavigationItem to = nav.FocusedItem;
+            if (to != null && to != from) to.GetComponent<UiSound>()?.Focused(); // the game's hover on a move (UiSounds); our own refocus after a rebuild is silent
+            UiKit.KeepInView(to);
         }
     }
 }

@@ -446,6 +446,7 @@ namespace GK2DonkeyAPI
                 xc.fadeDuration = 0.05f;
                 b.colors = xc;
                 b.onClick.AddListener(() => onClose());
+                UiSounds.Add(btn, UiSounds.Kind.Button); // as the game's close buttons
             }
             return tt;
         }
@@ -534,8 +535,8 @@ namespace GK2DonkeyAPI
 
         // A button of our own: flat (a journal's row: a dark face with a faint edge, hover brightens, the chosen one
         // coloured by its window) or the game's dialog button face sliced to the size (a touch dark at rest so the hover
-        // shows), with the game's font.
-        internal GameObject OwnButton(Transform parent, string name, string text, float w, float h, Action onClick, float textLeft = 0f, bool flat = false)
+        // shows), with the game's font. sound: the game's sounds for its kind (UiSounds: a button, a list's cell, a tab).
+        internal GameObject OwnButton(Transform parent, string name, string text, float w, float h, Action onClick, float textLeft = 0f, bool flat = false, UiSounds.Kind sound = UiSounds.Kind.Button)
         {
             GameObject go = Node(name, parent, typeof(Image), typeof(UnityEngine.UI.Button), typeof(CanvasGroup));
             Rect(go, 0f, 0f, w, h);
@@ -590,6 +591,7 @@ namespace GK2DonkeyAPI
             UnityEngine.UI.Button pressed = b;
             item.SetCallbacks(null, null, () => { if (pressed.interactable) pressed.onClick.Invoke(); });
             item.focusFrame = FocusFrame(go.transform);
+            UiSounds.Add(go, sound);
             return go;
         }
 

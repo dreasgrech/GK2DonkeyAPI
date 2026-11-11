@@ -12,6 +12,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Sounds in the Mount Journal and the colours and options windows** (2026-11-11): they open and close with the
+  game's window sounds, and their buttons, lists and tabs click and hover like the game's, with the mouse or a
+  gamepad.
 - **A new colours window** (2026-11-10): no more colour dropdowns. Pick a part on the left and colour it from one
   palette on the right, or step through its colours with the arrows. Every colour has its name, in your language. Original is the part as the skin draws it. The
   lightness slider is always there, greyed out when it does nothing. The colours you already chose stay exactly as
@@ -88,6 +91,15 @@ For mod authors:
 
 Development:
 
+- **Our windows' sounds** (2026-11-11, docs/mounts-panel-design.md "Sounds"): the game's ids read from its prefabs
+  (`LazyWindow.openSoundId`/`closeSoundId`, `LazyButton.on*Sound`): `win_open`/`win_close` for windows, `gui_hover` +
+  `gui_click` for buttons, `gui_hover_light` + `gui_click` for list cells, `gui_hover_light` + `tab_click` for tabs.
+  New `UiSounds` (the plays, an id looked up once, a missing one skipped with one warning) and the `UiSound` component
+  on each control (`OwnButton` takes the kind; the gamepad's hover and click in `RowControls`). The journal's `Close`
+  and `CloseColours` take `sound` (one sound per change of window; Ride or Drive over a game window: the game's close
+  only, `GameWindowAside.HasUnder`). Self-tests: the panel and options tests check one sound per open and close, a
+  hover per kind, a greyed control silent and a tab's click (`SelfTest.UiSoundChecks`). `tools/ui-sounds-scan.py`
+  reads the ids from the prefabs again after a game update (in docs/release-checklist.md).
 - **Four changes from the user's list** (2026-11-10, docs/mounts-panel-design.md, docs/instances.md):
   - the colours window's two columns are balanced on each unit's first row as the mount and skin show it
     (`MountsPanel.TabColumns`): the custom colour and lightness rows a choice opens weigh nothing, so no value moves
