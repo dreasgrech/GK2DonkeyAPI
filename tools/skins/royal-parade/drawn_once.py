@@ -79,6 +79,67 @@ def trim_front(cloth):
     return out
 
 
+BACK_STRETCH_X = 60   # a plain column of the cloth (its highlight, its red, the bottom band's gold): stretched
+BACK_WIDEN = 2        # columns: the back edge (trim, outline, the rear fringe's end) moved this far back
+
+
+def widen_back(cloth):
+    """The cloth's back edge moved BACK_WIDEN columns back, column BACK_STRETCH_X drawn that many times more: behind
+    the cloth, 2-3 columns of the donkey's rump showed, and in walk 01, 04, 05 and 08 the hind leg's stride put its
+    outline's brown there where the other frames show the coat, a blink behind the cloth (the user, 2026-11-11: "in
+    some frames, near the tail, brown pixels are appearing"). Wider, it covers that strip in every frame; the
+    pattern in front of the column (the fleur, the folds) stays where it is."""
+    src = cloth.load()
+    out = Image.new("RGBA", cloth.size, (0, 0, 0, 0))
+    op = out.load()
+    w, h = cloth.size
+    for y in range(h):
+        for x in range(w):
+            c = src[x, y]
+            if not c[3]:
+                continue
+            if x < BACK_STRETCH_X:
+                op[x, y] = c
+            elif x == BACK_STRETCH_X:
+                for k in range(BACK_WIDEN + 1):
+                    op[x + k, y] = c
+            elif x + BACK_WIDEN < w:
+                op[x + BACK_WIDEN, y] = c
+    return out
+
+
+ROUND_ENDS = {41: 61, 42: 63, 43: 64}   # the last column of the cloth's top rows at the back: the Jester's corner
+ROUND_REGION = (58, 41, 55)             # the back corner repainted: from this column back, rows 41 to 55
+OUTLINE, TRIM, HIGHLIGHT = (0x3A, 0x0A, 0x12, 255), (0xE3, 0xA8, 0x2F, 255), (0xE2, 0x3A, 0x50, 255)
+
+
+def round_back(cloth):
+    """The cloth's back top corner rounded along the rump, a step in a column a row as the Jester's cloth (the user,
+    2026-11-11: "can we make the rump part of the cloth not as right angle and that it curves more with the donkey's
+    rump"; "we got the rump curve good with the jester skin"): its top rows end at ROUND_ENDS, and the corner is
+    repainted in the cloth's own layers, the outline on the outside of every step, the gold trim inside it, the pink
+    highlight under the gold where the edge faces up (as along the top)."""
+    out = cloth.copy()
+    op = out.load()
+    for y, end in ROUND_ENDS.items():
+        for x in range(end + 1, 96):
+            op[x, y] = (0, 0, 0, 0)
+    x0, y0, y1 = ROUND_REGION
+    solid = lambda x, y: 0 <= x < 96 and 0 <= y < 96 and op[x, y][3] > 0
+    open_ = lambda x, y: not solid(x, y)
+    region = [(x, y) for y in range(y0, y1 + 1) for x in range(x0, 96) if solid(x, y)]
+    edge = {p for p in region if open_(p[0], p[1] - 1) or open_(p[0] + 1, p[1]) or open_(p[0] + 1, p[1] - 1)}
+    trim = {p for p in region if p not in edge and ((p[0], p[1] - 1) in edge or (p[0] + 1, p[1]) in edge or (p[0] + 1, p[1] - 1) in edge)}
+    light = {p for p in region if p not in edge and p not in trim and (p[0], p[1] - 1) in trim}
+    for p in edge:
+        op[p] = OUTLINE
+    for p in trim:
+        op[p] = TRIM
+    for p in light:
+        op[p] = HIGHLIGHT
+    return out
+
+
 def swaying(cloth):
     """body@<frame>.png for the clips in SWAY: the cloth where stamp places body.png in that frame (stamp.body_move,
     by its columns), each of its hanging bits (shapes.hanging by hangs_free) swung a pixel across on a pendulum by its
@@ -126,7 +187,9 @@ def hug_back(placed, art, cols, key, dx, dy):
         want = tf[x + dx] + (top[x] - ts[x])   # the frame's back, as far above the cloth's top as on the standing frame
         now = top[x] + dy
         d = want - now
-        if not d:
+        # raised only: where the cloth lies a pixel over the back nothing of the donkey shows, and lowered at a single
+        # column (a 1-px dip of the back line) the cloth's top edge was notched (walk 08, the widened cloth, 2026-11-11)
+        if d >= 0:
             continue
         fx = x + dx
         band = [placed.get((fx, now + k)) for k in range(BAND)]
@@ -151,7 +214,7 @@ def make():
     text = open(os.path.join(SRC, "skin.cfg"), encoding="utf-8", newline="").read()
     with open(os.path.join(SRC, "skin.cfg"), "w", encoding="utf-8", newline="") as f:
         f.write(text.replace("name = Royal Parade", "name = Royal Parade (drawn once)", 1))
-    cloth = trim_front(part("bdy_static_left", False))
+    cloth = round_back(widen_back(trim_front(part("bdy_static_left", False))))
     cloth.save(os.path.join(SRC, "body.png"))
     swaying(cloth)
     for name, key in (("head", "bdy_static_left"), ("head_turn", "bdy_turn_left_03"),

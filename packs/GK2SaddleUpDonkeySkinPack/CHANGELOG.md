@@ -3,7 +3,9 @@
 ## Unreleased
 
 - **Royal Parade's saddle cloth sits on the back while walking** (2026-11-11): in three walk frames the donkey's coat
-  showed above the cloth's top (white with a light coat); the cloth now follows the back.
+  showed above the cloth's top (white with a light coat); the cloth now follows the back. Its back edge reaches two
+  pixels further over the rump, where the donkey's thigh line blinked brown behind it in some walk frames, and its
+  back corner curves with the rump, as the Jester's cloth does.
 - **Each skin's colour rows start with its biggest part** (2026-11-08): Royal Parade: Saddle cloth, Trim and fringe,
   Emblem, Crown, Jewels. Armored: Body armour, Skirt, Helmet, Plume, Brass. Hellfire: Horns, Lava cracks, Tail, Tail
   tip, Glowing eyes. Only the order changed; every saved colour stays.

@@ -118,8 +118,14 @@ Development:
 - **Royal Parade's cloth follows the back in the walk** (2026-11-11, the user's video with a Snow coat):
   `tools/skins/royal-parade/drawn_once.py` `hug_back` moves the cloth's top band (outline, gold trim, pink highlight)
   in each walk and lips frame to lie on the back as on the standing frame, the red under it growing or shrinking by as
-  much: walk 01, 07, 08 (the coat showed above the cloth, `stamp.py moves`: "below") and 04-06 ("above"). Only those
-  six frames changed in the pack (Donkey Skins pack CHANGELOG).
+  much: walk 01, 07, 08 (the coat showed above the cloth, `stamp.py moves`: "below"). Raised only: lowering where the
+  cloth lay a pixel over the back (04-06, and 08 once widened) showed nothing more and notched its top edge. Then
+  `widen_back`: the back edge (trim, outline, the rear fringe's end) moved 2 columns back, column 60 drawn three
+  times, so the rump strip behind the cloth (the donkey's Outline line moving with the stride, brown in walk 01, 04,
+  05, 08) is covered in every frame; 41 of the 44 frames changed (Donkey Skins pack CHANGELOG). Then `round_back`:
+  the back top corner cut along the rump as the Jester's cloth is (its top rows ending at 61, 63, 64), repainted in
+  the cloth's layers (outline outside each step, gold inside, the pink under the gold where it faces up); the cloth
+  off the body 3-17 pixels a frame where the square corner was 8-22.
 - **Measurement: a skin over the donkey against the donkey** (2026-11-11, Measurements group,
   `MeasureTests.SkinOffset`, BepInEx\GK2-skin-offset.tsv): for Royal Parade and Armored, every frame shown in the world
   and in the journal's picture, how far the skin's pixel grid sits from the donkey's on screen (art pixels across, up
