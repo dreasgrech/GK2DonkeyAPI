@@ -256,6 +256,36 @@ the row's and the arrow's. The gamepad: `RowControls` plays the newly focused it
 focused item's click before Select; our own refocus after a rebuild is silent. Sliders and text boxes make none (the
 game's make none either). An id the game no longer has is skipped with one warning.
 
+The window sounds come late, ours and the game's alike (the user, a table's window): `win_open` rises for 65 ms before
+its hit, `win_close` peaks at 96 ms, and every UI clip is `Streaming`. Ours play what the game plays, as late.
+
+## Modal, as the game's windows (2026-11-11)
+
+What a game window does that is modal (`LazyWindow.isModalWindow`; the zombie window, a table's, the pause menu,
+Settings), read from the game: joining `LazyWindowsStackController`'s stack makes `HasAnyModalWindowOpened` true, and
+then
+- `MainGame.OnWindowOpened` takes the controls (`ByUI`) and calls its private `PauseGame` (the update manager stops:
+  the world, its systems, the fights; `Time.timeScale` is left alone) unless the window is the fishing or credits one;
+  `OnWindowClosed` gives them back and calls `UnpauseGame` when no modal window is left;
+- `InWorldSfxFilterController` (a driver's `LateUpdate`) asks `ShouldEnable` every frame (in the game, a modal window
+  open, not the fishing minigame) and fades the mixer's exposed `inworld_sfx_filter` to 0 (on) or -80 (off) over
+  0.12 s: the rain, the weather and the world's effects muffled, the UI's own sounds not (they stand out);
+- the window's prefab draws its `BgShadow` first: full-screen black at 40%, taking the clicks.
+
+Ours aren't in that stack (they are not `LazyWindow`s; making them so would hand their input, Escape and sorting to the
+game's window code), so each part is the game's own, called for ours:
+- the pause: `GameWindowAside.TakeControls`, re-asserted every tick with the controls, also calls the game's
+  `PauseGame` when the game runs (a game popup over ours closing unpauses it: paused again the next tick);
+  `ReleaseControls` calls `UnpauseGame` only if ours paused it and no game window still wants it (opened over the
+  Settings window, that window's pause stands; Ride or Drive closes it, and its own close unpauses; the fishing and
+  credits windows want none, as the game's rule, so closing ours over them runs the game again). In the game only.
+  Ride and Drive close the windows before the mount is called, so it comes with the game running;
+- the muffle: a postfix on the game's `InWorldSfxFilterController.ShouldEnable` says yes while ours is open in the
+  game and not covered by a game window; the fade, the mixer and the fishing exception stay the game's;
+- the dim: `UiKit.Dim` behind each of our windows, its colour, sprite and material read from the Settings window's own
+  `BgShadow` (the object isn't copied: it could bring components aimed at that window), taking the clicks. One window
+  is shown at a time, so one dim.
+
 ## Swatches
 
 In the colours window a custom-colour row (a `PaletteColor` choice, `MountSettingsPage.Color`) is drawn by the panel

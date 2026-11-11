@@ -29,7 +29,7 @@ dev Flight FlightSurvey MapSurvey DrawnGround PlayerPhysicalBody_LockMovement_Pa
 
 warned the safe spots (never lost, docs/never-lost.md): SafeSpots PlayerController_SetPosition_Patch
 warned the sounds: Sounds SoundBank AnimationComponentBase_OnAnimationStepCompleted_Patch AnimationComponentBase_PlaySound_Patch
-warned the Mounts panel and the options window (and the parts they share): MountsPanel OptionsWindow UiKit RowControls GameWindowAside KeyCapture UiSounds
+warned the Mounts panel and the options window (and the parts they share): MountsPanel OptionsWindow UiKit RowControls GameWindowAside KeyCapture UiSounds InWorldSfxFilterController_ShouldEnable_Patch
 warned the options button in the game's Settings window: SettingsButtons
 warned the translations (docs/localization.md, the game's language read when our windows draw): Texts
 

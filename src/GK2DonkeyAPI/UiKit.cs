@@ -261,6 +261,40 @@ namespace GK2DonkeyAPI
             return true;
         }
 
+        // The game's dim behind a window (2026-11-11, the user: "act the same way like the game ones"): every game window's
+        // prefab has a BgShadow first, a full-screen black at 40% taking the clicks (read from the prefabs: the Settings
+        // window's, the zombie window's, the same). Its look is read from the Settings window's own; the object isn't copied
+        // (a copy would bring any component the game hangs on it, listeners aimed at that window included). Behind our
+        // window's face, as wide as any screen at any of our scales; only the window shown draws it, so one dim at a time.
+        private const float DimSize = 6000f; // canvas units (the canvas is 1280x720): the screen at our smallest scale and more
+        private static readonly Color DimFallback = new Color(0f, 0f, 0f, 0.4f);
+
+        private void Dim(Transform window)
+        {
+            Image own = Node("dim", window, typeof(Image)).GetComponent<Image>();
+            Image game = Settings != null ? Settings.transform.Find("BgShadow")?.GetComponent<Image>() : null;
+            if (game != null)
+            {
+                own.color = game.color;
+                own.sprite = game.sprite;
+                own.material = game.material != null && game.material != Graphic.defaultGraphicMaterial ? game.material : null;
+            }
+            else
+            {
+                own.color = DimFallback;
+                if (!dimSaid) { dimSaid = true; Plugin.Log.LogInfo("Settings: the Settings window has no BgShadow to read; our windows' dim is the game's 40% black as read on 2026-11-11."); }
+            }
+            own.raycastTarget = true; // as the game's: the world and the HUD under it take no clicks
+            var drt = (RectTransform)own.transform;
+            drt.anchorMin = drt.anchorMax = new Vector2(0.5f, 0.5f);
+            drt.pivot = new Vector2(0.5f, 0.5f);
+            drt.anchoredPosition = Vector2.zero;
+            drt.sizeDelta = new Vector2(DimSize, DimSize);
+            own.transform.SetAsFirstSibling();
+        }
+
+        private static bool dimSaid;
+
         // A window of our make: the game's frame, a dark face inside it, its own canvas above the HUD; centred, hidden.
         internal GameObject Window(string name, float w, float h, int sorting)
         {
@@ -278,6 +312,7 @@ namespace GK2DonkeyAPI
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = Vector2.zero;
             rt.sizeDelta = new Vector2(w, h);
+            Dim(go.transform);
             // the face: the frame sprite's centre is see-through (the game draws its window face apart, inside the frame:
             // BackMask, 13 in), so a face of ours inset as far, under the frame, never past its corners (2026-10-27)
             Image face = Node("face", go.transform, typeof(Image)).GetComponent<Image>();

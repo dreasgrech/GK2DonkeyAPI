@@ -54,6 +54,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             if (Looks.Find(mecha) != null) looks.Add(mecha);
 
             yield return Settle(15f);
+            yield return LooksSettled(10f);
             // Live.Textures counts the skin sheets too: a sheet an earlier scenario still held and let go during this one
             // read as a colour texture gone (50 -> 49, Larry's sheet from the garbage survey's picking, 2026-11-09). The
             // colour textures are compared alone, and the sheets may only be fewer at the end (the crowd's let go).
@@ -144,6 +145,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             PutKeeper(home, homeFacing);
             yield return Seconds(2f);
             yield return Settle(15f);
+            yield return LooksSettled(10f);
             Check(Mount.All.Count == inst0, $"crowd gone: instances back ({inst0} -> {Mount.All.Count})");
             int views1 = WorldViews();
             if (views1 != views0)
@@ -158,6 +160,30 @@ namespace GK2DonkeyAPI.IntegrationTests
             Check(Looks.SheetCount <= sheets0, $"crowd gone: no skin sheet more than at the start ({sheets0} -> {Looks.SheetCount})");
             Check(Live.LampObjects == lamp0 && Live.Meshes == mesh0, $"crowd gone: lamps and meshes back ({lamp0}/{mesh0} -> {Live.LampObjects}/{Live.Meshes})");
             Check(Live.CargoHolders == cargo0, $"crowd gone: cargo holders back ({cargo0} -> {Live.CargoHolders})");
+        }
+
+        // Every world mount with a view wearing the look it wants, built and put on (Looks.Rig.Settling). A look let go
+        // while its mount slept and built again when it woke reaches the counters some frames after the levels settle: the
+        // colour textures read 60 -> 58 with the world's snail look loading again just after the count (2026-11-11).
+        private static IEnumerator LooksSettled(float timeout)
+        {
+            yield return Until(() =>
+            {
+                foreach (Mount.Instance i in Mount.All) if (i.HasView && i.LooksRig != null && i.LooksRig.Settling) return false;
+                return true;
+            }, timeout);
+            if (!waited)
+            {
+                var still = new StringBuilder();
+                foreach (Mount.Instance i in Mount.All)
+                {
+                    if (!i.HasView || i.LooksRig == null || !i.LooksRig.Settling) continue;
+                    if (still.Length > 0) still.Append("; ");
+                    still.Append(i.FullId).Append(" (").Append(i.tier).Append(": ").Append(i.LooksRig.TestSettleReport).Append(')');
+                }
+                Info($"the world's looks still settling after {timeout} s, counted as they are: {still}");
+            }
+            yield return Frames(2); // put on: the colours made the frame after
         }
 
         private static int WorldViews()

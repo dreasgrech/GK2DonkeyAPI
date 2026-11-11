@@ -101,6 +101,7 @@ namespace GK2DonkeyAPI
                 SelfTest.Check(UiSounds.Played == sounds0 + 1 && UiSounds.Last == UiSounds.WindowOpenId, $"opening it is the game's window sound, once ({UiSounds.Played - sounds0} played, last {UiSounds.Last})");
                 yield return SelfTest.Frames(2);
                 SelfTest.Check(OptionsWindow.IsShown && GameWindowAside.ControlsTaken, "the options window opens over the game and holds the controls");
+                SelfTest.Check(MainGame.IsGamePaused && GameWindowAside.PausedByUs && SelfTest.WorldMuffled(), $"and the game is paused and the world's sounds muffled under it, as under the game's windows (paused {MainGame.IsGamePaused}, by ours {GameWindowAside.PausedByUs})");
                 if (!OptionsWindow.IsShown) yield break;
                 SelfTest.UiSoundChecks(OptionsWindow.TestRoot, "the options window");
                 SelfTest.Check(OptionsWindow.TestScale >= 0.5f, $"it fits the screen (scale {OptionsWindow.TestScale:0.##})");
@@ -294,6 +295,7 @@ namespace GK2DonkeyAPI
                 yield return SelfTest.Frames(2);
                 SelfTest.Check(!OptionsWindow.IsOpen && LazyWindowsStackController.ActiveWindow == null && MainGame.PlayerController.IsControlEnabledByType(TakenControlType.ByUI),
                     "a step back: closed into the game, the controls given back");
+                SelfTest.Check(!MainGame.IsGamePaused && !GameWindowAside.PausedByUs && !SelfTest.WorldMuffled(), $"and the game runs again, the world's sounds clear (paused {MainGame.IsGamePaused})");
             }
             finally
             {

@@ -637,6 +637,24 @@ namespace GK2DonkeyAPI
             return false;
         }
 
+        // The game's own answer whether the world's sounds are muffled now (InWorldSfxFilterController.ShouldEnable, our
+        // patch included), and the mixer filter's level (0 on, -80 off; it fades over 0.12 s).
+        internal static bool WorldMuffled()
+        {
+            try { return (bool)HarmonyLib.AccessTools.Method(typeof(InWorldSfxFilterController), "ShouldEnable").Invoke(null, null); }
+            catch (Exception e) { Info("the game's muffle answer couldn't be read: " + e.Message); return false; }
+        }
+
+        internal static float MufflerLevel()
+        {
+            try
+            {
+                UnityEngine.Audio.AudioMixer mx = LazyAudio.AudioMixer;
+                return mx != null && mx.GetFloat(InWorldSfxFilterController.MixerParameter, out float v) ? v : float.NaN;
+            }
+            catch { return float.NaN; }
+        }
+
         // A window's controls make the game's sounds (UiSounds, 2026-11-11): the mouse over one of each kind is that kind's
         // hover, a greyed one is silent, a press and click on a tab (the one shown: nothing changes) is the tab click.
         internal static void UiSoundChecks(Transform root, string what)
@@ -3385,12 +3403,25 @@ namespace GK2DonkeyAPI
             try
             {
                 int sounds0 = UiSounds.Played;
+                bool pausedBefore = MainGame.IsGamePaused;
                 MountsPanel.Open(page, toggle: false);
                 // counted at once: a frame on, the mouse resting where a button lands is its hover too
                 Check(UiSounds.Played == sounds0 + 1 && UiSounds.Last == UiSounds.WindowOpenId, $"opening it is the game's window sound, once ({UiSounds.Played - sounds0} played, last {UiSounds.Last})");
                 yield return Frames(2);
                 Check(MountsPanel.IsOpen, "the panel opens over the game from a page with a Mount row");
                 if (!MountsPanel.IsOpen) yield break;
+                // as the game's modal windows (2026-11-11): the game paused, the world's sounds muffled, the world dimmed
+                Check(MainGame.IsGamePaused, $"the game is paused under it, as under the game's windows (it was {(pausedBefore ? "paused already" : "running")}; ours paused it: {GameWindowAside.PausedByUs})");
+                Check(WorldMuffled(), "the world's sounds are muffled under it (the game's InWorldSfxFilterController says so)");
+                yield return Seconds(0.3f);
+                float filter = MufflerLevel();
+                Check(filter > -5f, $"and the game's mixer filter faded in ({InWorldSfxFilterController.MixerParameter} {filter:0.#}, on at 0, off at -80)");
+                // our nodes carry the window's name before their own ("GK2DonkeyAPI mounts panel dim"): the first child by its end
+                Transform jroot = MountsPanel.TestRoot(coloursWindow: false);
+                Transform dim = jroot != null && jroot.childCount > 0 && jroot.GetChild(0).name.EndsWith("dim", StringComparison.Ordinal) ? jroot.GetChild(0) : null;
+                UnityEngine.UI.Image dimImg = dim != null ? dim.GetComponent<UnityEngine.UI.Image>() : null;
+                Check(dimImg != null && dimImg.isActiveAndEnabled && dimImg.color.a > 0.2f && dimImg.raycastTarget && dim.GetSiblingIndex() == 0,
+                    $"the world behind it is dimmed, as behind the game's windows (the dim {(dimImg != null ? $"alpha {dimImg.color.a:0.##}, first child {dim.GetSiblingIndex() == 0}" : "missing")})");
                 UiSoundChecks(MountsPanel.TestRoot(coloursWindow: false), "the journal");
                 var m = MountsPanel.TestMeasure();
                 Check(m.Scale >= 0.5f && m.W * m.Scale <= m.RoomW + 1f && m.H * m.Scale <= m.RoomH + 1f, $"it fits the screen ({m.W:0}x{m.H:0} at {m.Scale:0.##} in {m.RoomW:0}x{m.RoomH:0})");
@@ -3701,6 +3732,8 @@ namespace GK2DonkeyAPI
                 int sounds3 = UiSounds.Played;
                 MountsPanel.TestClose(keep: true);
                 Check(UiSounds.Played == sounds3 + 1 && UiSounds.Last == UiSounds.WindowCloseId, $"closing the journal is the game's window sound, once ({UiSounds.Played - sounds3} played, last {UiSounds.Last})");
+                Check(MainGame.IsGamePaused == pausedBefore && !GameWindowAside.PausedByUs && WorldMuffled() == LazyWindowsStackController.HasAnyModalWindowOpened,
+                    $"closed: the game {(MainGame.IsGamePaused ? "paused" : "running")} as before ({(pausedBefore ? "paused" : "running")}), the world's sounds as the game's windows say");
                 yield return Frames(2);
                 Check(!MountsPanel.IsOpen && string.Equals(page.MountChosen ?? MountCatalog.DonkeyId, was, StringComparison.OrdinalIgnoreCase) && meNow?.Skin == wore, $"Done with {other ?? "the same mount"} picked: the mount is {was} again, the companion still wears \"{meNow?.Skin}\"");
                 // the commit below makes the pick his for two frames: with his mount pulling a cart, the pick must pull it

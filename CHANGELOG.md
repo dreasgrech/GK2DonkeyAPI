@@ -15,6 +15,9 @@ For players:
 - **Sounds in the Mount Journal and the colours and options windows** (2026-11-11): they open and close with the
   game's window sounds, and their buttons, lists and tabs click and hover like the game's, with the mouse or a
   gamepad.
+- **The Mount Journal pauses the game like the game's windows** (2026-11-11): while it, the colours window or the
+  options window is open, the game is paused, the rain and other world sounds are muffled, and the world behind is
+  dimmed, as with a table's or a zombie's window.
 - **A new colours window** (2026-11-10): no more colour dropdowns. Pick a part on the left and colour it from one
   palette on the right, or step through its colours with the arrows. Every colour has its name, in your language. Original is the part as the skin draws it. The
   lightness slider is always there, greyed out when it does nothing. The colours you already chose stay exactly as
@@ -100,6 +103,16 @@ Development:
   only, `GameWindowAside.HasUnder`). Self-tests: the panel and options tests check one sound per open and close, a
   hover per kind, a greyed control silent and a tab's click (`SelfTest.UiSoundChecks`). `tools/ui-sounds-scan.py`
   reads the ids from the prefabs again after a game update (in docs/release-checklist.md).
+- **Our windows modal as the game's** (2026-11-11, docs/mounts-panel-design.md "Modal"): the game's own parts, called
+  for ours (they aren't in its window stack): `MainGame.PauseGame`/`UnpauseGame` held with the controls in
+  `GameWindowAside` (`PausedByUs`; let go only when no game window wants the pause), a postfix on
+  `InWorldSfxFilterController.ShouldEnable` for the muffle (`InWorldSfxFilterController_ShouldEnable_Patch`, sorted in
+  game-code.txt), and `UiKit.Dim` behind each window with the Settings window's `BgShadow` look. Self-tests: the panel
+  and options tests check paused, muffled (the game's answer and the mixer level) and dimmed while open, and the game as
+  before after closing.
+- **The crowd test waits for the world's looks** (2026-11-11): its counters read colour textures 60 -> 58 because the
+  world's own snail look was being built again (its mount woke when the keeper came back) just as they were counted.
+  Before both counts it now waits until every world mount with a view wears its look (`Looks.Rig.Settling`).
 - **Four changes from the user's list** (2026-11-10, docs/mounts-panel-design.md, docs/instances.md):
   - the colours window's two columns are balanced on each unit's first row as the mount and skin show it
     (`MountsPanel.TabColumns`): the custom colour and lightness rows a choice opens weigh nothing, so no value moves

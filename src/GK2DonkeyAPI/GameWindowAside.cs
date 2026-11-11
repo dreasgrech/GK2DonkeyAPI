@@ -171,6 +171,7 @@ namespace GK2DonkeyAPI
             {
                 if (!controlsTaken) Plugin.Log.LogInfo($"Settings: {who} could not take the controls ({e.Message}); the game's keys work under it.");
             }
+            HoldPause(who);
         }
 
         internal static void ReleaseControls(string who)
@@ -186,7 +187,83 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogWarning($"Settings: {who} could not give the controls back ({e.Message}).");
             }
+            LetPauseGo(who);
         }
+
+        // The game paused while ours is open, as its own modal windows do (2026-11-11, the user: "act the same way like the
+        // game ones"): MainGame pauses in its OnWindowOpened when a modal window joins its stack (the world, its systems,
+        // fights) and unpauses in OnWindowClosed when none is left; ours aren't in that stack, so the same two methods of
+        // the game's are called here. Held with the controls (re-asserted each tick: a game popup over ours closing
+        // unpauses the game); let go only if we paused it and no game window still wants it (a window ours opened over
+        // keeps its own pause; Ride or Drive closes those, and their own close unpauses). In the game only, as the game's.
+        internal static bool PausedByUs { get; private set; }
+        private static Action<MainGame> pauseGame, unpauseGame;
+        private static bool pauseLooked, pauseSaid;
+
+        private static bool PauseCalls()
+        {
+            if (!pauseLooked)
+            {
+                pauseLooked = true;
+                try
+                {
+                    pauseGame = HarmonyLib.AccessTools.MethodDelegate<Action<MainGame>>(HarmonyLib.AccessTools.Method(typeof(MainGame), "PauseGame"));
+                    unpauseGame = HarmonyLib.AccessTools.MethodDelegate<Action<MainGame>>(HarmonyLib.AccessTools.Method(typeof(MainGame), "UnpauseGame"));
+                }
+                catch (Exception e)
+                {
+                    pauseGame = unpauseGame = null;
+                    Plugin.Log.LogWarning($"Settings: the game's pause isn't found ({e.Message}); the game runs on under our windows.");
+                }
+            }
+            return pauseGame != null && unpauseGame != null;
+        }
+
+        private static void HoldPause(string who)
+        {
+            try
+            {
+                MainGame g = MainGame.Instance;
+                if (g == null || g.gameState != MainGame.GameState.InGame || MainGame.IsGamePaused || !PauseCalls()) return;
+                pauseGame(g);
+                PausedByUs = true;
+            }
+            catch (Exception e)
+            {
+                if (pauseSaid) return;
+                pauseSaid = true;
+                Plugin.Log.LogWarning($"Settings: {who} could not pause the game ({e.Message}).");
+            }
+        }
+
+        private static void LetPauseGo(string who)
+        {
+            if (!PausedByUs) return;
+            PausedByUs = false;
+            try
+            {
+                MainGame g = MainGame.Instance;
+                if (g == null || !MainGame.IsGamePaused || GameWantsPause() || !PauseCalls()) return;
+                unpauseGame(g);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Settings: {who} could not unpause the game ({e.Message}).");
+            }
+        }
+
+        // A game window still open that keeps the game paused: a modal one, but not the fishing or the credits window (the
+        // game never pauses for those, MainGame.OnWindowOpened): ours opened over the fishing window and paused the game,
+        // so closing ours runs it again.
+        private static bool GameWantsPause()
+        {
+            if (!LazyWindowsStackController.HasAnyModalWindowOpened) return false;
+            LazyWidgetBase top = LazyWindowsStackController.ActiveWindow;
+            return !(top is UIFishingWindow) && !(top is UICreditsWindow);
+        }
+
+        // Ours open in the game: the world's sounds muffled, as under the game's modal windows (the patch below).
+        internal static bool OursOpenInGame => controlsTaken && !Covered;
 
         // Escape (or the gamepad's Back, the game windows' close too) pressed this frame, for the window shown: true once a
         // frame, so one press is one step back however many of ours tick; never while a key is being set (KeyCapture
@@ -198,6 +275,22 @@ namespace GK2DonkeyAPI
             escapeFrame = Time.frameCount;
             try { LazyInput.ClearKeyDown(GameKey.InGameMenu); LazyInput.ClearKeyDown(GameKey.Back); } catch { }
             return true;
+        }
+    }
+
+    // The world's sounds muffled under our windows as under the game's (rain, weather, the world's effects; the UI's own
+    // sounds aren't in that mixer group): the game's InWorldSfxFilterController fades its mixer filter in each frame while
+    // ShouldEnable says so, which is in the game with a modal window in its stack (2026-11-11). Ours aren't in that stack:
+    // it says so for ours too. The fade, the mixer and the fishing exception stay the game's. Covered by a game window, the
+    // game's own answer stands.
+    [HarmonyLib.HarmonyPatch(typeof(InWorldSfxFilterController), "ShouldEnable")]
+    internal static class InWorldSfxFilterController_ShouldEnable_Patch
+    {
+        private static void Postfix(ref bool __result)
+        {
+            if (__result || !GameWindowAside.OursOpenInGame) return;
+            MainGame g = MainGame.Instance;
+            if (g != null && g.gameState == MainGame.GameState.InGame) __result = true;
         }
     }
 }

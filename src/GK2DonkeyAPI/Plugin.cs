@@ -458,6 +458,7 @@ namespace GK2DonkeyAPI
             typeof(SaveSystem_Remove_Patch),
             typeof(PlayerPhysicalBody_LockMovement_Patch), // the flying experiment: a movement unlock keeps a flying body kinematic (Flight.cs)
             typeof(PlayerController_SetPosition_Patch), // never lost: a placement of the keeper starts the fall watchdog's clocks anew (SafeSpots.cs)
+            typeof(InWorldSfxFilterController_ShouldEnable_Patch), // the world muffled under our windows as under the game's (GameWindowAside.cs)
             typeof(LazyTerrainMeshCollection_Runtime_StripCpuMeshData_Patch), // the flying experiment: the drawn ground's tiles (DrawnGround.cs)
             typeof(LazyTerrain_Awake_Patch), typeof(LazyTerrain_OnDestroy_Patch), // and its index, kept as the terrains come and go
         };
