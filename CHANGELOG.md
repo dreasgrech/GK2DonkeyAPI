@@ -12,6 +12,11 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Skins drawn over the donkey sit exactly on it** (2026-11-11): Royal Parade, Armored and the other skins over the
+  donkey were drawn a sixth of a pixel too low, which showed thin slivers of the donkey at their top edges in the
+  colours window (a white line in Royal Parade's cloth corners, a brown one under Armored's collar strap). The Mount
+  Journal's and the colours window's pictures are drawn on the mount's own pixel grid, so no thin line of the coat
+  under a skin shows at its edges in some frames.
 - **Sounds in the Mount Journal and the colours and options windows** (2026-11-11): they open and close with the
   game's window sounds, and their buttons, lists and tabs click and hover like the game's, with the mouse or a
   gamepad.
@@ -115,6 +120,22 @@ Development:
   in each walk and lips frame to lie on the back as on the standing frame, the red under it growing or shrinking by as
   much: walk 01, 07, 08 (the coat showed above the cloth, `stamp.py moves`: "below") and 04-06 ("above"). Only those
   six frames changed in the pack (Donkey Skins pack CHANGELOG).
+- **Measurement: a skin over the donkey against the donkey** (2026-11-11, Measurements group,
+  `MeasureTests.SkinOffset`, BepInEx\GK2-skin-offset.tsv): for Royal Parade and Armored, every frame shown in the world
+  and in the journal's picture, how far the skin's pixel grid sits from the donkey's on screen (art pixels across, up
+  and along the view), with the frame's trim offset and the overlay's local position: the user's slivers of a quarter
+  pixel at the cloth's corners and under Armored's collar strap, measured before any fix. Found: the pixel grids
+  line up across (the canvas origins 0.051 apart is the frame's trim fraction, as the donkey's own pixels are), and
+  the skin sat 0.16 art px too low on screen in every frame, in the world and the journal alike: `OverLift` along the
+  part's facing under the 53-degree camera. The over skin's lift now runs along the view (`Follow(..., alongView:
+  true)`, as the front layer's), the same depth gap with nothing moved on screen; the measurement reports the grids'
+  offset (0: on it). Then, with the grids on each other (0 in the world, the journal and the colours window) and every
+  picture sampled by point, the colours window's saved pictures (the measurement writes them,
+  BepInEx\GK2-skin-offset\) showed the coat under Armored as runs of one picture pixel at every third column in walk
+  03, 05 and 08: the picture's pixel centres on the art pixels' edges (Detail 3, the camera framed on the drawn bounds
+  and moved by half pixels), where the two layers rounded apart. `PreviewStage.SnapToArt` moves the camera before each
+  render so the donkey's art pixel edges fall on the picture's pixel edges (`PreviewStage.CanvasWorld`, the
+  measurement's too).
 - **The crowd test waits for the world's looks** (2026-11-11): its counters read colour textures 60 -> 58 because the
   world's own snail look was being built again (its mount woke when the keeper came back) just as they were counted.
   Before both counts it now waits until every Active world mount wears its look (`Looks.Rig.Settling`; an Idle view

@@ -2032,6 +2032,7 @@ namespace GK2DonkeyAPI
         internal static void TestSelect(string id) => Select(id);
         internal static bool TestDriveShown => driveButton != null && driveButton.activeSelf;
         internal static Texture TestPicture => picture != null && picture.gameObject.activeSelf ? picture.texture : null;
+        internal static Texture TestShownPicture => ShownPicture() != null && ShownPicture().gameObject.activeSelf ? ShownPicture().texture : null; // the colours window's when it is open (MeasureTests.SkinOffset)
         internal static bool TestColourGroup(string heading) => colourGroups.Exists(g => g.Group == heading);
         internal static string TestColourGroups()
         {

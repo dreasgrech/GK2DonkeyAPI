@@ -129,6 +129,199 @@ namespace GK2DonkeyAPI
             SelfTest.Info($"lamp framing: {lines.Count - 1} measurement(s) in BepInEx\\GK2-lamp-framing.tsv; the skin, the mount and every lantern setting back as they were");
         }
 
+        // A skin drawn over the donkey (layer = over) against the donkey under it, on screen, in art pixels (the user,
+        // 2026-11-11: a sliver of the coat in the corners of Royal Parade's cloth and a brown line under Armored's collar
+        // strap in the colours window, each about a quarter of an art pixel; the art itself has no such pixels). For every
+        // frame shown: where the skin's canvas pixel (0, 0) lands against the donkey's own, across and up the screen
+        // and along the view, with the game frame's trim offset (Looks.Rig.Follow adds its fractions) and the overlay's
+        // local position. Two places: a donkey in the world under the game's camera, walking, and the Mount Journal's
+        // picture (the paper, under the stage's camera). BepInEx\GK2-skin-offset.tsv.
+        internal static IEnumerator SkinOffset()
+        {
+            var lines = new List<string> { "where\tskin\tframe\tflip\tpixel grid off across (art px)\tpixel grid off up (art px)\tcanvas origin across\tcanvas origin up\talong the view (art px)\ttrim offset (x y)\toverlay local (x y z)\tpart sprite rect (w h)\tppu\tthe donkey's atlas sampling\tthe skin sheet's sampling\tthe material / shader" };
+            var seen = new HashSet<string>();
+            var worst = new Dictionary<string, (float A, float U)>();
+            string[] skins = { "saddleup-donkey-skins.royal-parade", "saddleup-donkey-skins.armored" };
+            var saved = new HashSet<string>();
+            string shots = Path.Combine(Paths.BepInExRootPath, "GK2-skin-offset");
+            try { Directory.CreateDirectory(shots); } catch { }
+
+            void Measure(string where, string skin, SpriteRenderer part, SpriteRenderer ov, Quaternion camRot)
+            {
+                if (part == null || !part || ov == null || !ov || !ov.enabled || part.sprite == null || ov.sprite == null) return;
+                string key = where + "|" + skin + "|" + part.sprite.name + "|" + part.flipX;
+                if (seen.Contains(key)) return;
+                if (!PreviewStage.CanvasWorld(part, new Vector2(0f, 0f), out Vector3 p0) || !PreviewStage.CanvasWorld(part, new Vector2(1f, 0f), out Vector3 p1)
+                    || !PreviewStage.CanvasWorld(part, new Vector2(0f, 1f), out Vector3 p2) || !PreviewStage.CanvasWorld(ov, new Vector2(0f, 0f), out Vector3 o0))
+                {
+                    if (seen.Add(key + "|unread")) SelfTest.Info($"skin offset: {where} {skin} {part.sprite.name}: a sprite's mesh couldn't be read");
+                    return;
+                }
+                seen.Add(key);
+                Vector3 right = camRot * Vector3.right, up = camRot * Vector3.up, fwd = camRot * Vector3.forward;
+                Vector3 d = o0 - p0;
+                float ax = Vector3.Dot(p1 - p0, right), uy = Vector3.Dot(p2 - p0, up);
+                float across = Mathf.Abs(ax) > 1e-6f ? Vector3.Dot(d, right) / ax : float.NaN;
+                float upward = Mathf.Abs(uy) > 1e-6f ? Vector3.Dot(d, up) / uy : float.NaN;
+                float pxWorld = (p1 - p0).magnitude;
+                float along = pxWorld > 1e-6f ? Vector3.Dot(d, fwd) / pxWorld : float.NaN;
+                Vector2 trim = Vector2.zero;
+                try { trim = part.sprite.textureRectOffset; } catch { }
+                // the donkey's own pixels sit at its trim offset's fraction on its canvas (the first run, 2026-11-11: the
+                // canvas origins 0.051 across apart, exactly the fraction): the grids' offset is the origins' less it
+                float gridAcross = across - (trim.x - Mathf.Floor(trim.x)), gridUp = upward - (trim.y - Mathf.Floor(trim.y));
+                Vector3 lp = ov.transform.localPosition;
+                lines.Add(string.Join("\t", where, skin, part.sprite.name, part.flipX ? "flipped" : "-", gridAcross.ToString("0.###"), gridUp.ToString("0.###"),
+                    across.ToString("0.###"), upward.ToString("0.###"), along.ToString("0.###"), $"{trim.x:0.###} {trim.y:0.###}", $"{lp.x:0.#####} {lp.y:0.#####} {lp.z:0.#####}",
+                    $"{part.sprite.rect.width:0} {part.sprite.rect.height:0}", part.sprite.pixelsPerUnit.ToString("0.##"),
+                    // how each picture is sampled: a smoothed one blends a shown pixel with the hidden one beside it
+                    $"{part.sprite.texture.filterMode} {part.sprite.texture.width}x{part.sprite.texture.height} mips {part.sprite.texture.mipmapCount}",
+                    $"{ov.sprite.texture.filterMode} mips {ov.sprite.texture.mipmapCount}",
+                    part.sharedMaterial != null ? part.sharedMaterial.name + " / " + (part.sharedMaterial.shader != null ? part.sharedMaterial.shader.name : "-") : "-"));
+                string wk = where + " " + skin;
+                worst.TryGetValue(wk, out var w);
+                worst[wk] = (Mathf.Max(w.A, Mathf.Abs(gridAcross)), Mathf.Max(w.U, Mathf.Abs(gridUp)));
+            }
+
+            // the world: a donkey of the test's wearing each skin, standing, then walking
+            Camera main = Camera.main;
+            if (main != null) SelfTest.Info($"skin offset: the game camera turned {main.transform.eulerAngles} (the stage's: {PreviewStage.TestCameraRotation.eulerAngles}), orthographic {main.orthographic}, size {main.orthographicSize:0.###}, screen {Screen.width}x{Screen.height}");
+            foreach (string sk in skins)
+            {
+                string id = Looks.SkinKey(MountCatalog.DonkeyId, sk);
+                if (Looks.Find(id) == null) { SelfTest.Info($"skin offset: {sk} isn't installed; left out"); continue; }
+                Vector3 near = SelfTest.Spot(SelfTest.home, 4f) ?? SelfTest.home;
+                MountHandle a = SelfTest.Spawn(near, true);
+                try
+                {
+                    if (a == null) { SelfTest.Info("skin offset: no test donkey could be made"); continue; }
+                    a.I.OwnLook = true;
+                    a.Tuning.Set(SelfTest.Owner, "Skin", id);
+                    yield return SelfTest.Until(() => a.IsReady && a.I.LooksRig.Wearing == id && !a.I.LooksRig.Building, 10f);
+                    if (!SelfTest.waited) { SelfTest.Info($"skin offset: the test donkey never wore {sk}"); continue; }
+                    yield return SelfTest.Frames(3);
+                    SpriteRenderer part = a.I.LooksRig.TestPart(), ov = a.I.LooksRig.TestOverlay();
+                    Measure("world", sk, part, ov, main != null ? main.transform.rotation : Quaternion.identity);
+                    yield return SelfTest.WalkFor(a, part, 90, () => Measure("world", sk, a.I.LooksRig.TestPart(), a.I.LooksRig.TestOverlay(), main != null ? main.transform.rotation : Quaternion.identity), null);
+                }
+                finally
+                {
+                    a?.Remove();
+                }
+                yield return SelfTest.Frames(2);
+            }
+
+            // the Mount Journal's picture: the paper wearing each skin, under the stage's camera (the game camera's pitch)
+            MountSettingsPage page = PageWithMounts();
+            ConfigEntryBase skinRow = null;
+            if (page != null)
+            {
+                foreach (MountSettingsPage.Row r in page.Rows)
+                {
+                    if (r.Entry != null && r.Entry.Definition.Key == "Skin_" + MountCatalog.DonkeyId) { skinRow = r.Entry; break; }
+                }
+            }
+            if (page == null || skinRow == null || LazyWindowsStackController.ActiveWindow != null || MountsPanel.IsOpen || OptionsWindow.IsOpen)
+            {
+                SelfTest.Info("skin offset: the journal's picture left out (no page with the donkey's Skin row, or a window open)");
+            }
+            else
+            {
+                object skinWas = skinRow.BoxedValue;
+                string mountWas = page.MountChosen;
+                Quaternion stageRot = PreviewStage.TestCameraRotation;
+                MountsPanel.Open(page, toggle: false);
+                yield return SelfTest.Frames(3);
+                try
+                {
+                    if (MountsPanel.IsOpen)
+                    {
+                        MountsPanel.TestSelect(MountCatalog.DonkeyId);
+                        yield return SelfTest.Frames(3);
+                        foreach (string sk in skins)
+                        {
+                            string id = Looks.SkinKey(MountCatalog.DonkeyId, sk);
+                            if (Looks.Find(id) == null) continue;
+                            skinRow.BoxedValue = id;
+                            Mount.Instance paper = null;
+                            yield return SelfTest.Until(() => (paper = MountsPanel.PaperOf(page)) != null && paper.LooksRig.Wearing == id && !paper.LooksRig.Building, 10f);
+                            if (!SelfTest.waited) { SelfTest.Info($"skin offset: the journal's picture never wore {sk}"); continue; }
+                            // the picture animates: three seconds of its frames
+                            float until = Time.unscaledTime + 3f;
+                            while (Time.unscaledTime < until)
+                            {
+                                paper = MountsPanel.PaperOf(page);
+                                if (paper != null) Measure("journal", sk, paper.LooksRig.TestPart(), paper.LooksRig.TestOverlay(), stageRot);
+                                yield return null;
+                            }
+                            // the colours window's picture (the mount alone, larger: the user's screenshots are of it)
+                            MountsPanel.TestOpenColours();
+                            yield return SelfTest.Frames(3);
+                            if (MountsPanel.IsColoursOpen)
+                            {
+                                until = Time.unscaledTime + 3f;
+                                while (Time.unscaledTime < until)
+                                {
+                                    paper = MountsPanel.PaperOf(page);
+                                    if (paper != null) Measure("colours", sk, paper.LooksRig.TestPart(), paper.LooksRig.TestOverlay(), stageRot);
+                                    // the picture as drawn, once per frame of the walk: the rendered pixels themselves
+                                    SpriteRenderer pp = paper?.LooksRig.TestPart();
+                                    string fk = pp != null && pp.sprite != null ? pp.sprite.name : null;
+                                    if (fk != null && saved.Add(sk + "|" + fk)) SavePicture(MountsPanel.TestShownPicture, Path.Combine(shots, sk.Replace("saddleup-donkey-skins.", "") + "-" + fk.Replace("0301_", "") + ".png"));
+                                    yield return null;
+                                }
+                                MountsPanel.TestCloseColours(keep: true);
+                                yield return SelfTest.Frames(2);
+                            }
+                            else SelfTest.Info($"skin offset: the colours window didn't open for {sk}");
+                        }
+                    }
+                    else SelfTest.Info("skin offset: the Mount Journal didn't open; its picture left out");
+                }
+                finally
+                {
+                    skinRow.BoxedValue = skinWas;
+                    if (MountsPanel.IsOpen && !string.IsNullOrEmpty(mountWas)) MountsPanel.TestSelect(mountWas);
+                    if (MountsPanel.IsOpen) MountsPanel.TestStepBack();
+                }
+            }
+
+            try { File.WriteAllText(Path.Combine(Paths.BepInExRootPath, "GK2-skin-offset.tsv"), string.Join("\n", lines) + "\n", new UTF8Encoding(false)); }
+            catch (Exception e) { SelfTest.Info("GK2-skin-offset.tsv couldn't be written: " + e.Message); }
+            foreach (var kv in worst) SelfTest.Info($"skin offset: {kv.Key}: the skin's pixel grid off the donkey's by up to {kv.Value.A:0.###} art px across and {kv.Value.U:0.###} up (0: on it)");
+            SelfTest.Info($"skin offset: {lines.Count - 1} frame(s) measured in BepInEx\\GK2-skin-offset.tsv");
+        }
+
+        // A picture (a render texture or a texture) written as a PNG, as drawn.
+        private static void SavePicture(Texture t, string path)
+        {
+            if (t == null) return;
+            RenderTexture prev = RenderTexture.active;
+            RenderTexture tmp = null;
+            Texture2D read = null;
+            try
+            {
+                tmp = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGB32);
+                tmp.filterMode = FilterMode.Point;
+                Graphics.Blit(t, tmp);
+                RenderTexture.active = tmp;
+                read = new Texture2D(t.width, t.height, TextureFormat.RGBA32, false);
+                read.ReadPixels(new Rect(0, 0, t.width, t.height), 0, 0, false);
+                read.Apply(false);
+                File.WriteAllBytes(path, read.EncodeToPNG());
+            }
+            catch (Exception e)
+            {
+                SelfTest.Info("skin offset: the picture couldn't be saved: " + e.Message);
+            }
+            finally
+            {
+                RenderTexture.active = prev;
+                if (tmp != null) RenderTexture.ReleaseTemporary(tmp);
+                if (read != null) UnityEngine.Object.Destroy(read);
+            }
+        }
+
         // Every skin of every mount written as the game builds it, for the review page (tools/skins/skin_preview_html.py
         // reads BepInEx\GK2-asset-probe\game-skins\ first; the user, 2026-11-05: the Mounts tab's button wrote only the
         // skins worn at that moment, "we need something that will export all of them"): Looks.ExportEverySkin in every run,

@@ -218,6 +218,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupMeasurements, Name = "measure: the journal picture with the lamp lit, dark and off, every donkey skin (GK2-lamp-framing.tsv)", Body = MeasureTests.LampFraming },
             new Scenario { Group = GroupMeasurements, Name = "measure: the colours window of every skin of every mount (GK2-panel-shots: colours-skin-*.png; GK2-colours-rows.tsv)", Body = MeasureTests.ColoursWindows },
             new Scenario { Group = GroupMeasurements, Name = "measure: the colour swap's cost, 21 donkeys at the donkey's own pairs, 64, 72, 96 and on the cube (GK2-palette-cost.tsv)", Body = MeasureTests.PaletteCost },
+            new Scenario { Group = GroupMeasurements, Name = "measure: a skin over the donkey against the donkey under it, in art pixels on screen, in the world and the journal's picture (GK2-skin-offset.tsv)", Body = MeasureTests.SkinOffset },
             new Scenario { Group = GroupMeasurements, Name = "measure: the game's Halloween head swap on the zombie pictures (carried, on the cart, on the ground; the swap forced off and on)", Body = HalloweenProbe.Heads },
             new Scenario { Group = GroupLooks, Name = "skins and mounts: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "skin: a game-source skin with no frames is set aside, the donkey comes, offered again when they are there", Body = AsideSkin },

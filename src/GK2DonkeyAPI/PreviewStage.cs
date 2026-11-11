@@ -28,6 +28,7 @@ namespace GK2DonkeyAPI
     internal static class PreviewStage
     {
         private const float GameCameraPitch = 53.130104f; // MainCamera.cs
+        internal static Quaternion TestCameraRotation => Quaternion.Euler(GameCameraPitch, 0f, 0f); // the stage camera's turn (MeasureTests.SkinOffset)
 
         // The prefab's helpers that only feed the game's effects: the shadow-casting sprite and cylinder, and the mask
         // that bends the grass (7.68 units wide: it had made the picture tiny).
@@ -621,6 +622,7 @@ namespace GK2DonkeyAPI
                     using (Perf.Measure(Perf.S.PrevFrame)) TightenStep(v);
                     if (v.TightenStep >= 0) return; // still measuring: the shown picture keeps its last photo
                 }
+                SnapToArt(v);
                 using (Perf.Measure(Perf.S.PrevRender)) v.Cam.Render();
                 if (gapStamp != v.EdgeStamp)
                 {
@@ -971,6 +973,78 @@ namespace GK2DonkeyAPI
             Frame(cartView);
             Plugin.Log.LogInfo($"Settings: the pictures are set up ({cartParts} cart parts on, {donkeyRenderers.Count} donkey sprites, {ppu} pixels per unit).");
             Describe("built");
+        }
+
+        // The camera moved, by less than a pixel of the picture, so the donkey's art pixels' edges fall on the picture's
+        // pixel edges (2026-11-11). An art pixel is Detail picture pixels across; framed on the drawn bounds (and moved by
+        // half pixels in Tighten) the picture's pixel centres could land exactly on an art pixel's edge, where the donkey
+        // and a skin drawn over it read the two art pixels either side by a float's rounding: a picture pixel of the coat
+        // hidden under the skin showed (Armored's collar strap, the user's purple coat: runs of one picture pixel at every
+        // third column, MeasureTests.SkinOffset's saved pictures). On the grid the centres sit a sixth of an art pixel in
+        // from any edge. Each render: every walk frame's picture has its own trim offset.
+        private static void SnapToArt(View v)
+        {
+            try
+            {
+                SpriteRenderer body = dressedAs?.LooksRig?.TestPart();
+                RenderTexture rt = v.Cam.targetTexture;
+                if (body == null || !body || !body.enabled || body.sprite == null || rt == null) return;
+                if (!CanvasWorld(body, Vector2.zero, out Vector3 corner)) return;
+                Transform ct = v.Cam.transform;
+                float upp = v.Cam.orthographicSize * 2f / rt.height; // world units a picture pixel
+                if (upp <= 0f) return;
+                Vector3 rel = corner - ct.position;
+                float px = Vector3.Dot(rel, ct.right) / upp + rt.width / 2f, py = Vector3.Dot(rel, ct.up) / upp + rt.height / 2f;
+                float fx = px - Mathf.Round(px), fy = py - Mathf.Round(py);
+                if (Mathf.Abs(fx) < 1e-4f && Mathf.Abs(fy) < 1e-4f) return;
+                ct.position += ct.right * (fx * upp) + ct.up * (fy * upp);
+            }
+            catch (Exception e)
+            {
+                if (snapSaid) return;
+                snapSaid = true;
+                Plugin.Log.LogInfo("[preview] the picture couldn't be put on the art pixels (" + e.Message + "); drawn as framed.");
+            }
+        }
+
+        private static bool snapSaid;
+
+        // Where a canvas pixel's corner of a sprite renderer's picture lands in the world, from the sprite's own mesh: each
+        // vertex's texture pixel (its uv) taken back to the sprite's canvas (the texture rect, less the trim offset), the
+        // mesh's scale read off two vertices; the renderer's flips mirror about the pivot (the local origin).
+        internal static bool CanvasWorld(SpriteRenderer r, Vector2 c, out Vector3 world)
+        {
+            world = default;
+            try
+            {
+                Sprite s = r.sprite;
+                Texture t = s != null ? s.texture : null;
+                if (t == null) return false;
+                Vector2[] v = s.vertices, uv = s.uv;
+                if (v == null || uv == null || v.Length < 3 || uv.Length != v.Length) return false;
+                Rect tr = s.textureRect;
+                Vector2 off = s.textureRectOffset;
+                Vector2 P(int i) => new Vector2(uv[i].x * t.width - tr.x + off.x, uv[i].y * t.height - tr.y + off.y);
+                int ix = -1, iy = -1;
+                Vector2 q0 = P(0);
+                for (int i = 1; i < v.Length; i++)
+                {
+                    Vector2 q = P(i);
+                    if (ix < 0 && Mathf.Abs(q.x - q0.x) > 0.5f) ix = i;
+                    if (iy < 0 && Mathf.Abs(q.y - q0.y) > 0.5f) iy = i;
+                }
+                if (ix < 0 || iy < 0) return false;
+                float kx = (v[ix].x - v[0].x) / (P(ix).x - q0.x), ky = (v[iy].y - v[0].y) / (P(iy).y - q0.y);
+                var local = new Vector3(v[0].x + (c.x - q0.x) * kx, v[0].y + (c.y - q0.y) * ky, 0f);
+                if (r.flipX) local.x = -local.x;
+                if (r.flipY) local.y = -local.y;
+                world = r.transform.TransformPoint(local);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         // The camera at the game's angle, framed wide on every shown part's bounds (then Tighten crops to what's drawn).

@@ -3660,8 +3660,12 @@ namespace GK2DonkeyAPI
                     // material's queue, not the sorting order) a tie in the depth test flickered the overlay in and
                     // out of the body while the donkey moved (a skin over the donkey, 2026-10-19; steady while idle, the tie
                     // breaking the same way every frame). A replacing skin's part isn't drawn at all.
+                    // The lift runs along the camera's line of sight (alongView): along the part's own facing it moved the skin
+                    // 0.16 of an art pixel down the screen under the game's 53-degree camera (measured, MeasureTests.SkinOffset,
+                    // 2026-11-11), and a sliver of the donkey showed along the skin's top edges in the journal's picture: the
+                    // coat in Royal Parade's cloth corners, a brown line under Armored's collar strap (the user's screenshots).
                     bool over = skin.Def.Over;
-                    Follow(ov, part, game, part.sortingLayerID, part.sortingOrder + (over ? 1 : 0), over ? OverLift : 0f);
+                    Follow(ov, part, game, part.sortingLayerID, part.sortingOrder + (over ? 1 : 0), over ? OverLift : 0f, alongView: true);
                     if (RiderReadout.On && s.Body && owner != null) owner.ReadoutDrawn(); // dev: the rider against the seat row, as drawn
                 }
                 // the front layer: the same picture rules, sorted above the keeper while he rides (as the leg overlay,
@@ -3715,9 +3719,10 @@ namespace GK2DonkeyAPI
                 }
             }
 
-            // How far an over skin's overlay sits in front of the body part, in world units along the sprite's own
-            // facing (its local -z, towards the camera): enough to win the depth test over the coplanar part, a fifth
-            // of an art pixel, too little to see. The self-tests zero it for a comparison render.
+            // How far an over skin's overlay sits in front of the body part, in world units along the camera's line
+            // of sight (alongView: nothing moves on screen): enough to win the depth test over the coplanar part, a fifth
+            // of an art pixel. Along the part's own facing until 2026-11-11 it moved the skin 0.16 art px down the screen
+            // (MeasureTests.SkinOffset). The self-tests zero it for a comparison render.
             internal static float OverLift = 0.004f;
 
             // How far a skin's front layer sits in front of the nearest of the rider's sprites, world units along the
