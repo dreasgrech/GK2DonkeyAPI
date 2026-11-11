@@ -20,6 +20,7 @@ namespace GK2DonkeyAPI.IntegrationTests
         internal static readonly Dictionary<string, string> ShippedDonkeySkins = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["hellfire"] = "saddleup-donkey-skins.hellfire", ["royal-parade"] = "saddleup-donkey-skins.royal-parade",
+            ["jester"] = "saddleup-donkey-skins.jester",
         };
 
         // The dragon's body raised on longer legs (its pictures): its seat 6 px above the donkey's.

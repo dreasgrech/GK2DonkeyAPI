@@ -979,7 +979,7 @@ namespace GK2DonkeyAPI
         // pixel edges (2026-11-11). An art pixel is Detail picture pixels across; framed on the drawn bounds (and moved by
         // half pixels in Tighten) the picture's pixel centres could land exactly on an art pixel's edge, where the donkey
         // and a skin drawn over it read the two art pixels either side by a float's rounding: a picture pixel of the coat
-        // hidden under the skin showed (Armored's collar strap, the user's purple coat: runs of one picture pixel at every
+        // hidden under the skin showed (along a skin's collar strap, the user's purple coat: runs of one picture pixel at every
         // third column, MeasureTests.SkinOffset's saved pictures). On the grid the centres sit a sixth of an art pixel in
         // from any edge. Each render: every walk frame's picture has its own trim offset.
         private static void SnapToArt(View v)

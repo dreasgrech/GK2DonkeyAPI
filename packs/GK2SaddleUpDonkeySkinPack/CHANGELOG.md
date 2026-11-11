@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.0, 2026-11-11
+
+- **A fourth look: Jester** (2026-11-11): a fool's cap with two belled points, a belled collar and a chequered motley
+  caparison with a pointed hem. Every part is yours to colour: the cap's two halves and its band, the collar (the
+  Harness row), the caparison's two colours and the bells, in all 11 languages. The cap is drawn over the rider.
 - **Royal Parade's saddle cloth sits on the back while walking** (2026-11-11): in three walk frames the donkey's coat
   showed above the cloth's top (white with a light coat); the cloth now follows the back. Its back edge reaches two
   pixels further over the rump, where the donkey's thigh line blinked brown behind it in some walk frames, and its

@@ -777,9 +777,11 @@ namespace GK2DonkeyAPI
                 // the standing call and the answers
                 Sounds.TestResetHerd();
                 ra.TestPlays.Clear(); r1.TestPlays.Clear(); r2.TestPlays.Clear();
-                yield return Until(() => Plays(ra, "voice") >= 1, 10f);
+                // the world's own mounts standing near call too, and the scene keeps one voice at a time (VoiceGapS after each):
+                // one of theirs can hold this one's call back by the gap (2026-11-11: due 0.2 s after a plain 10 s)
+                yield return Until(() => Plays(ra, "voice") >= 1, 10f + 2f * Sounds.VoiceGapS);
                 SoundSpec av = ra.Resolve("voice");
-                Check(waited, $"a standing grown one calls by itself within 10 s (idle_every {av?.Number("idle_every", -1f):0.##} x the standing factor {Sounds.StandingIdleFactor}; the rig: {ra.TestState}; voice {av?.Describe()})");
+                Check(waited, $"a standing grown one calls by itself within 10 s and the scene's voice gap (idle_every {av?.Number("idle_every", -1f):0.##} x the standing factor {Sounds.StandingIdleFactor}; the rig: {ra.TestState}; voice {av?.Describe()})");
                 Sounds.TestEveryBabyAnswers = true; // each baby answers by its chance in play (2026-10-27): both here
                 yield return Until(() => Plays(r1, "answer") >= 1 && Plays(r2, "answer") >= 1, Sounds.Rig.CallWaitMaxS + 3f);
                 Sounds.TestEveryBabyAnswers = false;
@@ -788,7 +790,7 @@ namespace GK2DonkeyAPI
                 float call = -1f, first = -1f, second = -1f;
                 foreach (var t in times)
                 {
-                    if (t.Event == "voice" && call < 0f) call = t.At;
+                    if (t.Event == "voice" && t.Who == a.I && call < 0f) call = t.At; // its own call, not a world mount's
                     else if (t.Event == "answer" && call >= 0f && t.At >= call) { if (first < 0f) first = t.At; else if (second < 0f) second = t.At; }
                 }
                 float ended = ra.TestCallEndedAt;

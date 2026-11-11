@@ -46,10 +46,12 @@ namespace GK2DonkeyAPI.IntegrationTests
                 Warn("a window is open: close it and run again; skipped");
                 yield break;
             }
-            // every look we ship: the donkey's own and its skins, the dragon and its Mecha, Larry, the critters
+            // every look we ship: the donkey's own and its skins (Armored and the Jester when installed), the dragon and its Mecha, Larry, the critters
             var looks = new List<string> { "", Tests.Sk("hellfire"), Tests.Sk("dragon"), Tests.Sk("gerry"), Tests.Sk("royal-parade"), Tests.Sk("rat"), Tests.Sk("snail"), Tests.Sk("worm") };
             string armored = Looks.SkinKey(Catalog.DonkeyId, "saddleup-donkey-skins.armored");
             if (Looks.Find(armored) != null) looks.Add(armored);
+            string jester = Looks.SkinKey(Catalog.DonkeyId, "saddleup-donkey-skins.jester");
+            if (Looks.Find(jester) != null) looks.Add(jester);
             string mecha = Looks.SkinKey(Tests.M("dragon"), "armored");
             if (Looks.Find(mecha) != null) looks.Add(mecha);
 

@@ -1,6 +1,6 @@
 [center][size=6][b][color=#f0b45a]GK2 Saddle Up - Donkey Skin Pack[/color][/b][/size]
 [size=4]A donkey skin pack for the donkey mount in the Saddle Up mod[/size]
-[size=3][b]Hellfire[/b], [b]Royal Parade[/b] and [b]Armored[/b]: three new looks for your donkey mount.[/size]
+[size=3][b]Hellfire[/b], [b]Royal Parade[/b], [b]Armored[/b] and [b]Jester[/b]: four new looks for your donkey mount.[/size]
 [/center]
 [line]
 [size=5][b][color=#f0b45a]Skins[/color][/b][/size]
@@ -20,6 +20,11 @@
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/armored-riding.png?v=1[/img][/center]
 
+[size=4][b]Jester[/b][/size]
+[size=3]A fool's cap with two belled points, a belled collar and a chequered motley caparison with a pointed hem, for a donkey with a sense of humour. The cap's two halves and its band, the collar, the caparison's two colours and the bells each take a colour of your own.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/jester-riding.png?v=1[/img][/center]
+
 [size=4][b]Pick it in the Mount Journal[/b][/size]
 [size=3]Press [b]L[/b], pick the Donkey, and choose the skin in its [b]Skin[/b] list. The picture shows it with the cart before you ride. Your coat, harness and cart colours still apply under the skin, and the choice is kept with your save.[/size]
 
@@ -32,9 +37,10 @@
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-hellfire.png?v=3[/img][/center]
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-royal-parade.png?v=3[/img][/center]
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-armored.png?v=1[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-jester.png?v=1[/img][/center]
 
 [size=4][b]The babies wear it too[/b][/size]
-[size=3]Your donkey's babies look like their parent: little horns and cracks, little crowns and cloths, or little helmets, each its own size and shade.[/size]
+[size=3]Your donkey's babies look like their parent: little horns and cracks, little crowns and cloths, little helmets or little fool's caps, each its own size and shade.[/size]
 
 [size=4][b]Languages[/b][/size]
 [size=3]Available in English, French, German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean (with GK2 Saddle Up 0.15.0 or newer).[/size]
@@ -46,7 +52,7 @@
 
 [list=1]
 [*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folder [b]GK2SaddleUpDonkeySkinPack[/b] to [i]BepInEx\plugins[/i]. The game's own [b]Mods[/b] window (main menu) lists only the mods the game installed itself from the Steam Workshop: installed from this download, the mod works fully but is not listed there. That is normal.[/size][/*]
-[*][size=3]Start the game, press [b]L[/b], pick the Donkey: Hellfire, Royal Parade and Armored are in its Skin list.[/size][/*]
+[*][size=3]Start the game, press [b]L[/b], pick the Donkey: Hellfire, Royal Parade, Armored and Jester are in its Skin list.[/size][/*]
 [/list]
 
 [size=3][b]Update.[/b] Replace the folder. The pack is one file with everything inside, so nothing is left over.

@@ -23,7 +23,7 @@ namespace SaddleUp
         public const string Guid = "dreas.gk2.saddleup";
         // This mod's own version; the GK2 Donkey API counts its own (Mounts.ApiVersion), and NeedsApi says which one this
         // mod was written against.
-        public const string Version = "0.16.0";
+        public const string Version = "0.17.0";
 
         // The API this mod is written against: 0.45 the ride and cart keys in the Mount Journal (MountCompanion.Ride and
         // Drive); 0.44 the mounts left in the world (MountCompanion.LeaveMountsInWorld,

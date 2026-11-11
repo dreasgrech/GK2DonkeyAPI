@@ -10,6 +10,8 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+## 0.17.0 (GK2 Donkey API 0.45.0), 2026-11-11
+
 For players:
 
 - **Skins drawn over the donkey sit exactly on it** (2026-11-11): Royal Parade, Armored and the other skins over the

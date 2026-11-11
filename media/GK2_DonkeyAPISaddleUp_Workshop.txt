@@ -54,7 +54,7 @@ Larry comes with the mod: the talking skull, three times his usual size, hopping
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/gerry-riding.gif?v=2[/img]
 
 [h3]Your donkey, your colours[/h3]
-Every part by its name: the donkey's coat, muzzle, legs, mane and ears, eyes, outline and harness, and a skin's own parts. The cart's paint, wheels and hubs, the lantern's light. Presets or 24 custom colours, with a live preview. Babies wear each in their own shade.
+Every part by its name: the donkey's coat, muzzle, legs, mane and ears, eyes, outline and harness, and a skin's own parts. The cart's paint, wheels and hubs, the lantern's light. 24 named colours or Original, with a live preview. Babies wear each in their own shade.
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-cart-colors-cycle.gif?v=2[/img]
 
@@ -120,7 +120,7 @@ Saddle Up comes with the donkey and Larry. More mounts and skins are packs, one 
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/dragons-mount-pack/dragon-flying.gif?v=2[/img]
 
-[url=https://steamcommunity.com/sharedfiles/filedetails/?id=3830154040]Donkey Skin Pack[/url]: Hellfire, Royal Parade and Armored, three new looks for your donkey, each part in a colour of your own.
+[url=https://steamcommunity.com/sharedfiles/filedetails/?id=3830154040]Donkey Skin Pack[/url]: Hellfire, Royal Parade, Armored and Jester, four new looks for your donkey, each part in a colour of your own.
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/royal-parade-riding.png?v=2[/img]
 

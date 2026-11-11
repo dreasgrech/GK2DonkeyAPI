@@ -1,6 +1,6 @@
 [h1]GK2 Saddle Up - Donkey Skin Pack[/h1]
 A donkey skin pack for the donkey mount in the Saddle Up mod
-[b]Hellfire[/b], [b]Royal Parade[/b] and [b]Armored[/b]: three new looks for your donkey mount.
+[b]Hellfire[/b], [b]Royal Parade[/b], [b]Armored[/b] and [b]Jester[/b]: four new looks for your donkey mount.
 
 [hr][/hr]
 [h2]Skins[/h2]
@@ -20,6 +20,11 @@ Plate barding for a war donkey: an ornate knight's helmet with a plume that sway
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/armored-riding.png?v=1[/img]
 
+[h3]Jester[/h3]
+A fool's cap with two belled points, a belled collar and a chequered motley caparison with a pointed hem, for a donkey with a sense of humour. The cap's two halves and its band, the collar, the caparison's two colours and the bells each take a colour of your own.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/jester-riding.png?v=1[/img]
+
 [h3]Pick it in the Mount Journal[/h3]
 Press [b]L[/b], pick the Donkey, and choose the skin in its [b]Skin[/b] list. The picture shows it with the cart before you ride. Your coat, harness and cart colours still apply under the skin, and the choice is kept with your save.
 
@@ -32,9 +37,10 @@ The Colours window names each skin's own parts next to the donkey's own rows, an
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-hellfire.png?v=3[/img]
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-royal-parade.png?v=3[/img]
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-armored.png?v=1[/img]
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-jester.png?v=1[/img]
 
 [h3]The babies wear it too[/h3]
-Your donkey's babies look like their parent: little horns and cracks, little crowns and cloths, or little helmets, each its own size and shade.
+Your donkey's babies look like their parent: little horns and cracks, little crowns and cloths, little helmets or little fool's caps, each its own size and shade.
 
 [h3]Languages[/h3]
 Available in English, French, German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean (with GK2 Saddle Up 0.15.0 or newer).
@@ -48,7 +54,7 @@ Needs [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3830136851]GK2
 
 [olist]
 [*]Subscribe. The game installs the pack itself: on the next start the main menu's [b]Mods[/b] window lists it with its version and an Enable/Disable switch.
-[*]Start the game, press [b]L[/b], pick the Donkey: Hellfire, Royal Parade and Armored are in its Skin list.
+[*]Start the game, press [b]L[/b], pick the Donkey: Hellfire, Royal Parade, Armored and Jester are in its Skin list.
 [/olist]
 [b]Steam Deck and Linux (Proton).[/b] Set the game's launch options to [code]WINEDLLOVERRIDES="winhttp=n,b" %command%[/code] so BepInEx loads.
 

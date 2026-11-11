@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.3.0, 2026-11-11
+
 - **A second look: Mecha** (2026-11-07, named Mecha 2026-11-08): a war dragon in plate, a closed helm, steel down its neck,
   flanks and legs trimmed in gold, a gold crest on its helm, a mace on its tail, and blackened steel wings with a
   saw-toothed edge, pierced through. It's in the Dragon's Skin row, every picture its own, built on the Red Dragon

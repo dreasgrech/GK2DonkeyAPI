@@ -130,8 +130,9 @@ namespace GK2DonkeyAPI
         }
 
         // A skin drawn over the donkey (layer = over) against the donkey under it, on screen, in art pixels (the user,
-        // 2026-11-11: a sliver of the coat in the corners of Royal Parade's cloth and a brown line under Armored's collar
-        // strap in the colours window, each about a quarter of an art pixel; the art itself has no such pixels). For every
+        // 2026-11-11: a sliver of the coat in a skin's cloth corners and a brown line under another's collar strap in the
+        // colours window, each about a quarter of an art pixel; the art itself has no such pixels). Every installed skin of
+        // the donkey drawn over it, found in the registry (the API names no pack's skin). For every
         // frame shown: where the skin's canvas pixel (0, 0) lands against the donkey's own, across and up the screen
         // and along the view, with the game frame's trim offset (Looks.Rig.Follow adds its fractions) and the overlay's
         // local position. Two places: a donkey in the world under the game's camera, walking, and the Mount Journal's
@@ -141,7 +142,13 @@ namespace GK2DonkeyAPI
             var lines = new List<string> { "where\tskin\tframe\tflip\tpixel grid off across (art px)\tpixel grid off up (art px)\tcanvas origin across\tcanvas origin up\talong the view (art px)\ttrim offset (x y)\toverlay local (x y z)\tpart sprite rect (w h)\tppu\tthe donkey's atlas sampling\tthe skin sheet's sampling\tthe material / shader" };
             var seen = new HashSet<string>();
             var worst = new Dictionary<string, (float A, float U)>();
-            string[] skins = { "saddleup-donkey-skins.royal-parade", "saddleup-donkey-skins.armored" };
+            var skins = new List<string>(); // skin ids ("donkey/<skin>")
+            foreach ((string sid, string _) in Looks.SkinChoicesOf(MountCatalog.DonkeyId))
+            {
+                Looks.SkinDef sd = Looks.Find(sid);
+                if (sd != null && sd.Over) skins.Add(sid);
+            }
+            if (skins.Count == 0) { SelfTest.Info("skin offset: no skin drawn over the donkey is installed; nothing measured"); yield break; }
             var saved = new HashSet<string>();
             string shots = Path.Combine(Paths.BepInExRootPath, "GK2-skin-offset");
             try { Directory.CreateDirectory(shots); } catch { }
@@ -188,7 +195,7 @@ namespace GK2DonkeyAPI
             if (main != null) SelfTest.Info($"skin offset: the game camera turned {main.transform.eulerAngles} (the stage's: {PreviewStage.TestCameraRotation.eulerAngles}), orthographic {main.orthographic}, size {main.orthographicSize:0.###}, screen {Screen.width}x{Screen.height}");
             foreach (string sk in skins)
             {
-                string id = Looks.SkinKey(MountCatalog.DonkeyId, sk);
+                string id = sk;
                 if (Looks.Find(id) == null) { SelfTest.Info($"skin offset: {sk} isn't installed; left out"); continue; }
                 Vector3 near = SelfTest.Spot(SelfTest.home, 4f) ?? SelfTest.home;
                 MountHandle a = SelfTest.Spawn(near, true);
@@ -240,7 +247,7 @@ namespace GK2DonkeyAPI
                         yield return SelfTest.Frames(3);
                         foreach (string sk in skins)
                         {
-                            string id = Looks.SkinKey(MountCatalog.DonkeyId, sk);
+                            string id = sk;
                             if (Looks.Find(id) == null) continue;
                             skinRow.BoxedValue = id;
                             Mount.Instance paper = null;
@@ -267,7 +274,7 @@ namespace GK2DonkeyAPI
                                     // the picture as drawn, once per frame of the walk: the rendered pixels themselves
                                     SpriteRenderer pp = paper?.LooksRig.TestPart();
                                     string fk = pp != null && pp.sprite != null ? pp.sprite.name : null;
-                                    if (fk != null && saved.Add(sk + "|" + fk)) SavePicture(MountsPanel.TestShownPicture, Path.Combine(shots, sk.Replace("saddleup-donkey-skins.", "") + "-" + fk.Replace("0301_", "") + ".png"));
+                                    if (fk != null && saved.Add(sk + "|" + fk)) SavePicture(MountsPanel.TestShownPicture, Path.Combine(shots, sk.Substring(sk.IndexOf('/') + 1) + "-" + fk.Replace("0301_", "") + ".png"));
                                     yield return null;
                                 }
                                 MountsPanel.TestCloseColours(keep: true);

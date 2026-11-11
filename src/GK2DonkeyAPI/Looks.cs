@@ -3663,7 +3663,7 @@ namespace GK2DonkeyAPI
                     // The lift runs along the camera's line of sight (alongView): along the part's own facing it moved the skin
                     // 0.16 of an art pixel down the screen under the game's 53-degree camera (measured, MeasureTests.SkinOffset,
                     // 2026-11-11), and a sliver of the donkey showed along the skin's top edges in the journal's picture: the
-                    // coat in Royal Parade's cloth corners, a brown line under Armored's collar strap (the user's screenshots).
+                    // coat in one skin's cloth corners, a brown line under another's collar strap (the user's screenshots).
                     bool over = skin.Def.Over;
                     Follow(ov, part, game, part.sortingLayerID, part.sortingOrder + (over ? 1 : 0), over ? OverLift : 0f, alongView: true);
                     if (RiderReadout.On && s.Body && owner != null) owner.ReadoutDrawn(); // dev: the rider against the seat row, as drawn

@@ -1,0 +1,17 @@
+# GK2 Saddle Up 0.17.0
+
+Includes GK2 Donkey API 0.45.0. Built for game 1.011.1.
+
+- New colours window: pick a part on the left and colour it from one palette on the right, or step through its colours with the arrows. Every colour has its name, in your language, and Original is the part as the skin draws it. The colours you already chose stay as they are.
+- The colours window has tabs (Mount, the skin's own parts and Cart) and shows the mount larger: the cart is in the picture only on the Cart tab.
+- Ride another mount without getting off first: next to a mount you could ride, "Ride" shows over it. The one you were on stays where you got off, with its cart.
+- "Load on cart" shows only when you face the cart.
+- The Mount Journal, the colours window and the options pause the game like the game's own windows: the world behind is dimmed and the rain and other world sounds are muffled.
+- The windows have the game's sounds: opening and closing, buttons, lists and tabs, with the mouse or a gamepad.
+- The Ride and Drive the cart keys (H and G) work in the Mount Journal.
+- The skull mount is called Larry, as in the game. Your skull keeps his colours, babies and name.
+- The keeper sits still on a flying mount instead of bobbing as if it were walking.
+- Smoother on slower PCs: less work and memory garbage each frame, the Mount Journal quicker to open and browse, and settings written a moment after you stop changing them.
+- Fixed skins drawn over the donkey showing thin lines of the donkey at their edges in the colours window.
+- Fixed hoofsteps in the pause menu, babies jumping beside a wall or being put one spot over, and the donkey playing another mount's call in the Mount Journal.
+- Your settings and saves carry over.

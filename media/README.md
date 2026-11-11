@@ -97,9 +97,13 @@ so it is not scaled up), 2026-10-31:
 | `GK2SaddleUpDragonsMountPack/gallery/babies-dragon.jpg` | `20261029173949_1.jpg`, box 641,110-2341,1066 | 1700x956 |
 | `GK2SaddleUpDragonsMountPack/gallery/journal-dragon.jpg` | `20261029172822_1.jpg`, box 236,134-2328,1306 | 2092x1172 |
 | `GK2SaddleUpDragonsMountPack/gallery/colours-dragon.jpg` | `20261029172919_1.jpg`, box 492,92-2068,1348 | 1576x1256 |
+| `GK2SaddleUpDragonsMountPack/gallery/mecha-riding.jpg` | `20261111230146_1.jpg`, box 660,110-2360,1066 | 1700x956 |
+| `GK2SaddleUpDragonsMountPack/gallery/colours-mecha.jpg` | `20261111225950_1.jpg`, box 492,72-2068,1368 | 1576x1296 |
 | `GK2SaddleUpDonkeySkinPack/gallery/hellfire-riding.jpg` | `20261028013218_1.jpg`, box 340,110-2040,1066 | 1700x956 |
 | `GK2SaddleUpDonkeySkinPack/gallery/royal-parade-riding.jpg` | `20261028013225_1.jpg`, box 420,110-2120,1066 | 1700x956 |
 | `GK2SaddleUpDonkeySkinPack/gallery/journal-hellfire.jpg` | `20261028013244_1.jpg`, box 236,134-2328,1306 | 2092x1172 |
 | `GK2SaddleUpDonkeySkinPack/gallery/journal-royal-parade.jpg` | `20261028013238_1.jpg`, box 236,134-2328,1306 | 2092x1172 |
 | `GK2SaddleUpDonkeySkinPack/gallery/colours-hellfire.jpg` | `20261028022007_1.jpg`, box 492,92-2068,1348 | 1576x1256 |
 | `GK2SaddleUpDonkeySkinPack/gallery/colours-royal-parade.jpg` | `20261028022141_1.jpg`, box 492,92-2068,1348 | 1576x1256 |
+| `GK2SaddleUpDonkeySkinPack/gallery/jester-riding.jpg` | `20261111225713_1.jpg`, box 240,116-1940,1072 | 1700x956 |
+| `GK2SaddleUpDonkeySkinPack/gallery/colours-jester.jpg` | `20261111225933_1.jpg`, box 492,72-2068,1368 | 1576x1296 |
