@@ -61,6 +61,15 @@ The Tests tab (the dev panel): every group folded, its title white with no resul
 - **The panel's state** (`Debug.TuningWindowHidden`) is left as it was: hidden for the frame-time scenario only, and
   back afterwards.
 - **Nothing is saved.**
+- **The camera is at the game's own zoom (100%) for the run** (`Dev/TestZoom.cs`, since 2026-11-12). A zoom mod's
+  zoom is held off: two postfixes of ours on `CameraSystem.CalculateOrthographicSize`, the first of all keeping the
+  game's value and the last of all giving it back (Grave Zoom 1.3.1 zooms with a postfix on that method), then
+  `OnResolutionChanged` applies it. The zoom keys do nothing during the run. Nothing of the other mod is touched; at
+  the run's end ours are taken off and the player's zoom applies again. The run's log says the zoom it found
+  (`[test] the camera at the game's own zoom (100%) for the run: it was at 400% ...`).
+  - Why: F11 of 2026-11-12 ran at Grave Zoom's remembered 400%. A test's pen 3.5 from the keeper was off screen
+    (x 2680 of 2560), a baby rightly caught up out of sight, and the test failed; the user: "always run the test at
+    normal 100% zoom and make sure grave zoom is disabled during the tests".
 - **The game's own story is held for the run** (`Dev/GameQuiet.cs`, since 2026-11-06). It is patched at the run's start
   and unpatched at its end, so a player's game is never hooked.
   - No quest trigger fires (`GlobalEventsSystem.FireTrigger`: every quest start, finish and fail).

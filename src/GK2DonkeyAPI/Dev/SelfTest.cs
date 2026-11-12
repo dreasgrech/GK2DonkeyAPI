@@ -131,6 +131,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupCore, Name = "mounts left in the world: a save and a load the whole way (the side file written, every mount taken away, the file restored, the load step: each back where it was under its key, its baby, skin and name; found as left; one cart; picked again, the same one)", Body = LeaveMountsTests.SaveAndLoad },
             new Scenario { Group = GroupCore, Name = "a called mount brings its babies (out of reach: placed by it in the call, ridden at once; within reach: they trot over), through the journal and the ride key", Body = LeaveMountsTests.CalledBabies },
             new Scenario { Group = GroupCore, Name = "a mount whose saved skin isn't installed wears its own look and is itself, its baby too, the choice kept; the donkey's missing skin and a missing mount still the donkey", Body = LeaveMountsTests.MissingSkin },
+            new Scenario { Group = GroupCore, Name = "the cart key while riding where the hitch would seat the keeper on blocked ground: refused before the cart moves (it stays where it stands, not hitched; with no cart yet, none left behind); where the seat is free, hitched as always", Body = CartSeatTests.SeatBlocked },
             new Scenario { Group = GroupCore, Name = "shared colour textures", Body = SharedColours },
             new Scenario { Group = GroupCore, Name = "settings: a moved section keeps a player's values", Body = MovedSections },
             new Scenario { Group = GroupCore, Name = "upgrade: a released version's player files are all read", Body = UpgradeFiles },
@@ -518,6 +519,7 @@ namespace GK2DonkeyAPI
             Running = true; // set and cleared here only
             MountCompanion.HeldForTests = true; // with it: no test's pick leaves the player's mount in the world (MountCompanion)
             GameQuiet.Begin(); // the game's own story held: no test starts a quest's event (GameQuiet.cs, F11 of 2026-11-06)
+            TestZoom.Begin(); // the camera at the game's own zoom, a zoom mod held off (TestZoom.cs, F11 of 2026-11-12)
             var stack = new Stack<IEnumerator>();
             stack.Push(root);
             while (stack.Count > 0)
@@ -565,6 +567,7 @@ namespace GK2DonkeyAPI
             }
             MountCompanion.HeldForTests = false;
             GameQuiet.End();
+            TestZoom.End();
             Running = false;
         }
 
@@ -4202,6 +4205,8 @@ namespace GK2DonkeyAPI
             }
             yield return Frames(3);
             int jumps0 = Mount.CatchUpCount;
+            var own0 = new List<int>();
+            foreach (MountHandle f in foals) own0.Add(f.I.CatchUps); // each baby's own, against the count of every mount's
             yield return MoveKeeper(far.Value, homeFacing); // the parent goes with the keeper
             if (!moved) yield break;
             yield return Seconds(0.6f);
@@ -4221,18 +4226,24 @@ namespace GK2DonkeyAPI
             }
             var dist = new StringBuilder();
             bool close = true;
-            foreach (MountHandle f in foals)
+            for (int k = 0; k < foals.Count; k++)
             {
+                MountHandle f = foals[k];
                 float dd = Vector3.Distance(f.Position, p.Position);
                 close &= dd < 4f;
-                dist.Append($" {f.FullId} {dd:F1}");
+                int own = f.I.CatchUps - own0[k];
+                dist.Append($" {f.FullId} {dd:F1}" + (own > 0 ? $" ({own} catch-up(s), the last: {f.I.LastCatchUpWhy})" : ""));
             }
+            // a catch-up of the world's own mounts in the same seconds counts in Mount.CatchUpCount too: told apart here
             int jumps = Mount.CatchUpCount - jumps0;
             Check(allActive, "the foals stayed active while their parent was");
             yield return WorldViewsRight();
-            if (close && jumps == 0) Pass($"both reached their parent 22 away by trotting, no jumps (distances{dist})");
-            else if (close) Warn($"both reached their parent, with {jumps} jump(s) (blocked on the way?){dist}");
-            else Fail($"not with their parent after 25 s (distances{dist}; {jumps} jump(s))");
+            int ownJumps = 0;
+            for (int k = 0; k < foals.Count; k++) ownJumps += foals[k].I.CatchUps - own0[k];
+            string others = jumps > ownJumps ? $"; {jumps - ownJumps} catch-up(s) of the world's own mounts meanwhile, not counted" : "";
+            if (close && ownJumps == 0) Pass($"both reached their parent 22 away by trotting, no jumps (distances{dist}{others})");
+            else if (close) Warn($"both reached their parent, with {ownJumps} jump(s) (blocked on the way?){dist}{others}");
+            else Fail($"not with their parent after 25 s (distances{dist}; {ownJumps} jump(s){others})");
             Mounts.Dismount("self-test");
             yield return Frames(2);
         }

@@ -80,6 +80,17 @@ release build (a rerun then says "nothing to release"), and raise a version to s
 the by-hand `git checkout` of unreleased pack DLLs and the hand-picked `--only` (2026-10-30). No step of a release
 lives outside `tools/`.
 
+**`dist/` committed before the zips** (0.17.0, 2026-11-11: `release.sh` then said "nothing to release", and the zips
+were first made by hand with `--only`; the user: fix the script, never leave it broken): a DLL whose version is
+committed in `dist/`, in no committed release zip, with its release's player note written
+(`docs/nexus/<name>-<version>-changelog.md`), is **pending**: in this release. `build-dist.sh` builds it, compares the
+build with the committed one by `tools/same-build.py` (every byte but the build identity: the commit stamp of the
+informational version, the MVID, the timestamps) and ships the committed bytes when they are the same code; when they
+are not (a source changed after the commit) it stops and names `--rebuild`. `make-release-zip.py` zips pending items
+like raised ones, and a rerun leaves a zip that holds every file as it is now ("written already") instead of
+failing. A held item (Critters 1.0.0: committed, never published, no note) stays **kept**. So `release.sh` runs
+whole either way, before or after `dist/` is committed.
+
 `build-dist.sh` builds each with `dotnet build -c Release --no-incremental -p:ForDist=true -p:Deploy=false`, stops on
 a failed build or any compiler warning, copies the DLLs into `dist/` and runs `check-dist.py` (build output in
 `release/logs/build-dist.log`).
@@ -359,6 +370,31 @@ the Dragons Mount Pack 1.2.0 and the Donkey Skin Pack 1.2.0, Critters held.
   - Found: with the fixture's made-up dragon skin (`default-x`), the journal drew the dragon as the plain donkey. That's
     a bug for after the release (docs/open-items.md), the user's call.
 - **Restore:** everything back, the saves identical; the dev builds rebuilt (`--no-incremental`) and deployed at 20:26.
+
+Run 2026-11-12 for 0.17.0 / API 0.45.0 (the colours window, riding from the saddle, the windows' sounds and modal
+behaviour, skins on the pixel grid) with the Donkey Skin Pack 1.3.0 (the Jester) and the Dragons Mount Pack 1.3.0
+(Mecha), Critters held.
+- **Before the run:** the full F11 2108/0/0 (2026-11-11) and the user's hand tests; `release.sh` of 2026-11-11 23:3x
+  stopped at its zips ("nothing to release": `dist/` committed in `4da84e2` first), the zips made by hand with `--only`,
+  then the script fixed (the *pending* state, `tools/same-build.py`) and run whole again (29 of 29, the zips "written
+  already").
+- **A, first (2026-11-12 00:3x):** loaded clean, no probe file written (the game folder listed before and after), but
+  G while riding just outside a door brought the cart and left it unhitched (the seat checked only after the move):
+  fixed for this release ("only refuse", the user), self-test `CartSeatTests.SeatBlocked`. Restored, saves identical.
+- **F11 after the fix:** 2114/2/1, then 2111/1/0; the three made to measure: the zoom (Grave Zoom at 400%) put a test's
+  pen off screen, so every run is at the game's own zoom since (`Dev/TestZoom.cs`); Levels and views 104/0/0 with it.
+  `release.sh --rebuild GK2DonkeyAPI --overwrite` at 02:5x: only the Saddle Up zip new (1,255,570 bytes), 29 of 29.
+- **A on fresh cfgs (10:58):** 0.45.0 / 0.17.0, Donkey Skins 1.3.0 (4 skins) and Dragon 1.3.0 (2 skins) loaded, the
+  cargo layout embedded, no `Dev tools` line, no warning, error or exception in 518 lines; no probe file written; five
+  rounds of H leaving the cart and G hitching the same one with its load (1, then 3 of 3 put back); G indoors refused.
+  The blocked-seat case didn't come up by hand (covered by its self-test).
+- **The fixture** `tests/fixtures/released/0.17.0/`: 359 Saddle Up and 489 API values flipped, plus `defaults.cfg`;
+  `tools/page-carryover.py`: all seven fixtures, 0 lost.
+- **B over the 0.16.0 fixture's Saddle Up cfg** (`fixture-live.py`, Royal Parade worn) with A's API cfg: no warning or
+  error in 592 lines; Royal Parade in the fixture's colours (every part Red, its lightness 40 kept), ridden at the
+  fixture's speed (x2.25); no key moved in this release, so no carry-over lines.
+- **Restore:** everything back, the saves identical; `rehearsal.sh` takes any number of rehearsals a day since
+  (`BepInEx\rehearsal-staged`).
 
 Run 2026-11-06 for 0.16.0 rebuilt with the missing-skin fix (the first zip, never uploaded, deleted by the user's
 commit `e16dd41`; docs/missing-skin.md section 8):

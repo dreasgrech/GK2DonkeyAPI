@@ -6,11 +6,11 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.45.0 (with Saddle Up 0.17.0; this release; before it 0.44.0 / 0.16.0, public 2026-11-06 on Nexus and the Workshop) | 26404424 (1.011.1), built 2026-11-06 00:59 (`--rebuild`, with the missing-skin fix; first built 2026-11-05 19:34) (the mounts left in the world, a called mount's babies, the looks' named parts and the skins' tones, the outline row) |
-| `GK2SaddleUp.dll` | 0.17.0 (needs GK2 Donkey API 0.45.0 or newer; this release; before it 0.16.0, public 2026-11-06, mods/391 and the Workshop) | 26404424 (1.011.1), built 2026-11-05 19:34 (five option tabs, Leave your mounts in the world) |
-| `GK2SaddleUpDragonsMountPack.dll` | 1.3.0 (needs GK2 Donkey API 0.40.0; its parts named, needing 0.44.0 for the names; public 2026-11-06, mods/420 and the Workshop; before it 1.1.0 of 2026-11-01) | the external pack: the dragon embedded, built 2026-11-05 19:34 |
+| `GK2DonkeyAPI.dll` | 0.45.0 (with Saddle Up 0.17.0; this release; before it 0.44.0 / 0.16.0, public 2026-11-06 on Nexus and the Workshop) | 26404424 (1.011.1), built 2026-11-12 02:50 (`--rebuild`, with the cart key's fix; first built 2026-11-11 evening) (the colours window and its tabs, riding from the saddle, the windows' sounds and the game's modal behaviour, skins over the donkey on its pixel grid) |
+| `GK2SaddleUp.dll` | 0.17.0 (needs GK2 Donkey API 0.45.0 or newer; this release; before it 0.16.0, public 2026-11-06, mods/391 and the Workshop) | 26404424 (1.011.1), built 2026-11-11 evening (the committed build; `release.sh` of 2026-11-12: the sources build to the same code) |
+| `GK2SaddleUpDragonsMountPack.dll` | 1.3.0 (needs GK2 Donkey API 0.40.0; its parts named, needing 0.44.0 for the names; this release; before it 1.2.0, public 2026-11-06, mods/420 and the Workshop) | the external pack: the dragon and its Mecha skin embedded, built 2026-11-11 evening (the committed build) |
 | `GK2SaddleUpCrittersMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; never released, as of 2026-11-06) | the external pack: the rat (cargo 2), snail (6) and worm (4) embedded, built 2026-10-29 14:37 |
-| `GK2SaddleUpDonkeySkinPack.dll` | 1.3.0 (needs GK2 Donkey API 0.40.0; Armored, each skin's parts their own colours, needing 0.44.0 for the rows; public 2026-11-06, mods/419 and the Workshop; before it 1.0.0 of 2026-10-28; 1.1.0 built 2026-11-01 but never uploaded, Armored held back then) | the external pack: the donkey's skins Hellfire, Royal Parade and Armored and Hellfire's effect embedded, built 2026-11-05 19:34 |
+| `GK2SaddleUpDonkeySkinPack.dll` | 1.3.0 (needs GK2 Donkey API 0.40.0; each skin's parts their own colours, needing 0.44.0 for the rows; this release; before it 1.2.0, public 2026-11-06, mods/419 and the Workshop; 1.1.0 built 2026-11-01 but never uploaded) | the external pack: the donkey's skins Hellfire, Royal Parade, Armored and Jester and Hellfire's effect embedded, built 2026-11-11 evening (the committed build) |
 
 The API DLL carries the list of every game member it uses (840 entries against this build); at start it compares
 them with the installed game and decides per feature what a changed one means (`docs/dependency-check.md`).
@@ -32,6 +32,16 @@ Royal Parade).
 
 What is new since 0.10.0 is CHANGELOG.md's Unreleased section (as of 2026-10-27). The mounts and skins are on for
 players since this version (0.10.0 shipped them off); which mounts a player has is which packs they installed.
+
+Sizes 2026-11-12 02:58 (0.17.0 / API 0.45.0 with the Donkey Skin Pack 1.3.0 and the Dragons Mount Pack 1.3.0, Critters
+held; `bash tools/release.sh --rebuild GK2DonkeyAPI --overwrite` after the cart key's fix: `dist/` was committed before
+the zips, so the four DLLs were pending, the API rebuilt and Saddle Up and the packs their committed bytes, the sources
+building to the same code; 29 of 29 release scans green): `GK2-Saddle-Up-0.17.0.zip` 1,255,570 bytes (`GK2DonkeyAPI.dll`
+3,408,384 bytes, `GK2SaddleUp.dll` 36,864, each with its `Languages\` of 11 files), `GK2-Saddle-Up-Donkey-Skin-Pack-1.3.0.zip`
+135,078 bytes (the DLL 224,256), `GK2-Saddle-Up-Dragons-Mount-Pack-1.3.0.zip` 666,685 bytes (the DLL 966,144; the two
+pack zips of 2026-11-11 23:34, left as they were). The Workshop folders: 4,197,558, 513,565 and 1,331,834 bytes (the
+zip's files, `modinfo.json`, the thumbnail, change note and description). Rehearsals A and B passed (docs/release-checklist.md
+section 5). Uploaded: (the user's, to note here).
 
 Sizes 2026-11-06 01:09 (0.16.0 / API 0.44.0 rebuilt with the missing-skin fix: `bash tools/build-dist.sh --rebuild
 GK2DonkeyAPI` at 00:59, only the API new, Saddle Up and the packs their committed bytes; 27 of 27 release scans green;

@@ -738,33 +738,8 @@ namespace GK2DonkeyAPI
 
             internal void ComeTo(PlayerController pc, GameScene scene, float facingX)
             {
-                float shownFacing = riderFacingX; // the facing the view is drawn in now
+                Vector3 target = ComePlace(pc, facingX, out Vector3 basePos);
                 riderFacingX = facingX >= 0f ? 1f : -1f;
-                PlayerData pd = pc.PlayerData;
-                Rigidbody rb = pc.PhysicalBody.Rb;
-                Vector3 basePos = rb != null ? rb.transform.position : pd.position.Value;
-                Vector3 away = AwayFromCamera();
-                Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
-                float lateral = 0f;
-                if (Mathf.Abs(S.CenterOffset.Value) > 0.0001f)
-                {
-                    if (bodySprite != null && bodySprite && donkey != null && donkey)
-                    {
-                        // Measured in the facing the view shows; the other facing mirrors it.
-                        lateral = Vector3.Dot(bodySprite.position - donkey.transform.position, right);
-                        if (shownFacing * riderFacingX < 0f)
-                        {
-                            lateral = -lateral;
-                        }
-                    }
-                    else
-                    {
-                        lateral = S.CenterOffset.Value * riderFacingX; // Follow's own fallback without a measured body
-                    }
-                }
-                float sign = Mathf.Abs(lateral) > 0.001f ? Mathf.Sign(lateral) : riderFacingX;
-                float fore = S.RiderOffsetPx.Value * 0.02f * sign;
-                Vector3 target = SnapToGround(basePos + away * S.Depth.Value - right * (lateral + fore));
                 if (SceneId != scene.Id)
                 {
                     DestroyDonkey(); // spawned again in the keeper's scene by StandTick
@@ -785,6 +760,40 @@ namespace GK2DonkeyAPI
                 // for them to catch up
                 int came = BringFarBabies("came with its parent, called to the keeper");
                 if (came > 0) Plugin.Log.LogInfo($"Mount: {FullId} came to the keeper with {came} baby(ies) from out of their reach, placed by it.");
+            }
+
+            // Where ComeTo would put it for this facing, nothing changed: asked before a called cart moves, so a hitch
+            // that would be refused there leaves it where it stands (MountCompanion.BringCart, 2026-11-12). basePos: where
+            // the keeper stands.
+            internal Vector3 ComePlace(PlayerController pc, float facingX, out Vector3 basePos)
+            {
+                float shownFacing = riderFacingX; // the facing the view is drawn in now
+                float facing = facingX >= 0f ? 1f : -1f;
+                PlayerData pd = pc.PlayerData;
+                Rigidbody rb = pc.PhysicalBody.Rb;
+                basePos = rb != null ? rb.transform.position : pd.position.Value;
+                Vector3 away = AwayFromCamera();
+                Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
+                float lateral = 0f;
+                if (Mathf.Abs(S.CenterOffset.Value) > 0.0001f)
+                {
+                    if (bodySprite != null && bodySprite && donkey != null && donkey)
+                    {
+                        // Measured in the facing the view shows; the other facing mirrors it.
+                        lateral = Vector3.Dot(bodySprite.position - donkey.transform.position, right);
+                        if (shownFacing * facing < 0f)
+                        {
+                            lateral = -lateral;
+                        }
+                    }
+                    else
+                    {
+                        lateral = S.CenterOffset.Value * facing; // Follow's own fallback without a measured body
+                    }
+                }
+                float sign = Mathf.Abs(lateral) > 0.001f ? Mathf.Sign(lateral) : facing;
+                float fore = S.RiderOffsetPx.Value * 0.02f * sign;
+                return SnapToGround(basePos + away * S.Depth.Value - right * (lateral + fore));
             }
 
             // Sets everything on this cart down on the ground at it, for good (a mod removing its cart keeps the cargo in
@@ -832,6 +841,24 @@ namespace GK2DonkeyAPI
             // This donkey (without a cart) takes the free cart 'cart': the cart's cargo and its cart settings come over,
             // the free cart goes, and this instance goes on in Cart style. Ridden: the keeper is moved so the donkey
             // stands where the cart's donkey would, facing its way. Standing: this donkey moves to the cart.
+            // While this mount is ridden, a hitch of the cart standing at cartPos (facing facingX) seats the keeper where
+            // the cart's donkey sits: null when he can stand there, else why not (SafeGround.cs). One computation for
+            // Hitch and for a cart called to be hitched, asked before it moves (MountCompanion.BringCart: the cart came
+            // next to the keeper and stayed unhitched when this refused, 2026-11-12).
+            internal string WhyHitchSeatBlocked(PlayerController pc, Instance cart, Vector3 cartPos, float facingX, out Vector3 seat)
+            {
+                Vector3 at = cartPos - HitchDirFor(cart, facingX) * Looks.HitchGapWorldFor(this);
+                seat = KeeperSpotFor(at, facingX, Plugin.For(MountStyle.Cart));
+                if (TestHitchSeatBlocked)
+                {
+                    return "a self-test blocks every hitch seat"; // set only by CartSeatTests, for one call at a time
+                }
+                return WhyKeeperCannotStandAt(pc, ref seat);
+            }
+
+            // The self-test's blocked ground (CartSeatTests): every hitch seat refused, as beside a wall. Never set outside it.
+            internal static bool TestHitchSeatBlocked;
+
             internal string Hitch(Instance cart, PlayerController pc)
             {
                 if (!HasDonkey || HasCart)
@@ -879,8 +906,7 @@ namespace GK2DonkeyAPI
                 {
                     // The keeper is moved to where the cart's donkey sits: only onto ground he can stand on, never below
                     // it (SafeGround.cs). Checked before anything changes; the seat itself is taken below, as always.
-                    Vector3 seat = KeeperSpotFor(at, facing, Plugin.For(MountStyle.Cart));
-                    string offGround = WhyKeeperCannotStandAt(pc, ref seat);
+                    string offGround = WhyHitchSeatBlocked(pc, cart, cart.Position, facing, out Vector3 seat);
                     if (offGround != null)
                     {
                         Plugin.Log.LogInfo($"Mount: hitching {cart.FullId} refused: its seat is no place for the keeper ({offGround}).");

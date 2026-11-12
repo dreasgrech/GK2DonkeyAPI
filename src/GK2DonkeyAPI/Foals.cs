@@ -259,6 +259,8 @@ namespace GK2DonkeyAPI
             private const int WedgeLinesMax = 6;
             // Counted for the self-tests (Dev/FoalRoomTests.cs): placed by a catch-up, rejoined, wedged, stood without room.
             internal int CatchUps, Rejoins, Wedges, StoodWithoutRoom;
+            // The last catch-up's reason, for a self-test's line (its own log line can be cut by the per-mount line limit).
+            internal string LastCatchUpWhy;
             private int pickFailsInRow;
             private float firstPickFailAt;
             private float nextAheadCheck;
@@ -936,6 +938,7 @@ namespace GK2DonkeyAPI
             {
                 CatchUpCount++;
                 CatchUps++;
+                LastCatchUpWhy = why;
                 Vector3 away = AwayFromCamera();
                 Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
                 if (SceneId != p.SceneId)
@@ -1065,6 +1068,9 @@ namespace GK2DonkeyAPI
                 float dx = a.x - b.x, dz = a.z - b.z;
                 return Mathf.Sqrt(dx * dx + dz * dz);
             }
+
+            // The babies' own "out of sight" (a catch-up's condition), for a self-test that needs its baby on screen.
+            internal static bool TestOffScreen(Vector3 world) => OffScreen(world);
 
             private static bool OffScreen(Vector3 world)
             {

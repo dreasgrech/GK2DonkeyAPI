@@ -10,10 +10,26 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+Development:
+
+- **The release runs whole when `dist/` was committed before the zips** (2026-11-12): the release rule
+  (`tools/release-versions.py items`) has a fourth state, *pending* (the version committed in `dist/`, in no committed
+  release zip, its player note written). `build-dist.sh` ships the committed DLL when the sources build to the same
+  code (new `tools/same-build.py`: every byte but the build identity) and stops naming `--rebuild` when they do not;
+  `make-release-zip.py` zips pending items and leaves an identical zip on a rerun. Found at 0.17.0, where `release.sh`
+  said "nothing to release". `release.sh --rebuild <DLL> --overwrite` passes both on (a pending DLL whose sources
+  changed after the commit, and its zip not yet uploaded); `--overwrite` rewrites only a zip whose files changed. `tools/rehearsal.sh` no longer excludes a `modinfo.json` the zips stopped carrying
+  (unzip's "excluded filename not matched" caution), and any number of rehearsals runs a day: the staged one's aside
+  folder (date and time) is named in `BepInEx\rehearsal-staged` until `restore` (a second one the same day collided:
+  renamed "-first" by hand on 2026-11-01, refused on 2026-11-12).
+
 ## 0.17.0 (GK2 Donkey API 0.45.0), 2026-11-11
 
 For players:
 
+- **The cart key no longer leaves the cart unhitched beside you** (2026-11-12): riding close to a wall, a fence or a
+  building, G could bring the cart over and leave it standing there unhitched, because the seat behind it was no place
+  for the keeper. Now nothing moves: the cart stays where it was and the keeper says there's no room for it here.
 - **Skins drawn over the donkey sit exactly on it** (2026-11-11): Royal Parade, Armored and the other skins over the
   donkey were drawn a sixth of a pixel too low, which showed thin slivers of the donkey at their top edges in the
   colours window (a white line in Royal Parade's cloth corners, a brown one under Armored's collar strap). The Mount
@@ -101,6 +117,20 @@ For mod authors:
 
 Development:
 
+- **The cart key's hitch seat asked before the cart moves** (2026-11-12): `MountCompanion.BringCart` asks
+  `WhyHitchSeatBlocked` (the hitch's own seat check, now one function) where `ComePlace` would put the cart, and
+  refuses with `say.no_room_here` before anything moves (a cart spawned for it is removed again). Self-test
+  `CartSeatTests.SeatBlocked` (Core; the dev switch `TestHitchSeatBlocked` blocks the hitch seat only). Found in
+  rehearsal A of 0.17.0, just outside a door.
+- **Three F11 results of 2026-11-12 made to measure** (the full run: 2114 passed, 2 failed, 1 warning): the stuck
+  report's shut-in baby has its pen where the screen shows it (a fixed 3.5 from the keeper was off screen with the
+  camera zoomed in by Grave Zoom at 400%: measured, the pen at x 2680 of 2560, so the baby rightly caught up out of
+  sight; now 3.5, 3 or 2.6 as the view allows, else skipped and said), and a failure prints the keeper, the camera and
+  the screen points; and every run is at the game's own zoom now (`Dev/TestZoom.cs`: a zoom mod held off for the
+  run, the player's zoom back at its end; docs/self-tests.md); "foals keep up off screen" counts its own babies'
+  catch-ups (`LastCatchUpWhy` names the reason), no longer every mount's (`Mount.CatchUpCount`); a jump sent back to
+  its take-off spot judges that spot as a landing too, in the dev log line (a spinning wheel by a weaving loom in the
+  home yard: refused 0.08 from where the keeper had stood).
 - **Our windows' sounds** (2026-11-11, docs/mounts-panel-design.md "Sounds"): the game's ids read from its prefabs
   (`LazyWindow.openSoundId`/`closeSoundId`, `LazyButton.on*Sound`): `win_open`/`win_close` for windows, `gui_hover` +
   `gui_click` for buttons, `gui_hover_light` + `gui_click` for list cells, `gui_hover_light` + `tab_click` for tabs.

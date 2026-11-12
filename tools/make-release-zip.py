@@ -8,7 +8,8 @@
     python tools/make-release-zip.py --no-zip --only GK2SaddleUpDragonsMountPack   # the Workshop folder alone (a public
                                                      #   pack version: its zip is not rebuilt, its item can still be staged)
     python tools/make-release-zip.py --overwrite     # replace a zip that exists in release/ (only one never uploaded:
-                                                     #   a released version is never rebuilt, it gets a new number)
+                                                     #   a released version is never rebuilt, it gets a new number);
+                                                     #   a zip whose files are all as they are now is left as it is
 
 A zip that already exists in release/ is never overwritten without --overwrite: it may be the public file.
 
@@ -161,6 +162,11 @@ def pack_item(pack):
 
 def write_zip(item, overwrite=False):
     path = os.path.join(OUT, item.zip_name)
+    if os.path.isfile(path) and holds_dist(path, item):
+        # a rerun of the release (release.sh after the zips were written): the same files, so the same zip; left as it
+        # is, with --overwrite too (that rewrites only a zip whose files changed)
+        print(f"{path}: written already, every file the same as now (left as it is)")
+        return
     if os.path.isfile(path) and not overwrite:
         # a zip in release/ may be the public one (0.13.1 was overwritten in place on 2026-10-30 before anyone noticed it
         # was uploaded already): a released version is never rebuilt, and a new one gets a new number
@@ -185,6 +191,22 @@ def write_zip(item, overwrite=False):
     print(f"{path}: {item.what}, {files} files, {os.path.getsize(path):,} bytes")
     for n in names:
         print("  " + n)
+
+
+def holds_dist(path, item):
+    """Whether the zip at path holds every file of the item as it is now (the DLLs of dist/, the Languages/ files)."""
+    want = [(s, n) for s, n in item.entries if s is not None and n != MODINFO]
+    try:
+        with zipfile.ZipFile(path) as z:
+            names = set(z.namelist())
+            for s, n in want:
+                if n not in names:
+                    return False
+                if sha(z.read(n)) != sha(open(s, "rb").read()):
+                    return False
+    except zipfile.BadZipFile:
+        return False
+    return True
 
 
 def unwrap(note):
@@ -307,11 +329,12 @@ def main():
             sys.exit(f"--only {only[0]}: no such item (saddleup or one of {', '.join(packs)})")
     else:
         # the release rule (tools/release-versions.py items): an item is in this release when one of its DLLs was raised
-        # above the version committed in dist/ (or is new); a kept one is a released build and gets no zip
+        # above the version committed in dist/, is new, or is pending (committed in dist/ before the zips, never
+        # published); a kept one is a released or held build and gets no zip
         r = subprocess.run([sys.executable, "-I", os.path.join(ROOT, "tools", "release-versions.py"), "items"], capture_output=True, text=True)
         if r.returncode != 0:
             sys.exit("release-versions.py items failed: " + r.stderr.strip())
-        raised = {line.split()[1] for line in r.stdout.splitlines() if line.split() and line.split()[0] in ("raised", "new")}
+        raised = {line.split()[1] for line in r.stdout.splitlines() if line.split() and line.split()[0] in ("raised", "new", "pending")}
         for it in items:
             dlls = {os.path.basename(s)[:-4] for s, _ in it.entries if s is not None and s.endswith(".dll")}
             print(f"{'in this release' if dlls & raised else 'kept (released)':16} {it.name} {it.version}")

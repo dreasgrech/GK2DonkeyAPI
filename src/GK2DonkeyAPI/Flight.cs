@@ -1247,6 +1247,15 @@ namespace GK2DonkeyAPI
                 }
             }
             TestJumpWentBack = put == takeOffSpot;
+            if (TestJumpWentBack && DevTools.Unlocked)
+            {
+                // Dev only: the take-off spot judged as a landing too. 2026-11-12 (F11 in the home yard): a landing 0.08
+                // from it was refused, "inside NavMeshCutBoxCustom ... by 0.13", and he went back to where he had stood. If
+                // the take-off spot fails the same way, the landing check is stricter than where he stood.
+                Vector3 t = takeOffSpot;
+                string whyT = Mount.Instance.WhyCannotLandAt(pc, ref t, grid: true, connectedTo: takeOffSpot, walkOut: true, walkBudgetMs: 0f, besideThings: true);
+                how += $" (the take-off spot itself, judged as a landing: {whyT ?? "lands"})";
+            }
             JumpTrace.Outcome(TestJumpWentBack ? "back" : "short");
             JumpTrace.Note($"can't land ({why}): {how}; the path had {jumpPath.Count} point(s)");
             GiveBack(pc, put, $"the jump can't land there ({why}): {how}");

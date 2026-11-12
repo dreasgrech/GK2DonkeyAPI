@@ -9,6 +9,11 @@
 #                                                     was never published is rebuilt, not put back (the user's word; refused
 #                                                     when a committed release zip holds the committed DLL: it is public)
 #
+# A DLL the release rule calls "pending" (its version committed in dist/ before this release's zips: release-versions.py)
+# gets its committed bytes back when the fresh build is the same code apart from the build identity (tools/same-build.py:
+# the commit stamp, MVID, timestamps), so the zip carries what was committed; when the code differs (a source changed
+# after dist/ was committed) the build stops and names --rebuild.
+#
 # Afterwards: bash tools/release-scans.sh, python tools/make-release-zip.py, then a dev build with the game closed
 # (bin/ holds whichever was built last).
 set -u
@@ -70,6 +75,24 @@ while read -r state dll ver rest; do
       else
         git -C "$REPO" checkout -- "dist/$dll.dll" || { echo "could not restore dist/$dll.dll"; exit 1; }
         echo "   $dll $ver: kept, the released build (its version was not raised)"
+      fi ;;
+    pending)
+      if [[ "$REBUILD" == *" $dll "* ]]; then
+        echo "   $dll $ver: pending, rebuilt (--rebuild)"
+      else
+        committed="$REPO/release/logs/$dll.committed.dll"
+        git -C "$REPO" show "HEAD:dist/$dll.dll" > "$committed" || { echo "could not read the committed dist/$dll.dll"; exit 1; }
+        if same=$(python -I "$REPO/tools/same-build.py" "$REPO/dist/$dll.dll" "$committed"); then
+          git -C "$REPO" checkout -- "dist/$dll.dll" || { echo "could not restore dist/$dll.dll"; exit 1; }
+          echo "   $dll $ver: pending (committed in dist/ before the zips), the committed build: the sources build to the same code"
+        else
+          echo "   $dll $ver: pending, but the committed dist/$dll.dll is not what the sources build now ($same):"
+          echo "   a source changed after dist/ was committed. Rebuild it: bash tools/build-dist.sh --rebuild $dll"
+          git -C "$REPO" checkout -- "dist/$dll.dll"
+          rm -f "$committed"
+          exit 1
+        fi
+        rm -f "$committed"
       fi ;;
     raised|new) echo "   $dll $ver: $state, this release's build" ;;
     *) echo "release-versions.py items said: $state $dll $ver $rest"; exit 1 ;;

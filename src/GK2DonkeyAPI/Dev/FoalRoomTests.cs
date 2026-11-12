@@ -216,11 +216,35 @@ namespace GK2DonkeyAPI
 
                 // 2. an active baby that can't get nearer: shut in a pen 6 from its parent, on screen (no catch-up out of
                 // sight), more than the shuffle's keeper distance from him
-                Vector3? c = Spot(home, 3.5f);
-                Vector3? pAt = c.HasValue ? Spot(c.Value, 6f) : null;
+                // The pen whole on screen by the babies' own rule (Foals.OffScreen): a fixed 3.5 from the keeper was off
+                // screen with the camera zoomed in (2026-11-12: Grave Zoom at 400%, 400 screen px a unit, 3.2 units each
+                // side; measured: the pen at x 2680 of 2560). Nearer as the view allows, never within the shuffle's keeper
+                // distance; none fits: the camera is too close for the case, skipped and said.
+                float keeperDist = IdleShuffle.KeeperDistance.Value;
+                bool PenOnScreen(Vector3 v)
+                {
+                    const float half = 0.75f; // the pen's walls, 1.5 across
+                    return !Mount.Instance.TestOffScreen(v) && !Mount.Instance.TestOffScreen(v + Vector3.right * half) && !Mount.Instance.TestOffScreen(v - Vector3.right * half)
+                        && !Mount.Instance.TestOffScreen(v + Vector3.forward * half) && !Mount.Instance.TestOffScreen(v - Vector3.forward * half);
+                }
+                Vector3? c = null;
+                float penDist = 0f;
+                foreach (float dist in new[] { 3.5f, 3f, 2.6f })
+                {
+                    if (dist <= keeperDist + 0.25f) break;
+                    c = Spot(home, dist, PenOnScreen);
+                    penDist = dist;
+                    if (c.HasValue) break;
+                }
+                if (!c.HasValue)
+                {
+                    Skip($"no spot for the pen on screen more than {keeperDist:F1} from the keeper (the camera zoomed in too close? a zoom mod)");
+                    yield break;
+                }
+                Vector3? pAt = Spot(c.Value, 6f);
                 if (!pAt.HasValue)
                 {
-                    Skip("no open ground for the pen and its parent");
+                    Skip("no open ground for the pen's parent");
                     yield break;
                 }
                 p2 = Spawn(pAt.Value, right: true);
@@ -247,11 +271,41 @@ namespace GK2DonkeyAPI
                 Wall(0f, 0.675f, 1.5f, 0.15f);
                 Wall(0f, -0.675f, 1.5f, 0.15f);
                 Physics.SyncTransforms();
+                // the pen on screen before the baby goes in: off screen, a baby that can't get out rightly catches up
+                // out of sight (Foals.cs), and the case isn't made. The keeper was just put back from 42-50 away; on
+                // 2026-11-12 the baby caught up at once ("its parent stands again") 0.5 s after he came back, so the
+                // camera's way back is waited for, and how long it took is in the check's line.
+                float camFrom = Time.unscaledTime;
+                yield return Until(() => !Mount.Instance.TestOffScreen(c.Value), 5f);
+                float camWait = Time.unscaledTime - camFrom;
+                if (!waited)
+                {
+                    // 2026-11-12, the second run: still off screen after 5 s, so not the camera's way back. What decides it:
+                    // where the keeper really is, the camera, and the pen's screen point in the space OffScreen compares
+                    // with Screen.width/height (the game draws through a pixel-perfect camera of its own).
+                    Vector3 k = Keeper();
+                    string screen;
+                    try
+                    {
+                        Vector3 sp = CameraSystem.WorldToScreenPoint(c.Value), sk = CameraSystem.WorldToScreenPoint(k);
+                        Camera cam = Camera.main;
+                        string main = cam != null
+                            ? $"Camera.main {cam.name} at {cam.transform.position:F2}, {cam.pixelWidth}x{cam.pixelHeight} px, the pen at {cam.WorldToScreenPoint(c.Value):F0}"
+                            : "no Camera.main";
+                        screen = $"CameraSystem: the pen at {sp:F0}, the keeper at {sk:F0}; Screen {Screen.width}x{Screen.height}; {main}";
+                    }
+                    catch (System.Exception e)
+                    {
+                        screen = "the screen points threw: " + e.Message;
+                    }
+                    Fail($"the pen at {c.Value:F2}, {penDist:F1} from home {home:F2}, was still off screen 5 s after the keeper came back; the keeper at {k:F2} ({Vector3.Distance(k, home):F2} from home); {screen}");
+                    yield break;
+                }
                 f2.MoveTo(c.Value);
                 int r2 = f2.I.StuckReports;
                 yield return Until(() => f2.I.StuckReports > r2, 6f);
                 float d2 = new Vector2(f2.Position.x - p2.Position.x, f2.Position.z - p2.Position.z).magnitude;
-                Check(waited && f2.I.tier == Mount.Tier.Active, $"an active baby shut in, {d2:F1} from its parent, is still reported ({f2.I.StuckReports - r2} report(s) within 6 s; level {f2.I.tier})");
+                Check(waited && f2.I.tier == Mount.Tier.Active, $"an active baby shut in, {d2:F1} from its parent, is still reported ({f2.I.StuckReports - r2} report(s) within 6 s; level {f2.I.tier}; the pen on screen {camWait:F1} s after the keeper came back)");
             }
             finally
             {

@@ -911,6 +911,7 @@ namespace GK2DonkeyAPI.Api
                     }
                 }
             }
+            bool spawned = false;
             if (Cart == null || !Cart.Exists)
             {
                 Cart = Mounts.Spawn(OwnerId, new MountSpawn { Position = Vector3.zero, Donkey = false, WithCart = true, Key = CartKey, Persist = keep });
@@ -918,9 +919,36 @@ namespace GK2DonkeyAPI.Api
                 {
                     return "The cart could not be spawned.";
                 }
+                spawned = true;
                 ApplyLook();
             }
             StepTrace.Mark("BringCart: the cart found or spawned");
+            // Riding: the seat the hitch would put the keeper on, asked where the cart would come to, before it moves. A
+            // seat he can't stand on (a wall, a fence or a building beside him) refuses it here, and the cart stays where it
+            // stands. Asked only by the hitch, after the move, the cart came next to him and stayed unhitched (2026-11-12;
+            // the user: only refuse, never turn him round). Not for a cart with more on it than this mount pulls: that one
+            // comes over unhitched by design (below).
+            if (to.IsRidden && GK2DonkeyAPI.Looks.WhyNotCartByLoad(to.I, Cart.I) == null
+                && Mount.Instance.IsInGame(out PlayerController rider, out _))
+            {
+                float facing = to.FacingRight ? 1f : -1f;
+                Vector3 place = Cart.I.ComePlace(rider, facing, out _);
+                string blocked = to.I.WhyHitchSeatBlocked(rider, Cart.I, place, facing, out Vector3 seat);
+                StepTrace.Mark("BringCart: the hitch seat asked where the cart would come to");
+                if (blocked != null)
+                {
+                    Plugin.Log.LogInfo($"Companion: {OwnerId}: the cart is not brought: hitched at {place:F2} it would seat the keeper at {seat:F2}, {blocked}; "
+                        + (spawned ? "the cart just spawned for it is removed again." : $"it stays where it stands ({Cart.Position:F2})."));
+                    if (spawned)
+                    {
+                        Mount.Remove(Cart.I, "spawned for a hitch refused at once");
+                        Cart = null;
+                    }
+                    string noRoom = UiWords.SayNoRoomHere.English;
+                    Mount.Say(noRoom);
+                    return noRoom;
+                }
+            }
             MountResult come = Cart.ComeToKeeper(to.FacingRight);
             StepTrace.Mark("BringCart: the cart came (ComeToKeeper)");
             if (!come.Ok)

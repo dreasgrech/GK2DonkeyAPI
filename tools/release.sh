@@ -4,6 +4,10 @@
 # history entry, docs/nexus/<name>-<version>-changelog.md and, for the Workshop, -workshop-changenote.txt):
 #
 #   bash tools/release.sh
+#   bash tools/release.sh --rebuild GK2DonkeyAPI --overwrite   a DLL committed in dist/ for this release, its sources changed
+#                                   since (build-dist.sh stops and names --rebuild): rebuilt, and its item's zip, written
+#                                   already but never uploaded, written again (the user's word; an identical zip is left,
+#                                   and a published item is never zipped)
 #
 # 1. release-versions.py check   every line that repeats a version agrees; the editorial pieces exist
 # 2. release-versions.py items   which DLLs this release raised, which stay released builds
@@ -15,6 +19,15 @@
 # listed at the end; the dev builds in the game are untouched (build-dist builds with Deploy=false).
 set -u
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BUILD_ARGS=()
+ZIP_ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --rebuild) [ $# -ge 2 ] || { echo "--rebuild needs a DLL name"; exit 1; }; BUILD_ARGS+=(--rebuild "$2"); shift 2 ;;
+    --overwrite) ZIP_ARGS+=(--overwrite); shift ;;
+    *) echo "unknown argument: $1 (--rebuild <DLL>, --overwrite)"; exit 1 ;;
+  esac
+done
 step() { echo; echo "######## $1"; }
 
 step "1. the version lines"
@@ -22,11 +35,11 @@ python -I "$REPO/tools/release-versions.py" check || { echo "RELEASE STOPPED: fi
 step "2. what this release carries"
 python -I "$REPO/tools/release-versions.py" items || exit 1
 step "3. the release build"
-bash "$REPO/tools/build-dist.sh" || { echo "RELEASE STOPPED at the build"; exit 1; }
+bash "$REPO/tools/build-dist.sh" "${BUILD_ARGS[@]}" || { echo "RELEASE STOPPED at the build"; exit 1; }
 step "4. the release scans"
 bash "$REPO/tools/release-scans.sh" || { echo "RELEASE STOPPED at the scans"; exit 1; }
 step "5. the zips and the Workshop folders"
-python -I "$REPO/tools/make-release-zip.py" || { echo "RELEASE STOPPED at the zips"; exit 1; }
+python -I "$REPO/tools/make-release-zip.py" "${ZIP_ARGS[@]}" || { echo "RELEASE STOPPED at the zips"; exit 1; }
 
 step "Done. To hand off"
 echo "- Nexus: each zip above to its page, with its docs/nexus/<name>-<version>-changelog.md as the file's note"

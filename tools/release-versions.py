@@ -1,7 +1,7 @@
 """Every line that carries a version number, checked or moved together (docs/release-checklist.md, section 6).
 
     python tools/release-versions.py check
-    python tools/release-versions.py items           # which DLLs this release carries (raised) and which stay released (kept)
+    python tools/release-versions.py items           # which DLLs this release carries (raised, pending) and which stay released (kept)
     python tools/release-versions.py set saddleup 0.13.2 --api 0.41.2
     python tools/release-versions.py set GK2SaddleUpDragonsMountPack 1.0.1
     python tools/release-versions.py published GK2DonkeyAPI   # the committed release zip holding dist/'s DLL, exit 1: none
@@ -9,7 +9,11 @@
 The release rule (`items`, used by build-dist.sh and make-release-zip.py): a DLL whose source version differs from the
 one committed in dist/ is in this release ("raised"); one with the same version is a released build ("kept"):
 build-dist.sh puts its committed bytes back and make-release-zip.py writes no zip for it. A released version is never
-rebuilt; to ship a change, raise the version.
+rebuilt; to ship a change, raise the version. One exception: a DLL with the same version that no committed release zip
+holds, whose release's player note (docs/nexus/<name>-<version>-changelog.md) is written, is "pending": dist/ was
+committed before the zips (0.15.0 on 2026-11-01, 0.17.0 on 2026-11-11). It is in this release; build-dist.sh ships its
+committed bytes only when the sources build to the same code (tools/same-build.py) and stops otherwise. A held item
+(Critters 1.0.0: committed in dist/, never published, no player note) stays "kept".
 
 `check` (make-release-zip.py runs it first; exit 1 on any finding) reads the one place each version lives (the
 plugin's `Version` constant in Plugin.cs) and verifies every other line that repeats it: the csproj, README.md's table
@@ -112,7 +116,7 @@ def check():
         bad += 1
         print(f"FAIL  the Nexus note {nexus} is missing (editorial: the simplified player text of this release)")
     # a pack raised in this release needs its player note too (its Nexus file's text, and its Workshop change note)
-    raised = {dll for dll, ver, committed in dll_items() if committed is not None and ver != committed}
+    raised = {dll for dll, ver, committed in dll_items() if state_of(dll, ver, committed) in ("raised", "pending")}
     for pack in pack_dirs():
         if dll_of(pack) not in raised:
             continue
@@ -135,7 +139,7 @@ def check():
         print(f"FAIL  CHANGELOG.md's first release heading is {m.group(1)} / {m.group(2)}, the constants say {su} / {api}")
     # a released build whose translation files changed since: the release rule leaves it out until its version is raised
     for dll, ver, committed in dll_items():
-        if committed is None or ver != committed:
+        if state_of(dll, ver, committed) != "kept":
             continue
         diff = languages_changed(dll)
         if diff:
@@ -289,12 +293,45 @@ def published(dll):
     return None
 
 
+def release_note(dll):
+    """The player note of the release that ships this DLL: Saddle Up's for the API and Saddle Up (one zip), the pack's
+    own for a pack."""
+    su = constant("src/SaddleUp/Plugin.cs")
+    if dll in ("GK2DonkeyAPI", "GK2SaddleUp"):
+        return f"docs/nexus/saddleup-{su}-changelog.md"
+    for pack in pack_dirs():
+        if dll_of(pack) == dll:
+            v = constant(f"packs/{pack}/Plugin.cs")
+            short = zip_name(pack, v)[len("GK2-Saddle-Up-"):-len(f"-{v}.zip")].lower()
+            return f"docs/nexus/{short}-{v}-changelog.md"
+    return None
+
+
+def state_of(dll, ver, committed):
+    """new: not in dist/; raised: another version in dist/; pending: this version committed in dist/ but in no committed
+    release zip, its release's player note written (dist/ committed before the zips); kept: a released build, or one
+    held back (never published, no note)."""
+    if committed is None:
+        return "new"
+    if ver != committed:
+        return "raised"
+    note = release_note(dll)
+    if published(dll) is None and note and os.path.isfile(os.path.join(ROOT, note)):
+        return "pending"
+    return "kept"
+
+
 def items():
     """Which DLLs this release carries: raised = the source's version differs from the one committed in dist/ (a new
-    release of it); kept = the same version, a released build (build-dist.sh puts the committed bytes back; no zip)."""
+    release of it); pending = the same version, committed in dist/ but never published, its player note written (in this
+    release; build-dist.sh checks the sources still build to it); kept = a released or held build (build-dist.sh puts
+    the committed bytes back; no zip)."""
     for dll, ver, committed in dll_items():
-        state = "new" if committed is None else ("raised" if ver != committed else "kept")
-        print(f"{state:6} {dll} {ver}" + ("" if committed in (None, ver) else f" (dist/ has {committed})"))
+        state = state_of(dll, ver, committed)
+        extra = "" if committed in (None, ver) else f" (dist/ has {committed})"
+        if state == "pending":
+            extra = " (committed in dist/, not yet published)"
+        print(f"{state:7} {dll} {ver}" + extra)
 
 
 def main():
