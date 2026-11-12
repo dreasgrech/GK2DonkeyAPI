@@ -1174,12 +1174,25 @@ namespace GK2DonkeyAPI.IntegrationTests
             foreach (string r in Colors.MountRegionKeys) regionsAtDefault &= !Colors.RegionChanged(r);
             if (regionsAtDefault) Check(before2.Colours > Colors.PaletteMaxColours && before2.Changed == 0, $"the game's colours: the worm's {before2.Colours} colours mapped, none changed");
             else Info($"the mount regions aren't at their defaults in the cfg (the Colors tab): the 'none changed' check skipped ({before2.Changed} of {before2.Colours} changed)");
+            int coloursBefore = paper.ColorsRig.Applied;
             me.CustomCoat = "20C040";
             me.Coat = CoatColor.Custom;
-            // the picture read once the framing is done: a look's first picture measures its framing over 20 frames and shows
-            // its last photo meanwhile (every kept framing measured again once after the framing file's version 2, 2026-10-29)
-            yield return Until(() => { PreviewStage.Picture(paper, withCart: false); return !PreviewStage.TestAloneMeasuring; }, 10f);
-            for (int i = 0; i < 4; i++) { PreviewStage.Picture(paper, withCart: false); yield return null; }
+            // read once the preview has a finished photo taken with the new colours (the colours applied, then a photo
+            // of them): four frames after the change read the old photo back at a high frame rate, the preview waiting
+            // for its next walk frame (2121/1 of 2026-11-12, the same pixels as the pink one)
+            yield return Until(() =>
+            {
+                PreviewStage.Picture(paper, withCart: false);
+                int applied = paper.ColorsRig.Applied;
+                return applied > coloursBefore && PreviewStage.TestRenderedColours(false) == applied;
+            }, 10f);
+            if (!waited)
+            {
+                Fail($"no settings picture with the new colours within 10 s (colours applied {paper.ColorsRig.Applied - coloursBefore} time(s) since the change, the photo's {PreviewStage.TestRenderedColours(false)})");
+                me.Coat = CoatColor.Game;
+                me.Skin = "";
+                yield break;
+            }
             float after = PreviewStage.TestDominantHue(false, out int greenPixels, out string topAfter);
             Check(greenPixels > 100 && after >= 80f && after <= 170f, $"a custom green coat: the picture leans green ({after:0}°, {greenPixels} coloured pixels; most drawn: {topAfter})");
             var g = paper.ColorsRig.TestMountGroup();

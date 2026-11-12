@@ -1,5 +1,5 @@
 GK2 Saddle Up: Donkey Skin Pack 1.3.1
 
-- Added Jester, a new look for your donkey: a belled fool's cap and collar and a chequered caparison, every part its own colour.
+- Added Jester, a new look for your donkey: a belled fool's cap and collar and a chequered caparison whose pointed hem swings as it walks, every part its own colour.
 - Royal Parade's saddle cloth sits on the back while walking and curves with the rump.
 - Fixed a line across Hellfire's hind legs while walking and a light strip under its belly. Your colours carry over.

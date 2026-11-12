@@ -381,7 +381,10 @@ def pinholes(key, drawn):
             skin = [drawn[q] for q in around if q in drawn]
             if skin and all(seen(q) for q in around):
                 own = [don[q] for q in around if q not in drawn]
-                out[(x, y)] = min(own or skin, key=lambda c: c[0] + c[1] + c[2])
+                c = min(own or skin, key=lambda c: c[0] + c[1] + c[2])
+                # opaque: a donkey neighbour of the donkey's soft edge gave its own part transparency, and the hole
+                # showed as a faint ghost (the Jester's walk 07 at the strap, alpha 102, a fresh review 2026-11-12)
+                out[(x, y)] = (c[0], c[1], c[2], 255)
     return out
 
 

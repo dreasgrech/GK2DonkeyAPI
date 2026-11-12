@@ -704,6 +704,11 @@ namespace GK2DonkeyAPI
                 dirty = true;
             }
 
+            // How many times new colours were put on the parts (Tick). The settings picture takes a new photo when it
+            // moves: it waited for its next walk frame or 1/24 s, so a colour changed showed late, and the colours
+            // self-test read the old photo back at a high frame rate (2026-11-12).
+            internal int Applied { get; private set; }
+
             // After PrepareParts: the view's parts are in place (and again after a cargo change: nothing new to find, the
             // lists are rebuilt the same way).
             internal void Attach(Wgo donkey)
@@ -834,6 +839,7 @@ namespace GK2DonkeyAPI
                         {
                             uploaded = Rebuild();
                             ApplyAll();
+                            Applied++;
                         }
                         double ms = watch.Elapsed.TotalMilliseconds;
                         // A slider drag rebuilds every frame: say so when that is not cheap (at most every 2 s).

@@ -924,6 +924,9 @@ def main(argv):
     for name, px in pieces:
         save(px, os.path.join(where, name))
     print("drew", len(pieces), "pieces")
+    # the walk's caparison swings as a pendulum below the seam (draw_cloth_walk.py: drawn over the walk's body@)
+    import draw_cloth_walk
+    draw_cloth_walk.run(where)
     made = {name for name, _ in pieces}
     for name in sorted(os.listdir(where)):   # a piece of an earlier run this one no longer draws
         if name.endswith(".png") and name.startswith(("head", "body", "neck")) and name not in made:

@@ -4,6 +4,11 @@
 
 ## 1.3.1, 2026-11-12
 
+- **Jester's caparison swings as it walks** (2026-11-12): below the seam its skirt swings back and forth as one
+  piece over the stride, each panel stepping on rows of its own, and each panel ends in a pointed dag of its own
+  colour with a bell at the tip (three bells). The hem was four points of the other colour hung under a dark band,
+  its points sliding a pixel or two under a skirt that never moved. Drawn by `tools/skins/jester/draw_cloth_walk.py`
+  after Saint11's Fabric/Flags tutorial; the 8 walk frames only.
 - **Hellfire's legs and belly as the donkey's own** (2026-11-12): in its fourth walk frame a straight line ran
   across both hind legs, and in the standing pose (and every animation that shares it: ears, grazing, chewing,
   lips, turning) a light strip ran along the bottom of the belly in front of the hind legs. The rump's fill

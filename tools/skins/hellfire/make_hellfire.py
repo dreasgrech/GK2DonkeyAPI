@@ -106,6 +106,22 @@ def rump_of(key):
     return _STANDING_RUMP
 
 
+def rump_shape_of(key):
+    """The walk's rump shape: the standing frame's curve moved by the frame's back bob (the rig's back row against the
+    standing frame's; the hip stays at the same column through the walk), each frame keeping its own rows down to its own
+    thigh. Its own curves bulged 2-3 columns apart from frame to frame (68 in walk 01/04/05/08, 66-67 in 03/06/07), so
+    the fill jumped between 7 and 40 pixels while walking (the user, 2026-11-12); the standing pose's shape is also the
+    one every idle animation shares, so walking and standing keep one rump."""
+    global _STANDING_RUMP
+    if "_walk_" not in key:
+        return None
+    if _STANDING_RUMP is None:
+        HP.hellfire("0301_" + STANDING, phase_of(STANDING), crack_pixels=crack_pixels(STANDING))
+        _STANDING_RUMP = dict(HP.LAST_RUMP)
+    dy = rig(key)["back"][1] - rig(STANDING)["back"][1]
+    return (_STANDING_RUMP["curve"], dy, _STANDING_RUMP.get("fill"))
+
+
 def horns_of(key):
     """The horns on the ear bases of the body points (anatomy.rig): (x, y, lean) for the left and the right, both leaning
     towards the muzzle, the left one outwards where the face looks at us (both eyes in view)."""
@@ -118,7 +134,7 @@ def horns_of(key):
 def pack_frame(key):
     """The pack's picture for one frame: the prototype's result against the original, pixel by pixel."""
     orig = HP.load("0301_" + key)
-    res = HP.hellfire("0301_" + key, phase_of(key), crack_pixels=crack_pixels(key), rump=rump_of(key), horn_bases=horns_of(key))
+    res = HP.hellfire("0301_" + key, phase_of(key), crack_pixels=crack_pixels(key), rump=rump_of(key), horn_bases=horns_of(key), rump_shape=rump_shape_of(key))
     assert res.size == orig.size, (key, res.size, orig.size)
     w, h = orig.size
     op, rp = orig.load(), res.load()

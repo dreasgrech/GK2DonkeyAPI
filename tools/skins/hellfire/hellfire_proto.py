@@ -223,14 +223,18 @@ def thigh_row(px, w, h, y0, top):
 
 
 RUMP_EDGE_MAX = 8  # the widest stretch fill_rump repaints in coat (the rump's edge measured 1-6, the body below 12+)
+FILLED = {}        # the last fill_rump's painted pixels and colours
 
 
-def fill_rump(px, w, h, y0, yb, bulge_per_row=1 / 7.0, curve_from=None):
+def fill_rump(px, w, h, y0, yb, bulge_per_row=1 / 7.0, curve_from=None, shape_from=None):
     """the rump's back where the tail was, as one curve: from the edge just above where the tail branched off (y0 - 1)
     down to the back of the thigh (thigh_row), bowed out mid-way and turning in as it reaches the thigh, so it rounds
     into the leg instead of meeting the belly at a right angle (2026-10-19). Every row between is set to the curve:
-    filled out in its coat colour or trimmed, the outline at the end. Returns the curve, row -> column, with the edge
-    row above it (y0 - 1). curve_from: another frame's curve, as returned, set instead (that row too)."""
+    filled out in the coat's own shading or trimmed, the outline at the end. Returns the curve, row -> column, with the
+    edge row above it (y0 - 1). curve_from: another frame's curve, as returned, set instead (that row too).
+    shape_from: (another frame's curve, dy): the frame's own rows (down to its own thigh) take that curve's columns,
+    moved dy rows (the walk takes the standing frame's, moved by the back's bob: its own curves bulged 2-3 columns
+    apart from frame to frame, a patch of 7 to 40 pixels jumping in the walk; the user, 2026-11-12)."""
     def edge(y):
         r = runs(px, y, w, h)
         return r[-1][1] if r else None
@@ -254,8 +258,16 @@ def fill_rump(px, w, h, y0, yb, bulge_per_row=1 / 7.0, curve_from=None):
         for y in range(y0, yl):  # no single row past both neighbours
             want[y] = min(want[y], max(want[y - 1], want[y + 1]))
         rows = range(y0, yl)
+        if shape_from is not None:
+            shape, dy = shape_from[0], shape_from[1]
+            for y in rows:
+                if y - dy in shape:
+                    want[y] = shape[y - dy]
     lava = {(255, 150, 40), (255, 90, 24), (150, 34, 12)}
     curve = {y0 - 1: top} if curve_from is None else {}
+    FILLED.clear()   # the pixels this fill paints, with their colours (LAST_RUMP["fill"]: the walk takes the standing frame's)
+    shape_fill = shape_from[2] if shape_from is not None and len(shape_from) > 2 else None
+    shape_dy = shape_from[1] if shape_from is not None else 0
     for y in rows:
         target = want[y]
         e = edge(y)
@@ -272,11 +284,21 @@ def fill_rump(px, w, h, y0, yb, bulge_per_row=1 / 7.0, curve_from=None):
         # The stretch from the last coat pixel to the curve is the rump's edge (the old outline, the tail's root, the
         # room the curve adds): 1 to 6 pixels in every frame (measured over all 44, 2026-11-12). A longer one is the
         # body below the rump, left as drawn: on the curve's lowest rows the coat was painted 12 pixels over the
-        # belly's bottom edge (the standing pose's 36 frames) and 12 and 19 straight across the hind legs (walk 04 rows
+        # belly's bottom edge (the standing pose's 33 frames) and 12 and 19 straight across the hind legs (walk 04 rows
         # 56-57, a line through both legs; the user, 2026-11-12). Nothing measured between 6 and 12.
-        if target - last - 1 <= RUMP_EDGE_MAX:
+        # Filled in the coat's own shading: the band of the donkey's pixels just inside the stretch, moved out by its
+        # width (its darker edge stays at the edge); a crack pixel or a non-coat one there gives the plain coat. One
+        # colour a row made flat bars beside the shaded coat, "blurred, almost like censored" (the user, 2026-11-12).
+        n = target - last - 1
+        if n <= RUMP_EDGE_MAX:
             for x in range(last + 1, target):
-                px[x, y] = coat
+                kept = shape_fill.get((x, y - shape_dy)) if shape_fill else None
+                if kept is not None:
+                    px[x, y] = kept   # the shape's own frame's colour there: the walk's fill doesn't flicker
+                else:
+                    src = px[x - n, y] if x - n >= 0 else (0, 0, 0, 0)
+                    px[x, y] = src if src[3] > 0 and src[:3] in COAT else coat
+                FILLED[(x, y)] = px[x, y]
         for x in range(target + 1, w):
             px[x, y] = (0, 0, 0, 0)
         px[target, y] = outline
@@ -503,7 +525,7 @@ def devil_tail(px, w, h, rx, ry, phase):
     put(px, tx - 1, ty - 2, (120, 20, 16), w, h)
     put(px, tx + 1, ty - 2, (120, 20, 16), w, h)
 
-def hellfire(name, phase=0.0, crack_pixels=None, rump=None, horn_bases=None):
+def hellfire(name, phase=0.0, crack_pixels=None, rump=None, horn_bases=None, rump_shape=None):
     """One frame: the donkey's frame turned Hellfire. crack_pixels: the cracks as (x, y, colour) to copy (default:
     drawn into the torso box). rump: another frame's LAST_RUMP to set (its curve and its tail's row; default: drawn
     from this frame's own edge and torso box). horn_bases: the two horns' (x, y, lean), the ear bases (none: no
@@ -537,10 +559,10 @@ def hellfire(name, phase=0.0, crack_pixels=None, rump=None, horn_bases=None):
                 stamp_cracks(px, w, h, crack_pixels)
             if root:
                 y0 = root[0]
-                curve = fill_rump(px, w, h, y0, box[3], curve_from=rump["curve"] if rump else None)
+                curve = fill_rump(px, w, h, y0, box[3], curve_from=rump["curve"] if rump else None, shape_from=rump_shape)
                 # the tail grows from the upper third of the rump's curve
                 ry = rump["tail_row"] if rump else y0 + (box[3] - y0) // 3
-                LAST_RUMP = {"curve": curve, "tail_row": ry}
+                LAST_RUMP = {"curve": curve, "tail_row": ry, "fill": dict(FILLED)}
                 rr = runs(px, ry, w, h)
                 root = (rr[-1][1], ry) if rr else None  # the row's actual edge (the body may be wider than the curve there)
     special = EAR_FRAMES.get(key)

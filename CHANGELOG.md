@@ -117,6 +117,12 @@ For mod authors:
 
 Development:
 
+- **The colours window's picture is taken again as soon as new colours are applied** (2026-11-12): `Colors.Rig.Applied`
+  counts the times new colours were put on the parts, and `PreviewStage.NeedsRender` takes a new photo when it moved
+  (it waited for the copy's next walk frame or 1/24 s). The self-test "the player's regions on a mount in its own
+  colours" waits for a photo taken with the new colours (`PreviewStage.TestRenderedColours`) instead of four frames,
+  which read the old photo back at a high frame rate (2121/1 on 2026-11-12: the green coat's picture had the pink
+  one's very pixels).
 - **The cart key's hitch seat asked before the cart moves** (2026-11-12): `MountCompanion.BringCart` asks
   `WhyHitchSeatBlocked` (the hitch's own seat check, now one function) where `ComePlace` would put the cart, and
   refuses with `say.no_room_here` before anything moves (a cart spawned for it is removed again). Self-test

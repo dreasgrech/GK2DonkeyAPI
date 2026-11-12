@@ -58,6 +58,7 @@ namespace GK2DonkeyAPI
             internal float LastRenderAt = -10f;   // when it was last rendered (unscaled)
             internal Sprite RenderedSprite;    // the copy's body sprite (the walk frame) it was rendered with
             internal int RenderedGapStamp = -2; // the paper's tuning stamp it was rendered with
+            internal int RenderedColours = -1;  // the paper's colours it was rendered with (ColorsRig.Applied)
             internal bool Drawn;               // a finished photo is in Rt (what a look still settling holds on to)
             internal string DrawnLook = "";    // the look that photo is of (LooksRig.Wearing when it was taken)
             internal bool StandIn;             // the alone view last asked for in the cart view's place (a mount that can't pull the cart)
@@ -222,6 +223,7 @@ namespace GK2DonkeyAPI
             if (RenderEveryFrame || v.Reframe || v.TightenStep >= 0 || !v.Drawn) return true;
             if (v.DrawnLook != (paper.LooksRig.Wearing ?? "")) return true;
             if (gapStamp != v.RenderedGapStamp) return true;
+            if (paper.ColorsRig.Applied != v.RenderedColours) return true; // new colours: shown at once, not a walk frame later
             if (copyBody != null && !ReferenceEquals(copyBody.sprite, v.RenderedSprite)) return true;
             return Time.unscaledTime - v.LastRenderAt >= MinRenderGap;
         }
@@ -398,6 +400,7 @@ namespace GK2DonkeyAPI
                     v.LastRenderAt = Time.unscaledTime;
                     v.RenderedSprite = copyBody != null ? copyBody.sprite : null;
                     v.RenderedGapStamp = gapStamp;
+                    v.RenderedColours = paper.ColorsRig.Applied;
                     Render(v);
                     if (v.TightenStep < 0) { v.Drawn = true; v.DrawnLook = paper.LooksRig.Wearing ?? ""; }
                 }
@@ -812,6 +815,12 @@ namespace GK2DonkeyAPI
         internal static string TestShownLooks => shownPaper?.LooksRig?.TestSettleReport ?? "no paper shown";
         internal static bool TestCartMeasuring => cartView.TightenStep >= 0;
         internal static bool TestAloneMeasuring => donkeyView.TightenStep >= 0;
+        // The self-tests: the paper's colours (ColorsRig.Applied) the last finished photo was taken with.
+        internal static int TestRenderedColours(bool withCart)
+        {
+            View v = withCart ? cartView : donkeyView;
+            return v.Drawn && v.TightenStep < 0 ? v.RenderedColours : -1;
+        }
         internal static Mount.Instance TestDressedAs => dressedAs;   // the self-tests: the paper the stage is dressed as
         // the self-tests' probe: why the cart view isn't framed again (2026-10-29)
         internal static string TestCartState => $"reframe {cartView.Reframe}, framed as {cartView.FramedVariant ?? "-"}, now {StageVariant(cartView)}, measuring {cartView.TightenStep}, last render frame {cartView.LastRenderFrame} (now {Time.frameCount}), asked {Time.unscaledTime - cartView.LastAsked:0.00} s ago, shown paper {(shownPaper != null ? shownPaper.FullId : "none")}, settling {(shownPaper != null && shownPaper.LooksRig.Settling)}, drawn {cartView.Drawn}";
