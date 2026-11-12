@@ -11,7 +11,7 @@
          the resource prefix and the skin ids keep the pack's name -->
     <AssemblyName>GK2SaddleUpDonkeySkinPack</AssemblyName>
     <RootNamespace>GK2SaddleUpDonkeySkinPack</RootNamespace>
-    <Version>1.3.0</Version>
+    <Version>1.3.1</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <GenerateDependencyFile>false</GenerateDependencyFile>

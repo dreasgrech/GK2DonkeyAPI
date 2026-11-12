@@ -9,10 +9,10 @@ Includes GK2 Donkey API 0.45.0. Built for game 1.011.1.
 - The Mount Journal, the colours window and the options pause the game like the game's own windows: the world behind is dimmed and the rain and other world sounds are muffled.
 - The windows have the game's sounds: opening and closing, buttons, lists and tabs, with the mouse or a gamepad.
 - The Ride and Drive the cart keys (H and G) work in the Mount Journal.
-- The skull mount is called Larry, as in the game. Your skull keeps his colours, babies and name.
+- Renamed the skull mount from Gerry to Larry, his name in the game (Gerry was the first game's skull). Your skull keeps his colours, babies, settings and any name you gave him.
 - The keeper sits still on a flying mount instead of bobbing as if it were walking.
 - Smoother on slower PCs: less work and memory garbage each frame, the Mount Journal quicker to open and browse, and settings written a moment after you stop changing them.
 - Fixed skins drawn over the donkey showing thin lines of the donkey at their edges in the colours window.
-- Fixed hoofsteps in the pause menu, babies jumping beside a wall or being put one spot over, and the donkey playing another mount's call in the Mount Journal.
+- Fixed hoofsteps in the pause menu, babies jumping beside a wall or being put one spot over, the donkey playing another mount's call in the Mount Journal, and a removed skin's name cut off in the Mount Journal in some languages.
 - Fixed the cart key (G) leaving the cart unhitched beside you when riding close to a wall, a fence or a building: now the cart stays where it was and the keeper says there's no room for it.
 - Your settings and saves carry over.

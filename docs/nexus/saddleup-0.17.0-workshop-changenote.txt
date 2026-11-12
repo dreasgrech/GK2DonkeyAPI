@@ -3,5 +3,5 @@ GK2 Saddle Up 0.17.0
 - New colours window: one palette for every part, named colours in your language, tabs for the mount, the skin and the cart.
 - Ride another mount without getting off first; "Load on cart" only when you face the cart.
 - The Mount Journal and its windows pause the game like the game's own, with the game's window and button sounds.
-- H and G work in the Mount Journal; the skull is called Larry; the keeper sits still on a flying mount.
+- H and G work in the Mount Journal; the skull is renamed from Gerry to Larry; the keeper sits still on a flying mount.
 - Smoother on slower PCs, and fixes for skins' edges, the pause menu, babies and the cart key next to walls. Your settings and saves carry over.

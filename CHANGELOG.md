@@ -122,6 +122,13 @@ Development:
   refuses with `say.no_room_here` before anything moves (a cart spawned for it is removed again). Self-test
   `CartSeatTests.SeatBlocked` (Core; the dev switch `TestHitchSeatBlocked` blocks the hitch seat only). Found in
   rehearsal A of 0.17.0, just outside a door.
+- **Hellfire's rump fill keeps the body's own pixels** (2026-11-12, `tools/skins/hellfire/hellfire_proto.py`
+  `fill_rump`): the stretch it repaints in coat, from the last coat pixel to the rump's curve, measured 1-6 pixels
+  on 489 rows over all 44 frames (the rump's edge) and 12 or 19 on 36 rows (the belly's bottom edge in the standing
+  pose's 33 frames, the hind legs in walk 04: the user's straight line through the legs); nothing between. A
+  stretch wider than `RUMP_EDGE_MAX` (8) is left as drawn. Regenerated: 34 frames differ from the shipped pack,
+  in those strips only (the first try, filling only outside the body's edge, also kept the old outline inside
+  the moved rump edge in 40 frames; diffed, reverted). Donkey Skin Pack 1.3.1.
 - **Three F11 results of 2026-11-12 made to measure** (the full run: 2114 passed, 2 failed, 1 warning): the stuck
   report's shut-in baby has its pen where the screen shows it (a fixed 3.5 from the keeper was off screen with the
   camera zoomed in by Grave Zoom at 400%: measured, the pen at x 2680 of 2560, so the baby rightly caught up out of

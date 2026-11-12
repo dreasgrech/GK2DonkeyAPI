@@ -222,6 +222,9 @@ def thigh_row(px, w, h, y0, top):
     return None
 
 
+RUMP_EDGE_MAX = 8  # the widest stretch fill_rump repaints in coat (the rump's edge measured 1-6, the body below 12+)
+
+
 def fill_rump(px, w, h, y0, yb, bulge_per_row=1 / 7.0, curve_from=None):
     """the rump's back where the tail was, as one curve: from the edge just above where the tail branched off (y0 - 1)
     down to the back of the thigh (thigh_row), bowed out mid-way and turning in as it reaches the thigh, so it rounds
@@ -266,8 +269,14 @@ def fill_rump(px, w, h, y0, yb, bulge_per_row=1 / 7.0, curve_from=None):
         if last is None:
             continue
         coat = next((px[x, y] for x in range(last, max(0, last - 10), -1) if px[x, y][:3] in COAT), px[last, y])
-        for x in range(last + 1, target):
-            px[x, y] = coat
+        # The stretch from the last coat pixel to the curve is the rump's edge (the old outline, the tail's root, the
+        # room the curve adds): 1 to 6 pixels in every frame (measured over all 44, 2026-11-12). A longer one is the
+        # body below the rump, left as drawn: on the curve's lowest rows the coat was painted 12 pixels over the
+        # belly's bottom edge (the standing pose's 36 frames) and 12 and 19 straight across the hind legs (walk 04 rows
+        # 56-57, a line through both legs; the user, 2026-11-12). Nothing measured between 6 and 12.
+        if target - last - 1 <= RUMP_EDGE_MAX:
+            for x in range(last + 1, target):
+                px[x, y] = coat
         for x in range(target + 1, w):
             px[x, y] = (0, 0, 0, 0)
         px[target, y] = outline

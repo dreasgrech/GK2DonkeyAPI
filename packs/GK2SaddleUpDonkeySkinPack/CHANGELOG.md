@@ -2,7 +2,15 @@
 
 ## Unreleased
 
-## 1.3.0, 2026-11-11
+## 1.3.1, 2026-11-12
+
+- **Hellfire's legs and belly as the donkey's own** (2026-11-12): in its fourth walk frame a straight line ran
+  across both hind legs, and in the standing pose (and every animation that shares it: ears, grazing, chewing,
+  lips, turning) a light strip ran along the bottom of the belly in front of the hind legs. The rump's fill
+  painted coat over the donkey's own pixels on its lowest rows; it now fills only the rump's edge. 34 frames,
+  those strips only.
+
+## 1.3.0, 2026-11-11 (never uploaded: Hellfire's walk line found before the upload; it ships with 1.3.1)
 
 - **A fourth look: Jester** (2026-11-11): a fool's cap with two belled points, a belled collar and a chequered motley
   caparison with a pointed hem. Every part is yours to colour: the cap's two halves and its band, the collar (the
