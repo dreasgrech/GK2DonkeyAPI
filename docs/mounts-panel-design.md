@@ -391,6 +391,14 @@ the window, each tab's rows filling both columns below it (`MountsPanel.MakeColo
   screen pixels per art pixel, not of the panel's units (one unit is about 2 screen pixels at 2560x1440, 1.5 at
   1920x1080): rounded to whole units, the dragon (119x78 art, room for 2.82) was drawn at 2, half the donkey's 4. The
   stage is 256 tall (236 until 2026-11-10), so the dragon fits at 3, as big as in the journal.
+- **The pictures' own pixels** (2026-11-13). Both windows (the journal too since this day) draw the picture at a whole
+  number of screen pixels per art pixel, and the stage renders it at that many picture pixels per art pixel
+  (`PreviewStage.WantDetail` from `MountsPanel.Fit`): a picture pixel is a screen pixel, as the game draws its cart.
+  It rendered at a fixed 3 before: shown at 6 screen pixels on a 2560x1440 screen, the rocking cart's planks stepped
+  two screen pixels at a time and the steps moved along them (the user's video, 2026-11-12); at 1920x1080 the journal
+  stretched it 1.5 times, unevenly. A framing is still measured at 3 (the framings on disk keep their keys) and sized
+  in whole art pixels, so the window's fit never depends on the density. Over the picture's own limits (12 a pixel,
+  4096 a side) the stage takes the largest divisor of the asked number and the window shows whole squares of it.
 - **Looks.** The tabs are the options window's section cards laid side by side: flat, the chosen one in the game's
   red with its name bold, each as wide as its name (120 to 260), a rule under the strip.
 - **The gamepad.** The tabs are a navigation group over the rows: up from the rows reaches them, down goes back.

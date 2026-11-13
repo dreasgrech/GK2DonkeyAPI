@@ -27,6 +27,11 @@ Development:
 
 For players:
 
+- **The pictures in the Mount Journal and the colours window are sharp at any screen size** (2026-11-13): they are
+  drawn at your screen's own resolution, one picture pixel to a screen pixel. The cart's planks showed seams moving
+  along them as it rocked (drawn at half the resolution they were shown at on a 2560x1440 screen), and at 1920x1080
+  the pictures were stretched by a fraction, unevenly. At 1920x1080 the journal's mount is a little smaller than
+  before, so that every pixel is whole.
 - **The cart key no longer leaves the cart unhitched beside you** (2026-11-12): riding close to a wall, a fence or a
   building, G could bring the cart over and leave it standing there unhitched, because the seat behind it was no place
   for the keeper. Now nothing moves: the cart stays where it was and the keeper says there's no room for it here.
@@ -117,6 +122,17 @@ For mod authors:
 
 Development:
 
+- **The stage's pictures at the window's density** (2026-11-13, `PreviewStage`): a framing is still measured and kept
+  at `MeasureDetail` (3 picture pixels an art pixel; the framings on disk keep their keys), then sized in whole art
+  pixels (`Size`: `ArtW` x `ArtH`, the camera covering exactly those) and drawn at the density the window asks for
+  (`WantDetail`, from `MountsPanel.Fit`: the whole screen pixels an art pixel, now in the journal too). Over the
+  picture's limits (12 a pixel, 4096 a side) the largest divisor of the asked number, shown as whole squares. A
+  picture being measured takes the new density at the end of its measure; one not measuring is resized and photographed
+  at once (`Photo`, shared with `Picture`). `ArtSize` reads each view's own `RtDetail`. The edge check reads the four
+  1-pixel strips only (`StripDrawn`), its cost no longer the picture's area. Self-tests: the journal's picture as large
+  as its room allows at whole screen pixels, and both windows' pictures drawn at that density
+  (`CheckPictureDensity`; `MountsPanel.TestJournalScale`, `PreviewStage.TestPictureDetail`). Found in the user's video
+  of 2026-11-12: the journal at 6 screen pixels an art pixel showed a picture drawn at 3, doubled.
 - **The colours window's picture is taken again as soon as new colours are applied** (2026-11-12): `Colors.Rig.Applied`
   counts the times new colours were put on the parts, and `PreviewStage.NeedsRender` takes a new photo when it moved
   (it waited for the copy's next walk frame or 1/24 s). The self-test "the player's regions on a mount in its own

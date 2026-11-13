@@ -13,6 +13,7 @@ Includes GK2 Donkey API 0.45.0. Built for game 1.011.1.
 - The keeper sits still on a flying mount instead of bobbing as if it were walking.
 - Smoother on slower PCs: less work and memory garbage each frame, the Mount Journal quicker to open and browse, and settings written a moment after you stop changing them.
 - Fixed skins drawn over the donkey showing thin lines of the donkey at their edges in the colours window.
+- Fixed seams moving across the cart's planks in the Mount Journal's and the colours window's pictures: they are drawn at your screen's own resolution, sharp at any screen size.
 - Fixed hoofsteps in the pause menu, babies jumping beside a wall or being put one spot over, the donkey playing another mount's call in the Mount Journal, and a removed skin's name cut off in the Mount Journal in some languages.
 - Fixed the cart key (G) leaving the cart unhitched beside you when riding close to a wall, a fence or a building: now the cart stays where it was and the keeper says there's no room for it.
 - Your settings and saves carry over.

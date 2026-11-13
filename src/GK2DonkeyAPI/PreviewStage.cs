@@ -59,6 +59,8 @@ namespace GK2DonkeyAPI
             internal Sprite RenderedSprite;    // the copy's body sprite (the walk frame) it was rendered with
             internal int RenderedGapStamp = -2; // the paper's tuning stamp it was rendered with
             internal int RenderedColours = -1;  // the paper's colours it was rendered with (ColorsRig.Applied)
+            internal int ArtW, ArtH;            // the picture's size in art pixels (Size)
+            internal int RtDetail = 3;          // picture pixels per art pixel of Rt now (MeasureDetail until first sized)
             internal bool Drawn;               // a finished photo is in Rt (what a look still settling holds on to)
             internal string DrawnLook = "";    // the look that photo is of (LooksRig.Wearing when it was taken)
             internal bool StandIn;             // the alone view last asked for in the cart view's place (a mount that can't pull the cart)
@@ -72,6 +74,7 @@ namespace GK2DonkeyAPI
             internal string MeasuringVariant;  // what was drawn when the measure in progress began: changed meanwhile, the measure starts over
             internal RenderTexture Scratch;
             internal Texture2D Readback;       // one buffer for this view's read-backs (a new texture and array each was 1.3 MB a read)
+            internal Texture2D EdgeRow, EdgeCol; // the edge check's strips (TouchesEdge)
 
             internal View(bool withCart)
             {
@@ -124,7 +127,7 @@ namespace GK2DonkeyAPI
             float gap = dressedAs != null ? Looks.HitchGapWorldFor(dressedAs) : 0f;
             return string.Join("|", FramingFileVersion.ToString(ci), Application.version, framedLook, v.Name, hash.ToString("x16"),
                 d != null ? $"{d.CanvasW}x{d.CanvasH}@{d.PivotX.ToString("0.###", ci)},{d.PivotY.ToString("0.###", ci)}" : "-",
-                gap.ToString("0.####", ci), (ppu * Detail).ToString("0.###", ci), StageVariant(v));
+                gap.ToString("0.####", ci), (ppu * MeasureDetail).ToString("0.###", ci), StageVariant(v));
         }
 
         private static bool FromDisk(View v, out Framing f)
@@ -241,16 +244,81 @@ namespace GK2DonkeyAPI
 
         // Picture pixels per art pixel. The walk animation rocks the cart body by up to 3 degrees; at one picture pixel
         // per art pixel that tilt snaps into a one-pixel step across the middle of the cart (it looked split in two).
-        // The game draws the cart at screen resolution, where the tilt is smooth: so does the picture, at the size it's
-        // shown (three canvas units per art pixel at most).
-        internal const int Detail = 3;
+        // The game draws the cart at screen resolution, where the tilt is smooth: so does the picture, at the screen
+        // pixels it is shown at. A framing is measured (and kept on disk) at MeasureDetail; the picture itself is drawn
+        // at the density the window showing it asks for (WantDetail: its whole screen pixels per art pixel), so a picture
+        // pixel is a screen pixel. At a fixed 3 the journal showed it doubled at 2560x1440 (6 screen pixels an art pixel):
+        // the rocking cart's planks stepped two screen pixels at a time, seams moving along it the game's cart doesn't have
+        // (the user's video, 2026-11-12); at 1920x1080 it was stretched 1.5 times, unevenly.
+        private const int MeasureDetail = 3;
+        private const int MaxDetail = 12, MaxSide = 4096; // a picture's own limits (any GPU takes 4096)
+        private static int wantedDetail = MeasureDetail;
 
         // The picture's size in art pixels (the CPU stand-in is drawn at one pixel per art pixel).
         internal static Vector2 ArtSize(Texture pic)
         {
-            float d = pic == cartView.Rt || pic == donkeyView.Rt ? Detail : 1f;
+            View v = pic == cartView.Rt ? cartView : pic == donkeyView.Rt ? donkeyView : null;
+            float d = v != null ? v.RtDetail : 1f;
             return new Vector2(pic.width / d, pic.height / d);
         }
+
+        // Whether a texture is one of the stage's pictures (not the CPU stand-in).
+        internal static bool IsStagePicture(Texture t) => t != null && (t == cartView.Rt || t == donkeyView.Rt);
+
+        // The window showing a picture asks for its density: the whole number of screen pixels an art pixel is shown at.
+        // A picture not being measured is drawn again at it at once (its last photo would show at the old size until
+        // the next one); one being measured takes it when the measure ends (its last finished photo stays meanwhile).
+        internal static void WantDetail(int screenPixelsPerArtPixel)
+        {
+            int want = Mathf.Clamp(screenPixelsPerArtPixel, 1, 64);
+            if (want == wantedDetail) return;
+            wantedDetail = want;
+            foreach (View v in views) ApplyDetail(v);
+        }
+
+        // The density a picture is drawn at for the one asked: that number, or (over the picture's own limits: a very large
+        // screen) its largest divisor within them, the window then showing each picture pixel as a whole square of screen
+        // pixels (even, never stretched by a fraction).
+        private static int DetailFor(View v)
+        {
+            int cap = Mathf.Clamp(MaxSide / Mathf.Max(1, Mathf.Max(v.ArtW, v.ArtH)), 1, MaxDetail);
+            for (int d = Mathf.Min(wantedDetail, cap); d > 1; d--)
+            {
+                if (wantedDetail % d == 0) return d;
+            }
+            return 1;
+        }
+
+        private static void ApplyDetail(View v)
+        {
+            if (failed || copy == null || v.Cam == null || v.Rt == null || v.ArtW <= 0 || v.TightenStep >= 0) return;
+            if (DetailFor(v) == v.RtDetail) return;
+            Resize(v);
+            if (v.Drawn && dressedAs != null) Photo(v, dressedAs); // the resized texture is empty: its photo now, not a frame later
+        }
+
+        // The texture for a framing measured at MeasureDetail (w x h of its pixels): a whole number of art pixels (rounded
+        // up: an art pixel's margin at most), each DetailFor pixels; the camera covers exactly those art pixels, its centre
+        // where the framing put it. One size in art pixels whatever the density, so the window's fit never changes with it.
+        private static void Size(View v, int w, int h)
+        {
+            v.ArtW = Mathf.Max(1, (w + MeasureDetail - 1) / MeasureDetail);
+            v.ArtH = Mathf.Max(1, (h + MeasureDetail - 1) / MeasureDetail);
+            Resize(v);
+        }
+
+        private static void Resize(View v)
+        {
+            int d = DetailFor(v);
+            v.Cam.orthographicSize = v.ArtH / ppu / 2f;
+            v.Cam.aspect = (float)v.ArtW / v.ArtH;
+            NewTexture(v, v.ArtW * d, v.ArtH * d);
+            v.RtDetail = d;
+            v.Cam.targetTexture = v.Rt;
+        }
+
+        // The self-tests: picture pixels per art pixel of a stage picture (0 for anything else).
+        internal static int TestPictureDetail(Texture t) => t == cartView.Rt ? cartView.RtDetail : t == donkeyView.Rt ? donkeyView.RtDetail : 0;
 
         // The pictures won't come this session: show the donkey alone (Colors.BuildPreview) instead.
         internal static bool Failed => failed;
@@ -396,13 +464,7 @@ namespace GK2DonkeyAPI
                         TestRenderSkips++;
                         return v.Rt; // the last photo still shows what the copy is now
                     }
-                    TestRenders++;
-                    v.LastRenderAt = Time.unscaledTime;
-                    v.RenderedSprite = copyBody != null ? copyBody.sprite : null;
-                    v.RenderedGapStamp = gapStamp;
-                    v.RenderedColours = paper.ColorsRig.Applied;
-                    Render(v);
-                    if (v.TightenStep < 0) { v.Drawn = true; v.DrawnLook = paper.LooksRig.Wearing ?? ""; }
+                    Photo(v, paper);
                 }
                 // measuring the new framing (a step a frame): the last finished photo stays meanwhile, as for a look settling
                 if (v.TightenStep >= 0) return v.Drawn ? v.Rt : null;
@@ -423,6 +485,18 @@ namespace GK2DonkeyAPI
             if (pic == null || paper == null) return false;
             View v = pic == cartView.Rt ? cartView : pic == donkeyView.Rt ? donkeyView : null;
             return v != null && v.Drawn && v.TightenStep < 0 && !paper.LooksRig.Settling && v.DrawnLook == (paper.LooksRig.Wearing ?? "");
+        }
+
+        // A photo into the view's picture, with what it was taken of (NeedsRender compares them next time).
+        private static void Photo(View v, Mount.Instance paper)
+        {
+            TestRenders++;
+            v.LastRenderAt = Time.unscaledTime;
+            v.RenderedSprite = copyBody != null ? copyBody.sprite : null;
+            v.RenderedGapStamp = gapStamp;
+            v.RenderedColours = paper.ColorsRig.Applied;
+            Render(v);
+            if (v.TightenStep < 0) { v.Drawn = true; v.DrawnLook = paper.LooksRig.Wearing ?? ""; }
         }
 
         // One photo: for the donkey alone, everything but the donkey's sprites is off just for it (and on again after,
@@ -985,12 +1059,13 @@ namespace GK2DonkeyAPI
         }
 
         // The camera moved, by less than a pixel of the picture, so the donkey's art pixels' edges fall on the picture's
-        // pixel edges (2026-11-11). An art pixel is Detail picture pixels across; framed on the drawn bounds (and moved by
-        // half pixels in Tighten) the picture's pixel centres could land exactly on an art pixel's edge, where the donkey
-        // and a skin drawn over it read the two art pixels either side by a float's rounding: a picture pixel of the coat
-        // hidden under the skin showed (along a skin's collar strap, the user's purple coat: runs of one picture pixel at every
-        // third column, MeasureTests.SkinOffset's saved pictures). On the grid the centres sit a sixth of an art pixel in
-        // from any edge. Each render: every walk frame's picture has its own trim offset.
+        // pixel edges (2026-11-11). An art pixel is a whole number of picture pixels across (the view's RtDetail); framed on
+        // the drawn bounds (and moved by half pixels in Tighten) the picture's pixel centres could land exactly on an art
+        // pixel's edge, where the donkey and a skin drawn over it read the two art pixels either side by a float's rounding:
+        // a picture pixel of the coat hidden under the skin showed (along a skin's collar strap, the user's purple coat: runs
+        // of one picture pixel at every third column at 3 a pixel, MeasureTests.SkinOffset's saved pictures). On the grid the
+        // centres sit half a picture pixel in from any edge, at any whole density. Each render: every walk frame's picture
+        // has its own trim offset.
         private static void SnapToArt(View v)
         {
             try
@@ -1089,17 +1164,17 @@ namespace GK2DonkeyAPI
             {
                 throw new InvalidOperationException("nothing to frame");
             }
-            float density = ppu * Detail;
-            int w = Mathf.Clamp(Mathf.CeilToInt(b.size.x * density) + 8 * Detail, 16, 768 * Detail);
-            int h = Mathf.Clamp(Mathf.CeilToInt(b.size.y * density) + 8 * Detail, 16, 768 * Detail);
+            float density = ppu * MeasureDetail;
+            int w = Mathf.Clamp(Mathf.CeilToInt(b.size.x * density) + 8 * MeasureDetail, 16, 768 * MeasureDetail);
+            int h = Mathf.Clamp(Mathf.CeilToInt(b.size.y * density) + 8 * MeasureDetail, 16, 768 * MeasureDetail);
             v.Cam.orthographicSize = h / density / 2f;
             v.Cam.aspect = (float)w / h;
             Vector3 centre = stage.transform.position + ct.TransformDirection(new Vector3(b.center.x, b.center.y, 0f));
             ct.position = centre - forward * (b.extents.z + 50f);
             v.Cam.nearClipPlane = 0.01f;
             v.Cam.farClipPlane = b.size.z + 100f;
-            if (scratch) ScratchTexture(v, w, h);
-            else NewTexture(v, w, h);
+            if (scratch) ScratchTexture(v, w, h); // measured at MeasureDetail
+            else Size(v, w, h);                   // shown: at the window's density
             if (v.WithCart)
             {
                 lamp.transform.position = centre - forward * 4f;
@@ -1157,8 +1232,7 @@ namespace GK2DonkeyAPI
             v.Cam.aspect = f.Aspect;
             v.Cam.nearClipPlane = f.Near;
             v.Cam.farClipPlane = f.Far;
-            NewTexture(v, f.W, f.H);
-            v.Cam.targetTexture = v.Rt;
+            Size(v, f.W, f.H); // W x H as measured (MeasureDetail): drawn at the window's density
             v.FramedVariant = StageVariant(v);
             if (v.WithCart)
             {
@@ -1223,20 +1297,45 @@ namespace GK2DonkeyAPI
             return deg < 0 ? deg + 360f : deg;
         }
 
-        // Is anything drawn on the picture's outermost pixels? Then it was cut off.
+        // Is anything drawn on the picture's outermost pixels? Then it was cut off. Only the four 1-pixel strips are read
+        // back: the whole picture (2 to 3.6 ms at 3 pixels an art pixel) grows with the square of the density the window
+        // draws it at (2026-11-13), the strips with the density alone.
         private static bool TouchesEdge(View v)
         {
-            NativeArray<Color32> px = ReadBack(v);
-            int w = v.Rt.width, h = v.Rt.height;
-            for (int x = 0; x < w; x++)
+            RenderTexture rt = v.Rt;
+            int w = rt.width, h = rt.height;
+            return StripDrawn(v, rt, 0, 0, w, 1) || StripDrawn(v, rt, 0, h - 1, w, 1)
+                || StripDrawn(v, rt, 0, 0, 1, h) || StripDrawn(v, rt, w - 1, 0, 1, h);
+        }
+
+        private static bool StripDrawn(View v, RenderTexture rt, int x, int y, int w, int h)
+        {
+            bool row = h == 1;
+            int n = row ? w : h;
+            ref Texture2D buf = ref (row ? ref v.EdgeRow : ref v.EdgeCol);
+            if (buf == null || (row ? buf.width : buf.height) < n)
             {
-                if (px[x].a > 8 || px[(h - 1) * w + x].a > 8) return true;
+                if (buf != null) UnityEngine.Object.Destroy(buf);
+                buf = row ? new Texture2D(n, 1, TextureFormat.RGBA32, mipChain: false) : new Texture2D(1, n, TextureFormat.RGBA32, mipChain: false);
+                buf.name = "GK2DonkeyAPI preview edge (" + v.Name + ")";
             }
-            for (int y = 0; y < h; y++)
+            RenderTexture prev = RenderTexture.active;
+            try
             {
-                if (px[y * w].a > 8 || px[y * w + w - 1].a > 8) return true;
+                RenderTexture.active = rt;
+                buf.ReadPixels(new Rect(x, y, w, h), 0, 0, false);
+                NativeArray<Color32> px = buf.GetRawTextureData<Color32>();
+                int stride = row ? 1 : buf.width; // a column texture is one pixel wide: its pixels follow each other
+                for (int i = 0; i < n; i++)
+                {
+                    if (px[i * stride].a > 8) return true;
+                }
+                return false;
             }
-            return false;
+            finally
+            {
+                RenderTexture.active = prev;
+            }
         }
 
         // Onto what is drawn over a whole walk cycle: the animator is stepped by hand through CycleSeconds of its
@@ -1302,12 +1401,11 @@ namespace GK2DonkeyAPI
             if (v.MaxX < 0)
             {
                 Plugin.Log.LogInfo($"[preview] the picture {v.Name} is empty; framing left wide.");
-                NewTexture(v, w0, h0);
-                v.Cam.targetTexture = v.Rt;
+                Size(v, w0, h0);
                 v.Cam.Render();
                 return;
             }
-            const int margin = 6 * Detail; // room for the walk's bob and the lamp's swing
+            const int margin = 6 * MeasureDetail; // room for the walk's bob and the lamp's swing
             int minX = Math.Max(0, v.MinX - margin), minY = Math.Max(0, v.MinY - margin);
             int maxX = Math.Min(w0 - 1, v.MaxX + margin), maxY = Math.Min(h0 - 1, v.MaxY + margin);
             int w = maxX - minX + 1, h = maxY - minY + 1;
@@ -1316,10 +1414,7 @@ namespace GK2DonkeyAPI
             float dy = ((minY + maxY + 1) / 2f - h0 / 2f) * unitsPerPixel;
             Transform ct = v.Cam.transform;
             ct.position += ct.right * dx + ct.up * dy;
-            NewTexture(v, w, h);
-            v.Cam.targetTexture = v.Rt;
-            v.Cam.orthographicSize = h * unitsPerPixel / 2f;
-            v.Cam.aspect = (float)w / h;
+            Size(v, w, h); // w x h measured at MeasureDetail: the picture at the window's density
             var measured = new Framing
             {
                 CamFromStage = ct.position - stage.transform.position, Ortho = v.Cam.orthographicSize, Aspect = v.Cam.aspect,
@@ -1330,7 +1425,7 @@ namespace GK2DonkeyAPI
             framings[FramingKey(v)] = measured;
             ToDisk(v, measured);
             v.Cam.Render();
-            Plugin.Log.LogInfo($"[preview] {v.Name}: framed on what's drawn over {CycleSeconds:0.#} s of the walk ({steps} photos, one a frame), {w} x {h} pixels (from {w0} x {h0}), {v.FramedVariant}; remembered for this look.");
+            Plugin.Log.LogInfo($"[preview] {v.Name}: framed on what's drawn over {CycleSeconds:0.#} s of the walk ({steps} photos, one a frame), {v.ArtW} x {v.ArtH} art pixels (measured {w} x {h} of {w0} x {h0} at {MeasureDetail} a pixel), drawn at {v.RtDetail} pixels an art pixel, {v.FramedVariant}; remembered for this look.");
         }
 
         // ------------------------------------------------------------------ the log

@@ -3393,6 +3393,25 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // A window's picture drawn by the stage at the density it is shown at (2026-11-13: the journal's cart, drawn at 3
+        // picture pixels an art pixel and shown at 6 screen pixels, had seams moving along its planks as it rocked; the
+        // game draws its cart at screen pixels): picture pixels an art pixel are the screen pixels an art pixel, or (a very
+        // large screen, over the picture's own limits) divide them, each picture pixel a whole square of screen pixels.
+        private static void CheckPictureDensity(string label, Texture pic, float screenPerArt)
+        {
+            if (!PreviewStage.IsStagePicture(pic))
+            {
+                Info($"{label} the picture isn't the stage's (the stand-in): its density not checked");
+                return;
+            }
+            int onPx = Mathf.RoundToInt(screenPerArt), d = PreviewStage.TestPictureDetail(pic);
+            bool whole = Mathf.Abs(screenPerArt - onPx) < 0.02f;
+            Check(whole && d > 0 && onPx % d == 0,
+                $"{label} drawn by the stage at {d} picture pixels an art pixel for {screenPerArt:F2} screen pixels: "
+                + (d == onPx ? "a picture pixel a screen pixel" : d > 0 && whole && onPx % d == 0 ? $"each picture pixel a {onPx / d}x{onPx / d} square (the picture's limit)" : "NOT a whole number of screen pixels a picture pixel")
+                + $" ({pic.width}x{pic.height})");
+        }
+
         internal static IEnumerator PanelSmoke()
         {
             MountSettingsPage page = null;
@@ -3561,6 +3580,20 @@ namespace GK2DonkeyAPI
                     MountsPanel.TestSelect(was);
                     yield return Frames(2);
                 }
+                // the journal's picture: as large as it has room for up to its scale, at a whole number of screen pixels per
+                // art pixel, drawn by the stage at that many (2026-11-13: whole panel units were 4.5 screen pixels at 1920x1080)
+                yield return Until(() => !PreviewStage.TestAloneMeasuring && !PreviewStage.TestCartMeasuring, 5f);
+                yield return Frames(2);
+                {
+                    var (js, jroom, jpx, jmax) = MountsPanel.TestJournalScale();
+                    if (jpx > 0.01f && MountsPanel.TestJournalTexture != null)
+                    {
+                        float jOn = js * jpx, jWant = Mathf.Floor(Mathf.Min(jmax, jroom) * jpx + 0.001f);
+                        Check(Mathf.Abs(jOn - jWant) < 0.02f, $"the journal's picture: {jOn:F2} screen pixels an art pixel, the whole number its room allows ({jWant:0}: room for {jroom:F2} units at {jpx:F2} pixels a unit, up to {jmax:0})");
+                        CheckPictureDensity("... and", MountsPanel.TestJournalTexture, jOn);
+                    }
+                    else Info("the journal's picture isn't shown: its size not checked");
+                }
                 int sounds1 = UiSounds.Played;
                 MountsPanel.TestOpenColours();
                 Check(UiSounds.Played == sounds1 + 1 && UiSounds.Last == UiSounds.WindowOpenId, $"the colours window opening is the game's window sound, once ({UiSounds.Played - sounds1} played, last {UiSounds.Last})");
@@ -3611,6 +3644,7 @@ namespace GK2DonkeyAPI
                     float onScreen = scale * px;
                     Check(Mathf.Abs(scale - wantScale) < 0.02f && Mathf.Abs(onScreen - Mathf.Round(onScreen)) < 0.02f,
                         $"... and drawn {scale:F2} per art pixel, {onScreen:F2} screen pixels ({px:F2} a unit; {(cartTab && pulls ? "3 with the cart" : "up to 4 alone")}, the stage has room for {room:F2})");
+                    CheckPictureDensity("... and", MountsPanel.TestColoursTexture, onScreen);
                     int set = 0;
                     if (MountsPanel.TestColourPartCount > 0)
                     {

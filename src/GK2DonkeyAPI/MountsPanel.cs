@@ -957,6 +957,16 @@ namespace GK2DonkeyAPI
             return (((RectTransform)coloursPicture.transform).sizeDelta.x / Mathf.Max(1f, art.x), room, ScreenPixelsPerUnit(coloursStage));
         }
 
+        // the journal's picture the same way, with the most it may be drawn at (units per art pixel)
+        internal static (float Scale, float Room, float Px, float Max) TestJournalScale()
+        {
+            if (picture == null || picture.texture == null || stage == null) return (0f, 0f, 0f, PictureScale);
+            Vector2 art = PreviewStage.ArtSize(picture.texture);
+            float room = Mathf.Min((stage.rect.width - 16f) / Mathf.Max(1f, art.x), (stage.rect.height - 16f) / Mathf.Max(1f, art.y));
+            return (((RectTransform)picture.transform).sizeDelta.x / Mathf.Max(1f, art.x), room, ScreenPixelsPerUnit(stage), PictureScale);
+        }
+        internal static Texture TestJournalTexture => picture != null && picture.gameObject.activeInHierarchy ? picture.texture : null;
+
         private static void AddTo(List<(string Group, List<MountSettingsPage.Row> Rows)> groups, string group, MountSettingsPage.Row r)
         {
             int gi = groups.FindIndex(g => g.Group == group);
@@ -2351,7 +2361,7 @@ namespace GK2DonkeyAPI
                     pic = held.texture;
                     nextPicture = 0f;
                 }
-                // as large as the stage allows, up to the scale, centred in it (the stage renders at 3x detail: a fraction of that is a smooth downscale)
+                // as large as the stage allows, up to the scale, centred in it (at whole screen pixels per art pixel, the stage drawing it at that many: Fit)
                 if (panel.activeSelf && !ChosenMissing) Fit(picture, stage, pic, PictureScale);
                 // the colours window shows only a photo of the look it colours (2026-11-10: one mount's colours opened over the
                 // last mount's photo for the 2 s its alone picture was first framed, the journal having shown that one): its
@@ -2362,7 +2372,7 @@ namespace GK2DonkeyAPI
                     if (PreviewStage.Failed || PreviewStage.ShowsLookNow(pic, paper))
                     {
                         coloursLook = look;
-                        Fit(coloursPicture, coloursStage, pic, ColoursScale(pic), screenWhole: true);
+                        Fit(coloursPicture, coloursStage, pic, ColoursScale(pic));
                     }
                     else
                     {
@@ -2396,10 +2406,14 @@ namespace GK2DonkeyAPI
         internal static void TestStepBack() => StepBack();
         internal static bool TestControlsTaken => GameWindowAside.ControlsTaken;
 
-        // screenWhole: a whole number of screen pixels per art pixel (the colours window, the user, 2026-11-10: a tall mount
-        // drawn at 2 where the stage had room for 2.82, half the donkey's 4), else of the panel's own units (the journal).
-        // A unit is about 2 screen pixels at 2560x1440 and 1.5 at 1920x1080, so whole units were not whole pixels there.
-        private static void Fit(RawImage img, RectTransform box, Texture pic, float maxScale, bool screenWhole = false)
+        // As large as the box allows up to maxScale (panel units per art pixel), at a whole number of SCREEN pixels per art
+        // pixel, in both windows, at any screen size (the colours window since 2026-11-10: a tall mount drawn at 2 where
+        // the stage had room for 2.82; the journal since 2026-11-13: whole panel units, about 2 screen pixels each at
+        // 2560x1440 and 1.5 at 1920x1080, were 4.5 screen pixels an art pixel there). The stage then draws the picture at
+        // that many picture pixels an art pixel (PreviewStage.WantDetail), so a picture pixel is a screen pixel, as the game
+        // draws its cart (the user's video, 2026-11-12: the journal's cart, drawn at 3 and shown at 6, had seams moving along
+        // its planks as it rocked).
+        private static void Fit(RawImage img, RectTransform box, Texture pic, float maxScale)
         {
             if (img == null || box == null) return;
             if (pic != null)
@@ -2413,10 +2427,14 @@ namespace GK2DonkeyAPI
                 }
                 Vector2 art = PreviewStage.ArtSize(pic);
                 float k = Mathf.Min(maxScale, (box.rect.width - 16f) / Mathf.Max(1f, art.x), (box.rect.height - 16f) / Mathf.Max(1f, art.y));
-                // the stage is point-filtered: a whole number of pixels per art pixel, no shimmer
-                float px = screenWhole ? ScreenPixelsPerUnit(box) : 0f;
+                // the stage is point-filtered: a whole number of screen pixels per art pixel, no shimmer
+                float px = ScreenPixelsPerUnit(box);
                 float whole = px > 0.01f ? Mathf.Floor(k * px + 0.001f) : 0f;
-                if (whole >= 1f) k = whole / px;
+                if (whole >= 1f)
+                {
+                    k = whole / px;
+                    if (PreviewStage.IsStagePicture(pic)) PreviewStage.WantDetail((int)whole);
+                }
                 else if (k >= 1f) k = Mathf.Floor(k);
                 ((RectTransform)img.transform).sizeDelta = new Vector2(art.x * k, art.y * k);
             }
@@ -2447,7 +2465,7 @@ namespace GK2DonkeyAPI
             try
             {
                 if (picture != null && stage != null) RefitOne(picture, stage, PictureScale);
-                if (coloursPicture != null && coloursStage != null) RefitOne(coloursPicture, coloursStage, ColoursScale(coloursPicture.texture), screenWhole: true);
+                if (coloursPicture != null && coloursStage != null) RefitOne(coloursPicture, coloursStage, ColoursScale(coloursPicture.texture));
             }
             catch (Exception e)
             {
@@ -2456,12 +2474,12 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void RefitOne(RawImage img, RectTransform box, float maxScale, bool screenWhole = false)
+        private static void RefitOne(RawImage img, RectTransform box, float maxScale)
         {
             if (!img || !box || !img.gameObject.activeInHierarchy) return;
             Texture t = img.texture;
             if (t == null || !fitted.TryGetValue(img, out (int W, int H) was) || (was.W == t.width && was.H == t.height)) return;
-            Fit(img, box, t, maxScale, screenWhole);
+            Fit(img, box, t, maxScale);
         }
 
         // A skin or mount registered, reloaded or withdrawn while the panel is open (the Mounts tab, the pack watch): the
