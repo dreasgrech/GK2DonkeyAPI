@@ -153,7 +153,7 @@ folders should be stable paths, e.g. a `workshop\<Item>\` folder per item that t
 
 A Nexus player who subscribes later: the item lands on the same paths and takes the files over (section 4).
 
-## 7. Status of our tooling for this (this repo; the QOL mods wait, the user, 2026-10-30)
+## 7. Status of our tooling for this (this repo; the QOL mods waited until 2026-11-13, the user: their `make-release-zip.py` stages the same folders since Tech Tree Search 1.0.2)
 
 Built 2026-10-30 after the lab run (section 9), bundle decided (section 10):
 

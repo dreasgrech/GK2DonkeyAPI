@@ -38,7 +38,11 @@ Donkey Skin Pack 1.3.2 raised, the never-uploaded 0.17.0 and 1.3.1 zips left com
 1.0.0 their committed bytes; `bash tools/release.sh`, 29 of 29 release scans green): `GK2-Saddle-Up-0.17.1.zip`
 1,258,395 bytes (`GK2DonkeyAPI.dll` 3,422,208 bytes, `GK2SaddleUp.dll` 36,864, each with its `Languages\` of 11
 files), `GK2-Saddle-Up-Donkey-Skin-Pack-1.3.2.zip` 134,932 bytes (the DLL 223,744, with its `Languages\`); each
-staged with its `modinfo.json` in `workshop\<Item>\`.
+staged with its `modinfo.json` in `workshop\<Item>\`. Uploaded 2026-11-13: the Workshop 18:09-18:10 (the game's creator:
+"Upload complete" for items 3830136851 Saddle Up, 3830144338 Dragons, 3830154040 Donkey Skins; the item pages show the
+update and 3.875 MB, 992.300 KB and 274.009 KB, the folders minus the uploader-only files); Nexus the same evening (the
+user: Saddle Up 0.17.1 on 391, the Donkey Skin Pack 1.3.2 on 419, the Dragons Mount Pack 1.3.0 on 420; the pages refuse
+automated reads).
 
 Sizes 2026-11-12 13:19, superseded (the Donkey Skin Pack 1.3.1: Hellfire's rump fill fixed, the line across its hind legs in walk 04
 and the strip along its belly in the standing pose's 33 frames; `bash tools/release.sh`, only the pack raised, the API,
