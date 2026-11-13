@@ -5,8 +5,8 @@ leave it standing with its load, and find it where you left it after a reload.
 
 Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey API](../GK2DonkeyAPI/README.md)) and
 `GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so; on Steam the [Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3830136851)
-installs them instead, and the game's Mods window lists it). Version 0.17.0, for GK2 Donkey API 0.45.0 or newer, and Steam game build 26404424 (game
-1.011.1).
+installs them instead, and the game's Mods window lists it). Version 0.17.1, for GK2 Donkey API 0.45.1 or newer, and Steam game build 26624074 (game
+1.012.7).
 
 **Mounts and skins.** Saddle Up itself brings the donkey (the game's own look) and Larry, the game's talking skull
 (a pack in `assets/mounts/saddleup.gerry/`, registered with the API at start the way any mod ships a mount). More

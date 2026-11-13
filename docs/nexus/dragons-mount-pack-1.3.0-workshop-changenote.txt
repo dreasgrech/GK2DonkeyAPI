@@ -1,3 +1,4 @@
 GK2 Saddle Up: Dragons Mount Pack 1.3.0
 
+- Built with GK2 Saddle Up 0.17.1 for game 1.012.
 - Added Mecha, a second look for the dragon: plate armour, a closed helm, a tail mace and steel wings, each part its own colour. Your colours carry over.

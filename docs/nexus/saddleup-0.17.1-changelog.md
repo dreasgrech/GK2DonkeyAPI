@@ -1,7 +1,8 @@
-# GK2 Saddle Up 0.17.0
+# GK2 Saddle Up 0.17.1
 
-Includes GK2 Donkey API 0.45.0. Built for game 1.011.1.
+Includes GK2 Donkey API 0.45.1. Built for game 1.012.7.
 
+- Works with game 1.012 (the update of 13 November): an earlier version of the mod turns itself off on it, with a note in the log.
 - New colours window: pick a part on the left and colour it from one palette on the right, or step through its colours with the arrows. Every colour has its name, in your language, and Original is the part as the skin draws it. The colours you already chose stay as they are.
 - The colours window has tabs (Mount, the skin's own parts and Cart) and shows the mount larger: the cart is in the picture only on the Cart tab.
 - Ride another mount without getting off first: next to a mount you could ride, "Ride" shows over it. The one you were on stays where you got off, with its cart.

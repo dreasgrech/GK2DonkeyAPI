@@ -69,6 +69,104 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // Game 1.012 pools the big drop pictures (docs/game-update-26624074.md): a cargo view clones the keeper's overhead
+        // atom while the keeper carries something, and must show one picture, the keeper keeping his; an item drawn with
+        // a stand-in (marble, the mechanism box) finds it among the pool's names, not the game's placeholder.
+        internal static IEnumerator CargoPooledPictures()
+        {
+            PlayerData pd = MainGame.PlayerData;
+            if (pd == null)
+            {
+                Skip("no game loaded");
+                yield break;
+            }
+            MountHandle h = Spawn(Spot(home, 4f) ?? home, true, withCart: true);
+            if (h == null)
+            {
+                Fail("could not spawn a donkey with a cart");
+                yield break;
+            }
+            Item carried = null;
+            try
+            {
+                yield return Until(() => h.IsReady && h.I.CargoRig.Inv != null, 6f);
+                Inventory inv = h.I.CargoRig.Inv;
+                if (inv == null)
+                {
+                    Fail("the test cart has no inventory");
+                    yield break;
+                }
+                DropViewAtomMesh keeper = Cargo.FindSourceAtom();
+                if (keeper == null)
+                {
+                    Fail("the keeper's overhead atom was not found");
+                    yield break;
+                }
+                // the keeper carries a log (the game's own add: not riding, the reroute is off)
+                carried = new Item("wood");
+                pd.AddOverheadItem(carried);
+                yield return Frames(3);
+                if (!pd.TryGetOverheadItem(it => it == carried, out _))
+                {
+                    carried = null;
+                    Skip("the keeper did not take the log overhead");
+                    yield break;
+                }
+                DropViewAtomMeshElement shown = keeper.MeshElement;
+                Check(shown != null && shown.gameObject.activeInHierarchy, $"the keeper's atom shows the log ({(shown == null ? "nothing" : "'" + shown.name + "'")})");
+                // a cargo view made now, cloned from that atom
+                h.I.CargoRig.TestForgetViews();
+                inv.AddItemToInventory(new Item("wood"));
+                yield return Frames(3);
+                DropViewAtomMesh view = h.I.CargoRig.PlacedViews.Count == 1 ? h.I.CargoRig.PlacedViews[0] : null;
+                int on = view == null ? 0 : view.GetComponentsInChildren<DropViewAtomMeshElement>(includeInactive: false).Length;
+                string onNames = view == null ? "" : string.Join(", ", System.Array.ConvertAll(view.GetComponentsInChildren<DropViewAtomMeshElement>(includeInactive: false), e => e.name));
+                string logIcon = Cargo.ResolveIcon(GameBalance.Me.GetData<ItemDef>("wood"));
+                Check(view != null && on == 1 && view.MeshElement != null && Cargo.PictureName(view.MeshElement.name) == logIcon,
+                    $"the cart shows one picture, the log ('{logIcon}'; {h.I.CargoRig.PlacedViews.Count} view(s), {on} picture(s) on: {onNames})");
+                Check(keeper.MeshElement == shown && shown != null && shown.gameObject.activeInHierarchy, $"the keeper keeps his ({(keeper.MeshElement == null ? "nothing" : "'" + keeper.MeshElement.name + "'")})");
+                // the stand-in (cargo-layout.cfg: marble has no picture of its own and is shown with the slab's) and the
+                // mechanism box (its picture was named by a prefix, i_box_engineering_mec, until 1.012 gave it the full
+                // name): both found among the pool's names
+                foreach (string id in new[] { "marble", "box_engineering_mechanism" })
+                {
+                    ItemDef def = GameBalance.Me.GetData<ItemDef>(id);
+                    if (def == null)
+                    {
+                        Warn($"no {id} item definition");
+                        continue;
+                    }
+                    string icon = Cargo.ResolveIcon(def);
+                    bool borrowed = id == "marble";
+                    Check(Cargo.PictureKnown(icon) && (!borrowed || icon != def.iconId), $"{id} resolves to a picture the pool has ('{icon}' for icon '{def.iconId}'{(borrowed ? ", a stand-in" : "")})");
+                    inv.AddItemToInventory(new Item(id));
+                    yield return Frames(3);
+                    DropViewAtomMesh standIn = null;
+                    for (int i = 0; i < h.I.CargoRig.Placed.Count && i < h.I.CargoRig.PlacedViews.Count; i++)
+                    {
+                        if (h.I.CargoRig.Placed[i].Id == id) standIn = h.I.CargoRig.PlacedViews[i];
+                    }
+                    string standInShown = standIn?.MeshElement == null ? "nothing" : Cargo.PictureName(standIn.MeshElement.name);
+                    Check(standIn != null && standInShown == icon, $"the cart draws {id} as that stand-in (shows '{standInShown}')");
+                }
+                // nails: the first run on 1.012 drew them as the game's placeholder; what they resolve to, for the record
+                ItemDef nails = GameBalance.Me.GetData<ItemDef>("nails_bronze");
+                if (nails != null)
+                {
+                    string icon = Cargo.ResolveIcon(nails);
+                    Info($"nails_bronze (icon '{nails.iconId}') resolve to '{icon}'{(Cargo.PictureKnown(icon) ? ", a picture the pool has" : ", no picture of that name: the game's placeholder")}");
+                }
+            }
+            finally
+            {
+                if (carried != null)
+                {
+                    try { pd.RemoveOverheadItem(carried); } catch (Exception e) { Warn("taking the log off the keeper's head failed: " + e.Message); }
+                }
+                if (h.Exists) h.Remove();
+            }
+        }
+
         internal static IEnumerator CargoLayers()
         {
             MountHandle h = Spawn(Spot(home, 4f) ?? home, true, withCart: true);

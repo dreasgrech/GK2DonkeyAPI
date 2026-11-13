@@ -157,6 +157,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupCargo, Name = "cargo: more than two items (layers, a re-made cart, the setting)", Body = CargoLayers },
             new Scenario { Group = GroupCargo, Name = "cargo: a cart with a hitch gap keeps its place as items go on", Body = CargoKeepsTheGap },
             new Scenario { Group = GroupCargo, Name = "cargo: a zombie with the game's Halloween head on the cart (head 1051 drawn as the table's 1060, the swap forced off and on)", Body = ZombieHeadTests.EventHeadOnTheCart },
+            new Scenario { Group = GroupCargo, Name = "cargo: the pictures from the game's shared pool (a view made while the keeper carries something, the stand-ins)", Body = CargoPooledPictures },
             new Scenario { Group = GroupIndoors, Name = "indoors: the two switches (refused, ended, allowed) under the indoor light", Body = IndoorsRules },
             new Scenario { Group = GroupIndoors, Name = "indoors: through a building's door riding and driving, and back out", Body = IndoorsThroughADoor },
             new Scenario { Group = GroupIndoors, Name = "indoors: the cart left at the morgue door, the corpse into the hands, the mount inside", Body = IndoorsMorgue },

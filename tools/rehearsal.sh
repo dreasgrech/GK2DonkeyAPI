@@ -19,8 +19,8 @@
 # MountsKey, RideKey and CartKey must be keys a keyboard has (a fixture's are on the numpad). A file that fails is not
 # staged.
 set -e
-SADDLEUP_ZIP="GK2-Saddle-Up-0.17.0.zip"
-PACK_ZIPS="GK2-Saddle-Up-Dragons-Mount-Pack-1.3.0.zip GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip GK2-Saddle-Up-Donkey-Skin-Pack-1.3.1.zip"
+SADDLEUP_ZIP="GK2-Saddle-Up-0.17.1.zip"
+PACK_ZIPS="GK2-Saddle-Up-Dragons-Mount-Pack-1.3.0.zip GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip GK2-Saddle-Up-Donkey-Skin-Pack-1.3.2.zip"
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 # the game folder as the builds have it (Directory.Build.props GameDir), the saves under the user's profile

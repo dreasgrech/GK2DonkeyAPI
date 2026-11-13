@@ -1,5 +1,6 @@
-GK2 Saddle Up 0.17.0
+GK2 Saddle Up 0.17.1
 
+- Works with game 1.012 (the update of 13 November): an earlier version of the mod turns itself off on it, with a note in the log.
 - New colours window: one palette for every part, named colours in your language, tabs for the mount, the skin and the cart.
 - Ride another mount without getting off first; "Load on cart" only when you face the cart.
 - The Mount Journal and its windows pause the game like the game's own, with the game's window and button sounds.

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
@@ -176,6 +177,8 @@ namespace GK2DonkeyAPI
         internal static bool IsShadowMesh(string name) => Rig.IsShadowMesh(name);
         internal static DropViewAtomMesh FindSourceAtom() => Rig.FindSourceAtom();
         internal static bool LyingZombieShown(DropViewAtomMesh view) => Rig.LyingZombieShown(view);
+        internal static string PictureName(string name) => Rig.PictureName(name);
+        internal static bool PictureKnown(string icon) => Rig.PictureKnown(icon);
 
         private static readonly AccessTools.FieldRef<DropViewAtomMesh, List<DropViewAtomMeshElement>> ZombieDropPrefabs =
             AccessTools.FieldRefAccess<DropViewAtomMesh, List<DropViewAtomMeshElement>>("zombieWorkerDropPrefabs");
@@ -788,6 +791,19 @@ namespace GK2DonkeyAPI
                     inv.OnItemsRemove -= OnChanged;
                 }
                 subscribed = false;
+                // Since game 1.012 a view's picture is borrowed from the game's shared pool (BigDropViewPools):
+                // back to it before the holder is destroyed, or the pool makes a new one for every cart that went.
+                foreach (DropViewAtomMesh v in views)
+                {
+                    try
+                    {
+                        if (v != null && v) v.Deactivate();
+                    }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogInfo($"Cargo: a cargo view could not give its picture back ({e.GetType().Name}: {e.Message}).");
+                    }
+                }
                 views.Clear();
                 viewKeys.Clear();
                 Placed.Clear();
@@ -1443,7 +1459,7 @@ namespace GK2DonkeyAPI
                     }
                     else
                     {
-                        string drawnAs = lying.name.Substring(LyingZombie.Length);
+                        string drawnAs = PictureName(lying.name).Substring(LyingZombie.Length);
                         Plugin.Log.LogInfo($"Cargo: zombie {z.Name} drawn lying on {owner.Describe()} (head {headId}{(drawnAs != headId ? ", drawn by the game as " + drawnAs : "")}, colours {(string.IsNullOrEmpty(lut) ? "none" : lut)}).");
                     }
                 }
@@ -1678,7 +1694,7 @@ namespace GK2DonkeyAPI
             };
 
             // The overhead element name to activate for an item: its icon id when an element of that name exists; else
-            // an element whose name is a prefix of the icon id (the game's box_engineering_mechanism element is named
+            // an element whose name is a prefix of the icon id (until game 1.012 the box_engineering_mechanism element was named
             // i_box_engineering_mec, truncated); else a stand-in from the table; else the icon id (the game then shows
             // its placeholder and logs an error, which is the honest outcome for an unknown future item).
             internal static string ResolveIcon(ItemDef def)
@@ -1721,7 +1737,27 @@ namespace GK2DonkeyAPI
                         return t;
                     }
                 }
-                return null;
+                return PoolPrototype(icon);
+            }
+
+            // Since game 1.012 the big drop pictures live in the game's shared pool (BigDropViewPools, docs/game-update-
+            // 26624074.md): an atom owns none and borrows one when activated, so the keeper's atom has no children to
+            // read the names from (an empty list left the stand-in rule nothing to find: marble, the mechanism box; nails
+            // on the cart showed the placeholder in the first run on 1.012). The pool keeps one prototype per picture under its holder,
+            // named by the icon id, and its table of views by that name: both private, read by name (Access.Verify
+            // requires them).
+            private static readonly FieldInfo PoolViews = AccessTools.Field(typeof(BigDropViewPools), "views");
+            private static readonly FieldInfo PoolHolder = AccessTools.Field(typeof(BigDropViewPools), "prototypeHolder");
+
+            private static Transform PoolPrototype(string icon)
+            {
+                if (!BigDropViewPools.IsReady || string.IsNullOrEmpty(icon))
+                {
+                    return null;
+                }
+                GameObject holder = PoolHolder?.GetValue(null) as GameObject;
+                Transform t = holder != null ? holder.transform.Find(icon) : null;
+                return t != null && t.GetComponent<DropViewAtomMeshElement>() != null ? t : null;
             }
 
             private static HashSet<string> ElementNames()
@@ -1736,10 +1772,28 @@ namespace GK2DonkeyAPI
                 {
                     foreach (DropViewAtomMeshElement el in src.GetComponentsInChildren<DropViewAtomMeshElement>(includeInactive: true))
                     {
-                        elementNames.Add(el.name);
+                        elementNames.Add(PictureName(el.name));
+                    }
+                }
+                if (BigDropViewPools.IsReady && PoolViews?.GetValue(null) is IDictionary views)
+                {
+                    foreach (object key in views.Keys)
+                    {
+                        if (key is string name) elementNames.Add(name);
                     }
                 }
                 return elementNames;
+            }
+
+            // Whether a picture of that name exists (the atom's own or the pool's): the self-tests.
+            internal static bool PictureKnown(string icon) => ElementNames().Contains(icon);
+
+            // A picture's name without the pool's "(Clone)": a borrowed picture is an instance of the prototype.
+            internal static string PictureName(string name)
+            {
+                if (string.IsNullOrEmpty(name)) return name ?? "";
+                int c = name.IndexOf("(Clone)", StringComparison.Ordinal);
+                return c < 0 ? name : name.Substring(0, c);
             }
 
             // Union of the mesh bounds under root, in the given transform's space, ignoring the root's own local
@@ -1948,6 +2002,7 @@ namespace GK2DonkeyAPI
                 }
                 DropViewAtomMesh view = UnityEngine.Object.Instantiate(source, container);
                 view.name = $"cargo_{index}";
+                StripCopiedPictures(view);
                 view.transform.SetParent(container, worldPositionStays: false);
                 view.transform.localRotation = Quaternion.identity;
                 view.transform.localScale = Vector3.one;
@@ -1962,6 +2017,73 @@ namespace GK2DonkeyAPI
                     c.enabled = false;
                 }
                 return view;
+            }
+
+            // Since game 1.012 the keeper's atom borrows its picture from the shared pool, and Instantiate copies the tree
+            // as it stands: whatever the keeper carries at this moment comes along as a plain child of the clone, not in
+            // any of its lists, switched on under the picture the clone borrows itself (two pictures). The game empties
+            // its own atom before cloning it (AnimationComponentBase.EnsureExtraOverheadViews); the keeper's picture is
+            // not ours to drop, so the copies go instead. A picture one of the atom's own lists names is the atom's
+            // (an atom off the pool) and stays.
+            private static readonly AccessTools.FieldRef<DropViewAtomMesh, List<DropViewAtomMeshElement>> OwnElements =
+                AccessTools.FieldRefAccess<DropViewAtomMesh, List<DropViewAtomMeshElement>>("elements");
+            private static readonly AccessTools.FieldRef<DropViewAtomMesh, DropViewAtomMeshElement> DefaultElement =
+                AccessTools.FieldRefAccess<DropViewAtomMesh, DropViewAtomMeshElement>("defaultElement");
+            private static readonly AccessTools.FieldRef<DropViewAtomMesh, DropViewAtomMeshElement> BoxElement =
+                AccessTools.FieldRefAccess<DropViewAtomMesh, DropViewAtomMeshElement>("boxElement");
+            private static readonly AccessTools.FieldRef<DropViewAtomMesh, DropViewAtomMeshZombieContainer> OverheadContainer =
+                AccessTools.FieldRefAccess<DropViewAtomMesh, DropViewAtomMeshZombieContainer>("zombieOverheadContainer");
+            private static readonly AccessTools.FieldRef<DropViewAtomMesh, DropViewAtomMeshZombieContainer> DropContainer =
+                AccessTools.FieldRefAccess<DropViewAtomMesh, DropViewAtomMeshZombieContainer>("zombieDropContainer");
+
+            private static void StripCopiedPictures(DropViewAtomMesh view)
+            {
+                var own = new HashSet<Component>();
+                List<DropViewAtomMeshElement> list = OwnElements(view);
+                if (list != null)
+                {
+                    foreach (DropViewAtomMeshElement el in list)
+                    {
+                        if (el != null) own.Add(el);
+                    }
+                }
+                if (DefaultElement(view) != null) own.Add(DefaultElement(view));
+                if (BoxElement(view) != null) own.Add(BoxElement(view));
+                if (OverheadContainer(view) != null) own.Add(OverheadContainer(view));
+                if (DropContainer(view) != null) own.Add(DropContainer(view));
+                int gone = 0;
+                foreach (DropViewAtomMeshZombieContainer c in view.GetComponentsInChildren<DropViewAtomMeshZombieContainer>(includeInactive: true))
+                {
+                    if (c != null && !own.Contains(c) && !IsUnder(c.transform, own))
+                    {
+                        UnityEngine.Object.Destroy(c.gameObject);
+                        gone++;
+                    }
+                }
+                foreach (DropViewAtomMeshElement el in view.GetComponentsInChildren<DropViewAtomMeshElement>(includeInactive: true))
+                {
+                    if (el != null && !own.Contains(el) && !IsUnder(el.transform, own))
+                    {
+                        UnityEngine.Object.Destroy(el.gameObject);
+                        gone++;
+                    }
+                }
+                if (gone > 0)
+                {
+                    Plugin.Log.LogInfo($"Cargo: {gone} copied picture(s) dropped from a new cargo view (the keeper's atom was showing something when it was cloned).");
+                }
+            }
+
+            private static bool IsUnder(Transform t, HashSet<Component> owners)
+            {
+                for (Transform p = t.parent; p != null; p = p.parent)
+                {
+                    foreach (Component c in owners)
+                    {
+                        if (c.transform == p) return true;
+                    }
+                }
+                return false;
             }
 
             internal static DropViewAtomMesh FindSourceAtom()

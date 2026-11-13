@@ -371,6 +371,33 @@ the Dragons Mount Pack 1.2.0 and the Donkey Skin Pack 1.2.0, Critters held.
     a bug for after the release (docs/open-items.md), the user's call.
 - **Restore:** everything back, the saves identical; the dev builds rebuilt (`--no-incremental`) and deployed at 20:26.
 
+Run 2026-11-13 for 0.17.1 / API 0.45.1 with the Donkey Skin Pack 1.3.2 (0.17.0 and 1.3.1, built and committed with
+their zips on 2026-11-12, were never uploaded: the game's 1.012 update of 2026-11-13 came first and disables every build
+made before it; `docs/game-update-26624074.md`), Dragons 1.3.0 kept as committed, Critters held.
+- **The update, before any fix (the user: "launch the game with the broken mod first"):** the deployed 1.011.1 build
+  logged the gate's line (8 of 922 members changed, four of them core: `DropItem`, `GetPlayerDropPosition`,
+  `UpdateInput`, `Save`; "Mod is DISABLED; the game runs unmodified"), no patch in, no exception; Saddle Up and the
+  packs registered their content and the options window still opened (by design); Owned Count ran with one warning,
+  the other three QOL mods identical.
+- **Rebuilt against 1.012.7 and deployed (13:35), F11 full:** 2125/2/0; the two: the zombie-head scenario's exact name
+  compare (the game's drop pictures are pooled now and come as `<name>(Clone)`; the cart drew the right head both
+  ways). Measured and fixed the same afternoon (`Cargo.cs`: the stand-in names from the pool, a new cargo view
+  stripped of copied pictures, the pictures given back on `Detach`; the scenario "cargo: the pictures from the game's
+  shared pool"). F11 full on that build: 2137/2/0, the two my scenario's own expectations (the log's picture is
+  `i_wood`; the mechanism box has its own picture in 1.012), corrected; the cargo group alone at 17:4x: 7 scenarios,
+  45/0/0.
+- **The release build (17:14):** `release.sh --rebuild` refused (a zip committed with its DLL counts as published), so
+  the versions were raised (the user: a new version, nothing overwritten): `release-versions.py set saddleup 0.17.1
+  --api 0.45.1` and `set GK2SaddleUpDonkeySkinPack 1.3.2`, the editorial pieces written, `release.sh` whole: 29 of 29,
+  `GK2-Saddle-Up-0.17.1.zip` 1,258,395 bytes and `GK2-Saddle-Up-Donkey-Skin-Pack-1.3.2.zip` 134,932 bytes, their DLLs
+  byte-identical to `dist/`, the API's manifest identical against the installed 1.012.7, the Jester's walk frames in
+  the pack DLL. The pins moved to 26624074 / 1.012.7 (`release-versions.py`, the READMEs, this checklist, the probe,
+  the notes and store texts).
+- **The fixture** `tests/fixtures/released/0.17.1/` is 0.17.0's renamed (the same code; its header says so), as
+  0.16.0's rebuilt zip kept its fixture; `page-carryover.py`: 0 lost.
+- **Rehearsal A/B:** not run again for 0.17.1 (the user's call on the day: the code and the player files are those
+  rehearsed for 0.17.0 on 2026-11-12, the only change the game build and the cargo pictures).
+
 Run 2026-11-12 for 0.17.0 / API 0.45.0 (the colours window, riding from the saddle, the windows' sounds and modal
 behaviour, skins on the pixel grid) with the Donkey Skin Pack 1.3.0 (the Jester) and the Dragons Mount Pack 1.3.0
 (Mecha), Critters held.
@@ -431,7 +458,7 @@ Released versions are never reused (0.9.0 went public 2026-10-16): a release wit
   release that heading becomes `<Saddle Up version> (GK2 Donkey API <version>), <date>` and a new empty Unreleased
   goes on top. Its "For players" part is the Nexus changelog text for that version.
 - **Hand-off**: the user commits, tags (`saddleup-<version>`; 0.9.0 is commit `6be69a2`) and uploads
-  `release/GK2-Saddle-Up-<version>.zip` with the changelog entry; the release notes name the game build (`26404424`,
-  1.011.1 as of 2026-11-03) and what `docs/open-items.md` still lists as unseen in game. On the Steam Workshop (once
+  `release/GK2-Saddle-Up-<version>.zip` with the changelog entry; the release notes name the game build (`26624074`,
+  1.012.7 as of 2026-11-13) and what `docs/open-items.md` still lists as unseen in game. On the Steam Workshop (once
   the items exist): Shift+F11, the item's Upload button with `workshop/<Item>/` as its linked folder; the change
   note comes from `_changenote.txt`; a pack's Required item (GK2 Saddle Up) is set once on its Steam page.

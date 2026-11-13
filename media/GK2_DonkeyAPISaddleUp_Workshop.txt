@@ -105,7 +105,7 @@ The game's [b]Settings[/b] window (pause menu or main menu) has a [b]GK2 Saddle 
 
 [b]Safe for your save.[/b] Nothing in your save is ever touched: it loads fine without the mod, and the donkey waits in its own small file next to it.
 
-[b]Game updates.[/b] Built for game 1.011.1. After a game update the mod checks the game's code at start: a part the update changed stays off until this item is updated, and the log says so.
+[b]Game updates.[/b] Built for game 1.012.7. After a game update the mod checks the game's code at start: a part the update changed stays off until this item is updated, and the log says so.
 
 [b]Unsubscribe.[/b] Unload the cart and set any chest down first. The game removes the mod's files on the next start.
 

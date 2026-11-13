@@ -107,6 +107,11 @@ From the asset bundles:
   - The ground drop view has the same lists.
   - A second, empty copy exists in the same bundle (`CustomizationCharacterScaledContainer/.../overhead/item`, 0
     elements). Today's cargo shows items, so the clone isn't taken from that one.
+- **Since game 1.012 (docs/game-update-26624074.md) the pictures are pooled** (`BigDropViewPools`): the atom owns none and
+  borrows one when activated (named `<prototype>(Clone)`), so the clone is made empty (`Cargo.StripCopiedPictures`: a
+  copy of what the keeper carried at that moment would stay on under the borrowed one), the stand-in names come from
+  the pool's table, and a view gives its picture back (`Deactivate`) before the holder is destroyed. The zombie prefab
+  lists above survive on the atom (the pool keeps the prototypes).
 - **The pose follows `isOverhead`.** `MakeView` already sets it false, so `ActivateZombie` gives pose 2, lying,
   in its own container at local (0, 0, 0.15).
 - **One body for all zombies; only the head mesh changes** (10 heads, identical bounds per pose). The colours are

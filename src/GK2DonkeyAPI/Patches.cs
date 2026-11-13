@@ -58,6 +58,16 @@ namespace GK2DonkeyAPI
             Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.DropOverheadItem), new System.Type[0]), "PlayerData.DropOverheadItem()");
             Require(AccessTools.Method(typeof(PlayerInputHandler), nameof(PlayerInputHandler.UpdateInput)), "PlayerInputHandler.UpdateInput");
             Require(AccessTools.Field(typeof(PlayerInputHandler), "playerController"), "PlayerInputHandler.playerController");
+            // The cart's cargo pictures on the game's shared drop-picture pool (Cargo.cs, game 1.012): the pool's table and
+            // prototype holder, and the atom's own lists (what a clone keeps).
+            Require(AccessTools.Field(typeof(BigDropViewPools), "views"), "BigDropViewPools.views");
+            Require(AccessTools.Field(typeof(BigDropViewPools), "prototypeHolder"), "BigDropViewPools.prototypeHolder");
+            Require(AccessTools.PropertyGetter(typeof(BigDropViewPools), nameof(BigDropViewPools.IsReady)), "BigDropViewPools.IsReady getter");
+            Require(AccessTools.Field(typeof(DropViewAtomMesh), "elements"), "DropViewAtomMesh.elements");
+            Require(AccessTools.Field(typeof(DropViewAtomMesh), "defaultElement"), "DropViewAtomMesh.defaultElement");
+            Require(AccessTools.Field(typeof(DropViewAtomMesh), "boxElement"), "DropViewAtomMesh.boxElement");
+            Require(AccessTools.Field(typeof(DropViewAtomMesh), "zombieOverheadContainer"), "DropViewAtomMesh.zombieOverheadContainer");
+            Require(AccessTools.Field(typeof(DropViewAtomMesh), "zombieDropContainer"), "DropViewAtomMesh.zombieDropContainer");
             Require(AccessTools.Field(typeof(PlayerInputHandler), "curInteractionHandler"), "PlayerInputHandler.curInteractionHandler");
             Require(AccessTools.Method(typeof(PlayerInputHandler), "TryCallFireEvent"), "PlayerInputHandler.TryCallFireEvent");
             Require(AccessTools.Inner(typeof(PlayerInputHandler), "InteractionType"), "PlayerInputHandler.InteractionType");

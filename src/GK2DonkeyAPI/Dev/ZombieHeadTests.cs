@@ -76,7 +76,8 @@ namespace GK2DonkeyAPI
                     DropViewAtomMesh view = h.I.CargoRig.PlacedViews.Count == 1 ? h.I.CargoRig.PlacedViews[0] : null;
                     DropViewAtomMeshElement shown = view?.MeshElement;
                     bool drawn = shown != null && Drawn(shown.transform, view.transform);
-                    SelfTest.Check(shown != null && shown.name == want && drawn,
+                    // the picture is the pool's instance since game 1.012, named "<prototype>(Clone)"
+                    SelfTest.Check(shown != null && Cargo.PictureName(shown.name) == want && drawn,
                         $"the swap {(on ? $"on: the game's head {eventHead}" : "off: its own head")} drawn lying on the cart ({want}; shows {(shown == null ? "nothing" : "'" + shown.name + "' " + (drawn ? "drawn" : "switched off"))}, {h.I.CargoRig.PlacedViews.Count} view(s)), not the item's icon");
                 }
             }

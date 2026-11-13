@@ -10,6 +10,23 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+## 0.17.1 (GK2 Donkey API 0.45.1), 2026-11-13
+
+0.17.0 was built, zipped and committed on 2026-11-11/12 and never uploaded: the game's 1.012 update of 2026-11-13
+landed first, and every build made before it is disabled by the start check. 0.17.1 is that release built for 1.012,
+with the cargo fix below; the raised number is the release rule's (a DLL committed with its zip is never rebuilt).
+
+For players:
+
+- **Built for game 1.012** (Steam build 26624074, 2026-11-13; `docs/game-update-26624074.md`): the update changed
+  eight game members the mod uses (where a dropped item lands, now on top of other drops; small drops joining a pile
+  beside them; the save call; the input handler; and the window, sprite, zombie-list and path helpers), so the start
+  check disables every earlier build on it, as designed, with the game running unmodified. This build carries the new
+  game's manifest. The game's big drop pictures come from one shared pool now, and the cart's cargo pictures with them:
+  the stand-in rule for an item drawn with another's picture (marble, shown with the slab's) had no names to read, and a
+  cargo picture made while the keeper carried something could carry a copy of his; both fixed (the stand-in names read
+  from the pool, a new cargo view starts empty, the pictures go back to the pool when the cart goes), with a self-test.
+
 Development:
 
 - **The release runs whole when `dist/` was committed before the zips** (2026-11-12): the release rule
@@ -23,7 +40,7 @@ Development:
   folder (date and time) is named in `BepInEx\rehearsal-staged` until `restore` (a second one the same day collided:
   renamed "-first" by hand on 2026-11-01, refused on 2026-11-12).
 
-## 0.17.0 (GK2 Donkey API 0.45.0), 2026-11-11
+## 0.17.0 (GK2 Donkey API 0.45.0), 2026-11-11 (never uploaded: game 1.012 landed before the upload; it ships with 0.17.1)
 
 For players:
 

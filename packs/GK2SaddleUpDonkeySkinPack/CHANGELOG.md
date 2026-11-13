@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-## 1.3.1, 2026-11-12
+## 1.3.2, 2026-11-13
+
+- **Built for game 1.012 with GK2 Saddle Up 0.17.1** (2026-11-13): the 1.3.1 zip was made before the Jester's
+  caparison was redrawn; this one has it. The pack asks nothing of the game itself and follows GK2 Saddle Up; the
+  raised number is the release rule's (a DLL committed with its zip is never rebuilt).
+
+## 1.3.1, 2026-11-12 (never uploaded: game 1.012 landed before the upload; it ships with 1.3.2)
 
 - **Jester's caparison swings as it walks** (2026-11-12/13): below the seam its skirt swings back and forth as one
   piece over the stride, its seven pleat lines drawn anew each frame as leaning lines (neighbouring lines stepping
