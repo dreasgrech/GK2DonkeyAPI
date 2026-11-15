@@ -384,14 +384,9 @@ namespace GK2DonkeyAPI
         internal static bool Quitting;
         internal static Plugin Instance;
 
-        // Runs once, at the top of the next LateUpdate: a settings page's hand-over to the menus (MountSettingsPage.Publish),
-        // which has to wait until every plugin's Awake has run (they all run in the chainloader's loop, before any frame).
-        private static readonly System.Collections.Generic.Queue<Action> nextFrame = new System.Collections.Generic.Queue<Action>();
-
-        internal static void NextFrame(Action action)
-        {
-            if (action != null) nextFrame.Enqueue(action);
-        }
+        // Runs once, at the top of the next LateUpdate (the window code's queue: a settings page's hand-over to the
+        // menus waits until every plugin's Awake has run; the panel's own deferred work rides the same queue).
+        internal static void NextFrame(Action action) => UiHost.NextFrame(action);
 
         // [General]: behaviour
         internal static ConfigEntry<bool> Enabled;
@@ -550,6 +545,7 @@ namespace GK2DonkeyAPI
         private void BindAndPatch()
         {
             Log = Logger;
+            UiOwnerSetup.Apply(); // the window code's owner: this plugin (docs/ui-library.md), before any window or text runs
             Log.LogEvent += (_, __) => Perf.NoteLogLine(); // the panel's log lines per second
             Instance = this;
             Application.quitting += () =>
@@ -567,7 +563,7 @@ namespace GK2DonkeyAPI
                 }
                 try
                 {
-                    DeferredSave.FlushAll(); // a setting changed in a window just before quitting
+                    UiHost.OnQuit(); // a setting changed in a window just before quitting: written now
                 }
                 catch (Exception e)
                 {
@@ -811,32 +807,10 @@ namespace GK2DonkeyAPI
         // LateUpdate: runs after the game moved the player for this frame, so the donkey follows without lag.
         private void LateUpdate()
         {
-            // The deferred actions first, whatever state the API is in (a page reaches the windows on a stopped API too).
-            while (nextFrame.Count > 0)
-            {
-                Action a = nextFrame.Dequeue();
-                try
-                {
-                    a();
-                }
-                catch (Exception e)
-                {
-                    Log.LogWarning("A deferred action threw (a settings page may be missing from the windows): " + e);
-                }
-            }
-            // A key being set in the options window, then the window itself (its Escape, its gamepad), whatever state
-            // the API is in (its options open on a stopped API too, and in the main menu): before the mods' keys act.
-            try
-            {
-                GameWindowAside.Tick(MountsPanel.Exists || OptionsWindow.IsOpen); // a game window over ours: they step aside
-                SettingsButtons.Tick(); // the Settings window's options button there while it is on top
-                KeyCapture.Tick();
-                OptionsWindow.Tick();
-            }
-            catch (Exception e)
-            {
-                Log.LogError($"The options window failed this frame. {e}");
-            }
+            // The window code's frame first, whatever state the API is in (a page reaches the windows on a stopped API
+            // too, its options open in the main menu): the deferred actions, a key being set, the windows themselves (their
+            // Escape, their gamepad), the cfg writes and the translation files' read-ahead, before the mods' keys act.
+            UiHost.LateUpdate();
             // Unity's layout pass runs before every OnGUI and makes garbage even when nothing is drawn: off while the
             // panel isn't showing (set here, before this frame's OnGUI, so the events of one frame agree).
             bool gui = harmony != null && Enabled.Value && (TuningWindow.Showing());

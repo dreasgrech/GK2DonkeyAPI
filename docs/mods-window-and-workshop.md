@@ -344,3 +344,47 @@ game folder it lands next to the exe, where nothing reads it (the game's code: o
 Workshop item or a `Mods\Code` folder; the lab's scenario F), and the README marks it optional and for the Mods
 window. It stays in the Workshop folders, where it gives the tile its name and version. The plugin files are the
 same bytes on both channels.
+
+## 14. The dev machine subscribed (2026-11-14)
+
+The four items showed in this machine's Mods window after the user subscribed on another machine with the same
+account. Subscriptions are the account's, not a machine's: this client downloaded the items on 2026-11-13 (the three
+Saddle Up items at 19:20, Tech Tree Search at 19:36; `steamapps\workshop\appworkshop_4358690.acf` lists them), and
+the game's sync copied them in. What the sync does, read from `GK2.WorkshopSync.Core.dll` (`WorkshopSyncCore.Apply`
+and `SyncTree`, decompiled):
+
+- **Copy rule:** a source file is copied when it has no record in `BepInEx\GK2.WorkshopSync\state.json`, or the
+  record's size or write time differs from the source's. The destination is never looked at (only `config/` files
+  are left alone when the player has them). So a dev build deployed over the Workshop copy stays through every
+  launch until that item is updated on Steam; then the new release is copied over the dev build.
+- **Delete rule:** a recorded file whose item is no longer among the sources (unsubscribed, or disabled in the Mods
+  window) is deleted by path, whatever its content: a dev build at that path goes with it.
+- **The state on this machine:** 49 files recorded: the API and Saddle Up DLLs with their 22 language files, the
+  two pack DLLs with 11 language files each, and the Tech Tree Search DLL under `plugins\GK2TechTreeSearch\`.
+
+What it did here: the API, Saddle Up and the two packs deploy into the same folders the items use, so at 19:20 the
+release DLLs replaced the dev builds (sha256 in the game = the Workshop copy = `dist/`; `bin/` differs). Tech Tree
+Search deploys flat (`plugins\GK2TechTreeSearch.dll`), so the Workshop copy sits beside the dev build and BepInEx
+skips one with a warning each start.
+
+The choices (the user's; investigated 2026-11-14, nothing changed):
+
+1. **Stay subscribed and deploy the QOL mods into folders** (the API repo's `DeployToGame.targets` already does it:
+   `plugins\<Assembly>\`, the loose copy removed; the file is generic and could be the QOL repo's byte for byte, as
+   `DependencyManifest.targets` is). Then every dev build overwrites the Workshop copy in place; after each release
+   upload the sync copies the release over the dev build once, and a rebuild puts the dev build back. Never press
+   Disable on this machine (it deletes the file). Touches in the QOL repo: the targets, the four loose DLLs deleted
+   once, the Built Count and Tech Tree Search READMEs' deploy and uninstall lines, the checklist's section 5 and 7
+   (the flat path), the pointer doc's "flat layout" sentence.
+2. **Unsubscribe** (the account, so the other machine too), launch once so the sync deletes its 49 files, rebuild
+   everything (`rehearsal.sh restore-pack` exists for the Saddle Up side). The other machine then tests with the
+   item content as a local pack in `Mods\Code` (section 11's rehearsal) instead of a subscription, or with a second
+   Steam account.
+3. **Stay subscribed and leave the flat deploy**: the warning stays at every start and the rule against ignored
+   warnings says no.
+
+Chosen 2026-11-15: the user unsubscribed (choice 2) and launched once; the log showed the 49 "Removed" lines, the
+state file emptied, the content folders gone. The API, Saddle Up, the two packs and Tech Tree Search were rebuilt with
+the game closed (the deploy targets put the dev builds and language files back; the empty leftover folder of Tech
+Tree Search removed first). The QOL deploy stays flat; the folder layout for the QOL mods is open for the day the
+dev machine subscribes again.

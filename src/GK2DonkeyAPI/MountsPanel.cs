@@ -63,7 +63,7 @@ namespace GK2DonkeyAPI
         private static GameObject panel, colours;
         private static MountSettingsPage page;
         // what the windows are built with (the game's look, read when the panel opens) and the rows' controls (UiKit, RowControls)
-        private static readonly UiKit ui = new UiKit("GK2DonkeyAPI mounts panel ");
+        private static readonly UiKit ui = new UiKit(UiOwner.NamePrefix + "mounts panel ");
         private static readonly RowControls controls = new RowControls(ui, () => colours != null ? colours : panel, Refresh);
 
         private static RectTransform listContent, rightArea, stage, contentRoot, coloursRoot, coloursStage;
@@ -78,21 +78,21 @@ namespace GK2DonkeyAPI
         private static bool pictureOff;
 
         private static readonly List<(string Id, Image Face, TextMeshProUGUI Label)> cards = new List<(string, Image, TextMeshProUGUI)>();
-        private static readonly List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> rows = new List<(MountSettingsPage.Row, GameObject, Action, CanvasGroup)>();
-        private static readonly List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> colourRows = new List<(MountSettingsPage.Row, GameObject, Action, CanvasGroup)>();
+        private static readonly List<(SettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> rows = new List<(SettingsPage.Row, GameObject, Action, CanvasGroup)>();
+        private static readonly List<(SettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> colourRows = new List<(SettingsPage.Row, GameObject, Action, CanvasGroup)>();
         // each built row's tie to its page row (RowControls.Bound), and last build's rows waiting to be pointed at the next
         // build's (BuildRows)
         private static readonly Dictionary<GameObject, RowControls.Bound> rowBound = new Dictionary<GameObject, RowControls.Bound>();
         private static readonly List<(GameObject Go, RowControls.Bound B)> spareRows = new List<(GameObject, RowControls.Bound)>();
         internal static int LastRowsReused { get; private set; }  // the last BuildRows: rows kept and pointed at new rows
         internal static int LastRowsMade { get; private set; }    // ... and rows made
-        private static readonly List<(string Group, List<MountSettingsPage.Row> Rows)> journalGroups = new List<(string, List<MountSettingsPage.Row>)>();
-        private static readonly List<(string Group, List<MountSettingsPage.Row> Rows)> colourGroups = new List<(string, List<MountSettingsPage.Row>)>();
+        private static readonly List<(string Group, List<SettingsPage.Row> Rows)> journalGroups = new List<(string, List<SettingsPage.Row>)>();
+        private static readonly List<(string Group, List<SettingsPage.Row> Rows)> colourGroups = new List<(string, List<SettingsPage.Row>)>();
         private static readonly Dictionary<string, string> groupShown = new Dictionary<string, string>(StringComparer.Ordinal); // a colours group's heading in the player's language (Texts), by its English
         // The colours window's tabs (2026-11-08, the user: a skin's many colours apart from the mount's): a tab per heading's
         // rows, named by the heading, and a skin's own parts (Row.SkinPart) on a tab of their own after the rows they came
         // with, named by the skin; the chosen tab's rows in the two columns. Tabs: (key, name drawn, rows).
-        private static readonly List<(string Key, string Name, List<MountSettingsPage.Row> Rows)> colourTabs = new List<(string, string, List<MountSettingsPage.Row>)>();
+        private static readonly List<(string Key, string Name, List<SettingsPage.Row> Rows)> colourTabs = new List<(string, string, List<SettingsPage.Row>)>();
         private static readonly List<(string Key, Image Face, TextMeshProUGUI Label)> tabButtons = new List<(string, Image, TextMeshProUGUI)>();
         private static string colourTab;            // the chosen tab's key
         private static string tabsBuilt;            // the tabs the strip was built for (their keys and names)
@@ -148,7 +148,7 @@ namespace GK2DonkeyAPI
                 return rt.anchoredPosition.x + rt.sizeDelta.x * along;
             }
             float left = Pad + ListW + Gap;
-            bool done = panel != null && panel.transform.Find("GK2DonkeyAPI mounts panel done") != null;
+            bool done = panel != null && panel.transform.Find(UiOwner.NamePrefix + "mounts panel done") != null;
             return (X(optionsButton, 0.5f), X(optionsButton, 1f) - X(optionsButton, 0f), X(coloursButton, 0.5f), X(driveButton, 0f), X(rideButton, 1f),
                 Pad, Pad + ListW, left, left + StageW, W - Pad, done);
         }
@@ -308,6 +308,7 @@ namespace GK2DonkeyAPI
 
         internal static void Open(MountSettingsPage p, bool toggle)
         {
+            picLogged = null; // the dev log line of the picture again on every open (2026-11-15)
             try
             {
                 if (!Mount.IsGameReady)
@@ -379,7 +380,7 @@ namespace GK2DonkeyAPI
             // skin and colours), not only the chosen mount's, so a put-back after choosing another mount puts
             // the first one back.
             before.Clear();
-            foreach (MountSettingsPage.Row r in page.Rows)
+            foreach (SettingsPage.Row r in page.Rows)
             {
                 if (r.IsLook && r.Entry != null) before[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
             }
@@ -513,12 +514,12 @@ namespace GK2DonkeyAPI
             // the page's options (OptionsWindow), under the mount list; from the options themselves (their Mounts button
             // opened the journal), back to them
             optionsButton = null;
-            if (OptionsWindow.HasOptions(page))
+            if (OptionsWindow.HasOptions(page.Page))
             {
                 GameObject opts = optionsButton = ui.OwnButton(panel.transform, "options", UiWords.Options.Text, ButtonW, ButtonH, () =>
                 {
                     if (overOptions) Close(keep: true);
-                    else OptionsWindow.Open(page);
+                    else OptionsWindow.Open(page.Page);
                 });
                 UiKit.Rect(opts, Mathf.Round(Pad + (ListW - ButtonW) / 2f), buttonsY, ButtonW, ButtonH);
                 UiKit.NavGroup(opts, 2);
@@ -714,10 +715,10 @@ namespace GK2DonkeyAPI
             colourGroups.Clear();
             groupShown.Clear();
             string heading = null, headingSection = null, headingShown = null;
-            foreach (MountSettingsPage.Row r in page.Rows)
+            foreach (SettingsPage.Row r in page.Rows)
             {
                 if (!r.IsLook) continue;
-                if (r.RowKind == MountSettingsPage.RowKind.Note)
+                if (r.RowKind == SettingsPage.RowKind.Note)
                 {
                     heading = r.Label;
                     headingSection = r.ShownSection;
@@ -730,7 +731,7 @@ namespace GK2DonkeyAPI
                 bool underHeading = heading != null && r.ShownSection == headingSection;
                 string group = underHeading ? heading : (mountSection ? "Skin" : r.ShownSection);
                 // the group stays its English (its key: rows are gathered by it); its heading is drawn in the player's language
-                if (group != null && !groupShown.ContainsKey(group)) groupShown[group] = underHeading ? headingShown : mountSection ? UiWords.SkinRow.Text : Texts.Section(page, r.ShownSection);
+                if (group != null && !groupShown.ContainsKey(group)) groupShown[group] = underHeading ? headingShown : mountSection ? UiWords.SkinRow.Text : Texts.Section(page.Page, r.ShownSection);
                 if (mountSection) AddTo(journalGroups, null, r);  // the journal: the Skin, no heading (the user, 2026-10-25)
                 else AddTo(colourGroups, group, r);               // the colours window: every colour row
             }
@@ -759,22 +760,22 @@ namespace GK2DonkeyAPI
             colourTabs.Clear();
             foreach (var g in colourGroups)
             {
-                var own = new List<MountSettingsPage.Row>();
-                var parts = new List<MountSettingsPage.Row>();
-                foreach (MountSettingsPage.Row r in g.Rows) (r.SkinPart ? parts : own).Add(r);
+                var own = new List<SettingsPage.Row>();
+                var parts = new List<SettingsPage.Row>();
+                foreach (SettingsPage.Row r in g.Rows) (MountSettingsPage.Info(r).SkinPart ? parts : own).Add(r);
                 string name = g.Group != null && groupShown.TryGetValue(g.Group, out string shown) ? shown : g.Group ?? "";
                 if (own.Count > 0) colourTabs.Add((g.Group ?? "", name, own));
                 if (parts.Count > 0)
                 {
-                    Looks.SkinDef sd = Looks.Find(parts[0].SkinId);
-                    colourTabs.Add((PartsTab, sd != null ? Looks.NameTerm(sd).Text : parts[0].SkinId ?? "", parts));
+                    Looks.SkinDef sd = Looks.Find(MountSettingsPage.Info(parts[0]).SkinId);
+                    colourTabs.Add((PartsTab, sd != null ? Looks.NameTerm(sd).Text : MountSettingsPage.Info(parts[0]).SkinId ?? "", parts));
                 }
             }
             if (colourTab == null || colourTabs.FindIndex(t => t.Key == colourTab) < 0) colourTab = colourTabs.Count > 0 ? colourTabs[0].Key : null;
         }
 
         // The chosen tab's rows (none: no tabs).
-        private static List<MountSettingsPage.Row> ColourTabRows()
+        private static List<SettingsPage.Row> ColourTabRows()
         {
             int i = colourTabs.FindIndex(t => t.Key == colourTab);
             return i >= 0 ? colourTabs[i].Rows : null;
@@ -787,18 +788,18 @@ namespace GK2DonkeyAPI
         // starts at every row but a swatch row and the slider right after one: not by Visible, which every row a page
         // keeps per skin has (its skin shown), so the whole tab was one unit in one column (the user's screenshot,
         // 2026-11-08).
-        private static List<(string Group, List<MountSettingsPage.Row> Rows)> TabColumns(List<MountSettingsPage.Row> tabRows)
+        private static List<(string Group, List<SettingsPage.Row> Rows)> TabColumns(List<SettingsPage.Row> tabRows)
         {
-            var units = new List<List<MountSettingsPage.Row>>();
+            var units = new List<List<SettingsPage.Row>>();
             var weights = new List<int>();
-            MountSettingsPage.Row prev = null;
-            foreach (MountSettingsPage.Row r in tabRows)
+            SettingsPage.Row prev = null;
+            foreach (SettingsPage.Row r in tabRows)
             {
-                bool follows = IsPalette(r) || (r.RowKind == MountSettingsPage.RowKind.Steps && prev != null && IsPalette(prev));
+                bool follows = IsPalette(r) || (r.RowKind == SettingsPage.RowKind.Steps && prev != null && IsPalette(prev));
                 prev = r;
                 if (!follows || units.Count == 0)
                 {
-                    units.Add(new List<MountSettingsPage.Row>());
+                    units.Add(new List<SettingsPage.Row>());
                     weights.Add(0);
                 }
                 units[units.Count - 1].Add(r);
@@ -810,7 +811,7 @@ namespace GK2DonkeyAPI
                     weights[weights.Count - 1] += IsPalette(r) ? 2 : 1;
                 }
             }
-            var cols = new List<(string Group, List<MountSettingsPage.Row> Rows)>();
+            var cols = new List<(string Group, List<SettingsPage.Row> Rows)>();
             if (units.Count == 0) return cols;
             int total = 0;
             foreach (int w in weights) total += w;
@@ -821,8 +822,8 @@ namespace GK2DonkeyAPI
                 int worst = Math.Max(left, total - left);
                 if (worst < best || (worst == best && left >= total - left)) { best = worst; split = k; } // a tie: the longer side on the left
             }
-            var a = new List<MountSettingsPage.Row>();
-            var b = new List<MountSettingsPage.Row>();
+            var a = new List<SettingsPage.Row>();
+            var b = new List<SettingsPage.Row>();
             for (int k = 0; k < units.Count; k++) (k < split ? a : b).AddRange(units[k]);
             cols.Add((null, a));
             if (b.Count > 0) cols.Add((null, b));
@@ -833,7 +834,7 @@ namespace GK2DonkeyAPI
         private static void BuildColourTab()
         {
             if (colours == null) return;
-            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            List<SettingsPage.Row> tabRows = ColourTabRows();
             if (HasColourParts(tabRows))
             {
                 BuildPartsTab(tabRows); // its parts on the left, one palette on the right (direction E)
@@ -844,7 +845,7 @@ namespace GK2DonkeyAPI
             parts.Clear();
             partPanel = null;
             partPanelRefresh = null;
-            var cols = tabRows != null ? TabColumns(tabRows) : new List<(string Group, List<MountSettingsPage.Row> Rows)>();
+            var cols = tabRows != null ? TabColumns(tabRows) : new List<(string Group, List<SettingsPage.Row> Rows)>();
             coloursSignature = BuildRows(cols, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, colourRows, out _);
             MarkColourTabs();
         }
@@ -853,17 +854,17 @@ namespace GK2DonkeyAPI
         private static string ColourTabSignature()
         {
             var sig = new StringBuilder();
-            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            List<SettingsPage.Row> tabRows = ColourTabRows();
             if (tabRows == null) return "";
             bool partsTab = HasColourParts(tabRows);
             for (int i = 0; i < tabRows.Count; i++)
             {
-                MountSettingsPage.Row r = tabRows[i];
+                SettingsPage.Row r = tabRows[i];
                 sig.Append(r.Visible == null || r.Visible() ? '1' : '0');
                 // a colour part's own rows (its custom colour, its lightness) are always drawn: no pick rebuilds the tab
                 if (!partsTab || i + 1 >= tabRows.Count || !IsColourPart(r, tabRows[i + 1], out _)) continue;
                 i++;
-                if (i + 1 < tabRows.Count && tabRows[i + 1].RowKind == MountSettingsPage.RowKind.Steps) i++;
+                if (i + 1 < tabRows.Count && tabRows[i + 1].RowKind == SettingsPage.RowKind.Steps) i++;
             }
             return sig.ToString();
         }
@@ -929,21 +930,23 @@ namespace GK2DonkeyAPI
         private static bool ColoursWantCart()
         {
             if (colours == null) return true;
-            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            List<SettingsPage.Row> tabRows = ColourTabRows();
             if (tabRows == null) return true;
             if (HasCartRow(tabRows)) return true;
             for (int i = 0; i < colourTabs.Count; i++) if (HasCartRow(colourTabs[i].Rows)) return false;
             return true;
         }
 
-        private static bool HasCartRow(List<MountSettingsPage.Row> rows)
+        private static bool HasCartRow(List<SettingsPage.Row> rows)
         {
-            for (int i = 0; i < rows.Count; i++) if (rows[i].CartPart) return true;
+            for (int i = 0; i < rows.Count; i++) if (MountSettingsPage.Info(rows[i]).CartPart) return true;
             return false;
         }
 
         // The picture on screen: the colours window's while it is open (the journal waits hidden under it).
         private static string coloursLook; // the look the colours window's photo shows (null: none yet)
+        private static Texture picLogged; // the dev log line above: once per picture or paper
+        private static Mount.Instance picLoggedFor;
 
         private static RawImage ShownPicture() => colours != null && coloursPicture != null ? coloursPicture : picture;
 
@@ -967,12 +970,12 @@ namespace GK2DonkeyAPI
         }
         internal static Texture TestJournalTexture => picture != null && picture.gameObject.activeInHierarchy ? picture.texture : null;
 
-        private static void AddTo(List<(string Group, List<MountSettingsPage.Row> Rows)> groups, string group, MountSettingsPage.Row r)
+        private static void AddTo(List<(string Group, List<SettingsPage.Row> Rows)> groups, string group, SettingsPage.Row r)
         {
             int gi = groups.FindIndex(g => g.Group == group);
             if (gi < 0)
             {
-                groups.Add((group, new List<MountSettingsPage.Row>()));
+                groups.Add((group, new List<SettingsPage.Row>()));
                 gi = groups.Count - 1;
             }
             groups[gi].Rows.Add(r);
@@ -981,8 +984,8 @@ namespace GK2DonkeyAPI
         // Rows in groups as columns (two side by side, more in further rows), centred in the area; each row and heading
         // placed where its drawing (not its rectangle) lands: rowVisual says where that is. A row shown only with a
         // preset (a custom colour) is left out until the preset is chosen. Returns the signature of what was built.
-        private static string BuildRows(List<(string Group, List<MountSettingsPage.Row> Rows)> groups, RectTransform root, ScrollRect scroll, float areaW,
-            List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> into, out float needed)
+        private static string BuildRows(List<(string Group, List<SettingsPage.Row> Rows)> groups, RectTransform root, ScrollRect scroll, float areaW,
+            List<(SettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> into, out float needed)
         {
             controls.CloseDropdown(refocus: false); // its button goes with the rows
             controls.CommitFields(); // a name being typed is written to its own row before the rows are pointed at others
@@ -1032,7 +1035,7 @@ namespace GK2DonkeyAPI
                     var group = groups[g0 + ci];
                     float cx = x0 + ci * (colW + colGap), cy = rowTop;
                     bool any = false;
-                    foreach (MountSettingsPage.Row r in group.Rows) if (r.Visible == null || r.Visible()) { any = true; break; }
+                    foreach (SettingsPage.Row r in group.Rows) if (r.Visible == null || r.Visible()) { any = true; break; }
                     if (group.Group != null && any) // a heading only over rows that show (a row hidden by its own condition)
                     {
                         // left on the column's start (a game heading row right-aligns on the labels' edge and floated mid-column)
@@ -1046,7 +1049,7 @@ namespace GK2DonkeyAPI
                     }
                     for (int ri = 0; ri < group.Rows.Count; ri++)
                     {
-                        MountSettingsPage.Row r = group.Rows[ri];
+                        SettingsPage.Row r = group.Rows[ri];
                         bool visible = r.Visible == null || r.Visible();
                         sig.Append(visible ? '1' : '0');
                         if (!visible) continue; // shown only with a preset: not now
@@ -1116,7 +1119,7 @@ namespace GK2DonkeyAPI
         }
 
         // Last build's row of r's shape, pointed at r (its value shown); false: none, or r can't be built.
-        private static bool TakeSpare(MountSettingsPage.Row r, RowLayout lay, out GameObject go, out RowControls.Bound b)
+        private static bool TakeSpare(SettingsPage.Row r, RowLayout lay, out GameObject go, out RowControls.Bound b)
         {
             go = null;
             b = null;
@@ -1136,11 +1139,11 @@ namespace GK2DonkeyAPI
             return false;
         }
 
-        private static bool IsPalette(MountSettingsPage.Row r) => r?.Entry != null && r.Entry.SettingType == typeof(PaletteColor);
+        private static bool IsPalette(SettingsPage.Row r) => r?.Entry != null && r.Entry.SettingType == typeof(PaletteColor);
 
         // A custom colour's row: the label where a game row's label sits, then the 24 named colours as squares in two
         // rows of twelve; the chosen one framed; a click sets the row's value (the page applies it, the picture shows it).
-        private static GameObject SwatchRow(Transform parent, MountSettingsPage.Row r, RowLayout lay, out Action refresh, out float height)
+        private static GameObject SwatchRow(Transform parent, SettingsPage.Row r, RowLayout lay, out Action refresh, out float height)
         {
             var entry = (BepInEx.Configuration.ConfigEntry<PaletteColor>)r.Entry;
             int perRow = 12;
@@ -1217,10 +1220,10 @@ namespace GK2DonkeyAPI
         // A colour choice drawn as swatches (ColourPart): a choice whose next row is its custom colour (a PaletteColor row)
         // and with a value named Custom; the first value is the choice's default (Game default: as the look draws it).
         // Anything else stays a dropdown (another mod's page made otherwise).
-        private static bool IsColourPart(MountSettingsPage.Row r, MountSettingsPage.Row next, out object customValue)
+        private static bool IsColourPart(SettingsPage.Row r, SettingsPage.Row next, out object customValue)
         {
             customValue = null;
-            if (r == null || r.RowKind != MountSettingsPage.RowKind.Choice || r.Entry == null || r.ChoiceValues == null || r.ChoiceValues.Length < 2 || !IsPalette(next)) return false;
+            if (r == null || r.RowKind != SettingsPage.RowKind.Choice || r.Entry == null || r.ChoiceValues == null || r.ChoiceValues.Length < 2 || !IsPalette(next)) return false;
             foreach (object v in r.ChoiceValues)
             {
                 if (v != null && v.ToString() == "Custom") { customValue = v; return true; }
@@ -1245,7 +1248,7 @@ namespace GK2DonkeyAPI
         // signature (ColourTabSignature). Nothing is written by drawing or refreshing; the values stay as saved.
         private sealed class PartView
         {
-            internal MountSettingsPage.Row Choice, Pal, Light;
+            internal SettingsPage.Row Choice, Pal, Light;
             internal object Custom, Default, Kept;
             internal string KeptName, KeptHex, OrigHex;
             internal GameObject Go;
@@ -1266,29 +1269,29 @@ namespace GK2DonkeyAPI
         private static readonly Color ArrowFace = new Color(0.235f, 0.255f, 0.306f, 1f), ArrowShade = new Color(0.165f, 0.18f, 0.22f, 1f);
         private static readonly Color LanternOriginal = new Color(0.95f, 0.71f, 0.36f, 1f); // the lamp's warm light, as drawn
 
-        private static bool HasColourParts(List<MountSettingsPage.Row> rows)
+        private static bool HasColourParts(List<SettingsPage.Row> rows)
         {
             if (rows == null) return false;
             for (int i = 0; i + 1 < rows.Count; i++) if (IsColourPart(rows[i], rows[i + 1], out _)) return true;
             return false;
         }
 
-        private static string PartKey(MountSettingsPage.Row choice) => choice.Entry.Definition.Section + "/" + choice.Entry.Definition.Key;
+        private static string PartKey(SettingsPage.Row choice) => choice.Entry.Definition.Section + "/" + choice.Entry.Definition.Key;
 
         // The colour a part is drawn in (its "Original"): its region's or its skin part's art, as the lightness rule reads
         // it; for the page's own colour kinds without a mark, the region the kind colours.
-        private static string OriginalHex(MountSettingsPage.Row choice)
+        private static string OriginalHex(SettingsPage.Row choice)
         {
             try
             {
-                string skin = choice.SkinId;
-                if (choice.ArtTone != null)
+                string skin = MountSettingsPage.Info(choice).SkinId;
+                if (MountSettingsPage.Info(choice).ArtTone != null)
                 {
                     Looks.SkinDef d = Looks.Find(skin);
-                    List<string> hexes = d != null ? SkinTones.ColoursOf(d, choice.ArtTone) : null;
+                    List<string> hexes = d != null ? SkinTones.ColoursOf(d, MountSettingsPage.Info(choice).ArtTone) : null;
                     return hexes != null && hexes.Count > 0 ? Colors.SampleOf(Colors.ColoursOfHexes(hexes)) : null;
                 }
-                string region = choice.ArtRegion;
+                string region = MountSettingsPage.Info(choice).ArtRegion;
                 if (region == null)
                 {
                     Type kind = choice.Entry.SettingType;
@@ -1316,7 +1319,7 @@ namespace GK2DonkeyAPI
 
         // The tab's rows: its parts on the left (their arrows), its other rows under them, the chosen part's palette on
         // the right.
-        private static void BuildPartsTab(List<MountSettingsPage.Row> tabRows)
+        private static void BuildPartsTab(List<SettingsPage.Row> tabRows)
         {
             controls.CloseDropdown(refocus: false);
             controls.CommitFields();
@@ -1339,11 +1342,11 @@ namespace GK2DonkeyAPI
             float y = 4f;
             for (int i = 0; i < tabRows.Count; i++)
             {
-                MountSettingsPage.Row r = tabRows[i];
-                MountSettingsPage.Row next = i + 1 < tabRows.Count ? tabRows[i + 1] : null;
+                SettingsPage.Row r = tabRows[i];
+                SettingsPage.Row next = i + 1 < tabRows.Count ? tabRows[i + 1] : null;
                 if (IsColourPart(r, next, out object custom))
                 {
-                    MountSettingsPage.Row light = i + 2 < tabRows.Count && tabRows[i + 2].RowKind == MountSettingsPage.RowKind.Steps ? tabRows[i + 2] : null;
+                    SettingsPage.Row light = i + 2 < tabRows.Count && tabRows[i + 2].RowKind == SettingsPage.RowKind.Steps ? tabRows[i + 2] : null;
                     i += light != null ? 2 : 1;
                     if (r.Visible != null && !r.Visible()) continue; // another skin's, a cart part of a mount without one
                     PartView p = PartRow(r, next, light, custom, lay);
@@ -1396,7 +1399,7 @@ namespace GK2DonkeyAPI
 
         // A part's row: the row itself a button (it chooses the part), its label, and on the controls' span the arrows
         // around the field in its colour.
-        private static PartView PartRow(MountSettingsPage.Row choice, MountSettingsPage.Row pal, MountSettingsPage.Row light, object custom, RowLayout lay)
+        private static PartView PartRow(SettingsPage.Row choice, SettingsPage.Row pal, SettingsPage.Row light, object custom, RowLayout lay)
         {
             var p = new PartView { Choice = choice, Pal = pal, Light = light, Custom = custom, Default = choice.ChoiceValues.GetValue(0) };
             if (!keptNamed.TryGetValue(choice.Entry, out object kept))
@@ -1772,10 +1775,10 @@ namespace GK2DonkeyAPI
             return outer;
         }
 
-        private static string Signature(List<(string Group, List<MountSettingsPage.Row> Rows)> groups)
+        private static string Signature(List<(string Group, List<SettingsPage.Row> Rows)> groups)
         {
             var sig = new StringBuilder();
-            foreach (var g in groups) foreach (MountSettingsPage.Row r in g.Rows) sig.Append(r.Visible == null || r.Visible() ? '1' : '0');
+            foreach (var g in groups) foreach (SettingsPage.Row r in g.Rows) sig.Append(r.Visible == null || r.Visible() ? '1' : '0');
             return sig.ToString();
         }
 
@@ -1823,7 +1826,7 @@ namespace GK2DonkeyAPI
                 UiKit.Hand(cnav, 0, GUIDirection.Down, 1); UiKit.Hand(cnav, 1, GUIDirection.Up, 0); // the rows and swatches <-> Done
                 UiKit.Hand(cnav, 0, GUIDirection.Up, 2); UiKit.Hand(cnav, 2, GUIDirection.Down, 0); // the tabs over the rows
                 coloursBefore.Clear();
-                foreach (var g in colourGroups) foreach (MountSettingsPage.Row r in g.Rows) if (r.Entry != null) coloursBefore[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
+                foreach (var g in colourGroups) foreach (SettingsPage.Row r in g.Rows) if (r.Entry != null) coloursBefore[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
                 BuildColourTab();
                 panel.SetActive(false); // the journal waits underneath
                 controls.NavDirty = true;
@@ -2068,21 +2071,21 @@ namespace GK2DonkeyAPI
             return colourTab == colourTabs[i].Key;
         }
         // the colours window's colour parts (ColourPart) on the chosen tab, in order: each its choice row and its part
-        private static List<(MountSettingsPage.Row Choice, GameObject Go)> TestParts()
+        private static List<(SettingsPage.Row Choice, GameObject Go)> TestParts()
         {
-            var parts = new List<(MountSettingsPage.Row, GameObject)>();
+            var parts = new List<(SettingsPage.Row, GameObject)>();
             foreach (var x in colourRows)
             {
-                if (x.Go != null && x.Row.RowKind == MountSettingsPage.RowKind.Choice && x.Row.Entry != null && x.Go.name.EndsWith("colour " + x.Row.Entry.Definition.Key, StringComparison.Ordinal)) parts.Add((x.Row, x.Go));
+                if (x.Go != null && x.Row.RowKind == SettingsPage.RowKind.Choice && x.Row.Entry != null && x.Go.name.EndsWith("colour " + x.Row.Entry.Definition.Key, StringComparison.Ordinal)) parts.Add((x.Row, x.Go));
             }
             return parts;
         }
         internal static int TestColourPartCount => TestParts().Count;
-        internal static MountSettingsPage.Row TestColourPartRow(int i) { var p = TestParts(); return i >= 0 && i < p.Count ? p[i].Choice : null; }
-        internal static MountSettingsPage.Row TestColourPartPalette(int i)
+        internal static SettingsPage.Row TestColourPartRow(int i) { var p = TestParts(); return i >= 0 && i < p.Count ? p[i].Choice : null; }
+        internal static SettingsPage.Row TestColourPartPalette(int i)
         {
-            MountSettingsPage.Row c = TestColourPartRow(i);
-            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            SettingsPage.Row c = TestColourPartRow(i);
+            List<SettingsPage.Row> tabRows = ColourTabRows();
             int at = c != null && tabRows != null ? tabRows.IndexOf(c) : -1;
             return at >= 0 && at + 1 < tabRows.Count ? tabRows[at + 1] : null;
         }
@@ -2122,11 +2125,11 @@ namespace GK2DonkeyAPI
         // value opens (the user, 2026-11-10: a row moved from one column to the other when another was set to Custom)
         internal static string TestColourColumns()
         {
-            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            List<SettingsPage.Row> tabRows = ColourTabRows();
             if (tabRows == null) return "";
             var cols = TabColumns(tabRows);
             var sb = new StringBuilder(tabRows.Count);
-            foreach (MountSettingsPage.Row r in tabRows) sb.Append(cols.Count > 1 && cols[1].Rows.Contains(r) ? 'R' : 'L');
+            foreach (SettingsPage.Row r in tabRows) sb.Append(cols.Count > 1 && cols[1].Rows.Contains(r) ? 'R' : 'L');
             return sb.ToString();
         }
         // every choice of the chosen tab that has a custom colour after it, shown now, set to its "Custom" value (on), or
@@ -2142,12 +2145,12 @@ namespace GK2DonkeyAPI
                 if (n > 0) Refresh(); // as the row's control does after a pick
                 return n;
             }
-            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            List<SettingsPage.Row> tabRows = ColourTabRows();
             if (tabRows == null) return 0;
             for (int i = 0; i + 1 < tabRows.Count; i++)
             {
-                MountSettingsPage.Row r = tabRows[i];
-                if (r.RowKind != MountSettingsPage.RowKind.Choice || r.Entry == null || r.ChoiceValues == null || !IsPalette(tabRows[i + 1])) continue;
+                SettingsPage.Row r = tabRows[i];
+                if (r.RowKind != SettingsPage.RowKind.Choice || r.Entry == null || r.ChoiceValues == null || !IsPalette(tabRows[i + 1])) continue;
                 if (r.Visible != null && !r.Visible()) continue;
                 foreach (object v in r.ChoiceValues)
                 {
@@ -2167,17 +2170,17 @@ namespace GK2DonkeyAPI
         // whether every row of the chosen tab that shows was built, and only those (the two columns hold the tab whole)
         internal static bool TestColourTabWhole()
         {
-            List<MountSettingsPage.Row> tabRows = ColourTabRows();
+            List<SettingsPage.Row> tabRows = ColourTabRows();
             if (tabRows == null) return colourRows.Count == 0;
             if (HasColourParts(tabRows))
             {
                 int want = 0, built = 0;
                 for (int i = 0; i < tabRows.Count; i++)
                 {
-                    MountSettingsPage.Row r = tabRows[i];
+                    SettingsPage.Row r = tabRows[i];
                     bool part = i + 1 < tabRows.Count && IsColourPart(r, tabRows[i + 1], out _);
                     bool shows = r.Visible == null || r.Visible();
-                    if (part) { i++; if (i + 1 < tabRows.Count && tabRows[i + 1].RowKind == MountSettingsPage.RowKind.Steps) i++; }
+                    if (part) { i++; if (i + 1 < tabRows.Count && tabRows[i + 1].RowKind == SettingsPage.RowKind.Steps) i++; }
                     if (!shows) continue;
                     want++;
                     foreach (var x in colourRows) if (x.Row == r) { built++; break; }
@@ -2186,7 +2189,7 @@ namespace GK2DonkeyAPI
                 return want == built && parts.Count > 0 && partPanel != null;
             }
             int shown = 0;
-            foreach (MountSettingsPage.Row r in tabRows) if (r.Visible == null || r.Visible()) shown++;
+            foreach (SettingsPage.Row r in tabRows) if (r.Visible == null || r.Visible()) shown++;
             foreach (var x in colourRows) if (!tabRows.Contains(x.Row)) return false;
             return colourRows.Count == shown;
         }
@@ -2253,7 +2256,7 @@ namespace GK2DonkeyAPI
             MarkList();
         }
 
-        private static void RefreshRows(List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> list)
+        private static void RefreshRows(List<(SettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> list)
         {
             foreach (var (row, go, refresh, group) in list)
             {
@@ -2341,6 +2344,13 @@ namespace GK2DonkeyAPI
                 Mount.Instance paper = PaperOf(page);
                 Texture pic;
                 using (Perf.Measure(Perf.S.Preview)) pic = PreviewStage.Picture(paper, withCart: ColoursWantCart());
+                if (DevTools.Unlocked && paper != null && (pic != picLogged || paper != picLoggedFor)) // dev: why the picture has its cart or not (2026-11-15: the journal showed the donkey alone)
+                {
+                    picLogged = pic;
+                    picLoggedFor = paper;
+                    Catalog.Entry wanted = Looks.MountWanted(paper);
+                    Plugin.Log.LogInfo($"[preview] the {(colours != null ? "colours window" : "journal")} asked for {paper.FullId} {(ColoursWantCart() ? "with the cart" : "alone")}: the mount wanted {wanted.Id} pulls a cart {wanted.Cart}; drawn as {PreviewStage.TestViewOf(pic)}; the stage: {PreviewStage.TestCartPartsState()}; the cart in the picture: {PreviewStage.TestCartDrawn()}; {PreviewStage.TestCartFacts()}.");
+                }
                 if (paper != null && !paper.LooksRig.Settling)
                 {
                     Looks.HoldForPanel(paper.LooksRig.Wearing); // picked again: there at once
@@ -2498,7 +2508,7 @@ namespace GK2DonkeyAPI
                 {
                     // the panel's own lists (the Skin rows: never in the options window, InOptions) are read
                     // again, so a skin added or withdrawn shows as it is now
-                    if (page != null) foreach (MountSettingsPage.Row r in page.Rows) if (r.IsLook && r.RowKind == MountSettingsPage.RowKind.List) { r.ChoiceLabels = null; r.ChoiceValues = null; }
+                    if (page != null) foreach (SettingsPage.Row r in page.Rows) if (r.IsLook && r.RowKind == SettingsPage.RowKind.List) { r.ChoiceLabels = null; r.ChoiceValues = null; }
                     entries = Entries();
                     AddMissingChosen(entries);
                     BuildList();
@@ -2639,20 +2649,20 @@ namespace GK2DonkeyAPI
         // name is per mount not per skin"): a text row (its name) first, then the Skin, then the others in the order
         // the page made the donkey's (a mount registered later had its rows made later: page.Rows alone put its Skin
         // last).
-        private static void JournalOrder(List<MountSettingsPage.Row> list, string chosen)
+        private static void JournalOrder(List<SettingsPage.Row> list, string chosen)
         {
             var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             int i = 0;
-            foreach (MountSettingsPage.Row r in page.Rows)
+            foreach (SettingsPage.Row r in page.Rows)
             {
                 if (!r.IsLook || r.Entry == null || !string.Equals(r.ShownSection, "Mount", StringComparison.OrdinalIgnoreCase)) continue;
-                string b = BaseKey(r, r.MountId);
+                string b = BaseKey(r, MountSettingsPage.Info(r).MountId);
                 if (!rank.ContainsKey(b)) rank[b] = i;
                 i++;
             }
-            int Rank(MountSettingsPage.Row r)
+            int Rank(SettingsPage.Row r)
             {
-                if (r.RowKind == MountSettingsPage.RowKind.Text) return -2;
+                if (r.RowKind == SettingsPage.RowKind.Text) return -2;
                 string b = BaseKey(r, chosen);
                 if (b.Equals("Skin", StringComparison.OrdinalIgnoreCase)) return -1;
                 return rank.TryGetValue(b, out int at) ? at : int.MaxValue;
@@ -2660,7 +2670,7 @@ namespace GK2DonkeyAPI
             // a stable insertion sort (few rows; no LINQ in the game)
             for (int a = 1; a < list.Count; a++)
             {
-                MountSettingsPage.Row r = list[a];
+                SettingsPage.Row r = list[a];
                 int k = Rank(r), j = a - 1;
                 while (j >= 0 && Rank(list[j]) > k)
                 {
@@ -2694,7 +2704,7 @@ namespace GK2DonkeyAPI
             foreach (var x in coloursWindow ? colourRows : rows)
             {
                 if (x.Go == null) continue;
-                Transform t = x.Go.transform.Find("GK2DonkeyAPI mounts panel label");
+                Transform t = x.Go.transform.Find(UiOwner.NamePrefix + "mounts panel label");
                 if (t is RectTransform rt && rt.rect.width < 100f) return $"{x.Row.Label}: {rt.rect.width:0}";
             }
             return null;
@@ -2704,7 +2714,7 @@ namespace GK2DonkeyAPI
         // parts were set, it never was: the user, 2026-10-26). Null: no text box in the journal.
         internal static TMP_InputField TestNameField()
         {
-            foreach (var x in rows) if (x.Go != null && x.Row.RowKind == MountSettingsPage.RowKind.Text) return x.Go.GetComponentInChildren<TMP_InputField>(true);
+            foreach (var x in rows) if (x.Go != null && x.Row.RowKind == SettingsPage.RowKind.Text) return x.Go.GetComponentInChildren<TMP_InputField>(true);
             return null;
         }
 
@@ -2731,7 +2741,7 @@ namespace GK2DonkeyAPI
 
         // A row's key without its mount's part: "Foals_acme-pack.crab" and "Foals" are both "Foals", every
         // "Skin_<mount>" is "Skin".
-        private static string BaseKey(MountSettingsPage.Row r, string mountId)
+        private static string BaseKey(SettingsPage.Row r, string mountId)
         {
             string key = r.Entry?.Definition.Key ?? "";
             if (key.StartsWith("Skin_", StringComparison.OrdinalIgnoreCase)) return "Skin";

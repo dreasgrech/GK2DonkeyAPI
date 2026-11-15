@@ -27,9 +27,9 @@ namespace GK2DonkeyAPI.IntegrationTests
             if (saddle == null) Info("Saddle Up's page isn't shown: its rows not checked");
             else
             {
-                MountSettingsPage.Row guard = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "FallGuard" && x.ShownSection == "Safe spot");
-                MountSettingsPage.Row button = saddle.Rows.Find(x => x.RowKind == MountSettingsPage.RowKind.Button && x.ShownSection == "Safe spot" && x.Label == "Back to the last safe spot");
-                MountSettingsPage.Row key = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "ReturnKey" && x.ShownSection == "Safe spot");
+                SettingsPage.Row guard = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "FallGuard" && x.ShownSection == "Safe spot");
+                SettingsPage.Row button = saddle.Rows.Find(x => x.RowKind == SettingsPage.RowKind.Button && x.ShownSection == "Safe spot" && x.Label == "Back to the last safe spot");
+                SettingsPage.Row key = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "ReturnKey" && x.ShownSection == "Safe spot");
                 Check(guard != null && button != null && key != null, $"Saddle Up has the FallGuard toggle, the button and the ReturnKey row ({(guard != null ? "toggle" : "no toggle")}, {(button != null ? "button \"" + button.ButtonText + "\"" : "no button")}, {(key != null ? "key" : "no key")})");
                 if (guard != null)
                 {

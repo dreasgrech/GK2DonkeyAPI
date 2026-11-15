@@ -42,13 +42,13 @@ namespace GK2DonkeyAPI.IntegrationTests
                         Dictionary<string, Dictionary<string, string>> file = MountSettingsPage.ReadSections(su);
                         int n = 0;
                         foreach (var s in file) n += s.Value.Count;
-                        List<MountSettingsPage.UpgradeClaim> claims = page.Upgrade(file, out List<(string Section, string Key, string Raw)> unclaimed);
+                        List<SettingsPage.UpgradeClaim> claims = page.Upgrade(file, out List<(string Section, string Key, string Raw)> unclaimed);
                         var lost = new StringBuilder();
                         foreach (var u in unclaimed) lost.Append(lost.Length > 0 ? ", " : "").Append('[').Append(u.Section).Append("] ").Append(u.Key);
                         Check(unclaimed.Count == 0, $"{version} Saddle Up cfg: every one of its {n} values lands on a row of today's page" + (unclaimed.Count > 0 ? $"; lost: {lost}" : ""));
                         var bad = new StringBuilder();
                         int found = 0, moved = 0;
-                        foreach (MountSettingsPage.UpgradeClaim c in claims)
+                        foreach (SettingsPage.UpgradeClaim c in claims)
                         {
                             if (c.Raw == null) continue;
                             found++;

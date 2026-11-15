@@ -217,12 +217,12 @@ namespace GK2DonkeyAPI
                 }
                 SelfTest.Check(refused == null, $"a tone named like the page's picture row (Cloth) gets its rows ({refused ?? "built"})");
                 page.Heading("Colours", "A later heading");
-                MountSettingsPage.Row RowOf(string key) => page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == key);
+                SettingsPage.Row RowOf(string key) => page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == key);
                 string sx = "_" + SkinId;
-                MountSettingsPage.Row cloth = RowOf("Tone.cloth" + sx), custom = RowOf("CustomTone.cloth" + sx), light = RowOf("CustomTone.clothLightness" + sx), trim = RowOf("Tone.trim" + sx);
+                SettingsPage.Row cloth = RowOf("Tone.cloth" + sx), custom = RowOf("CustomTone.cloth" + sx), light = RowOf("CustomTone.clothLightness" + sx), trim = RowOf("Tone.trim" + sx);
                 int toneRows = 0;
-                foreach (MountSettingsPage.Row r in page.Rows) if (r.Entry != null && r.Entry.Definition.Key.StartsWith("Tone.", StringComparison.Ordinal) && r.SkinId != null && r.SkinId.Equals(SkinId, StringComparison.OrdinalIgnoreCase)) toneRows++;
-                SelfTest.Check(cloth != null && custom != null && light != null && trim != null && toneRows == 2 && cloth.SkinId == SkinId && custom.SkinId == SkinId,
+                foreach (SettingsPage.Row r in page.Rows) if (r.Entry != null && r.Entry.Definition.Key.StartsWith("Tone.", StringComparison.Ordinal) && MountSettingsPage.Info(r).SkinId != null && MountSettingsPage.Info(r).SkinId.Equals(SkinId, StringComparison.OrdinalIgnoreCase)) toneRows++;
+                SelfTest.Check(cloth != null && custom != null && light != null && trim != null && toneRows == 2 && MountSettingsPage.Info(cloth).SkinId == SkinId && MountSettingsPage.Info(custom).SkinId == SkinId,
                     $"a choice, its custom colour and the lightness per tone, under the skin's keys (Tone.cloth{sx}, CustomTone.cloth{sx}, CustomTone.clothLightness{sx}; {toneRows} tone choices)");
                 if (cloth == null || custom == null || light == null) yield break;
                 string label = Texts.Label(cloth), customLabel = Texts.Label(custom), lightLabel = Texts.Label(light), gold = Texts.Choice(cloth, (int)ToneColor.Gold);
@@ -252,8 +252,8 @@ namespace GK2DonkeyAPI
                 if (!wrote) yield break;
                 lateRegistered = Looks.RegisterFolder(lateRoot, owner + ".late") == 1;
                 int caught = page.CatchUp();
-                MountSettingsPage.Row sash = RowOf("Tone.sash_" + LateId);
-                int heading = page.Rows.FindIndex(r => r.RowKind == MountSettingsPage.RowKind.Note && r.Label == "A later heading");
+                SettingsPage.Row sash = RowOf("Tone.sash_" + LateId);
+                int heading = page.Rows.FindIndex(r => r.RowKind == SettingsPage.RowKind.Note && r.Label == "A later heading");
                 int at = sash != null ? page.Rows.IndexOf(sash) : -1;
                 SelfTest.Check(lateRegistered && caught >= 1 && sash != null && at >= 0 && at < heading, $"a skin registered after the page gets its tone rows at CatchUp, with the skins' rows (row {at}, the later heading at {heading})");
             }

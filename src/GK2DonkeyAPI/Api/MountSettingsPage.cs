@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using BepInEx;
 using BepInEx.Configuration;
 
 namespace GK2DonkeyAPI.Api
@@ -8,209 +7,106 @@ namespace GK2DonkeyAPI.Api
     // A player mod's settings, defined once and shown where the player looks (Mounts.SettingsPage), the same for every
     // player (since 0.42.0; GK2 Mod Framework's Mods menu before, when installed, else pages in the game's Settings
     // window; the framework isn't on the Steam Workshop, the user 2026-10-30, docs/options-window.md):
-    // - the options window (OptionsWindow.cs): every row but the look rows, its sections side by side with their rows,
-    //   each our own control (keys set there too); opened from the mod's button in the game's Settings window
-    //   (SettingsButtons.cs), the Mounts panel's Options button, and with GK2 Mod Framework installed the Settings
-    //   button of the mod's entry in its Mods menu (FrameworkLink.cs: the entry has one setting, a button to it);
+    // - the options window (GK2DreasUI.OptionsWindow): every row but the look rows, its sections side by side with their
+    //   rows, each our own control (keys set there too); opened from the mod's button in the game's Settings window
+    //   (SettingsButtons), the Mounts panel's Options button, and with GK2 Mod Framework installed the Settings button
+    //   of the mod's entry in its Mods menu (FrameworkLink: the entry has one setting, a button to it);
     // - the Mounts panel (MountsPanel.cs: the mounts listed, the chosen one drawn with its words and its rows): the look
     //   rows (look: true; the Mount and Skin rows, the colours), opened by PanelButton from the page and OpenPanel from a
     //   mod's key.
+    // The page itself (its rows, the cfg binding with the moved sections and keys, the options window) is the window
+    // library's SettingsPage (docs/ui-library.md), wrapped here: this class keeps every public method a mod built against
+    // it uses, and adds the mount rows (MountRows, FoalRows, the colours, the per-mount and per-skin sets). A row's mount,
+    // skin and part are its MountRowInfo (Info), the API's data on the library's row.
     // Each row binds a BepInEx entry in the mod's own cfg, runs its apply action now and on every change (from a window or
     // the cfg), and shows under its section. Call Publish once, after the rows, from the mod's Awake; the page reaches the
     // windows the frame after (Show), when every plugin's Awake has run, so a mount or skin another mod registered in its
     // Awake is in the lists whatever order BepInEx loaded the plugins in (it orders by dependencies only, and a mount mod
     // can't ask to load before the mod that owns the page; docs/mounts-as-mods.md 4).
-    // Sections keep the order they're first used in: the cfg section is numbered ("1. Keys", "2. Behaviour"; the
-    // framework's Mods menu sorted sections by name, and the numbers stay: renaming them would move every player's
-    // values). The windows show the plain names. If a window fails, it doesn't show, and the settings work through the
-    // cfg as before.
     public sealed class MountSettingsPage
     {
-        internal enum RowKind { Toggle, Choice, Steps, Key, Text, Info, Button, Preview, Note, List }
-
-        internal sealed class Row
+        // The API's data on a library row: the mount and skin of a row kept per mount or per skin, a skin's own part
+        // (ToneRows: the colours window's tab of its own), a cart row (CartRow: the colours window draws the cart only on a
+        // tab with such rows), what a colour row colours (a mount region or a skin's own tone: the "Original" square), a
+        // picture row's cart.
+        internal sealed class MountRowInfo
         {
-            internal RowKind RowKind;
-            internal ConfigEntryBase Entry;
-            internal string Section, Label, Description;
-            internal string ShownSection; // the plain name, without the number
-            internal string[] ChoiceLabels;
-            internal Array ChoiceValues;
-            internal Func<IReadOnlyList<(string Id, string Label)>> Choices; // RowKind.List: read when the row is first shown
-            internal int Min, Max, Step;
-            internal Func<int, string> Format;
-            internal Func<string> InfoValue;
-            internal Func<bool> Visible;     // shown at all
-            internal Func<bool> Shown;       // a row of a set kept per mount (PerMount, the Skin rows): the chosen mount's shows, the others don't
-            internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the Mounts panel leaves the row out while false (a custom colour shows with its preset), the options window greys it
-            internal bool IsLook;           // the Mounts panel's, not the options window's (InOptions); a Note with it is a heading there (Heading)
-            internal Action OnClick;         // RowKind.Button
-            internal string ButtonText;      // RowKind.Button: the word on it ("Open", "Go")
-            internal bool OpensPanel;        // RowKind.Button: PanelButton's (from the journal under the options, it goes back to it)
-            internal bool HasPress;          // RowKind.Key: the mod acts on its press (pressed:): another key row with the same key is a clash (KeyCapture.Clash)
-            internal bool WithCart;          // RowKind.Preview: the donkey with its cart, or alone
-            internal string MountId;         // a PerMount or PerSkin row's mount (null: a row of no one mount)
-            internal string SkinId;          // a PerSkin row's skin (null: a row of no one skin)
-            // Translations (Texts, docs/localization.md): the text fields above stay English (they are compared and logged);
-            // the windows draw them through Texts with these. Owner: the page's mod; TextKey: the row's key in its
-            // translation file, without its mount or skin; LabelWord and ButtonWord: the API's own word instead (the
-            // rows its builders add, the default button words).
-            internal string Owner, TextKey;
-            internal Word LabelWord, ButtonWord;
-            // A skin's tone row (ToneRows): its label made from the tone's name (its skin's owner's text, in an API template
-            // for the custom rows), its choices the API's words; the page has nothing of either to translate.
-            internal Func<string> LabelOf;
-            internal Word[] ChoiceWords;
-            // A row of a skin's own part (ToneRows: its choice, custom colour and lightness): the Mounts panel's colours
-            // window shows them on a tab of their own, named by the skin (2026-11-08).
+            internal string MountId;   // a PerMount or PerSkin row's mount (null: a row of no one mount)
+            internal string SkinId;    // a PerSkin row's skin (null: a row of no one skin)
             internal bool SkinPart;
-            // A row of the cart (CartRow): the colours window shows the mount with its cart only on a tab that has one, the mount
-            // alone (larger) on the others (the user, 2026-11-10: "only show cart in preview when the cart tab is selected").
             internal bool CartPart;
-            // What a colour row colours (the Mounts panel's "Original" square shows that art's colour): a mount region
-            // (RegionRows, the region parts) or a skin's own part (ToneRows); null: known by its kind, or none.
             internal string ArtRegion, ArtTone;
-            // A region's row (RegionRows): labelled by the look's name for the part where it has one, its own label where
-            // the look names none (a pack from before names, another mod's mount): that label stays the page's to translate.
-            internal bool OwnLabelToo;
-            // A List row's choices FillList marked (a stored id nothing installed provides, set aside, the list empty): drawn
-            // with the API's words around the name (Texts.Choice); ChoiceLabels keep the English for the comparisons and logs.
-            internal ChoiceNote[] ChoiceNotes;
-            internal string[] ChoiceNames;
+            internal bool WithCart;    // RowKind.Preview: the donkey with its cart, or alone
         }
 
-        internal enum ChoiceNote { None, NotInstalled, SetAside, Empty }
+        private static readonly MountRowInfo NoInfo = new MountRowInfo();
 
-        internal readonly List<Row> Rows = new List<Row>();
+        // A row's mount data (never null: a row of no mount answers nulls and falses).
+        internal static MountRowInfo Info(SettingsPage.Row r) => r?.Tag as MountRowInfo ?? NoInfo;
+
+        private static MountRowInfo Own(SettingsPage.Row r)
+        {
+            if (!(r.Tag is MountRowInfo i))
+            {
+                i = new MountRowInfo();
+                r.Tag = i;
+            }
+            return i;
+        }
+
+        internal readonly SettingsPage Page;
         internal static readonly List<MountSettingsPage> All = new List<MountSettingsPage>(); // every page made this session (the upgrade self-test)
-        private readonly List<string> sections = new List<string>();
         internal MountCompanion PreviewOf;
 
-        // "Keys" -> "1. Keys", numbered in the order sections are first used.
-        private string Sec(string name)
+        internal MountSettingsPage(string ownerId, ConfigFile config, string title, string author, string description, Func<string> status)
         {
-            int at = sections.IndexOf(name);
-            if (at < 0)
-            {
-                sections.Add(name);
-                at = sections.Count - 1;
-            }
-            return (at + 1) + ". " + name;
+            Page = new SettingsPage(ownerId, config, title, author, description, status ?? (() => Mounts.StatusText));
+            Page.BeforeShow = BeforeShow;
+            Page.AfterShow = AfterShow;
+            All.Add(this);
         }
 
-        // Every row's cfg entry comes through here. A section's number is its place on the page, so when a mod moves a
-        // section (a mod put Mount right after Keys: Donkey went from "3. Donkey" to "5. Donkey"), a cfg from
-        // before has the values under the old number, and BepInEx would bind the defaults and leave the old lines as
-        // orphans: every player's settings reset on an update. So a key the file doesn't have under its section takes
-        // the value the file has for it under the same name with another number, or under a place the mod says the
-        // key moved from (MovedKey). The file's text is read once per page. The old copy is then dropped from
-        // BepInEx's orphans, so the file holds each value in one place: BepInEx writes orphans back on every save, and
-        // a stale copy under a third number would otherwise be found first the next time the section moves.
-        private ConfigEntry<T> Bind<T>(string cfgSection, string key, T value, string description) => Bind(cfgSection, key, value, new ConfigDescription(description));
+        // ---- the library page's own, as this page's (the windows, the tests and the panel read them here) ----
 
-        private ConfigEntry<T> Bind<T>(string cfgSection, string key, T value, ConfigDescription description)
-        {
-            ConfigEntry<T> e = Config.Bind(cfgSection, key, value, description);
-            string moved = MovedValue(cfgSection, key, out string from, out string fromKey);
-            if (moved != null)
-            {
-                try
-                {
-                    e.SetSerializedValue(moved);
-                    bool keyMove = fromKey != key || PlainName(from) != PlainName(cfgSection); // MovedKey, not a renumbered section
-                    if (movedNoted.Add(keyMove ? from + "|" + cfgSection + "|" + key : from + "|" + cfgSection)) // once per moved section, once per moved key
-                    {
-                        Plugin.Log.LogInfo(keyMove
-                            ? $"Settings: {Title}: [{from}] {fromKey} is [{cfgSection}] {key} now; the value carried over."
-                            : $"Settings: {Title}: the section \"{from}\" is \"{cfgSection}\" now; its values carried over.");
-                    }
-                }
-                catch (Exception x)
-                {
-                    Plugin.Log.LogWarning($"Settings: {Title}: [{from}] {fromKey} = {moved} can't be read as {typeof(T).Name} ({x.Message}); the default applies.");
-                }
-            }
-            DropOldCopies(cfgSection, key);
-            return e;
-        }
+        internal List<SettingsPage.Row> Rows => Page.Rows;
+        internal string OwnerId => Page.OwnerId;
+        internal string Title => Page.Title;
+        internal string Author => Page.Author;
+        internal string Description => Page.Description;
+        internal ConfigFile Config => Page.Config;
+        internal Func<string> StatusValue => Page.StatusValue;
+        internal string Version => Page.Version;
+        internal bool Shown => Page.Shown;
+        internal void FinishBinding() => Page.FinishBinding();
+        internal bool InOptions(SettingsPage.Row r) => Page.InOptions(r);
+        internal bool IsRetired(string cfgSection, string key) => Page.IsRetired(cfgSection, key);
+        internal List<SettingsPage.UpgradeClaim> Upgrade(Dictionary<string, Dictionary<string, string>> file, out List<(string Section, string Key, string Raw)> unclaimed) => Page.Upgrade(file, out unclaimed);
+        internal static Dictionary<string, Dictionary<string, string>> ReadSections(string path) => SettingsPage.ReadSections(path);
+        internal static string PlainName(string section) => SettingsPage.PlainName(section);
+        internal static int SectionNumber(string section) => SettingsPage.SectionNumber(section);
+        internal static Dictionary<ConfigDefinition, string> OrphansOf(ConfigFile cfg) => SettingsPage.OrphansOf(cfg);
+        internal static void FillList(SettingsPage.Row r) => SettingsPage.FillList(r);
+        internal static Func<bool> Guard(Func<bool> f, bool fallback, string where, string what) => SettingsPage.Guard(f, fallback, where, what);
+        internal static string LightnessKey(string key) => SettingsPage.LightnessKey(key);
+        internal static bool IsClearKey(KeyboardShortcut k) => SettingsPage.IsClearKey(k);
+        internal static bool AnyShown => SettingsPage.AnyShown;
+
+        private string Sec(string name) => Page.Sec(name);
 
         // A key that moved to another section (or name) on the page: the first bind of (section, key) with nothing in
         // the cfg takes the value the cfg has as (oldSection, oldKey), whatever number oldSection had. Call it before
         // the row. Sections that only moved on the page keep their values without this.
         // A key that moved more than once names each old place with a call of its own (0.36.0: one call named one).
-        public void MovedKey(string section, string key, string oldSection, string oldKey = null)
-        {
-            if (string.IsNullOrEmpty(section) || string.IsNullOrEmpty(key) || string.IsNullOrEmpty(oldSection)) throw new ArgumentException("section, key and oldSection are needed.");
-            string at = section + "\n" + key;
-            if (!movedKeys.TryGetValue(at, out List<(string Section, string Key)> places)) movedKeys[at] = places = new List<(string, string)>();
-            if (!places.Contains((oldSection, oldKey ?? key))) places.Add((oldSection, oldKey ?? key));
-        }
-
-        private readonly Dictionary<string, List<(string Section, string Key)>> movedKeys = new Dictionary<string, List<(string, string)>>(StringComparer.Ordinal);
+        public void MovedKey(string section, string key, string oldSection, string oldKey = null) => Page.MovedKey(section, key, oldSection, oldKey);
 
         // A setting the mod no longer has, on purpose (0.36.0; a mod's Riding speed and Cart speed, now each mount's
         // own): its line leaves the player's file (under any number of the section) at Publish, and the upgrade
         // self-test counts it as retired, not as a value lost. Call it once per key, any time before Publish.
-        public void RetiredKey(string section, string key)
-        {
-            if (string.IsNullOrEmpty(section) || string.IsNullOrEmpty(key)) throw new ArgumentException("section and key are needed.");
-            retiredKeys.Add(PlainName(section) + "\n" + key);
-        }
-
-        private readonly HashSet<string> retiredKeys = new HashSet<string>(StringComparer.Ordinal);
-        internal bool IsRetired(string cfgSection, string key) => retiredKeys.Contains(PlainName(cfgSection) + "\n" + key);
-
-        // Every retired line of the file out of BepInEx's orphans, so the save at Publish leaves them out.
-        private void DropRetired()
-        {
-            if (retiredKeys.Count == 0) return;
-            if (fileSections == null) fileSections = ReadSections(Config.ConfigFilePath);
-            foreach (KeyValuePair<string, Dictionary<string, string>> s in fileSections)
-            {
-                foreach (string key in s.Value.Keys)
-                {
-                    if (!IsRetired(s.Key, key)) continue;
-                    Dictionary<ConfigDefinition, string> orphans = OrphansOf(Config);
-                    if (orphans == null) return;
-                    if (orphans.Remove(new ConfigDefinition(s.Key, key))) retiredDropped++;
-                    else dropsFailed++;
-                }
-            }
-        }
-        private Dictionary<string, Dictionary<string, string>> fileSections; // the cfg file's sections and their keys, raw
-        private readonly HashSet<string> movedNoted = new HashSet<string>();
-
-        // Every section in the file that may hold a copy of (cfgSection, key): the same plain name under another
-        // number, and the place MovedKey named, under any number. (section, key) pairs.
-        private IEnumerable<(string Section, string Key)> OldPlaces(string cfgSection, string key) => OldPlaces(cfgSection, key, fileSections);
-
-        private IEnumerable<(string Section, string Key)> OldPlaces(string cfgSection, string key, Dictionary<string, Dictionary<string, string>> file)
-        {
-            string plain = PlainName(cfgSection);
-            movedKeys.TryGetValue(PlainName(cfgSection) + "\n" + key, out List<(string Section, string Key)> aliases);
-            string unprefixed = UnprefixedMountKey(key);
-            if (unprefixed != null && file.ContainsKey(cfgSection)) yield return (cfgSection, unprefixed);
-            foreach (string s in file.Keys)
-            {
-                if (s == cfgSection) continue;
-                string p = PlainName(s);
-                if (p == plain)
-                {
-                    yield return (s, key);
-                    if (unprefixed != null) yield return (s, unprefixed);
-                }
-                else if (aliases != null)
-                {
-                    foreach ((string Section, string Key) alias in aliases)
-                    {
-                        if (p == alias.Section) yield return (s, alias.Key);
-                    }
-                }
-            }
-        }
+        public void RetiredKey(string section, string key) => Page.RetiredKey(section, key);
 
         // A per-mount key with its mount's id from before the prefixes ("Coat_acme.crab" -> "Coat_crab": a dev's
         // cfg of 2026-10-24, mounts never released): its old name, so the value carries over; null for any other key.
+        // The library asks for it on every bind (UiOwner.KeyAlias).
         internal static string UnprefixedMountKey(string key)
         {
             int u = key.IndexOf('_');
@@ -219,221 +115,7 @@ namespace GK2DonkeyAPI.Api
             return dot > u + 1 && dot < key.Length - 1 ? key.Substring(0, u + 1) + key.Substring(dot + 1) : null;
         }
 
-        // The file's value for key from an old place (OldPlaces) when the file has none under cfgSection itself; null
-        // otherwise. Several old copies: the section with the most keys wins (a newer version binds at least as many),
-        // then the highest number.
-        private string MovedValue(string cfgSection, string key, out string from, out string fromKey)
-        {
-            from = null;
-            fromKey = null;
-            if (fileSections == null) fileSections = ReadSections(Config.ConfigFilePath);
-            if (fileSections.Count == 0) return null;
-            if (fileSections.TryGetValue(cfgSection, out Dictionary<string, string> own) && own.ContainsKey(key)) return null;
-            return BestOldValue(cfgSection, key, fileSections, out from, out fromKey);
-        }
-
-        private string BestOldValue(string cfgSection, string key, Dictionary<string, Dictionary<string, string>> file, out string from, out string fromKey)
-        {
-            from = null;
-            fromKey = null;
-            string best = null;
-            int bestKeys = -1, bestNumber = -1;
-            foreach ((string Section, string Key) place in OldPlaces(cfgSection, key, file))
-            {
-                Dictionary<string, string> s = file[place.Section];
-                if (!s.TryGetValue(place.Key, out string raw)) continue;
-                int number = SectionNumber(place.Section);
-                if (s.Count > bestKeys || (s.Count == bestKeys && number > bestNumber))
-                {
-                    best = raw;
-                    bestKeys = s.Count;
-                    bestNumber = number;
-                    from = place.Section;
-                    fromKey = place.Key;
-                }
-            }
-            return best;
-        }
-
-        // Where each row's value would come from in a cfg file of another version (ReadSections of it): the file's own
-        // line for the row, else the best old place (a renumbered section, a MovedKey), else nothing (the row is new;
-        // its default applies). And the file's lines no row claims: a player's value this page would lose. The upgrade
-        // self-test runs it over the released files in tests/fixtures/released (docs/compatibility.md); nothing is bound
-        // or written.
-        internal sealed class UpgradeClaim
-        {
-            internal Row Row;
-            internal string Section, Key, Raw; // null: the file has no value for the row
-            internal bool Moved => Raw != null && Section != Row.Entry.Definition.Section;
-        }
-
-        internal List<UpgradeClaim> Upgrade(Dictionary<string, Dictionary<string, string>> file, out List<(string Section, string Key, string Raw)> unclaimed)
-        {
-            var claims = new List<UpgradeClaim>();
-            var claimed = new HashSet<string>(StringComparer.Ordinal);
-            foreach (Row r in Rows)
-            {
-                if (r.Entry == null) continue;
-                string sec = r.Entry.Definition.Section, key = r.Entry.Definition.Key;
-                var c = new UpgradeClaim { Row = r };
-                if (file.TryGetValue(sec, out Dictionary<string, string> own) && own.TryGetValue(key, out string raw))
-                {
-                    c.Section = sec;
-                    c.Key = key;
-                    c.Raw = raw;
-                }
-                else
-                {
-                    c.Raw = BestOldValue(sec, key, file, out c.Section, out c.Key);
-                }
-                if (c.Raw != null) claimed.Add(c.Section + "\n" + c.Key);
-                claims.Add(c);
-            }
-            unclaimed = new List<(string, string, string)>();
-            foreach (KeyValuePair<string, Dictionary<string, string>> s in file)
-            {
-                foreach (KeyValuePair<string, string> kv in s.Value)
-                {
-                    if (!claimed.Contains(s.Key + "\n" + kv.Key) && !IsRetired(s.Key, kv.Key)) unclaimed.Add((s.Key, kv.Key, kv.Value)); // a retired line is left out on purpose
-                }
-            }
-            return claims;
-        }
-
-        // Every old copy of (cfgSection, key) out of BepInEx's orphans (the entries it read from the file and nothing
-        // bound), so the next save drops those lines. The orphans are BepInEx's own (ConfigFile.OrphanedEntries, not
-        // public); without them the file merely keeps the old lines.
-        private void DropOldCopies(string cfgSection, string key)
-        {
-            if (fileSections == null || fileSections.Count == 0) return;
-            foreach ((string Section, string Key) place in OldPlaces(cfgSection, key))
-            {
-                if (!fileSections[place.Section].ContainsKey(place.Key)) continue;
-                System.Collections.Generic.Dictionary<ConfigDefinition, string> orphans = OrphansOf(Config);
-                if (orphans == null) return;
-                if (orphans.Remove(new ConfigDefinition(place.Section, place.Key))) droppedOldCopies++;
-                else dropsFailed++;
-            }
-        }
-
-        private static System.Reflection.PropertyInfo orphansProperty;
-        private static bool orphansLooked;
-
-        internal static Dictionary<ConfigDefinition, string> OrphansOf(ConfigFile cfg)
-        {
-            if (!orphansLooked)
-            {
-                orphansLooked = true;
-                orphansProperty = typeof(ConfigFile).GetProperty("OrphanedEntries", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-                if (orphansProperty == null || orphansProperty.PropertyType != typeof(Dictionary<ConfigDefinition, string>))
-                {
-                    orphansProperty = null;
-                    Plugin.Log.LogWarning("Settings: this BepInEx has no ConfigFile.OrphanedEntries dictionary; old copies of moved settings stay in the cfg files (harmless).");
-                }
-            }
-            return orphansProperty != null ? orphansProperty.GetValue(cfg) as Dictionary<ConfigDefinition, string> : null;
-        }
-
-        // "5. Donkey" -> 5; -1 without a number.
-        internal static int SectionNumber(string section)
-        {
-            int dot = section.IndexOf(". ", StringComparison.Ordinal);
-            if (dot <= 0) return -1;
-            int n = 0;
-            for (int i = 0; i < dot; i++)
-            {
-                if (!char.IsDigit(section[i])) return -1;
-                n = n * 10 + (section[i] - '0');
-            }
-            return n;
-        }
-
-        // "5. Donkey" -> "Donkey"; a section without a number is its own name.
-        internal static string PlainName(string section)
-        {
-            int dot = section.IndexOf(". ", StringComparison.Ordinal);
-            if (dot <= 0) return section;
-            for (int i = 0; i < dot; i++) if (!char.IsDigit(section[i])) return section;
-            return section.Substring(dot + 2);
-        }
-
-        // The cfg as BepInEx writes it: "[Section]" lines, "Key = Value" lines, "#" comments; the raw values as text.
-        internal static Dictionary<string, Dictionary<string, string>> ReadSections(string path)
-        {
-            var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
-            try
-            {
-                if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return result;
-                Dictionary<string, string> section = null;
-                foreach (string raw in System.IO.File.ReadAllLines(path))
-                {
-                    string line = raw.Trim();
-                    if (line.Length == 0 || line[0] == '#') continue;
-                    if (line[0] == '[' && line[line.Length - 1] == ']')
-                    {
-                        string name = line.Substring(1, line.Length - 2).Trim();
-                        if (!result.TryGetValue(name, out section)) result[name] = section = new Dictionary<string, string>(StringComparer.Ordinal);
-                        continue;
-                    }
-                    int eq = line.IndexOf('=');
-                    if (section == null || eq <= 0) continue;
-                    section[line.Substring(0, eq).Trim()] = line.Substring(eq + 1).Trim();
-                }
-            }
-            catch (Exception x)
-            {
-                Plugin.Log.LogWarning($"Settings: {path} couldn't be read for moved sections ({x.Message}).");
-            }
-            return result;
-        }
-
-        internal readonly string OwnerId, Title, Author, Description;
-        internal readonly ConfigFile Config;
-        internal readonly Func<string> StatusValue;
-        private bool published;
-
-        internal MountSettingsPage(string ownerId, ConfigFile config, string title, string author, string description, Func<string> status)
-        {
-            OwnerId = ownerId;
-            Config = config;
-            Title = title;
-            Author = author;
-            Description = description;
-            StatusValue = status ?? (() => Mounts.StatusText);
-            KeyActions.Track(ownerId);
-            All.Add(this);
-            // One write of the cfg at Publish instead of one per row: BepInEx saves inside every Bind by default,
-            // which also wrote the file before Bind below could drop an old copy of a moved setting, so the last row's
-            // old line stayed in the file (seen 2026-10-18 with a 0.9.1 cfg: "[5. Sound] Volume" next to "[7. Sound]").
-            saveOnSet = config.SaveOnConfigSet;
-            config.SaveOnConfigSet = false;
-        }
-
-        private readonly bool saveOnSet; // the mod's own setting, put back at Publish
-        private int droppedOldCopies, dropsFailed, retiredDropped;
-
-        // After the last row: the mod's save-on-set back as it was, and the one save that writes every value and
-        // leaves out the old copies dropped while binding. Publish calls it; a page never published keeps its
-        // values in memory only, as "Add every row before Publish" says.
-        internal void FinishBinding()
-        {
-            if (Config.SaveOnConfigSet != saveOnSet) Config.SaveOnConfigSet = saveOnSet;
-            DropRetired();
-            if (saveOnSet || droppedOldCopies > 0 || retiredDropped > 0) Config.Save();
-            if (retiredDropped > 0) Plugin.Log.LogInfo($"Settings: {Title}: {retiredDropped} line(s) of settings it no longer has left out of the file.");
-            if (droppedOldCopies > 0) Plugin.Log.LogInfo($"Settings: {Title}: {droppedOldCopies} old line(s) of moved settings left out of the file.");
-            if (dropsFailed > 0) Plugin.Log.LogWarning($"Settings: {Title}: {dropsFailed} old line(s) of moved settings could not be dropped from BepInEx's orphans; they stay in the file (harmless) and this is worth a look.");
-        }
-
-        internal string Version
-        {
-            get
-            {
-                return BepInEx.Bootstrap.Chainloader.PluginInfos.TryGetValue(OwnerId, out PluginInfo p) && p?.Metadata != null
-                    ? p.Metadata.Version.ToString()
-                    : "0.0.0";
-            }
-        }
+        // ---- the mount rows ----
 
         // The rows every player mod wants for choosing its mount, in one call (docs/mounts-design.md §6), meant for a
         // section of their own ("Mount"): a Mount dropdown (every mount), a Skin dropdown with that mount's skins, and
@@ -454,6 +136,7 @@ namespace GK2DonkeyAPI.Api
             mountRow = List(section, "Mount", MountCatalog.DonkeyId, Looks.MountChoices, "Mount",
                 "The mount you ride.",
                 v => ApplyMountRows(), look: true);
+            Rows[Rows.Count - 1].Untranslated = true; // the panel's list is the picker: its words aren't the page's to translate
             foreach (MountInfo k in Mounts.Catalog.All) AddSkinRow(k);
             ApplyMountRows();
         }
@@ -493,17 +176,17 @@ namespace GK2DonkeyAPI.Api
             string id = k.Id;
             if (skinRows.ContainsKey(id)) return;
             string first = Looks.FirstSkinOf(id);
-            pendingShown = () => string.Equals(mountRow?.Value, id, StringComparison.OrdinalIgnoreCase); // the chosen mount's Skin row shows (Row.Shown)
+            Page.PendingShown = () => string.Equals(mountRow?.Value, id, StringComparison.OrdinalIgnoreCase); // the chosen mount's Skin row shows (Row.Shown)
             try
             {
                 skinRows[id] = List(mountSection, "Skin_" + id, first, () => Looks.SkinChoicesOf(id), UiWords.SkinRow.English,
                     $"How your {k.Name.ToLowerInvariant()} looks.",
                     v => ApplyMountRows(), look: true);
-                LastRowSays(UiWords.SkinRow);
+                Page.LastRowSays(UiWords.SkinRow);
             }
             finally
             {
-                pendingShown = null;
+                Page.PendingShown = null;
             }
         }
 
@@ -545,9 +228,11 @@ namespace GK2DonkeyAPI.Api
         // late skin got its PerSkin rows counts too).
         internal int CatchUp()
         {
-            if (mountRow == null || shown) return 0;
+            if (mountRow == null || Page.Shown) return 0;
             int added = 0;
             catchingUp = true;
+            bool late = Page.AllowLateRows;
+            Page.AllowLateRows = true;
             try
             {
                 var lateMounts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -573,9 +258,27 @@ namespace GK2DonkeyAPI.Api
             finally
             {
                 catchingUp = false;
+                Page.AllowLateRows = late;
             }
             if (added > 0) ApplyMountRows(); // a cfg holding a late mount with its second skin: the companion wears that skin, not the default (the Skin row exists now)
             return added;
+        }
+
+        private bool catchingUp;
+
+        // The library's showing of the page (SettingsPage.Show): the late mounts' rows first, GK2 Mod Framework's entry after.
+        private void BeforeShow()
+        {
+            int late = CatchUp();
+            if (late > 0) Plugin.Log.LogInfo($"Settings: {Title}: {late} mount(s) registered after the page was built (a mod loaded after {OwnerId}) got their rows before the page was shown.");
+        }
+
+        private void AfterShow()
+        {
+            if (OptionsWindow.HasOptions(Page) && FrameworkLink.TryRegister(this))
+            {
+                Plugin.Log.LogInfo($"Settings: {Title} is in GK2 Mod Framework's Mods menu too (its Settings button opens the options window).");
+            }
         }
 
         internal bool HasSkinRow(string mountId) => skinRows.ContainsKey(mountId);
@@ -593,28 +296,8 @@ namespace GK2DonkeyAPI.Api
         internal Mount.Instance MountPaper => mountCompanion?.Paper; // the panel's picture when the page has no Preview() row
         internal MountResult UseMount(MountStyle style) => mountCompanion != null ? mountCompanion.UseFromPanel(style) : MountResult.Refused("No mount rows on this page."); // the panel's Ride and Drive buttons
         internal bool IsCompanion(MountCompanion c) => c != null && ReferenceEquals(c, mountCompanion); // a ride or cart key works in this page's journal (KeyActions)
-        internal bool IsMountRow(Row r) => r != null && r.Entry != null && ReferenceEquals(r.Entry, mountRow); // the Mount dropdown: the panel's list is the picker, the row stays out of its rows
-
-        // Whether a row is the options window's (OptionsWindow) or the Mounts panel's: a look row is the panel's; a
-        // heading (Heading) is the panel's only when the rows after it in its section are look rows, so a mod's heading
-        // over plain rows stays in the options; the picture (Preview) is neither's (the panel draws the mount itself).
-        internal bool InOptions(Row r)
-        {
-            if (r.RowKind == RowKind.Preview) return false;
-            if (!r.IsLook) return true;
-            if (r.RowKind != RowKind.Note) return false;
-            int at = Rows.IndexOf(r);
-            for (int i = at + 1; i < Rows.Count; i++)
-            {
-                Row n = Rows[i];
-                if (n.Section != r.Section) continue;
-                if (n.RowKind == RowKind.Note) break; // the next heading: nothing of this one's
-                return !n.IsLook;
-            }
-            return false; // a heading with nothing after it: not worth a line
-        }
+        internal bool IsMountRow(SettingsPage.Row r) => r != null && r.Entry != null && ReferenceEquals(r.Entry, mountRow); // the Mount dropdown: the panel's list is the picker, the row stays out of its rows
         internal bool HasMountRow => mountRow != null;
-        internal bool Shown => shown;
 
         // The rows for the mount's babies (foals), for a section of their own ("Babies"; MountRows' section works too):
         // how many, whether they follow the keeper on foot, whether they come indoors (since 0.40.0 they always look like
@@ -633,11 +316,11 @@ namespace GK2DonkeyAPI.Api
                 MountOwn l = me.OwnOf(mountId);
                 Func<bool> babies = () => Catalog.Find(mountId)?.Foals ?? true;
                 Steps(section, "Foals" + sfx, l.FoalCount, 0, MountCompanion.MaxFoals, 1, UiWords.Babies.English, "How many little ones follow your mount around.", v => l.FoalCount = v, v => v == 0 ? UiWords.None.Text : v.ToString(), look: true, visible: babies);
-                LastRowSays(UiWords.Babies);
+                Page.LastRowSays(UiWords.Babies);
                 Toggle(section, "FoalsFollow" + sfx, l.FoalsFollowOnFoot, UiWords.BabiesFollow.English, "When you get off, the babies follow you instead of staying with your mount.", v => l.FoalsFollowOnFoot = v, babies, look: true);
-                LastRowSays(UiWords.BabiesFollow);
+                Page.LastRowSays(UiWords.BabiesFollow);
                 Toggle(section, "FoalsIndoors" + sfx, true, UiWords.BabiesIndoors.English, "The babies follow you into buildings and back out.", v => l.FoalsComeIndoors = v, babies, look: true);
-                LastRowSays(UiWords.BabiesIndoors);
+                Page.LastRowSays(UiWords.BabiesIndoors);
                 // "Babies are the same mount and skin" is gone (the user, 2026-10-27): off made another mount's babies plain
                 // donkeys. Babies always look like their parent (MountLook.FoalsWearSkin stays true unless a mod sets it); the
                 // old lines leave the file.
@@ -653,30 +336,12 @@ namespace GK2DonkeyAPI.Api
         // On or off.
         // look: the Mounts panel's row (not the options window's), as Choice's.
         public ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, Action<bool> apply = null, Func<bool> visible = null, bool look = false)
-        {
-            string cfgSection = Sec(section);
-            ConfigEntry<bool> e = Bind(cfgSection, key, value, description);
-            Add(new Row { RowKind = RowKind.Toggle, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Visible = visible, IsLook = look });
-            Wire(e, apply);
-            return e;
-        }
+            => Page.Toggle(section, key, value, label, description, apply, visible, look);
 
         // One of an enum's values; labels (one per value, in order) are what players see, else the value names.
         // look: the Mounts panel's row (PanelButton), not the options window's.
         public ConfigEntry<T> Choice<T>(string section, string key, T value, string label, string description, Action<T> apply = null, string[] labels = null, bool look = false, Func<bool> visible = null) where T : struct, Enum
-        {
-            string cfgSection = Sec(section);
-            ConfigEntry<T> e = Bind(cfgSection, key, value, description);
-            Array values = Enum.GetValues(typeof(T));
-            string[] shown = new string[values.Length];
-            for (int i = 0; i < shown.Length; i++)
-            {
-                shown[i] = labels != null && i < labels.Length ? labels[i] : values.GetValue(i).ToString();
-            }
-            Add(new Row { RowKind = RowKind.Choice, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, ChoiceLabels = shown, ChoiceValues = values, IsLook = look, Visible = visible });
-            Wire(e, apply);
-            return e;
-        }
+            => Page.Choice(section, key, value, label, description, apply, labels, look, visible);
 
         // One of a list of ids read when the row is first shown (the skins installed, say): choices gives (id, label)
         // pairs; the id is what the cfg holds, from every menu alike. A stored id that isn't in the list is shown by
@@ -685,73 +350,11 @@ namespace GK2DonkeyAPI.Api
         // session, when the page is shown (the frame after Publish): anything registered after that appears after a
         // restart. look: the Mounts panel's row, not the options window's.
         public ConfigEntry<string> List(string section, string key, string value, Func<IReadOnlyList<(string Id, string Label)>> choices, string label, string description, Action<string> apply = null, bool look = false, Func<bool> visible = null)
-        {
-            if (choices == null) throw new ArgumentNullException(nameof(choices));
-            string cfgSection = Sec(section);
-            ConfigEntry<string> e = Bind(cfgSection, key, value, description);
-            // an empty id can't be a dropdown choice (FillList drops it): a cfg holding "" takes the row's default
-            if (string.IsNullOrEmpty(e.Value) && !string.IsNullOrEmpty(value)) e.Value = value;
-            Add(new Row { RowKind = RowKind.List, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Choices = choices, IsLook = look, Visible = visible });
-            Wire(e, apply);
-            return e;
-        }
-
-        // A List row's labels and ids, filled once from its choices (plus the stored id if it isn't among them), so every
-        // window shows the same list for the session.
-        internal static void FillList(Row r)
-        {
-            if (r.RowKind != RowKind.List || r.ChoiceLabels != null) return;
-            var ids = new List<string>();
-            var labels = new List<string>();
-            var notes = new List<ChoiceNote>();
-            var names = new List<string>();
-            try
-            {
-                foreach ((string id, string label) in r.Choices() ?? Array.Empty<(string, string)>())
-                {
-                    if (string.IsNullOrEmpty(id) || ids.Contains(id)) continue;
-                    ids.Add(id);
-                    labels.Add(string.IsNullOrEmpty(label) ? id : label);
-                    notes.Add(ChoiceNote.None);
-                    names.Add(labels[labels.Count - 1]);
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.LogWarning($"Settings: the choices of {r.Section}.{r.Entry.Definition.Key} could not be read: {ex.Message}");
-            }
-            string now = r.Entry.BoxedValue as string ?? "";
-            if (now.Length > 0 && !ids.Contains(now))
-            {
-                string name = MountsPanel.NameFromId(now);
-                bool aside = Looks.Find(now)?.Unavailable != null;
-                ids.Add(now);
-                labels.Add(name + (aside ? " (set aside)" : " (not installed)"));
-                notes.Add(aside ? ChoiceNote.SetAside : ChoiceNote.NotInstalled);
-                names.Add(name);
-            }
-            if (ids.Count == 0)
-            {
-                ids.Add(now);
-                labels.Add(now.Length > 0 ? now : "(none)");
-                notes.Add(now.Length > 0 ? ChoiceNote.None : ChoiceNote.Empty);
-                names.Add(now);
-            }
-            r.ChoiceValues = ids.ToArray();
-            r.ChoiceNotes = notes.ToArray();
-            r.ChoiceNames = names.ToArray();
-            r.ChoiceLabels = labels.ToArray(); // last: a window reads the labels as the sign the list is filled
-        }
+            => Page.List(section, key, value, choices, label, description, apply, look, visible);
 
         // A whole number from min to max in steps; format turns it into the shown text (e.g. "100%").
         public ConfigEntry<int> Steps(string section, string key, int value, int min, int max, int step, string label, string description, Action<int> apply = null, Func<int, string> format = null, bool look = false, Func<bool> visible = null)
-        {
-            string cfgSection = Sec(section);
-            ConfigEntry<int> e = Bind(cfgSection, key, value, new ConfigDescription(description, new AcceptableValueRange<int>(min, max)));
-            Add(new Row { RowKind = RowKind.Steps, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Min = min, Max = max, Step = Math.Max(1, step), Format = format, IsLook = look, Visible = visible });
-            Wire(e, apply);
-            return e;
-        }
+            => Page.Steps(section, key, value, min, max, step, label, description, apply, format, look, visible);
 
         // A key (with modifiers), set in the options window's key box (KeyCapture: Shift, Ctrl or Alt alone too).
         // pressed: called when the player presses the key (its modifiers held; other keys held, like walking, don't
@@ -760,19 +363,7 @@ namespace GK2DonkeyAPI.Api
         // Plain Backspace means no key: the key box sets none for it, and a cfg (or an older menu) holding Backspace is
         // cleared at once.
         public ConfigEntry<KeyboardShortcut> Key(string section, string key, KeyboardShortcut value, string label, string description, Action<KeyboardShortcut> apply = null, Action pressed = null)
-        {
-            string cfgSection = Sec(section);
-            ConfigEntry<KeyboardShortcut> e = Bind(cfgSection, key, value, description);
-            Add(new Row { RowKind = RowKind.Key, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, HasPress = pressed != null });
-            ClearIfBackspace(e);
-            e.SettingChanged += (_, __) => ClearIfBackspace(e); // before apply: apply sees the cleared key
-            Wire(e, apply);
-            if (pressed != null)
-            {
-                KeyActions.Add(OwnerId, e, pressed, overPanel: pressed == (Action)OpenPanel); // the rest wait while the panel is open
-            }
-            return e;
-        }
+            => Page.Key(section, key, value, label, description, apply, pressed, overOwnerWindow: pressed != null && pressed == (Action)OpenPanel); // the rest wait while the panel is open
 
         // The signature from before look (added in 0.40.0), kept for mods built against it (every parameter required:
         // a call is never ambiguous between the two).
@@ -782,13 +373,7 @@ namespace GK2DonkeyAPI.Api
         // Free text, in a text box. visible: shown only while it says so.
         // look: the Mounts panel's row, not the options window's.
         public ConfigEntry<string> Text(string section, string key, string value, string label, string description, Action<string> apply = null, Func<bool> visible = null, bool look = false)
-        {
-            string cfgSection = Sec(section);
-            ConfigEntry<string> e = Bind(cfgSection, key, value, description);
-            Add(new Row { RowKind = RowKind.Text, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Visible = visible, IsLook = look });
-            Wire(e, apply);
-            return e;
-        }
+            => Page.Text(section, key, value, label, description, apply, visible, look);
 
         // A colour a player picks by name (PaletteColor: Chestnut, Sand, Moss, Sky, ...) and makes lighter or darker
         // (the picture, Preview, shows the result; a swatch row did before it existed). Bound as <key> and <key>Lightness; apply gets the colour as hex RRGGBB. visible:
@@ -809,7 +394,8 @@ namespace GK2DonkeyAPI.Api
             colour = Choice(section, key, value, label, description, _ => Combine(), null, look: true, visible: visible);
             string lightnessKey = LightnessKey(key);
             // a colour key moved here from another section (MovedKey before this call) brings its lightness key along
-            if (movedKeys.TryGetValue(section + "\n" + key, out List<(string Section, string Key)> froms))
+            List<(string Section, string Key)> froms = Page.MovedFrom(section, key);
+            if (froms != null)
             {
                 foreach ((string Section, string Key) from in froms.ToArray()) MovedKey(section, lightnessKey, from.Section, LightnessKey(from.Key));
             }
@@ -817,35 +403,17 @@ namespace GK2DonkeyAPI.Api
             Combine();
         }
 
-        // The lightness key of a Color row's key: "CustomCoatLightness", and with a per-mount suffix
-        // "CustomCoatLightness_crab".
-        internal static string LightnessKey(string key)
-        {
-            int suffix = key.IndexOf('_');
-            return suffix < 0 ? key + "Lightness" : key.Substring(0, suffix) + "Lightness" + key.Substring(suffix);
-        }
-
         // The read-only "Status" row: the page's status (Mounts.StatusText unless the page was given its own).
-        public void Status(string section, string label = "Status", string description = "What the mod is doing right now.")
-        {
-            Info(section, label, () => StatusValue(), description);
-        }
+        public void Status(string section, string label = "Status", string description = "What the mod is doing right now.") => Page.Status(section, label, description);
 
         // A read-only line, e.g. what the mod is doing.
-        public void Info(string section, string label, Func<string> value, string description = "")
-        {
-            Add(new Row { RowKind = RowKind.Info, Section = Sec(section), ShownSection = section, Label = label, Description = description, InfoValue = value });
-        }
+        public void Info(string section, string label, Func<string> value, string description = "") => Page.Info(section, label, value, description);
 
         // A heading inside a section: a line with the label and no value, before the rows it names ("Mount colours",
         // "Cart colours" in a Colours section). In the Mounts panel the look rows after it, in its section, stand under
         // this heading in a column of their own instead of under the section's name (MountsPanel; for one, the mount's
         // colours left, the cart's right). Not a picture row's label (Add).
-        public void Heading(string section, string label, string description = "")
-        {
-            if (string.IsNullOrEmpty(label)) throw new ArgumentException("label is needed.");
-            Add(new Row { RowKind = RowKind.Note, Section = Sec(section), ShownSection = section, Label = label, Description = description, IsLook = true });
-        }
+        public void Heading(string section, string label, string description = "") => Page.Heading(section, label, description);
 
         // The companion whose mount the Mounts panel draws (its picture of the mount and cart in their current colours).
         // Since 0.42.0 the options window shows no picture (the panel shows the mount); the row stays on the page, out of
@@ -853,20 +421,19 @@ namespace GK2DonkeyAPI.Api
         public void Preview(string section, MountCompanion companion, string label = "Your mount", bool cart = true)
         {
             PreviewOf = companion;
-            Add(new Row
+            Page.Add(new SettingsPage.Row
             {
-                RowKind = RowKind.Preview, Section = Sec(section), ShownSection = section, Label = label, Description = "",
-                WithCart = cart,
+                RowKind = SettingsPage.RowKind.Preview, Section = Sec(section), ShownSection = section, Label = label, Description = "",
+                Tag = new MountRowInfo { WithCart = cart },
             });
         }
-
 
         // A button that opens the Mounts panel over the options window: every mount listed, the chosen one drawn with its
         // description, what it does and its abilities, and the page's look rows for it (its Skin, the colours); its X and
         // Escape keep what was chosen and go back to the options. Only in a game; greyed in the main menu.
         public void PanelButton(string section, string label, string description)
         {
-            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = UiWords.Open.English, ButtonWord = UiWords.Open, OnClick = () => MountsPanel.Open(this, toggle: false), OpensPanel = true });
+            Page.Add(new SettingsPage.Row { RowKind = SettingsPage.RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = UiWords.Open.English, ButtonWord = UiWords.Open, OnClick = () => MountsPanel.Open(this, toggle: false), OpensOwnerWindow = true });
         }
 
         // The signature from before visible (added 2026-11-05), kept for mods built against it (every parameter required:
@@ -879,11 +446,7 @@ namespace GK2DonkeyAPI.Api
         // Toggle's (2026-11-05: a button with nothing to do while another row is off). No cfg key. A handler that throws is
         // logged.
         public void Button(string section, string label, string description, Action onClick, string buttonText = "Go", Func<bool> enabled = null, Func<bool> visible = null)
-        {
-            if (onClick == null) throw new ArgumentNullException(nameof(onClick));
-            bool go = string.IsNullOrEmpty(buttonText) || buttonText == UiWords.Go.English; // the default word is the API's, a mod's own word its own
-            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = go ? UiWords.Go.English : buttonText, ButtonWord = go ? UiWords.Go : null, OnClick = onClick, Enabled = enabled, Visible = visible });
-        }
+            => Page.Button(section, label, description, onClick, buttonText, enabled, visible);
 
         // The same (the panel grew out of the look bar); kept so a mod written for 0.30 to 0.34 still opens it.
         public void LookButton(string section, string label, string description) => PanelButton(section, label, description);
@@ -950,134 +513,8 @@ namespace GK2DonkeyAPI.Api
         // The mod is done adding rows. The page is shown the frame after (Show): its button goes into the game's Settings
         // window (SettingsButtons), opening the options window. The frame between is what lets every plugin's Awake run first
         // (the header's note): the mounts registered meanwhile get their rows (CatchUp) and every list is read then.
-        public void Publish()
-        {
-            if (published)
-            {
-                return;
-            }
-            published = true;
-            Plugin.NextFrame(Show);
-        }
+        public void Publish() => Page.Publish();
 
-        private bool shown, catchingUp;
-
-        // A page has been shown: its lists are read (the window for registering mounts and skins is over, Catalog.Late).
-        internal static bool AnyShown { get; private set; }
-
-        private void Show()
-        {
-            if (shown)
-            {
-                return;
-            }
-            int late = CatchUp();
-            if (late > 0) Plugin.Log.LogInfo($"Settings: {Title}: {late} mount(s) registered after the page was built (a mod loaded after {OwnerId}) got their rows before the page was shown.");
-            shown = true;
-            AnyShown = true;
-            FinishBinding();
-            GuardCallbacks();
-            Texts.Published(this); // with the dev tools: the page's English written out for the translators' templates
-            SettingsButtons.Add(this);
-            if (OptionsWindow.HasOptions(this) && FrameworkLink.TryRegister(this))
-            {
-                Plugin.Log.LogInfo($"Settings: {Title} is in GK2 Mod Framework's Mods menu too (its Settings button opens the options window).");
-            }
-        }
-
-        // The mod's own functions on its rows (shown, enabled, an info line, a value's words) run in shared windows: the
-        // options window, the Mounts panel with every mod's rows. One that throws would close the window
-        // or stop the page for every mod (docs/multi-mod-loading.md 3): each is wrapped once, a throw logged once with
-        // the page's mod and the row, and the row then shown, enabled, "-" or the plain number.
-        private void GuardCallbacks()
-        {
-            foreach (Row r in Rows)
-            {
-                string where = $"{OwnerId}'s row '{r.Label}'";
-                r.Visible = Guard(r.Visible, true, where, "Visible");
-                r.Shown = Guard(r.Shown, true, where, "Shown");
-                r.Enabled = Guard(r.Enabled, true, where, "Enabled");
-                if (r.InfoValue != null)
-                {
-                    Func<string> info = r.InfoValue;
-                    bool said = false;
-                    r.InfoValue = () =>
-                    {
-                        try { return info(); }
-                        catch (Exception e) { if (!said) { said = true; Plugin.Log.LogWarning($"Settings: {where}: its info line threw ({e.Message}); it says '-'."); } return "-"; }
-                    };
-                }
-                if (r.Format != null)
-                {
-                    Func<int, string> format = r.Format;
-                    bool said = false;
-                    r.Format = v =>
-                    {
-                        try { return format(v); }
-                        catch (Exception e) { if (!said) { said = true; Plugin.Log.LogWarning($"Settings: {where}: its words for a value threw ({e.Message}); the number is shown."); } return v.ToString(System.Globalization.CultureInfo.InvariantCulture); }
-                    };
-                }
-            }
-        }
-
-        internal static Func<bool> Guard(Func<bool> f, bool fallback, string where, string what)
-        {
-            if (f == null) return null;
-            bool said = false;
-            return () =>
-            {
-                try { return f(); }
-                catch (Exception e) { if (!said) { said = true; Plugin.Log.LogWarning($"Settings: {where}: its {what} threw ({e.Message}); taken as {fallback.ToString().ToLowerInvariant()}."); } return fallback; }
-            };
-        }
-
-        private void Add(Row r)
-        {
-            if (shown || (published && !catchingUp))
-            {
-                throw new InvalidOperationException("Add every row before Publish.");
-            }
-            // A picture row's label is its own: until 0.42.0 the picture was found on screen by its label (a heading "Your
-            // mount" next to a picture "Your mount" got a picture of its own, seen 2026-10-19), and a page made since keeps to it.
-            if (!string.IsNullOrEmpty(r.Label) && Rows.Exists(o => (o.RowKind == RowKind.Preview || r.RowKind == RowKind.Preview) && o.Label == r.Label))
-            {
-                throw new ArgumentException($"the label \"{r.Label}\" is already a row's on this page, and one of the two is a picture row (Preview): a picture is found on screen by its label, so give it a label of its own.");
-            }
-            r.MountId = pendingMountId;
-            r.SkinId = pendingSkinId;
-            r.Owner = OwnerId;
-            r.TextKey = Texts.TextKeyOf(r);
-            // a key another section of the page has already (BepInEx allows a key per section; two buttons may share a label):
-            // this one's translation key takes its section, so each keeps a line of its own (a row's mount and skin copies
-            // share their section and key, and their line)
-            foreach (Row o in Rows)
-            {
-                if (o.TextKey == r.TextKey && o.ShownSection != r.ShownSection)
-                {
-                    r.TextKey = Texts.Slug(r.ShownSection) + "." + r.TextKey;
-                    break;
-                }
-            }
-            if (pendingShown != null)
-            {
-                Func<bool> shown = pendingShown, own = r.Visible;
-                r.Shown = shown;
-                r.Enabled = own;
-                r.Visible = own == null ? shown : () => shown() && own();
-            }
-            Rows.Add(r);
-        }
-
-        // The row just added is drawn with the API's word as its label (a row the API's builders add: the Skin row, the
-        // babies rows), so its text is the API's to translate, not the page's.
-        private void LastRowSays(Word label)
-        {
-            if (Rows.Count > 0) Rows[Rows.Count - 1].LabelWord = label;
-        }
-
-        private Func<bool> pendingShown; // set while PerMount (or MountRows) builds one mount's rows
-        private string pendingMountId;   // set while PerMount (or PerSkin) builds one mount's rows
-        private string pendingSkinId;    // set while PerSkin builds one skin's rows
         private ConfigEntry<string> mountRow; // MountRows' Mount row: which mount is chosen
 
         // Rows kept per mount (the colour rows: another mount's look isn't the donkey's; docs/mount-colours.md 2.7): rows is
@@ -1112,20 +549,7 @@ namespace GK2DonkeyAPI.Api
             EnableWhen(section, key, () => PinnedBy(companion, tuningKey) == null);
         }
 
-        public void EnableWhen(string section, string key, Func<bool> enabled)
-        {
-            if (enabled == null) throw new ArgumentNullException(nameof(enabled));
-            string cfgSection = Sec(section);
-            foreach (Row r in Rows)
-            {
-                if (r.Entry != null && r.Entry.Definition.Section == cfgSection && (r.Entry.Definition.Key == key || r.Entry.Definition.Key == LightnessKey(key)))
-                {
-                    // a Color row's lightness row (LightnessKey) goes with it: greyed together, never live on its own
-                    Func<bool> own = r.Enabled; // a row's own condition (a custom colour row: its preset is Custom) stays
-                    r.Enabled = own == null ? enabled : () => own() && enabled();
-                }
-            }
-        }
+        public void EnableWhen(string section, string key, Func<bool> enabled) => Page.EnableWhen(section, key, enabled);
 
         // Says a row is about the cart (its paint, its wheels, its lantern; 0.39.0): shown only while its mount pulls one
         // (a PerMount row's mount, else the chosen mount): a mount whose [Mount] says cart = false (MountDef.Cart false)
@@ -1135,11 +559,11 @@ namespace GK2DonkeyAPI.Api
         public void CartRow(string section, string key)
         {
             string cfgSection = Sec(section);
-            foreach (Row r in Rows)
+            foreach (SettingsPage.Row r in Rows)
             {
                 if (r.Entry == null || r.Entry.Definition.Section != cfgSection || (r.Entry.Definition.Key != key && r.Entry.Definition.Key != LightnessKey(key))) continue;
-                r.CartPart = true; // the Mounts panel's colours window draws the cart only on a tab with such rows
-                string id = r.MountId;
+                Own(r).CartPart = true; // the Mounts panel's colours window draws the cart only on a tab with such rows
+                string id = Info(r).MountId;
                 Func<bool> pulls = () => MountPullsCart(id ?? mountRow?.Value);
                 Func<bool> shown = r.Shown, visible = r.Visible;
                 r.Shown = shown == null ? pulls : () => shown() && pulls();
@@ -1163,14 +587,14 @@ namespace GK2DonkeyAPI.Api
             Term name = SkinRegions.NameTerm(skinId, r);
             string skin = skinId;
             Func<bool> has = () => SkinHasRegion(skin, r) && SkinRegions.HasRow(skin, r); // a look may give a region no row (row = none)
-            foreach (Row row in Rows)
+            foreach (SettingsPage.Row row in Rows)
             {
                 if (row.Entry == null || row.Entry.Definition.Section != cfgSection) continue;
                 string k = row.Entry.Definition.Key;
                 bool isChoice = k == choiceKey, isCustom = customKey != null && k == customKey, isLight = customKey != null && k == LightnessKey(customKey);
                 if (!isChoice && !isCustom && !isLight) continue;
                 row.OwnLabelToo = true;
-                if (isChoice) row.ArtRegion = r;
+                if (isChoice) Own(row).ArtRegion = r;
                 if (name != null)
                 {
                     if (isChoice) row.LabelOf = () => name.Text;
@@ -1185,16 +609,6 @@ namespace GK2DonkeyAPI.Api
 
         // The keys RegionRows was given, by "<skin>\n<region>": the section, the choice's key and its custom colour's.
         private readonly Dictionary<string, (string Section, string Choice, string Custom)> regionKeys = new Dictionary<string, (string, string, string)>(StringComparer.OrdinalIgnoreCase);
-
-        // Whether the player's cfg file held this key before this session bound anything (the page's snapshot of it, read
-        // at the first bind: MovedValue).
-        private bool InFile(string cfgSection, string key)
-        {
-            if (fileSections == null) fileSections = ReadSections(Config.ConfigFilePath);
-            return fileSections.TryGetValue(cfgSection, out Dictionary<string, string> keys) && keys.ContainsKey(key);
-        }
-
-        private Row RowOfKey(string cfgSection, string key) => Rows.FindLast(r => r.Entry != null && r.Entry.Definition.Section == cfgSection && r.Entry.Definition.Key == key);
 
         // The region presets' nearest part presets (ToneColor), by the region preset's name: a name both have is itself.
         private static readonly Dictionary<string, ToneColor> NearestPart = new Dictionary<string, ToneColor>(StringComparer.Ordinal)
@@ -1212,9 +626,9 @@ namespace GK2DonkeyAPI.Api
         private void CarryOver(string skinId, string region, ConfigEntry<ToneColor> choice, string customKey, string who)
         {
             string cfgSection = choice.Definition.Section;
-            if (InFile(cfgSection, choice.Definition.Key)) return;
+            if (Page.InFile(cfgSection, choice.Definition.Key)) return;
             if (!regionKeys.TryGetValue((skinId ?? "") + "\n" + region, out var rk)) return; // no rows of the region on the page
-            Row regionChoice = RowOfKey(rk.Section, rk.Choice);
+            SettingsPage.Row regionChoice = Page.RowOfKey(rk.Section, rk.Choice);
             string was = regionChoice?.Entry?.BoxedValue?.ToString();
             if (string.IsNullOrEmpty(was) || was == "Game") return; // as drawn there, as drawn here
             ToneColor to;
@@ -1222,8 +636,8 @@ namespace GK2DonkeyAPI.Api
             else if (!NearestPart.TryGetValue(was, out to) && !Enum.TryParse(was, out to)) return;
             if (to == ToneColor.Custom && rk.Custom != null)
             {
-                Row fromColour = RowOfKey(rk.Section, rk.Custom), fromLight = RowOfKey(rk.Section, LightnessKey(rk.Custom));
-                Row toColour = RowOfKey(cfgSection, customKey), toLight = RowOfKey(cfgSection, LightnessKey(customKey));
+                SettingsPage.Row fromColour = Page.RowOfKey(rk.Section, rk.Custom), fromLight = Page.RowOfKey(rk.Section, LightnessKey(rk.Custom));
+                SettingsPage.Row toColour = Page.RowOfKey(cfgSection, customKey), toLight = Page.RowOfKey(cfgSection, LightnessKey(customKey));
                 if (fromColour?.Entry != null && toColour?.Entry != null) toColour.Entry.BoxedValue = fromColour.Entry.BoxedValue;
                 if (fromLight?.Entry != null && toLight?.Entry != null) toLight.Entry.BoxedValue = fromLight.Entry.BoxedValue;
             }
@@ -1308,24 +722,23 @@ namespace GK2DonkeyAPI.Api
                 // the three rows by their keys (Color's colour and lightness rows wherever it put them): their words the
                 // tone's name, in the API's templates for the custom rows, and the API's presets
                 string cfgSection = choice.Definition.Section;
-                Row RowOf(string key) => Rows.FindLast(r => r.Entry != null && r.Entry.Definition.Section == cfgSection && r.Entry.Definition.Key == key);
-                Row choiceRow = RowOf(choice.Definition.Key), customRow = RowOf(customKey), lightRow = RowOf(LightnessKey(customKey));
+                SettingsPage.Row choiceRow = Page.RowOfKey(cfgSection, choice.Definition.Key), customRow = Page.RowOfKey(cfgSection, customKey), lightRow = Page.RowOfKey(cfgSection, LightnessKey(customKey));
                 if (choiceRow != null)
                 {
                     choiceRow.LabelOf = () => name.Text;
                     choiceRow.ChoiceWords = words;
-                    choiceRow.SkinPart = true;
-                    choiceRow.ArtTone = t.Id;
+                    Own(choiceRow).SkinPart = true;
+                    Own(choiceRow).ArtTone = t.Id;
                 }
                 if (customRow != null)
                 {
                     customRow.LabelOf = () => UiWords.ToneCustom.Format(name);
-                    customRow.SkinPart = true;
+                    Own(customRow).SkinPart = true;
                 }
                 if (lightRow != null)
                 {
                     lightRow.LabelOf = () => UiWords.ToneLightness.Format(name);
-                    lightRow.SkinPart = true;
+                    Own(lightRow).SkinPart = true;
                 }
                 // greyed once the skin, loaded, turns out to draw none of the tone's colours (a variant drawing every
                 // frame of its own over its default's tone: the choice would colour nothing; the tenth code review), live
@@ -1352,13 +765,12 @@ namespace GK2DonkeyAPI.Api
             string customKey = "Custom" + region + sfx;
             Color(section, customKey, label + ": custom colour", $"Used when {name.English} is Custom.", PaletteColor.Gold, v => part.Custom = v, () => choice.Value == ToneColor.Custom);
             string cfgSection = choice.Definition.Section;
-            Row RowOf(string key) => Rows.FindLast(r => r.Entry != null && r.Entry.Definition.Section == cfgSection && r.Entry.Definition.Key == key);
-            Row choiceRow = RowOf(choice.Definition.Key), customRow = RowOf(customKey), lightRow = RowOf(LightnessKey(customKey));
+            SettingsPage.Row choiceRow = Page.RowOfKey(cfgSection, choice.Definition.Key), customRow = Page.RowOfKey(cfgSection, customKey), lightRow = Page.RowOfKey(cfgSection, LightnessKey(customKey));
             if (choiceRow != null)
             {
                 choiceRow.LabelOf = () => name.Text;
                 choiceRow.ChoiceWords = words;
-                choiceRow.ArtRegion = region;
+                Own(choiceRow).ArtRegion = region;
             }
             if (customRow != null) customRow.LabelOf = () => UiWords.ToneCustom.Format(name);
             if (lightRow != null) lightRow.LabelOf = () => UiWords.ToneLightness.Format(name);
@@ -1400,7 +812,7 @@ namespace GK2DonkeyAPI.Api
 
         private readonly List<Action<string, string, string, Func<bool>>> perSkinBuilders = new List<Action<string, string, string, Func<bool>>>();
         private readonly HashSet<string> perSkinDone = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // "<builder index>|<skin id>"
-        private readonly Dictionary<Action<string, string, string, Func<bool>>, Row> lastSkinRowOf = new Dictionary<Action<string, string, string, Func<bool>>, Row>();
+        private readonly Dictionary<Action<string, string, string, Func<bool>>, SettingsPage.Row> lastSkinRowOf = new Dictionary<Action<string, string, string, Func<bool>>, SettingsPage.Row>();
         internal int SeededSkins => seededSkins.Count; // the skins whose rows took the mount's 0.12 values (the self-test)
         private readonly HashSet<string> seededSkins = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -1427,9 +839,9 @@ namespace GK2DonkeyAPI.Api
             string sfx = isFirst ? mountSfx : "_" + skinId;
             Func<bool> isShown = () => string.Equals(mountRow?.Value ?? MountCatalog.DonkeyId, mountId, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(SkinChosen(mountId), skinId, StringComparison.OrdinalIgnoreCase);
-            pendingShown = isShown;
-            pendingMountId = mountId;
-            pendingSkinId = skinId;
+            Page.PendingShown = isShown;
+            Page.PendingTag = () => new MountRowInfo { MountId = mountId, SkinId = skinId }; // one object per row
+            Page.PendingKeyTails = new[] { "_" + skinId, "_" + mountId }; // the skin's tail first, then the mount's (Texts.TextKeyOf)
             int before = Rows.Count;
             try
             {
@@ -1437,14 +849,14 @@ namespace GK2DonkeyAPI.Api
             }
             finally
             {
-                pendingShown = null;
-                pendingMountId = null;
-                pendingSkinId = null;
+                Page.PendingShown = null;
+                Page.PendingTag = null;
+                Page.PendingKeyTails = null;
             }
             int made = Rows.Count - before;
             if (made <= 0) return;
-            List<Row> mine = Rows.GetRange(before, made);
-            if (catchingUp && lastSkinRowOf.TryGetValue(rows, out Row last))
+            List<SettingsPage.Row> mine = Rows.GetRange(before, made);
+            if (catchingUp && lastSkinRowOf.TryGetValue(rows, out SettingsPage.Row last))
             {
                 int at = Rows.IndexOf(last);
                 if (at >= 0 && at < before - 1)
@@ -1470,10 +882,10 @@ namespace GK2DonkeyAPI.Api
         // The 0.12 carry-over (PerSkin): the skin's rows just made take the mount's values from the file when the file
         // has the mount's and none of the skin's, and the mount's Skin row in the file says this skin; the mount's rows
         // (its first skin's) go back to their defaults, so the first skin doesn't wear this skin's colours.
-        private void SeedFromMount(List<Row> mine, string skinId, string mountId, string skinSfx, string mountSfx)
+        private void SeedFromMount(List<SettingsPage.Row> mine, string skinId, string mountId, string skinSfx, string mountSfx)
         {
             if (Config == null || string.IsNullOrEmpty(Config.ConfigFilePath)) return;
-            if (fileSections == null) fileSections = ReadSections(Config.ConfigFilePath);
+            Dictionary<string, Dictionary<string, string>> fileSections = Page.FileSections;
             if (fileSections.Count == 0) return;
             // the file's own Skin row value for the mount, under any number of its section
             string skinKey = "Skin_" + mountId, chosenInFile = null;
@@ -1482,21 +894,21 @@ namespace GK2DonkeyAPI.Api
                 if (s.Value.TryGetValue(skinKey, out string v)) { chosenInFile = v; break; }
             }
             if (chosenInFile == null || !chosenInFile.Trim().Equals(skinId, StringComparison.OrdinalIgnoreCase)) return;
-            var pairs = new List<(Row Skin, Row Mount)>();
-            foreach (Row r in mine)
+            var pairs = new List<(SettingsPage.Row Skin, SettingsPage.Row Mount)>();
+            foreach (SettingsPage.Row r in mine)
             {
                 if (r.Entry == null) continue;
                 string key = r.Entry.Definition.Key;
                 if (!key.EndsWith(skinSfx, StringComparison.OrdinalIgnoreCase)) continue;
                 if (fileSections.TryGetValue(r.Entry.Definition.Section, out Dictionary<string, string> own) && own.ContainsKey(key)) return; // the skin has values of its own: nothing to seed
                 string mountKey = key.Substring(0, key.Length - skinSfx.Length) + mountSfx;
-                Row m = Rows.Find(o => o.Entry != null && o.Entry.Definition.Section == r.Entry.Definition.Section && o.Entry.Definition.Key == mountKey);
+                SettingsPage.Row m = Rows.Find(o => o.Entry != null && o.Entry.Definition.Section == r.Entry.Definition.Section && o.Entry.Definition.Key == mountKey);
                 if (m == null) continue;
                 if (!fileSections.TryGetValue(m.Entry.Definition.Section, out Dictionary<string, string> ms) || !ms.ContainsKey(mountKey)) continue; // the mount's row isn't in the file either
                 pairs.Add((r, m));
             }
             if (pairs.Count == 0) return;
-            foreach ((Row Skin, Row Mount) pr in pairs)
+            foreach ((SettingsPage.Row Skin, SettingsPage.Row Mount) pr in pairs)
             {
                 pr.Skin.Entry.BoxedValue = pr.Mount.Entry.BoxedValue;
                 pr.Mount.Entry.BoxedValue = pr.Mount.Entry.DefaultValue;
@@ -1511,14 +923,15 @@ namespace GK2DonkeyAPI.Api
         // Where each builder's rows end (its last row so far): a mount caught up later gets its rows put right after them,
         // under the same heading. Appended at the end, a late mount's colour rows sat under the page's last heading (the
         // mount from its own pack, registered after the page was built: its Coat and Harness under "Cart colours", 2026-10-26).
-        private readonly Dictionary<Action<string, string, Func<bool>>, Row> lastRowOf = new Dictionary<Action<string, string, Func<bool>>, Row>();
+        private readonly Dictionary<Action<string, string, Func<bool>>, SettingsPage.Row> lastRowOf = new Dictionary<Action<string, string, Func<bool>>, SettingsPage.Row>();
 
         private void RunPerMount(Action<string, string, Func<bool>> rows, string id)
         {
             bool donkey = id.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase);
             Func<bool> isShown = () => string.Equals(mountRow?.Value ?? MountCatalog.DonkeyId, id, StringComparison.OrdinalIgnoreCase);
-            pendingShown = isShown;
-            pendingMountId = id;
+            Page.PendingShown = isShown;
+            Page.PendingTag = () => new MountRowInfo { MountId = id };
+            Page.PendingKeyTails = new[] { "_" + id };
             int before = Rows.Count;
             try
             {
@@ -1526,13 +939,14 @@ namespace GK2DonkeyAPI.Api
             }
             finally
             {
-                pendingShown = null;
-                pendingMountId = null;
+                Page.PendingShown = null;
+                Page.PendingTag = null;
+                Page.PendingKeyTails = null;
             }
             int made = Rows.Count - before;
             if (made <= 0) return;
-            List<Row> mine = Rows.GetRange(before, made);
-            if (catchingUp && lastRowOf.TryGetValue(rows, out Row last))
+            List<SettingsPage.Row> mine = Rows.GetRange(before, made);
+            if (catchingUp && lastRowOf.TryGetValue(rows, out SettingsPage.Row last))
             {
                 int at = Rows.IndexOf(last);
                 if (at >= 0 && at < before - 1)
@@ -1542,44 +956,6 @@ namespace GK2DonkeyAPI.Api
                 }
             }
             lastRowOf[rows] = mine[mine.Count - 1];
-        }
-
-        internal static bool IsClearKey(KeyboardShortcut k)
-        {
-            if (k.MainKey != UnityEngine.KeyCode.Backspace) return false;
-            foreach (UnityEngine.KeyCode m in k.Modifiers) return false; // any modifier: not the clearing key
-            return true;
-        }
-
-        private void ClearIfBackspace(ConfigEntry<KeyboardShortcut> e)
-        {
-            if (IsClearKey(e.Value))
-            {
-                e.Value = KeyboardShortcut.Empty;
-                Plugin.Log.LogInfo($"Settings: {OwnerId} {e.Definition.Key} cleared (Backspace means no key).");
-            }
-        }
-
-        private void Wire<T>(ConfigEntry<T> e, Action<T> apply)
-        {
-            if (apply == null)
-            {
-                return;
-            }
-            e.SettingChanged += (_, __) => Run(e, apply);
-            Run(e, apply);
-        }
-
-        private void Run<T>(ConfigEntry<T> e, Action<T> apply)
-        {
-            try
-            {
-                apply(e.Value);
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.LogWarning($"Settings: {OwnerId} {e.Definition.Section}.{e.Definition.Key} could not be applied: {ex.Message}");
-            }
         }
     }
 }

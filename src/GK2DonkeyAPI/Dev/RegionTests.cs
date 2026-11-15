@@ -109,9 +109,9 @@ namespace GK2DonkeyAPI
                 // page B: the update's first load: the rows named, the Harness rows of the skin without a harness left out, its
                 // Dark a row of its own; the two parts take the regions' values
                 MountSettingsPage pageB = Page(cfgPath, owner, me, true, out ConfigFile cfgB);
-                MountSettingsPage.Row Row(MountSettingsPage page, string key) => page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == key);
-                MountSettingsPage.Row overMuzzleRow = Row(pageB, "Muzzle_" + OverId), overCustomRow = Row(pageB, "CustomMuzzle_" + OverId), ownMuzzleRow = Row(pageB, "Muzzle_" + OwnId);
-                MountSettingsPage.Row ownHarnessRow = Row(pageB, "Harness_" + OwnId), ownCoatRow = Row(pageB, "Coat_" + OwnId), ownDarkRow = Row(pageB, "Dark_" + OwnId), ownEyeRow = Row(pageB, "Eye_" + OwnId);
+                SettingsPage.Row Row(MountSettingsPage page, string key) => page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == key);
+                SettingsPage.Row overMuzzleRow = Row(pageB, "Muzzle_" + OverId), overCustomRow = Row(pageB, "CustomMuzzle_" + OverId), ownMuzzleRow = Row(pageB, "Muzzle_" + OwnId);
+                SettingsPage.Row ownHarnessRow = Row(pageB, "Harness_" + OwnId), ownCoatRow = Row(pageB, "Coat_" + OwnId), ownDarkRow = Row(pageB, "Dark_" + OwnId), ownEyeRow = Row(pageB, "Eye_" + OwnId);
                 string overMuzzleLabel = Texts.Label(overMuzzleRow), overCustomLabel = Texts.Label(overCustomRow), ownMuzzleLabel = Texts.Label(ownMuzzleRow), ownCoatLabel = Texts.Label(ownCoatRow);
                 SelfTest.Check(overMuzzleLabel == overMuzzle.Text && overCustomLabel == UiWords.ToneCustom.Format(overMuzzle) && ownMuzzleLabel == ownMuzzle.Text && ownCoatLabel == ownCoatRow.Label,
                     $"RegionRows labels a page's rows by the look's names ({overMuzzleLabel} | {overCustomLabel} | {ownMuzzleLabel}); a region the look names none of keeps the row's own words ({ownCoatLabel})");
@@ -126,7 +126,7 @@ namespace GK2DonkeyAPI
                 // the skin without a Harness and an Eye row: chosen, its Harness rows left out and no Eye row made, its
                 // Coat and Dark rows there
                 if (skinRow != null) skinRow.Value = RowlessId;
-                MountSettingsPage.Row rlHarness = Row(pageB, "Harness_" + RowlessId), rlCoat = Row(pageB, "Coat_" + RowlessId);
+                SettingsPage.Row rlHarness = Row(pageB, "Harness_" + RowlessId), rlCoat = Row(pageB, "Coat_" + RowlessId);
                 bool rlHarnessOut = rlHarness != null && rlHarness.Visible != null && !rlHarness.Visible();
                 bool rlCoatIn = rlCoat != null && (rlCoat.Visible == null || rlCoat.Visible());
                 bool rlNoEye = Row(pageB, "Eye_" + RowlessId) == null, rlDark = Row(pageB, "Dark_" + RowlessId) != null;

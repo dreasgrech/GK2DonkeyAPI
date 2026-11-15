@@ -189,7 +189,7 @@ namespace GK2DonkeyAPI
         private static string PathOf(Transform t, Transform root)
         {
             var parts = new List<string>();
-            for (Transform p = t; p != null && p != root && parts.Count < 3; p = p.parent) parts.Insert(0, p.name.Replace("GK2DonkeyAPI options ", "").Replace("GK2DonkeyAPI mounts panel ", ""));
+            for (Transform p = t; p != null && p != root && parts.Count < 3; p = p.parent) parts.Insert(0, p.name.Replace(UiOwner.NamePrefix + "options ", "").Replace(UiOwner.NamePrefix + "mounts panel ", ""));
             return string.Join(" / ", parts);
         }
 

@@ -76,7 +76,7 @@ namespace GK2DonkeyAPI.IntegrationTests
                 // the late skins: the pack loads after Saddle Up (its soft dependency), so its skins come after Saddle Up's page
                 // was built; its donkey Skin row reads its choices when it is shown, and offers both
                 MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
-                MountSettingsPage.Row skinRow = saddle?.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "Skin_" + Catalog.DonkeyId);
+                SettingsPage.Row skinRow = saddle?.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "Skin_" + Catalog.DonkeyId);
                 if (skinRow == null) Info("Saddle Up's page isn't shown: its donkey Skin row not checked");
                 else
                 {

@@ -21,8 +21,8 @@ namespace GK2DonkeyAPI.IntegrationTests
             MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
             if (saddle != null)
             {
-                MountSettingsPage.Row ride = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "MountIndoors");
-                MountSettingsPage.Row cartRow = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "CartIndoors");
+                SettingsPage.Row ride = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "MountIndoors");
+                SettingsPage.Row cartRow = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "CartIndoors");
                 bool rideOn = ride?.Entry is BepInEx.Configuration.ConfigEntry<bool> re && re.Value;
                 Check(ride != null && cartRow != null && cartRow.Enabled != null && cartRow.Enabled() == rideOn,
                     $"Saddle Up's rows: \"Allow mounting indoors\" ({(ride == null ? "missing" : rideOn ? "on" : "off")}) and \"... with the cart\" ({(cartRow == null ? "missing" : cartRow.Enabled != null && cartRow.Enabled() ? "live" : "greyed")})");

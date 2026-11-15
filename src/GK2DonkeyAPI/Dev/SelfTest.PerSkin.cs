@@ -43,7 +43,7 @@ namespace GK2DonkeyAPI
                 var page = new MountSettingsPage(owner, cfg, "Per skin test", "test", "", null);
                 int sets = PerSkinRows(page, me);
                 ConfigEntry<T> Row<T>(string key) => page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == key)?.Entry as ConfigEntry<T>;
-                MountSettingsPage.Row RowOf(string key) => page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == key);
+                SettingsPage.Row RowOf(string key) => page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == key);
                 int choices = Looks.SkinChoicesOf(MountCatalog.DonkeyId).Count;
                 Check(sets >= 2 && sets == choices, $"PerSkin ran once per skin of the donkey ({sets} of {choices}): the own art and the temp skin at least");
                 ConfigEntry<CoatColor> coatPlain = Row<CoatColor>("Coat"), coatA = Row<CoatColor>("Coat_" + skinA);
@@ -55,7 +55,7 @@ namespace GK2DonkeyAPI
                 Check(coatPlain.Value == CoatColor.Game && lanternPlain.Value, $"and the donkey's own art is at its defaults again ({coatPlain.Value}, lantern {lanternPlain.Value}): a copy would have left it in the skin's colours");
                 Check(me.LookOf(skinA).Coat == CoatColor.Black && !me.LookOf(skinA).Lantern && me.LookOf(MountLooks.DonkeyId).Coat == CoatColor.Game, "the companion's looks follow: the skin's Black without a lantern, the own art's Game default");
                 // the shown set: the chosen mount's chosen skin's
-                MountSettingsPage.Row rowA = RowOf("Coat_" + skinA), rowPlain = RowOf("Coat");
+                SettingsPage.Row rowA = RowOf("Coat_" + skinA), rowPlain = RowOf("Coat");
                 Check(string.Equals(page.SkinChosen(MountCatalog.DonkeyId), skinA, StringComparison.OrdinalIgnoreCase) && rowA.Shown() && !rowPlain.Shown(), $"with the Skin row on the temp skin its rows show and the own art's don't (chosen {page.SkinChosen(MountCatalog.DonkeyId)})");
                 ConfigEntry<string> skinRow = Row<string>("Skin_" + MountCatalog.DonkeyId);
                 if (skinRow != null) skinRow.Value = MountLooks.DonkeyId;

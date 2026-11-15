@@ -289,8 +289,13 @@ namespace GK2DonkeyAPI
             return 1;
         }
 
+        // A detail asked while a picture renders (the journal's Refit from Unity's willRenderCanvases, fired by the stage
+        // camera's own Render): applied at the next tick, never as a render inside the render (RenderLit).
+        private static bool detailPending;
+
         private static void ApplyDetail(View v)
         {
+            if (inRenderLit) { detailPending = true; return; }
             if (failed || copy == null || v.Cam == null || v.Rt == null || v.ArtW <= 0 || v.TightenStep >= 0) return;
             if (DetailFor(v) == v.RtDetail) return;
             Resize(v);
@@ -330,6 +335,18 @@ namespace GK2DonkeyAPI
             if (shownPaper == null || failed || copy == null)
             {
                 return;
+            }
+            if (detailPending)
+            {
+                detailPending = false;
+                foreach (View v in views) ApplyDetail(v); // asked during a render: now
+            }
+            // the watchdog of 2026-11-15: a cart renderer off between renders (nothing of ours but the alone render switches one
+            // off, and that one puts it back): said once, with the stage's facts; looked at once a second
+            if (!cartOffTickSaid && (Time.frameCount & 63) == 0 && CartRendererOff(out string offWhich))
+            {
+                cartOffTickSaid = true;
+                Plugin.Log.LogWarning($"[preview] a cart renderer is off between renders ({offWhich}) at frame {Time.frameCount}; {TestCartFacts()}");
             }
             bool pulls = Looks.MountWanted(shownPaper).Cart;
             foreach (View v in views)
@@ -649,9 +666,21 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // A render inside a render (2026-11-15, found by the probe's stack: the stage camera's Render fires Unity's
+        // willRenderCanvases, the journal's Refit asks WantDetail, ApplyDetail photographs the other view): the inner render
+        // cleared the one list of what the outer render had switched off, so the outer restore put nothing back and the
+        // cart stayed off the stage for the session (the user's journal after a full F11 run). Two guards: a detail asked
+        // while a render runs waits for the next tick (ApplyDetail), and a nested render, should one still happen, keeps a
+        // list of its own and is said in the log.
+        private static int renderDepth;
+        private static bool inRenderLit => renderDepth > 0;
+
         private static void RenderLit(View v)
         {
-            switchedOff.Clear();
+            if (inRenderLit) Plugin.Log.LogWarning("[preview] a picture rendered inside a render: " + Environment.StackTrace);
+            renderDepth++;
+            List<Renderer> off = renderDepth > 1 ? new List<Renderer>() : switchedOff; // the outer render's list stays its own
+            off.Clear();
             if (!v.WithCart)
             {
                 copy.GetComponentsInChildren(false, allRenderers);
@@ -660,10 +689,11 @@ namespace GK2DonkeyAPI
                     if (r != null && r.enabled && !donkeyRenderers.Contains(r))
                     {
                         r.enabled = false;
-                        switchedOff.Add(r);
+                        off.Add(r);
                     }
                 }
             }
+            switchedOffCount = off.Count;
             try
             {
                 string variant = StageVariant(v);
@@ -718,15 +748,47 @@ namespace GK2DonkeyAPI
             }
             finally
             {
-                foreach (Renderer r in switchedOff)
+                foreach (Renderer r in off)
                 {
                     if (r != null)
                     {
                         r.enabled = true;
                     }
                 }
-                switchedOff.Clear();
+                off.Clear();
+                renderDepth--;
+                // the probe of 2026-11-15 (a full F11 run left the stage's cart renderers off): a cart renderer still off right
+                // after this render's restore is said once, with where this render was asked from
+                if (!cartOffSaid && CartRendererOff(out string which))
+                {
+                    cartOffSaid = true;
+                    Plugin.Log.LogWarning($"[preview] after the {v.Name} render's restore a cart renderer is still off ({which}); switched off this render: {switchedOffCount}; {Environment.StackTrace}");
+                }
             }
+        }
+
+        private static bool cartOffSaid, cartOffTickSaid;
+        private static int switchedOffCount;
+
+        // A cart part's renderer (the lamp's left out: they follow the lantern switch) switched off, and which.
+        private static readonly List<Renderer> cartCheck = new List<Renderer>(); // reused: the watchdog looks once a second
+
+        private static bool CartRendererOff(out string which)
+        {
+            which = null;
+            List<Renderer> rs = cartCheck;
+            foreach (KeyValuePair<Transform, Vector3> kv in cartRest)
+            {
+                Transform t = kv.Key;
+                if (t == null || t.name.IndexOf("lantern", StringComparison.OrdinalIgnoreCase) >= 0 || t.name.IndexOf("light", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                rs.Clear();
+                t.GetComponentsInChildren(true, rs);
+                foreach (Renderer r in rs)
+                {
+                    if (r != null && !r.enabled) { which = t.name + "/" + r.name; return true; }
+                }
+            }
+            return false;
         }
 
         // The pose for this frame: walking on the spot, then the lantern (after the animator: this runs in the
@@ -861,6 +923,65 @@ namespace GK2DonkeyAPI
                 RenderTexture.ReleaseTemporary(temp);
                 foreach (Renderer r in off) r.enabled = true;
             }
+        }
+
+        // The self-tests' account of the stage's cart parts now (2026-11-15: the journal showed the donkey alone after a full F11 run,
+        // the cart view drawn without its cart): each part's object active, its renderers on; "no stage" before it is built.
+        internal static string TestCartPartsState()
+        {
+            if (copy == null) return "no stage";
+            int parts = 0, active = 0, on = 0, off = 0;
+            var rs = new List<Renderer>();
+            foreach (KeyValuePair<Transform, Vector3> kv in cartRest)
+            {
+                Transform t = kv.Key;
+                if (t == null) continue;
+                parts++;
+                if (t.gameObject.activeInHierarchy) active++;
+                rs.Clear();
+                if (t.name.IndexOf("lantern", StringComparison.OrdinalIgnoreCase) >= 0 || t.name.IndexOf("light", StringComparison.OrdinalIgnoreCase) >= 0) continue; // the lamp's renderers follow the look's Lantern switch: not a sign
+                t.GetComponentsInChildren(true, rs);
+                foreach (Renderer r in rs) { if (r == null) continue; if (r.enabled) on++; else off++; }
+            }
+            return $"{parts} cart parts, {active} active, renderers {on} on / {off} off; stage active {(stage != null && stage.activeSelf)}, copy active {copy.activeInHierarchy}";
+        }
+
+        // The self-tests' verdict on the cart in the picture, by pixels (2026-11-15): with the stage dressed as a mount that pulls a
+        // cart, the cart view's drawn box is wider than the alone view's (the cart hangs off the mount's back); the same width means
+        // the cart view shows no cart. With it, what could take the cart out: the view's framing (measured for which variant, drawn as
+        // which now), the camera's size and mask, each cart part's layer, mesh and place against its rest, the hitch gap.
+        internal static string TestCartDrawn()
+        {
+            if (copy == null || dressedAs == null) return "no stage dressed";
+            if (!Looks.MountWanted(dressedAs).Cart) return "n/a: " + Looks.MountWanted(dressedAs).Id + " pulls no cart";
+            bool c = TestDrawnRect(TestHide.Nothing, out _, out _, out int cw, out int ch, out int cpw, out int cph);
+            bool a = TestDrawnRect(TestHide.Nothing, out _, out _, out int aw, out int ah, out int apw, out int aph, alone: true);
+            string verdict = !c ? "cart view not rendered" : !a ? $"cart view drawn {cw}x{ch} of {cpw}x{cph} (no alone view to compare)" : cw > aw + 4 ? $"drawn (cart view {cw}x{ch} of {cpw}x{cph}, alone {aw}x{ah} of {apw}x{aph})" : $"NOT drawn (cart view {cw}x{ch} of {cpw}x{cph}, alone {aw}x{ah} of {apw}x{aph}: no wider)";
+            return verdict;
+        }
+
+        // The same, with the facts behind it (the dev log line of the journal).
+        internal static string TestCartFacts()
+        {
+            if (copy == null) return "no stage";
+            View v = cartView;
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"framed as {v.FramedVariant ?? "-"}, now {StageVariant(v)}, measuring {v.TightenStep}, reframe {v.Reframe}; ");
+            if (v.Cam != null) sb.Append($"camera ortho {v.Cam.orthographicSize:0.00}, aspect {v.Cam.aspect:0.00}, mask {v.Cam.cullingMask}, at {v.Cam.transform.position - stage.transform.position}; ");
+            sb.Append($"gap {gapApplied:0.00}, dir {cartDir}; parts:");
+            foreach (KeyValuePair<Transform, Vector3> kv in cartRest)
+            {
+                Transform t = kv.Key;
+                if (t == null) { sb.Append(" (gone)"); continue; }
+                var mf = t.GetComponentInChildren<MeshFilter>(true);
+                var sr = t.GetComponentInChildren<SpriteRenderer>(true);
+                var r = t.GetComponentInChildren<Renderer>(true);
+                string what = mf != null ? (mf.sharedMesh != null ? "mesh" : "NO MESH") : sr != null ? (sr.sprite != null ? "sprite" : "NO SPRITE") : "";
+                Material m = r != null ? r.sharedMaterial : null;
+                if (m != null) what += " " + m.name + "/" + (m.shader != null ? m.shader.name : "no shader") + (m.HasProperty("_Color") ? " a=" + m.color.a.ToString("0.00") : "");
+                sb.Append($" {t.name}[{(t.gameObject.activeInHierarchy ? "on" : "OFF")} layer {t.gameObject.layer} {(r != null ? (r.enabled ? "r+" : "r-") : "no renderer")} {what} at {t.localPosition - kv.Value}]");
+            }
+            return sb.ToString();
         }
 
         // The self-tests' account of the stage's lamp now: the rig's state, the paper's LanternShow override, and each lamp

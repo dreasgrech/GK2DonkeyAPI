@@ -101,7 +101,7 @@ namespace GK2DonkeyAPI
             // (the user, 2026-10-22: H in the panel got him on and off). Only the panel's own key works, to close it,
             // while the panel is the one shown, and a companion's ride and cart keys work in its journal as the journal's
             // Ride and Drive the cart buttons (the user, 2026-11-07: the journal closes and the mount picked comes).
-            bool windowOpen = MountsPanel.IsOpen || OptionsWindow.IsOpen;
+            bool windowOpen = MountsPanel.IsOpen || OptionsWindow.IsOpen || UiHost.OthersOpen; // another mod's copy of the windows open: the same wait
             bool panelShown = MountsPanel.IsShownOnTop && !OptionsWindow.IsShown;
             for (int i = 0; i < entries.Count; i++)
             {
@@ -204,24 +204,9 @@ namespace GK2DonkeyAPI
             return ModifiersHeld(k);
         }
 
-        // A shortcut's keys without garbage: its own array (BepInEx's KeyboardShortcut._allKeys, the main key first, its
-        // modifiers after), read in place. KeyboardShortcut.Modifiers is a LINQ Skip(1) over it, a new iterator per read,
-        // and the flight's key checks compared them with SequenceEqual three times a ridden frame. Null when the field
-        // isn't there (another BepInEx): the callers fall back to the public members.
-        private static readonly HarmonyLib.AccessTools.StructFieldRef<KeyboardShortcut, KeyCode[]> allKeys = AllKeysRef();
-
-        private static HarmonyLib.AccessTools.StructFieldRef<KeyboardShortcut, KeyCode[]> AllKeysRef()
-        {
-            try { return HarmonyLib.AccessTools.StructFieldRefAccess<KeyboardShortcut, KeyCode[]>("_allKeys"); }
-            catch { return null; }
-        }
-
-        private static KeyCode[] KeysOf(ref KeyboardShortcut k)
-        {
-            if (allKeys == null) return null;
-            try { return allKeys(ref k); }
-            catch { return null; }
-        }
+        // A shortcut's keys without garbage: its own array read in place (the window library's Keys: the main key first,
+        // its modifiers after; null when the field isn't there, another BepInEx: the callers fall back to the public members).
+        private static KeyCode[] KeysOf(ref KeyboardShortcut k) => Keys.KeysOf(ref k);
 
         // The modifiers of a shortcut all held now.
         internal static bool ModifiersHeld(KeyboardShortcut k)
@@ -236,22 +221,6 @@ namespace GK2DonkeyAPI
             return true;
         }
 
-        // The fallback when the array can't be read: the public Modifiers walked side by side.
-        private static bool SameModifiers(KeyboardShortcut a, KeyboardShortcut b)
-        {
-            using (IEnumerator<KeyCode> x = a.Modifiers.GetEnumerator())
-            using (IEnumerator<KeyCode> y = b.Modifiers.GetEnumerator())
-            {
-                while (true)
-                {
-                    bool mx = x.MoveNext(), my = y.MoveNext();
-                    if (mx != my) return false;
-                    if (!mx) return true;
-                    if (x.Current != y.Current) return false;
-                }
-            }
-        }
-
         // The most specific of our keys acts alone (docs/options-window.md §14; the user, 2026-10-30): our keys ignore what
         // is held with them (walking keys, the climb's Shift), so with G and Ctrl + G both ours, Ctrl + G did both. True
         // when another key row of a page has k's main key and k's modifiers and more, and those are all held now: that
@@ -260,11 +229,11 @@ namespace GK2DonkeyAPI
         internal static bool Shadowed(KeyboardShortcut k)
         {
             if (k.MainKey == KeyCode.None) return false;
-            foreach (MountSettingsPage p in MountSettingsPage.All)
+            foreach (SettingsPage p in SettingsPage.All)
             {
-                foreach (MountSettingsPage.Row o in p.Rows)
+                foreach (SettingsPage.Row o in p.Rows)
                 {
-                    if (o.RowKind != MountSettingsPage.RowKind.Key || o.Entry == null) continue;
+                    if (o.RowKind != SettingsPage.RowKind.Key || o.Entry == null) continue;
                     var ok = (KeyboardShortcut)o.Entry.BoxedValue;
                     if (MoreSpecific(ok, k) && ModifiersHeld(ok)) return true;
                 }
@@ -299,23 +268,14 @@ namespace GK2DonkeyAPI
         internal static List<string> TestMoreSpecificThan(KeyboardShortcut k)
         {
             var labels = new List<string>();
-            foreach (MountSettingsPage p in MountSettingsPage.All)
-                foreach (MountSettingsPage.Row o in p.Rows)
-                    if (o.RowKind == MountSettingsPage.RowKind.Key && o.Entry != null && MoreSpecific((KeyboardShortcut)o.Entry.BoxedValue, k)) labels.Add(o.Label);
+            foreach (SettingsPage p in SettingsPage.All)
+                foreach (SettingsPage.Row o in p.Rows)
+                    if (o.RowKind == SettingsPage.RowKind.Key && o.Entry != null && MoreSpecific((KeyboardShortcut)o.Entry.BoxedValue, k)) labels.Add(o.Label);
             return labels;
         }
 
-        // The same combination (its main key and its modifiers, in order).
-        internal static bool SameKey(KeyboardShortcut a, KeyboardShortcut b)
-        {
-            if (a.MainKey != b.MainKey) return false;
-            KeyCode[] ka = KeysOf(ref a), kb = KeysOf(ref b);
-            if (ka == null || kb == null) return SameModifiers(a, b);
-            int na = ka.Length, nb = kb.Length;
-            if (na != nb) return na <= 1 && nb <= 1; // both without modifiers (an empty shortcut's array may be empty or hold None)
-            for (int i = 1; i < na; i++) if (ka[i] != kb[i]) return false;
-            return true;
-        }
+        // The same combination (its main key and its modifiers, in order): the window library's.
+        internal static bool SameKey(KeyboardShortcut a, KeyboardShortcut b) => Keys.SameKey(a, b);
 
         private static readonly List<string> gone = new List<string>();
 

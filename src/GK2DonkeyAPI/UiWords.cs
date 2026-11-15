@@ -1,68 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Reflection;
 
 namespace GK2DonkeyAPI
 {
-    // A text with a translation of its own: its owner (a plugin's GUID), its key in the owner's files and its English. A
-    // pack's mount or skin name is one (step 3: Catalog.NameTerm, its pack's file); the API's words are (Word).
-    internal class Term
-    {
-        internal readonly string Owner, Key, English;
-        internal bool MayDropValues; // a translation may leave a {n} out (Texts.Fill); else one without it shows the English
-
-        internal Term(string owner, string key, string english)
-        {
-            Owner = owner;
-            Key = key;
-            English = english;
-        }
-
-        // In the player's game language (Texts), else the English.
-        internal string Text => Texts.Of(Owner, Key, English);
-
-        // A template filled in; a value that has a translation of its own (a Term) in the player's language.
-        internal string Format(params object[] args) => Texts.Fill(Owner, Key, English, MayDropValues, UiWords.Values(args, shown: true));
-
-        public override string ToString() => English;
-    }
-
-    // One of the API's own words: its key in the translation files and its English, which is the source (the English file
-    // is written from this table, Texts.EnglishOf). A template takes {0}, {1}.
-    internal sealed class Word : Term
-    {
-        internal readonly string What; // for the translator: where it shows and what its {0} is (the English file's comment)
-
-        internal Word(string key, string english, string what = null, bool mayDropValues = false) : base(Texts.Api, key, english)
-        {
-            What = what;
-            MayDropValues = mayDropValues;
-        }
-
-        // A sentence the keeper says that also travels as an English reason (MountResult.Reason: other mods read it, log
-        // it, may compare it): the English filled in, remembered a moment so that Mount.Say shows it in the player's
-        // language (UiWords.Shown). A value that has a translation of its own (a Term: a word, a pack's name) goes into
-        // the reason in English and into the bubble translated.
-        internal string Make(params object[] args)
-        {
-            string english;
-            try
-            {
-                english = string.Format(CultureInfo.InvariantCulture, English, UiWords.Values(args, shown: false));
-            }
-            catch (FormatException)
-            {
-                Plugin.Log.LogWarning($"Translations: the API's English {Key} doesn't take its values ({English}): a bug in the API.");
-                return English;
-            }
-            UiWords.Remember(english, this, args);
-            return english;
-        }
-
-        // The sentence Make made, in the player's language.
-        internal string Shown(object[] args) => Format(args);
-    }
+    // Term (a text with a translation of its own: its owner, its key, its English) and Word (one of the owner's own words)
+    // are the window library's (GK2DreasUI.Words); a pack's mount or skin name is a Term (Catalog.NameTerm, its pack's
+    // file). The window's own words are the library's too, aliased below so every UiWords.X of the API stays.
 
     // The API's own words (docs/localization.md): the options window, the Mount Journal and its colours window, and the
     // rows its builders add to a page (MountRows' Skin, FoalRows) (step 1, 2026-10-31); the keeper's bubbles, the prompts
@@ -71,34 +15,32 @@ namespace GK2DonkeyAPI
     // release scans look for a Say("...") with a literal).
     internal static class UiWords
     {
-        // the options window
-        internal static readonly Word Done = new Word("options.done", "Done");
-        internal static readonly Word Defaults = new Word("options.defaults", "Defaults");
-        internal static readonly Word SetBackAsk = new Word("options.set_back_ask", "Set every option in {0} back to its default?", "the Defaults button's question; {0}: a section's name");
-        internal static readonly Word SetBack = new Word("options.set_back", "Set back");
-        internal static readonly Word Cancel = new Word("options.cancel", "Cancel");
-        internal static readonly Word HintPad = new Word("options.hint_pad", "Move to an option to see what it does.", "the line under the options, with a gamepad");
-        internal static readonly Word HintMouse = new Word("options.hint_mouse", "Point at an option to see what it does.", "the line under the options, with a mouse");
-        internal static readonly Word PressKeyFor = new Word("options.press_key_for", "Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.", "while a key is being set; {0}: the option's name");
-        internal static readonly Word KeyHowPad = new Word("options.key_how_pad", "Select it, then press the key on the keyboard.", "after a key option's description, with a gamepad");
-        internal static readonly Word KeyHowMouse = new Word("options.key_how_mouse", "Click it to set the key.", "after a key option's description, with a mouse");
-        internal static readonly Word OnlyInGame = new Word("options.only_in_game", "Only in a game.", "after a greyed button's description");
-        internal static readonly Word NotNow = new Word("options.not_now", "Not available right now.", "after a greyed option's description");
-        internal static readonly Word AndThen = new Word("options.and_then", "{0} {1}", "the line under the options: {0} the option's description, {1} the sentence after it (the two above)");
-        internal static readonly Word PageOptions = new Word("options.page_button", "{0} options", "the button in the game's Settings window; {0}: the mod's name");
-
-        // the rows' own words
-        internal static readonly Word Open = new Word("row.open", "Open", "a button that opens the Mounts panel");
-        internal static readonly Word Go = new Word("row.go", "Go", "a mod's button");
-        internal static readonly Word PressAKey = new Word("row.press_a_key", "Press a key...", "a key option while it waits for the key");
-        internal static readonly Word None = new Word("row.none", "None", "a key option with no key; an empty name; no babies");
-        internal static readonly Word SameKeyAs = new Word("key.same_as", "Same key as {0}", "under a key option; {0}: another option, or another mod's setting");
-        internal static readonly Word ClashesWith = new Word("key.clashes_with", "Clashes with {0} ({1})", "under a key option; {0}: another option or mod's setting, {1}: its key");
+        // the options window and the rows' own words: the window library's (GK2DreasUI.Words), the same objects
+        internal static readonly Word Done = Words.Done;
+        internal static readonly Word Defaults = Words.Defaults;
+        internal static readonly Word SetBackAsk = Words.SetBackAsk;
+        internal static readonly Word SetBack = Words.SetBack;
+        internal static readonly Word Cancel = Words.Cancel;
+        internal static readonly Word HintPad = Words.HintPad;
+        internal static readonly Word HintMouse = Words.HintMouse;
+        internal static readonly Word PressKeyFor = Words.PressKeyFor;
+        internal static readonly Word KeyHowPad = Words.KeyHowPad;
+        internal static readonly Word KeyHowMouse = Words.KeyHowMouse;
+        internal static readonly Word OnlyInGame = Words.OnlyInGame;
+        internal static readonly Word NotNow = Words.NotNow;
+        internal static readonly Word AndThen = Words.AndThen;
+        internal static readonly Word PageOptions = Words.PageOptions;
+        internal static readonly Word Open = Words.Open;
+        internal static readonly Word Go = Words.Go;
+        internal static readonly Word PressAKey = Words.PressAKey;
+        internal static readonly Word None = Words.None;
+        internal static readonly Word SameKeyAs = Words.SameKeyAs;
+        internal static readonly Word ClashesWith = Words.ClashesWith;
+        internal static readonly Word NoChoice = Words.NoChoice;
 
         // the rows the API adds to a page (MountRows, FoalRows)
         internal static readonly Word SkinRow = new Word("row.skin", "Skin");
         internal static readonly Word DefaultSkin = new Word("row.default_skin", "Default", "the Skin list: a mount's own look");
-        internal static readonly Word NoChoice = new Word("row.no_choice", "(none)", "a list with nothing to choose");
         internal static readonly Word Babies = new Word("row.babies", "Babies");
         internal static readonly Word BabiesFollow = new Word("row.babies_follow", "Babies follow you on foot");
         internal static readonly Word BabiesIndoors = new Word("row.babies_indoors", "Babies come indoors");
@@ -350,17 +292,12 @@ namespace GK2DonkeyAPI
         }
 
         // A template's values: a Term (a word, a pack's name) as its English or its translation, the rest as they are.
-        internal static object[] Values(object[] args, bool shown)
-        {
-            if (args == null) return Array.Empty<object>();
-            var v = new object[args.Length];
-            for (int n = 0; n < args.Length; n++) v[n] = args[n] is Term t ? (shown ? t.Text : t.English) : args[n];
-            return v;
-        }
+        internal static object[] Values(object[] args, bool shown) => Words.Values(args, shown);
 
         private static List<Word> all;
 
-        // Every word, in the order above (the fields' order in the class).
+        // Every word, in the order above (the fields' order in the class), the window's own among them (the same objects:
+        // the English file lists each key once, Texts.EnglishOf).
         internal static List<Word> All
         {
             get
@@ -369,7 +306,7 @@ namespace GK2DonkeyAPI
                 var list = new List<Word>();
                 foreach (FieldInfo f in typeof(UiWords).GetFields(BindingFlags.Static | BindingFlags.NonPublic))
                 {
-                    if (f.FieldType == typeof(Word) && f.GetValue(null) is Word w) list.Add(w);
+                    if (f.FieldType == typeof(Word) && f.GetValue(null) is Word w && !list.Contains(w)) list.Add(w);
                 }
                 all = list;
                 return all;

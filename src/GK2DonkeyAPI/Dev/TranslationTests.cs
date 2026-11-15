@@ -284,13 +284,13 @@ namespace GK2DonkeyAPI
             foreach (string o in owned) if (Texts.TestBundled.TryGetValue(o, out string was)) had[o] = was;
             string chosenWas = page?.MountChosen; // the player's pick, put back in the finally
             bool picked = false;
-            MountSettingsPage.Row skinRow = null;
+            SettingsPage.Row skinRow = null;
             int skinAt = -1;
             if (page != null && skin != null)
             {
-                foreach (MountSettingsPage.Row r in page.Rows)
+                foreach (SettingsPage.Row r in page.Rows)
                 {
-                    if (r.RowKind != MountSettingsPage.RowKind.List) continue;
+                    if (r.RowKind != SettingsPage.RowKind.List) continue;
                     MountSettingsPage.FillList(r);
                     if (r.ChoiceValues == null) continue;
                     for (int i = 0; i < r.ChoiceValues.Length; i++) if (string.Equals(r.ChoiceValues.GetValue(i) as string, skin.Id, StringComparison.OrdinalIgnoreCase)) { skinRow = r; skinAt = i; }
@@ -821,14 +821,14 @@ namespace GK2DonkeyAPI
         // only the mount by itself: a Skin row's value set from here showed the journal as it was, 2026-11-07)
         private static void Relist(MountSettingsPage page)
         {
-            foreach (MountSettingsPage.Row r in page.Rows)
-                if (r.IsLook && r.RowKind == MountSettingsPage.RowKind.List) { r.ChoiceLabels = null; r.ChoiceValues = null; }
+            foreach (SettingsPage.Row r in page.Rows)
+                if (r.IsLook && r.RowKind == SettingsPage.RowKind.List) { r.ChoiceLabels = null; r.ChoiceValues = null; }
             if (MountsPanel.IsOpen) MountsPanel.Refresh();
         }
 
         private static MountSettingsPage PageWithOptions()
         {
-            foreach (MountSettingsPage live in MountSettingsPage.All) if (live.Shown && OptionsWindow.HasOptions(live)) return live;
+            foreach (MountSettingsPage live in MountSettingsPage.All) if (live.Shown && OptionsWindow.HasOptions(live.Page)) return live;
             return null;
         }
 
@@ -854,7 +854,7 @@ namespace GK2DonkeyAPI
                 Texts.TestForced = false;
                 yield return MeasureEnglish(page);
                 Texts.TestForced = true;
-                OptionsWindow.Open(page);
+                OptionsWindow.Open(page.Page);
                 yield return SelfTest.Frames(2);
                 SelfTest.Check(OptionsWindow.IsShown, "the options window opens in the test language");
                 if (!OptionsWindow.IsShown) yield break;
@@ -867,7 +867,7 @@ namespace GK2DonkeyAPI
                     string headingText = OptionsWindow.TestHeadingText ?? "";
                     SelfTest.Check(IsBracketed(headingText) && headingText.StartsWith("[" + name), $"{name}: its heading over the rows is looked up ({headingText})");
                     int labels = 0, plain = 0;
-                    foreach (MountSettingsPage.Row r in page.Rows)
+                    foreach (SettingsPage.Row r in page.Rows)
                     {
                         if (!page.InOptions(r) || (r.ShownSection ?? r.Section) != name || (r.Visible != null && !r.Visible())) continue;
                         GameObject go = OptionsWindow.TestRowObject(r);
@@ -977,11 +977,11 @@ namespace GK2DonkeyAPI
             List<string> rootsWas = Texts.TestTranslators;
             Texts.TestTranslators = new List<string>(); // no real translators' files under the test's own
             bool hadPage = Texts.TestBundled.TryGetValue(page.OwnerId, out string pageWas), hadApi = Texts.TestBundled.TryGetValue(Texts.Api, out string apiWas);
-            var chosen = new List<MountSettingsPage.Row>();
-            MountSettingsPage.Row stale = null;
-            foreach (MountSettingsPage.Row r in page.Rows)
+            var chosen = new List<SettingsPage.Row>();
+            SettingsPage.Row stale = null;
+            foreach (SettingsPage.Row r in page.Rows)
             {
-                if (!page.InOptions(r) || r.LabelWord != null || r.LabelOf != null || string.IsNullOrEmpty(r.Label) || r.RowKind == MountSettingsPage.RowKind.Note) continue;
+                if (!page.InOptions(r) || r.LabelWord != null || r.LabelOf != null || string.IsNullOrEmpty(r.Label) || r.RowKind == SettingsPage.RowKind.Note) continue;
                 if (r.Visible != null && !r.Visible()) continue;
                 if (chosen.Count < 4) chosen.Add(r);
                 else if (stale == null && (r.ShownSection ?? r.Section) == (chosen[0].ShownSection ?? chosen[0].Section)) stale = r;
@@ -992,7 +992,7 @@ namespace GK2DonkeyAPI
                 Directory.CreateDirectory(pageDir);
                 Directory.CreateDirectory(apiDir);
                 var csv = new StringBuilder("key,value,english\n");
-                foreach (MountSettingsPage.Row r in chosen) csv.Append(Csv(r.TextKey + ".label")).Append(',').Append(Csv("Ä " + r.Label)).Append(',').Append(Csv(r.Label)).Append('\n');
+                foreach (SettingsPage.Row r in chosen) csv.Append(Csv(r.TextKey + ".label")).Append(',').Append(Csv("Ä " + r.Label)).Append(',').Append(Csv(r.Label)).Append('\n');
                 if (stale != null) csv.Append(Csv(stale.TextKey + ".label")).Append(",Ä alt,An older English of this row\n");
                 File.WriteAllText(Path.Combine(pageDir, "de.csv"), csv.ToString(), new UTF8Encoding(false));
                 File.WriteAllText(Path.Combine(apiDir, "de.csv"), "key;value;english\r\noptions.done;Fertig;Done\r\njournal.title;\"Reittier-Tagebuch; Seite\";Mount Journal\r\ncolours.title;Farben: {0};Colours: {0}\r\n", new UTF8Encoding(true));
@@ -1001,7 +1001,7 @@ namespace GK2DonkeyAPI
                 Texts.TestForced = false;
                 Texts.LanguageOverride = "de";
                 Texts.Forget();
-                OptionsWindow.Open(page);
+                OptionsWindow.Open(page.Page);
                 yield return SelfTest.Frames(2);
                 SelfTest.Check(OptionsWindow.IsShown, "the options window opens with a German translation");
                 if (!OptionsWindow.IsShown) yield break;
@@ -1009,7 +1009,7 @@ namespace GK2DonkeyAPI
                 yield return SelfTest.Frames(1);
                 int german = 0, shown = 0;
                 var seen = new List<string>();
-                foreach (MountSettingsPage.Row r in chosen)
+                foreach (SettingsPage.Row r in chosen)
                 {
                     GameObject go = OptionsWindow.TestRowObject(r);
                     TextMeshProUGUI label = go != null ? LabelOf(go) : null;
@@ -1092,7 +1092,7 @@ namespace GK2DonkeyAPI
                 {
                     Switch(gs, id);
                     yield return SelfTest.Frames(2);
-                    OptionsWindow.Open(page);
+                    OptionsWindow.Open(page.Page);
                     yield return SelfTest.Frames(2);
                     UiKit ui = OptionsWindow.TestUi;
                     string sample = Texts.Plain(LLBase.L("ui_menu_options") + " " + LLBase.L("btn_cancel") + " " + LLBase.L("ui_settings_language"));
@@ -1197,7 +1197,7 @@ namespace GK2DonkeyAPI
                     languages++;
                     var shortOnes = new List<(string Text, float Room, bool Wraps)>();
                     int measured = 0;
-                    OptionsWindow.Open(page);
+                    OptionsWindow.Open(page.Page);
                     yield return SelfTest.Frames(2);
                     if (OptionsWindow.IsShown)
                     {
@@ -1489,12 +1489,12 @@ namespace GK2DonkeyAPI
                 ("(no row, mouse)", OptionsWindow.DescriptionOf(null, false, false, false)),
                 ("(no row, gamepad)", OptionsWindow.DescriptionOf(null, false, false, true)),
             };
-            foreach (MountSettingsPage.Row r in page.Rows)
+            foreach (SettingsPage.Row r in page.Rows)
             {
                 if (!page.InOptions(r) || (r.ShownSection ?? r.Section) != section || (r.Visible != null && !r.Visible())) continue;
                 list.Add((r.Label, OptionsWindow.DescriptionOf(r, true, false, false)));
-                if (r.Enabled != null || r.RowKind == MountSettingsPage.RowKind.Button) list.Add((r.Label + " (greyed)", OptionsWindow.DescriptionOf(r, false, false, false)));
-                if (r.RowKind != MountSettingsPage.RowKind.Key) continue;
+                if (r.Enabled != null || r.RowKind == SettingsPage.RowKind.Button) list.Add((r.Label + " (greyed)", OptionsWindow.DescriptionOf(r, false, false, false)));
+                if (r.RowKind != SettingsPage.RowKind.Key) continue;
                 list.Add((r.Label + " (gamepad)", OptionsWindow.DescriptionOf(r, true, false, true)));
                 list.Add((r.Label + " (being set)", OptionsWindow.DescriptionOf(r, true, true, false)));
             }
@@ -1541,7 +1541,7 @@ namespace GK2DonkeyAPI
                 {
                     Switch(gs, id);
                     yield return SelfTest.Frames(1);
-                    UIDialogWindowButton ours = SettingsButtons.ButtonOf(settings, page);
+                    UIDialogWindowButton ours = SettingsButtons.ButtonOf(settings, page.Page);
                     UIDialogWindowButton ok = UiKit.OkButtonOf(settings);
                     // the OK button keeps its font until its state changes (a hover; "OK" reads in the Latin font): restyled
                     // here as a hover would, the font the game's own button style gives the language
@@ -1554,7 +1554,7 @@ namespace GK2DonkeyAPI
                         continue;
                     }
                     checkedLanguages++;
-                    string want = UiWords.PageOptions.Format(Texts.Title(page));
+                    string want = UiWords.PageOptions.Format(Texts.Title(page.Page));
                     float wants = label.GetPreferredValues(label.text, float.PositiveInfinity, float.PositiveInfinity).x, has = label.rectTransform.rect.width;
                     if (label.text != want) wrong.Add($"{id}: the words \"{label.text}\", not \"{want}\"");
                     if (okLabel != null && label.font != okLabel.font) wrong.Add($"{id}: the font {(label.font != null ? label.font.name : "none")}, the OK button's {(okLabel.font != null ? okLabel.font.name : "none")}");
@@ -1582,7 +1582,7 @@ namespace GK2DonkeyAPI
         private static List<string> SectionsOf(MountSettingsPage page)
         {
             var names = new List<string>();
-            foreach (MountSettingsPage.Row r in page.Rows) if (page.InOptions(r) && !names.Contains(r.ShownSection ?? r.Section)) names.Add(r.ShownSection ?? r.Section);
+            foreach (SettingsPage.Row r in page.Rows) if (page.InOptions(r) && !names.Contains(r.ShownSection ?? r.Section)) names.Add(r.ShownSection ?? r.Section);
             return names;
         }
 
@@ -1590,7 +1590,7 @@ namespace GK2DonkeyAPI
         private static List<(string Name, string Text)> DescriptionsOf(MountSettingsPage page, string section)
         {
             var list = new List<(string Name, string Text)>();
-            foreach (MountSettingsPage.Row r in page.Rows)
+            foreach (SettingsPage.Row r in page.Rows)
             {
                 if (page.InOptions(r) && (r.ShownSection ?? r.Section) == section && (r.Visible == null || r.Visible())) list.Add((r.Label, OptionsWindow.TestDescription(r)));
             }
@@ -1600,7 +1600,7 @@ namespace GK2DonkeyAPI
         // The three windows in English, each section, its descriptions too: the room every text has now (TextRoom, "english: ...").
         private static IEnumerator MeasureEnglish(MountSettingsPage page)
         {
-            OptionsWindow.Open(page);
+            OptionsWindow.Open(page.Page);
             yield return SelfTest.Frames(2);
             if (OptionsWindow.IsShown)
             {
@@ -1635,10 +1635,10 @@ namespace GK2DonkeyAPI
         private static HashSet<string> KeepWords(MountSettingsPage page)
         {
             var keep = new HashSet<string>(StringComparer.Ordinal);
-            foreach (MountSettingsPage.Row r in page.Rows)
+            foreach (SettingsPage.Row r in page.Rows)
             {
-                if (r.RowKind == MountSettingsPage.RowKind.Key && r.Entry != null) keep.Add(KeyCapture.Words((BepInEx.Configuration.KeyboardShortcut)r.Entry.BoxedValue));
-                if (r.RowKind == MountSettingsPage.RowKind.List && r.ChoiceLabels != null)
+                if (r.RowKind == SettingsPage.RowKind.Key && r.Entry != null) keep.Add(KeyCapture.Words((BepInEx.Configuration.KeyboardShortcut)r.Entry.BoxedValue));
+                if (r.RowKind == SettingsPage.RowKind.List && r.ChoiceLabels != null)
                 {
                     for (int i = 0; i < r.ChoiceLabels.Length; i++)
                     {
@@ -1646,7 +1646,7 @@ namespace GK2DonkeyAPI
                         if (s == null || string.IsNullOrEmpty(s.Name)) keep.Add(r.ChoiceLabels[i]); // no name: its id
                     }
                 }
-                if (r.RowKind == MountSettingsPage.RowKind.Text && r.Entry?.BoxedValue is string typed && typed.Length > 0) keep.Add(typed); // the player's own words (a mount's name)
+                if (r.RowKind == SettingsPage.RowKind.Text && r.Entry?.BoxedValue is string typed && typed.Length > 0) keep.Add(typed); // the player's own words (a mount's name)
             }
             return keep;
         }

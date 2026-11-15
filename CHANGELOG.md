@@ -10,6 +10,45 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+For players:
+
+- **The Mount Journal's picture no longer loses the cart and the lantern for the session** (2026-11-15): the pictures
+  are drawn on a stage of their own, the mount alone with every cart part switched off for that one photo and on
+  again after. Unity fires its canvas pre-render callback inside that photo, the journal refits its picture there,
+  and when the screen density it wanted had changed, the refit took the other photo (with the cart) inside the first:
+  the inner photo cleared the first photo's list of switched-off parts, so nothing was switched on again, and the cart
+  and its lantern stayed off the stage until the game was restarted. Seen after a full self-test run (the user's
+  screenshot); the same chain can run in play. A detail asked during a photo now waits for the next frame, a nested
+  photo keeps a list of its own, and the self-tests compare the stage's cart parts and the cart in its picture (by
+  pixels) before and after every scenario, and check a cart-pulling mount's journal picture is the cart view.
+
+Development:
+
+- **The window code is a library inside the API** (2026-11-15; `docs/ui-library.md`, the user's ask of 2026-11-13: the
+  options window for the other mods too, where GK2 Mod Framework, Nexus-only, is no help to Steam players):
+  `src/GK2DonkeyAPI/GK2DreasUI/` holds the windows (`UiKit`, `RowControls`, `OptionsWindow`, `SettingsButtons`,
+  `GameWindowAside`, `KeyCapture`, `DeferredSave`, `UiSounds`), the texts (`Texts`, `TranslationFiles`, `LegacyText`,
+  the window's own words in `Words`) and the generic page (`SettingsPage`: the rows, the cfg binding with the moved
+  sections and keys, the upgrade claims), under its own namespace and naming nothing of the API: what the windows
+  need from their owner is one record (`UiOwner`: the GUID, the logger, in-game, the window under the options, the
+  key poller, the words and English of the owner), filled by `UiOwnerSetup` at the start of Awake; the frame and the
+  quit go through `UiHost`. `MountSettingsPage` keeps every public method (the surface test is unchanged) as a wrapper
+  over a `SettingsPage`, with the mount rows, the per-mount and per-skin sets and a row's mount data (`Info(row)`:
+  the mount, skin, part, cart and art of a row) as the API's own. Two mods carrying the windows agree through one
+  scene object, `GK2DreasUI.open` (a child per mod with a window open, one for the pause): the pause and the
+  controls go back with the last window, a window refuses to open over another mod's, the mods' keys wait while any
+  is open. Every object of ours is named `GK2DreasUI <guid> ...` (the template filters tell our copies from the
+  game's and from each other's). The key comparison (`Keys.SameKey`) is the library's; `KeyActions` calls it.
+  No change for players: the windows are the same code. The sources move to their own repository (GK2DreasUI, a
+  submodule of this one and of GK2QOLMods) once the self-tests pass; Tech Tree Search is the first other mod.
+- **The window code builds from the GK2DreasUI submodule** (2026-11-15, `docs/ui-library.md` §10): `lib/GK2DreasUI`,
+  imported by the csproj through its `.targets`; the in-repo folder is gone; the layering scan reads the submodule.
+  GK2 Tech Tree Search (GK2QOLMods) is the first other consumer. Two library changes made for it, pending the
+  submodule's next commit: a page may keep its cfg sections as named (`numberSections: false`; this API's pages stay
+  numbered), and the owner hooks of `UiOwner`, `SettingsPage`, `Texts`, `TranslationFiles` and `Words` are
+  auto-properties (a consumer that sets few of them built with 78 "never assigned" warnings; nothing changes for
+  this API, which compiles against them unchanged).
+
 ## 0.17.1 (GK2 Donkey API 0.45.1), 2026-11-13
 
 0.17.0 was built, zipped and committed on 2026-11-11/12 and never uploaded: the game's 1.012 update of 2026-11-13

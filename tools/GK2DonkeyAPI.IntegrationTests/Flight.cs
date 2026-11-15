@@ -19,12 +19,12 @@ namespace GK2DonkeyAPI.IntegrationTests
         {
             MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
             if (saddle == null) { Skip("Saddle Up's page isn't shown"); yield break; }
-            MountSettingsPage.Row Row(string key) => saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == key && x.ShownSection == "Keys");
-            MountSettingsPage.Row jump = Row("JumpKey"), fly = Row("FlyKey");
+            SettingsPage.Row Row(string key) => saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == key && x.ShownSection == "Keys");
+            SettingsPage.Row jump = Row("JumpKey"), fly = Row("FlyKey");
             Check(jump != null && fly != null, "Saddle Up has Jump and Fly rows in its Keys section");
             if (jump == null || fly == null) yield break;
             // flying for players (0.38.0): the Climb and Descend rows, their keys the flight's (Left Shift and Left Ctrl as shipped)
-            MountSettingsPage.Row climb = Row("ClimbKey"), descend = Row("DescendKey");
+            SettingsPage.Row climb = Row("ClimbKey"), descend = Row("DescendKey");
             Check(climb != null && descend != null && climb.Enabled != null && descend.Enabled != null, "and Climb and Descend rows (0.38.0), shown with the others");
             Check(Plugin.ClimbKey != null && Plugin.DescendKey != null && Flight.UpKey == Plugin.ClimbKey.Value.MainKey && Flight.DownKey == Plugin.DescendKey.Value.MainKey,
                 $"the flight's climb and descend keys are the Behaviour keys' main keys ({Flight.UpKey}, {Flight.DownKey})");

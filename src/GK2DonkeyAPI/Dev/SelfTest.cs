@@ -206,6 +206,8 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "settings: the options window (every option our own control in its section; a switch; a key set, in words, a clash; the line at the bottom; Defaults asked)", Body = OptionsTests.Smoke },
             new Scenario { Group = GroupLooks, Name = "settings: the options window's way back (the Settings window's button; the Mounts button and back; the journal's Options button and back; Ride from the journal over them)", Body = OptionsTests.WayBack },
             new Scenario { Group = GroupLooks, Name = "settings: the options window among other mods (the window's own OK copied, another mod's part left off it, our button added again when taken away; another mod's key and the game's named; a game window over the options)", Body = OptionsTests.AmongOtherMods },
+            new Scenario { Group = GroupLooks, Name = "settings: another mod's window open (the shared marker): the options refuse to open; the pause and the controls go back with the last window", Body = OptionsTests.OthersOpen },
+            new Scenario { Group = GroupLooks, Name = "settings: a row's mount data is its own (a skin's parts are its tone rows alone, the cart's rows no skin part)", Body = OptionsTests.RowData },
             new Scenario { Group = GroupTranslations, Name = "translations: the files (a translator's own beats the bundled; comma, tab and ; CSVs; the English changed; {0}; the language's base id and a close one; the test language; the API's English and its template read back)", Body = TranslationTests.Files },
             new Scenario { Group = GroupTranslations, Name = "translations: the test language over the options window, the Mount Journal and the colours window (every word looked up; the room at 1.6 times)", Body = TranslationTests.Windows },
             new Scenario { Group = GroupTranslations, Name = "translations: a German translation in the windows (the page's de.txt with a row whose English changed, the API's de.csv saved with ; and quotes, read back from the options window, the journal and the colours window)", Body = TranslationTests.German },
@@ -439,6 +441,8 @@ namespace GK2DonkeyAPI
             bool? testLanguageWas = Texts.TestForced;
             Texts.LanguageOverride = "en";
             Texts.TestForced = false;
+            string cartLastDrawnAfter = null; // the stage's cart in its picture: the last scenario after which it was drawn (2026-11-15)
+            bool cartGoneSaid = false;
             foreach (Scenario s in scenarios)
             {
                 if (abort)
@@ -458,9 +462,16 @@ namespace GK2DonkeyAPI
                 {
                     Plugin.TuningWindowHidden = true;
                 }
+                string stageBefore = PreviewStage.TestCartPartsState(), cartBefore = PreviewStage.TestCartDrawn(); // the stage's cart parts and the cart in its picture as the scenario found them (2026-11-15: a run left the cart out)
                 yield return s.Body();
                 // Between scenarios: everything back.
                 yield return CleanUp();
+                string stageAfter = PreviewStage.TestCartPartsState(), cartAfter = PreviewStage.TestCartDrawn();
+                if (stageBefore != "no stage" && stageAfter != stageBefore) Warn($"{s.Name}: the stage's cart parts are not as the scenario found them ({stageBefore} -> {stageAfter})");
+                if (cartBefore.StartsWith("drawn", StringComparison.Ordinal) && cartAfter.StartsWith("NOT drawn", StringComparison.Ordinal)) Warn($"{s.Name}: the cart is gone from the stage's picture over the scenario ({cartBefore} -> {cartAfter}); {PreviewStage.TestCartFacts()}");
+                // the stage dressed as a cartless mount hides it meanwhile: the range since the cart was last seen drawn
+                if (cartAfter.StartsWith("drawn", StringComparison.Ordinal)) { cartLastDrawnAfter = s.Name; cartGoneSaid = false; }
+                else if (cartAfter.StartsWith("NOT drawn", StringComparison.Ordinal) && !cartGoneSaid) { cartGoneSaid = true; Warn($"{s.Name}: the stage's picture has no cart after this scenario ({cartAfter}); it was last drawn after {cartLastDrawnAfter ?? "no scenario yet"}; {PreviewStage.TestCartFacts()}"); }
                 if (s.HidesPanel)
                 {
                     Plugin.TuningWindowHidden = panelWasHidden;
@@ -705,7 +716,7 @@ namespace GK2DonkeyAPI
         {
             var d = new Dictionary<string, string>(StringComparer.Ordinal);
             if (p == null) return d;
-            foreach (MountSettingsPage.Row r in p.Rows)
+            foreach (SettingsPage.Row r in p.Rows)
             {
                 if (r.Entry == null) continue;
                 d[r.Entry.Definition.Section + "/" + r.Entry.Definition.Key] = Convert.ToString(r.Entry.BoxedValue, System.Globalization.CultureInfo.InvariantCulture);
@@ -1416,7 +1427,7 @@ namespace GK2DonkeyAPI
                 page.Preview("Mount", Mounts.Companion("dreas.gk2.selftest.moved"), "Picture");
                 bool refused = false;
                 try { page.Heading("Mount", "Picture"); } catch (ArgumentException) { refused = true; }
-                Check(refused && !page.Rows.Exists(r => r.RowKind == MountSettingsPage.RowKind.Note && r.Label == "Picture"), "a row with a picture row's label is refused");
+                Check(refused && !page.Rows.Exists(r => r.RowKind == SettingsPage.RowKind.Note && r.Label == "Picture"), "a row with a picture row's label is refused");
                 cfg.Save();
                 Dictionary<string, Dictionary<string, string>> after = MountSettingsPage.ReadSections(path);
                 Check(after.TryGetValue("3. Behaviour", out Dictionary<string, string> b3) && b3.ContainsKey("CartSlots") && !after.ContainsKey("2. Behaviour"), "saved: CartSlots is under 3. Behaviour only, the 2. Behaviour copy is gone");
@@ -1696,7 +1707,7 @@ namespace GK2DonkeyAPI
                 ConfigEntry<CoatColor> coatDonkey = Row<CoatColor>("Coat"), coatBeast = Row<CoatColor>("Coat_" + beast);
                 ConfigEntry<int> lightBeast = Row<int>("CustomCoatLightness_" + beast);
                 Check(sets == skinSets && coatDonkey != null && coatBeast != null && lightBeast != null, $"one row set per skin ({sets} of {skinSets}): the donkey's own art's keys plain, the beast's first skin's suffixed with the mount (CustomCoatLightness_beast too)");
-                MountSettingsPage.Row rowBeast = page.Rows.Find(r => r.Entry == coatBeast), rowCustomBeast = page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == "CustomCoat_" + beast);
+                SettingsPage.Row rowBeast = page.Rows.Find(r => r.Entry == coatBeast), rowCustomBeast = page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == "CustomCoat_" + beast);
                 Check(rowBeast != null && rowBeast.Shown != null && rowBeast.Enabled == null && rowCustomBeast != null && rowCustomBeast.Shown != null && rowCustomBeast.Enabled != null, "a per-mount row knows which mount shows it; the custom colour row keeps its own condition apart (Enabled)");
                 Check(rowBeast != null && !rowBeast.Shown() && !rowBeast.Visible(), "with the donkey chosen the beast's Coat row isn't shown");
                 coatBeast.Value = CoatColor.Custom;
@@ -1712,7 +1723,7 @@ namespace GK2DonkeyAPI
                 // journal): the dropdown lists it by a name made from the id, "(not installed)", the id kept as the choice
                 const string goneId = "donkey/selftest.gone-skin";
                 ConfigEntry<string> gone = page.List("Mount", "GoneTest", goneId, () => Looks.SkinChoicesOf(MountCatalog.DonkeyId), "Gone skin", "");
-                MountSettingsPage.Row rowGone = page.Rows.Find(r => r.Entry == gone);
+                SettingsPage.Row rowGone = page.Rows.Find(r => r.Entry == gone);
                 if (rowGone != null) MountSettingsPage.FillList(rowGone);
                 int atGone = rowGone?.ChoiceValues == null ? -1 : Array.IndexOf(rowGone.ChoiceValues, goneId);
                 string goneLabel = atGone >= 0 && rowGone.ChoiceLabels != null && atGone < rowGone.ChoiceLabels.Length ? rowGone.ChoiceLabels[atGone] : "(not listed)";
@@ -1739,7 +1750,7 @@ namespace GK2DonkeyAPI
                     ConfigEntry<string> skinLate = Row<string>("Skin_selftest.late-beast");
                     ConfigEntry<CoatColor> coatLate = Row<CoatColor>("Coat_selftest.late-beast");
                     Check(late == 1 && skinLate != null && skinLate.Value == "selftest.late-beast/default", $"the catch-up adds its Skin row with the pack's skin as the default ({late} mount(s); \"{skinLate?.Value}\")");
-                    MountSettingsPage.Row rowLate = page.Rows.Find(r => r.Entry == coatLate);
+                    SettingsPage.Row rowLate = page.Rows.Find(r => r.Entry == coatLate);
                     Check(coatLate != null && rowLate != null && rowLate.Shown != null && !rowLate.Shown(), "and its per-mount coat row, wired to the Mount row (not shown while the donkey is chosen)");
                     bool offered = false;
                     foreach ((string id, string label) in Looks.MountChoices()) if (id == "selftest.late-beast") offered = true;
@@ -2791,7 +2802,7 @@ namespace GK2DonkeyAPI
                 var page = new MountSettingsPage(Owner + ".pin", cfg, "Pin test", "test", "", null);
                 page.Toggle("Behaviour", "Fast", true, "Fast", "");
                 page.TuningKey("Behaviour", "Fast", "SpeedMultiplier", me);
-                MountSettingsPage.Row row = page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == "Fast");
+                SettingsPage.Row row = page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == "Fast");
                 me.Skin = "";
                 Check(row != null && row.Enabled != null && row.Enabled() && MountSettingsPage.PinnedBy(me, "SpeedMultiplier") == null, "on the donkey the speed row is live");
                 me.Skin = "selftest.own-beast/selftest.own-test";
@@ -3594,6 +3605,14 @@ namespace GK2DonkeyAPI
                         CheckPictureDensity("... and", MountsPanel.TestJournalTexture, jOn);
                     }
                     else Info("the journal's picture isn't shown: its size not checked");
+                // the picture with the cart for a mount that pulls one (the journal always; 2026-11-15: the Armored donkey stood alone
+                // in the journal after the window code moved, and no check said so)
+                {
+                    Texture jt = MountsPanel.TestJournalTexture;
+                    bool jpulls = MountSettingsPage.MountPullsCart(page.MountChosen ?? MountCatalog.DonkeyId);
+                    if (jt != null) Check(!jpulls || PreviewStage.TestViewOf(jt) == "the cart view", $"the journal's picture of {page.MountChosen ?? "the donkey"}: {PreviewStage.TestViewOf(jt)} ({(jpulls ? "it pulls a cart: the cart view" : "no cart: the alone view")})");
+                    else Info("the journal's picture isn't shown: its view not checked");
+                }
                 }
                 int sounds1 = UiSounds.Played;
                 MountsPanel.TestOpenColours();
@@ -3703,7 +3722,7 @@ namespace GK2DonkeyAPI
                 Check(walked == null, $"every tab walked, each set to Custom and back: every saved value as it was{(walked != null ? " (NOT: " + walked + ")" : "")}");
                 // the squares (the first part of the first tab): a colour sets Custom with it, Game default the first value;
                 // then a named colour from before the swatches, kept in a slot of its own and named after the label
-                MountSettingsPage.Row partChoice = MountsPanel.TestColourPartRow(0), partColour = MountsPanel.TestColourPartPalette(0);
+                SettingsPage.Row partChoice = MountsPanel.TestColourPartRow(0), partColour = MountsPanel.TestColourPartPalette(0);
                 if (partChoice != null && partColour != null)
                 {
                     object choiceWas = partChoice.Entry.BoxedValue, colourWas = partColour.Entry.BoxedValue;

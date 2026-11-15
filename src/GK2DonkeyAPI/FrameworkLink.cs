@@ -154,7 +154,7 @@ namespace GK2DonkeyAPI
                 {
                     try
                     {
-                        OptionsWindow.Open(p); // over the Mods menu, which waits underneath and is shown again on Escape
+                        OptionsWindow.Open(p.Page); // over the Mods menu, which waits underneath and is shown again on Escape
                     }
                     catch (Exception e)
                     {
@@ -207,7 +207,7 @@ namespace GK2DonkeyAPI
                 {
                     if (Pages.TryGetValue(mod.Metadata.Id, out MountSettingsPage p))
                     {
-                        OptionsWindow.Open(p);
+                        OptionsWindow.Open(p.Page);
                         return false;
                     }
                 }

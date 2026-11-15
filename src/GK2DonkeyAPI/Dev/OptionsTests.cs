@@ -16,7 +16,7 @@ namespace GK2DonkeyAPI
     {
         private static MountSettingsPage PageWithOptions()
         {
-            foreach (MountSettingsPage live in MountSettingsPage.All) if (live.Shown && OptionsWindow.HasOptions(live)) return live;
+            foreach (MountSettingsPage live in MountSettingsPage.All) if (live.Shown && OptionsWindow.HasOptions(live.Page)) return live;
             return null;
         }
 
@@ -24,7 +24,7 @@ namespace GK2DonkeyAPI
         private static Dictionary<ConfigEntryBase, object> Snapshot(MountSettingsPage page)
         {
             var was = new Dictionary<ConfigEntryBase, object>();
-            foreach (MountSettingsPage.Row r in page.Rows) if (page.InOptions(r) && r.Entry != null) was[r.Entry] = r.Entry.BoxedValue;
+            foreach (SettingsPage.Row r in page.Rows) if (page.InOptions(r) && r.Entry != null) was[r.Entry] = r.Entry.BoxedValue;
             return was;
         }
 
@@ -37,17 +37,17 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static MountSettingsPage.Row RowWhere(MountSettingsPage page, Func<MountSettingsPage.Row, bool> what)
+        private static SettingsPage.Row RowWhere(MountSettingsPage page, Func<SettingsPage.Row, bool> what)
         {
-            foreach (MountSettingsPage.Row r in page.Rows) if (page.InOptions(r) && what(r)) return r;
+            foreach (SettingsPage.Row r in page.Rows) if (page.InOptions(r) && what(r)) return r;
             return null;
         }
 
-        private static string ShownName(MountSettingsPage.Row r) => r.ShownSection ?? r.Section;
+        private static string ShownName(SettingsPage.Row r) => r.ShownSection ?? r.Section;
 
         // A key nobody has for the row (another mod, the game or a row of ours using it would be a clash of its own; F9 is
         // Performance Hog's): the first free of these, the row's own key put back; KeyboardShortcut.Empty if none is.
-        private static KeyboardShortcut FreeKey(MountSettingsPage.Row r)
+        private static KeyboardShortcut FreeKey(SettingsPage.Row r)
         {
             object was = r.Entry.BoxedValue;
             KeyboardShortcut free = KeyboardShortcut.Empty;
@@ -63,17 +63,116 @@ namespace GK2DonkeyAPI
         // A switch the tests may press: shown, usable, and not in the section with the page's Mounts button (the mount's
         // own section: keeping the mount with the save, say, which a flip would apply to the player's mount). allDefault:
         // its section's other options are all at their defaults (Defaults then changes only this switch).
-        private static MountSettingsPage.Row SafeToggle(MountSettingsPage page, bool allDefault)
+        private static SettingsPage.Row SafeToggle(MountSettingsPage page, bool allDefault)
         {
-            foreach (MountSettingsPage.Row r in page.Rows)
+            foreach (SettingsPage.Row r in page.Rows)
             {
-                if (!page.InOptions(r) || r.RowKind != MountSettingsPage.RowKind.Toggle || r.Entry == null) continue;
+                if (!page.InOptions(r) || r.RowKind != SettingsPage.RowKind.Toggle || r.Entry == null) continue;
                 if ((r.Visible != null && !r.Visible()) || !OptionsWindow.Usable(r)) continue;
-                if (RowWhere(page, o => o.OpensPanel && o.Section == r.Section) != null) continue;
+                if (RowWhere(page, o => o.OpensOwnerWindow && o.Section == r.Section) != null) continue;
                 if (allDefault && RowWhere(page, o => o != r && o.Section == r.Section && o.Entry != null && !Equals(o.Entry.BoxedValue, o.Entry.DefaultValue)) != null) continue;
                 return r;
             }
             return null;
+        }
+
+        // Another mod's copy of the windows open (the shared scene marker, UiHost; docs/ui-library.md 8.3): the options
+        // refuse to open over it; with ours open and the other marked open meanwhile, ours closing leaves the game paused
+        // and the controls taken (the other's to give back); the other gone, ours opened and closed again runs the game
+        // and gives the controls back. The other is pretended (a child of another name on the marker).
+        internal static IEnumerator OthersOpen()
+        {
+            MountSettingsPage page = PageWithOptions();
+            if (page == null)
+            {
+                SelfTest.Skip("no mod's settings page with options is shown");
+                yield break;
+            }
+            if (LazyWindowsStackController.ActiveWindow != null || MountsPanel.IsOpen || OptionsWindow.IsOpen)
+            {
+                SelfTest.Warn("a window is open: close it and run again; skipped");
+                yield break;
+            }
+            const string other = "selftest.other.mod";
+            try
+            {
+                UiHost.TestOtherOpen(other, true);
+                SelfTest.Check(UiHost.OthersOpen, "another mod's window marked open on the shared marker (GK2DreasUI.open)");
+                OptionsWindow.Open(page.Page);
+                yield return SelfTest.Frames(1);
+                SelfTest.Check(!OptionsWindow.IsOpen, "the options refuse to open over it");
+                UiHost.TestOtherOpen(other, false);
+                yield return SelfTest.Frames(1);
+                OptionsWindow.Open(page.Page);
+                yield return SelfTest.Frames(2);
+                SelfTest.Check(OptionsWindow.IsShown && GameWindowAside.ControlsTaken && MainGame.IsGamePaused && UiHost.PausedFlag,
+                    $"the other gone, ours opens: the controls taken, the game paused and the pause marked (paused {MainGame.IsGamePaused}, marked {UiHost.PausedFlag})");
+                UiHost.TestOtherOpen(other, true);
+                OptionsWindow.TestClose(back: true);
+                yield return SelfTest.Frames(2);
+                bool held = ControlsHeld();
+                SelfTest.Check(!OptionsWindow.IsOpen && MainGame.IsGamePaused && UiHost.PausedFlag && held,
+                    $"ours closed with the other still open: the game stays paused ({MainGame.IsGamePaused}), the pause stays marked ({UiHost.PausedFlag}), the controls stay taken ({held}): the other's to give back");
+                UiHost.TestOtherOpen(other, false);
+                OptionsWindow.Open(page.Page);
+                yield return SelfTest.Frames(2);
+                OptionsWindow.TestClose(back: true);
+                yield return SelfTest.Frames(2);
+                SelfTest.Check(!MainGame.IsGamePaused && !UiHost.PausedFlag && !ControlsHeld(),
+                    $"the other gone, ours opened and closed: the game runs ({!MainGame.IsGamePaused}), the marker is clear ({!UiHost.PausedFlag}), the controls are back ({!ControlsHeld()})");
+            }
+            finally
+            {
+                UiHost.TestOtherOpen(other, false);
+                if (OptionsWindow.IsOpen) OptionsWindow.TestClose(back: true);
+            }
+        }
+
+        // A row's mount data is its own (MountSettingsPage.Info): a skin's parts are its tone rows alone, a tone's art only
+        // on its choice, a region's art only on a choice, a cart row no skin part. One tag object shared by every row of a
+        // per-skin set marked the mount's own colour rows as skin parts, so the colours window lost its mount tab, and
+        // every F11 scenario passed (2026-11-15, the user's screenshot).
+        internal static IEnumerator RowData()
+        {
+            int pages = 0, rows = 0, bad = 0;
+            var said = new List<string>();
+            foreach (MountSettingsPage page in MountSettingsPage.All)
+            {
+                if (!page.Shown) continue;
+                pages++;
+                foreach (SettingsPage.Row r in page.Rows)
+                {
+                    if (r.Entry == null) continue;
+                    rows++;
+                    string key = r.Entry.Definition.Key;
+                    MountSettingsPage.MountRowInfo i = MountSettingsPage.Info(r);
+                    bool toneKey = key.StartsWith("Tone.", StringComparison.Ordinal) || key.StartsWith("CustomTone.", StringComparison.Ordinal);
+                    string wrong = null;
+                    if (i.SkinPart != toneKey) wrong = $"SkinPart {i.SkinPart} on {key}";
+                    else if (i.ArtTone != null && !key.StartsWith("Tone.", StringComparison.Ordinal)) wrong = $"ArtTone {i.ArtTone} on {key}";
+                    else if (i.ArtRegion != null && r.RowKind != SettingsPage.RowKind.Choice) wrong = $"ArtRegion {i.ArtRegion} on a {r.RowKind} row {key}";
+                    else if (i.CartPart && (i.SkinPart || i.ArtTone != null || i.ArtRegion != null)) wrong = $"a cart row with skin data: {key}";
+                    if (wrong == null) continue;
+                    bad++;
+                    if (said.Count < 6) said.Add(page.Title + ": " + wrong);
+                }
+            }
+            SelfTest.Check(pages > 0 && bad == 0, $"{rows} rows of {pages} page(s): every row's mount data is its own ({bad} wrong{(said.Count > 0 ? ": " + string.Join("; ", said) : "")})");
+            yield break;
+        }
+
+        // The player's controls taken by a window (ByUI).
+        private static bool ControlsHeld()
+        {
+            try
+            {
+                PlayerController pc = MainGame.PlayerController;
+                return pc != null && !pc.IsControlEnabledByType(TakenControlType.ByUI);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         // The window over the game: it fits, has the page's sections, every row of every section is our own control and
@@ -96,7 +195,7 @@ namespace GK2DonkeyAPI
             try
             {
                 int sounds0 = UiSounds.Played;
-                OptionsWindow.Open(page);
+                OptionsWindow.Open(page.Page);
                 // counted at once: a frame on, the mouse resting where a button lands is its hover too
                 SelfTest.Check(UiSounds.Played == sounds0 + 1 && UiSounds.Last == UiSounds.WindowOpenId, $"opening it is the game's window sound, once ({UiSounds.Played - sounds0} played, last {UiSounds.Last})");
                 yield return SelfTest.Frames(2);
@@ -112,19 +211,19 @@ namespace GK2DonkeyAPI
 
                 // the sections: the page's, in its order
                 var expected = new List<string>();
-                foreach (MountSettingsPage.Row r in page.Rows) if (page.InOptions(r) && !expected.Contains(ShownName(r))) expected.Add(ShownName(r));
+                foreach (SettingsPage.Row r in page.Rows) if (page.InOptions(r) && !expected.Contains(ShownName(r))) expected.Add(ShownName(r));
                 string sections = OptionsWindow.TestSections();
                 SelfTest.Check(sections == string.Join(", ", expected), $"its sections are the page's, in order ({sections})");
 
                 // every section: its shown rows, each our own control, inside the column
-                var kinds = new Dictionary<MountSettingsPage.RowKind, int>();
+                var kinds = new Dictionary<SettingsPage.RowKind, int>();
                 int total = 0;
                 foreach (string name in expected)
                 {
                     OptionsWindow.TestShowSection(name);
                     yield return SelfTest.Frames(1);
                     int shown = 0;
-                    foreach (MountSettingsPage.Row r in page.Rows)
+                    foreach (SettingsPage.Row r in page.Rows)
                     {
                         if (!page.InOptions(r) || ShownName(r) != name || (r.Visible != null && !r.Visible())) continue;
                         shown++;
@@ -135,7 +234,7 @@ namespace GK2DonkeyAPI
                     // the room each text has before it no longer fits (the translation investigation, 2026-10-31)
                     TextRoom.Measure(OptionsWindow.TestRoot, "options: " + name);
                     var descriptions = new List<(string Name, string Text)>();
-                    foreach (MountSettingsPage.Row r in page.Rows)
+                    foreach (SettingsPage.Row r in page.Rows)
                     {
                         if (page.InOptions(r) && ShownName(r) == name && (r.Visible == null || r.Visible())) descriptions.Add((r.Label, OptionsWindow.TestDescription(r)));
                     }
@@ -150,18 +249,18 @@ namespace GK2DonkeyAPI
                 SelfTest.Info($"{total} options shown in {expected.Count} sections: {string.Join(", ", kindWords)}");
 
                 // a switch: its own button flips the value, and the value is the entry's
-                MountSettingsPage.Row toggle = SafeToggle(page, allDefault: false);
+                SettingsPage.Row toggle = SafeToggle(page, allDefault: false);
                 if (toggle == null) SelfTest.Info("no switch to press: the switch check skipped");
                 else
                 {
                     OptionsWindow.TestShowSection(ShownName(toggle));
                     yield return SelfTest.Frames(1);
                     bool before = (bool)toggle.Entry.BoxedValue;
-                    Transform sw = OptionsWindow.TestRowObject(toggle)?.transform.Find("GK2DonkeyAPI options switch");
+                    Transform sw = OptionsWindow.TestRowObject(toggle)?.transform.Find(UiOwner.NamePrefix + "options switch");
                     sw?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
                     yield return SelfTest.Frames(1);
                     SelfTest.Check(sw != null && (bool)toggle.Entry.BoxedValue == !before, $"'{toggle.Label}': its switch pressed sets the option ({before} -> {toggle.Entry.BoxedValue})");
-                    sw = OptionsWindow.TestRowObject(toggle)?.transform.Find("GK2DonkeyAPI options switch"); // the row may have been built again
+                    sw = OptionsWindow.TestRowObject(toggle)?.transform.Find(UiOwner.NamePrefix + "options switch"); // the row may have been built again
                     sw?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
                     yield return SelfTest.Frames(1);
                     SelfTest.Check((bool)toggle.Entry.BoxedValue == before, $"pressed again: back to {before}");
@@ -171,8 +270,8 @@ namespace GK2DonkeyAPI
                 SelfTest.Check(KeyCapture.Words(new KeyboardShortcut(KeyCode.LeftShift)) == "Left Shift" && KeyCapture.Words(new KeyboardShortcut(KeyCode.G, KeyCode.LeftControl)) == "Ctrl + G"
                     && KeyCapture.Words(KeyboardShortcut.Empty) == "None" && KeyCapture.Words(new KeyboardShortcut(KeyCode.Alpha1)) == "1",
                     $"keys in words: {KeyCapture.Words(new KeyboardShortcut(KeyCode.LeftShift))}, {KeyCapture.Words(new KeyboardShortcut(KeyCode.G, KeyCode.LeftControl))}, {KeyCapture.Words(KeyboardShortcut.Empty)}, {KeyCapture.Words(new KeyboardShortcut(KeyCode.Alpha1))}");
-                MountSettingsPage.Row k1 = RowWhere(page, r => r.RowKind == MountSettingsPage.RowKind.Key && r.HasPress && OptionsWindow.Usable(r));
-                MountSettingsPage.Row k2 = k1 == null ? null : RowWhere(page, r => r != k1 && r.RowKind == MountSettingsPage.RowKind.Key && r.HasPress && ShownName(r) == ShownName(k1) && OptionsWindow.Usable(r));
+                SettingsPage.Row k1 = RowWhere(page, r => r.RowKind == SettingsPage.RowKind.Key && r.HasPress && OptionsWindow.Usable(r));
+                SettingsPage.Row k2 = k1 == null ? null : RowWhere(page, r => r != k1 && r.RowKind == SettingsPage.RowKind.Key && r.HasPress && ShownName(r) == ShownName(k1) && OptionsWindow.Usable(r));
                 if (k1 == null || k2 == null) SelfTest.Info("not two keys that act on their press in one section: the key checks skipped");
                 else
                 {
@@ -252,7 +351,7 @@ namespace GK2DonkeyAPI
                 }
 
                 // the description line: the row's description, and for a key how to set it
-                MountSettingsPage.Row described = k1 ?? toggle;
+                SettingsPage.Row described = k1 ?? toggle;
                 if (described != null)
                 {
                     string d = OptionsWindow.TestDescription(described);
@@ -260,7 +359,7 @@ namespace GK2DonkeyAPI
                 }
 
                 // Defaults: asked first; Cancel keeps, Set back sets the section back
-                MountSettingsPage.Row changed = SafeToggle(page, allDefault: true);
+                SettingsPage.Row changed = SafeToggle(page, allDefault: true);
                 if (changed == null) SelfTest.Info("no section away from the mount's own with every option at its default: the Defaults check skipped (the player's options are left as they are)");
                 else
                 {
@@ -283,7 +382,7 @@ namespace GK2DonkeyAPI
                     OptionsWindow.TestConfirmYes();
                     yield return SelfTest.Frames(1);
                     bool allDefault = true;
-                    foreach (MountSettingsPage.Row r in page.Rows)
+                    foreach (SettingsPage.Row r in page.Rows)
                         if (page.InOptions(r) && r.Entry != null && r.Section == changed.Section && !Equals(r.Entry.BoxedValue, r.Entry.DefaultValue)) allDefault = false;
                     SelfTest.Check(allDefault, $"Set back: every option of {ShownName(changed)} is its default");
                 }
@@ -348,7 +447,7 @@ namespace GK2DonkeyAPI
                 settings.Open(null);
                 yield return SelfTest.Frames(2);
                 ok = UiKit.OkButtonOf(settings);
-                UIDialogWindowButton ours = SettingsButtons.ButtonOf(settings, page);
+                UIDialogWindowButton ours = SettingsButtons.ButtonOf(settings, page.Page);
                 SelfTest.Check(ok != null && !ok.name.StartsWith("GK2DonkeyAPI", StringComparison.Ordinal) && ours != null && ours.transform.parent == ok.transform.parent
                     && ours.transform.GetSiblingIndex() < ok.transform.GetSiblingIndex(),
                     $"the button copied is the window's own OK ({ok?.name}), ours stands above it");
@@ -357,7 +456,7 @@ namespace GK2DonkeyAPI
                 UnityEngine.Object.DestroyImmediate(ours.gameObject); // as a mod rebuilding the window would
                 SettingsButtons.TestCheckNow();
                 yield return SelfTest.Frames(1);
-                ours = SettingsButtons.ButtonOf(settings, page);
+                ours = SettingsButtons.ButtonOf(settings, page.Page);
                 SelfTest.Check(ours != null && ours.gameObject.activeInHierarchy && SettingsButtons.TextOf(ours) == page.Title + " options",
                     "our button taken away: the watchdog adds it again while the Settings window is on top");
                 SelfTest.Check(ours != null && ours.GetComponentInChildren<ForeignPart>(true) == null && ok.GetComponent<ForeignPart>() != null,
@@ -368,11 +467,11 @@ namespace GK2DonkeyAPI
                 yield return SelfTest.Frames(2);
 
                 // 2. keys other mods and the game have
-                OptionsWindow.Open(page);
+                OptionsWindow.Open(page.Page);
                 yield return SelfTest.Frames(2);
                 var counts = KeyCapture.TestOtherCounts();
                 SelfTest.Info($"the clash check read {counts.Mods} key(s) of other mods and {counts.Game} of the game's own bindings");
-                MountSettingsPage.Row k = RowWhere(page, r => r.RowKind == MountSettingsPage.RowKind.Key && r.HasPress && OptionsWindow.Usable(r));
+                SettingsPage.Row k = RowWhere(page, r => r.RowKind == SettingsPage.RowKind.Key && r.HasPress && OptionsWindow.Usable(r));
                 if (k == null) SelfTest.Info("no key that acts on its press: the clash checks skipped");
                 else
                 {
@@ -402,7 +501,7 @@ namespace GK2DonkeyAPI
                             $"another mod's {KeyCapture.Words(theirs)} does '{k.Label}' on {KeyCapture.Words(freeK)} too: the row says so (\"{line}\")");
                         // a key of ours read while held (not on its press), on a lone modifier, against another mod's combination
                         // holding that modifier: no line (Descend on Left Ctrl met Tech Tree Search's Ctrl + F, the log 2026-10-30)
-                        MountSettingsPage.Row held = RowWhere(page, r => r.RowKind == MountSettingsPage.RowKind.Key && !r.HasPress && r.Entry != null);
+                        SettingsPage.Row held = RowWhere(page, r => r.RowKind == SettingsPage.RowKind.Key && !r.HasPress && r.Entry != null);
                         if (held == null) SelfTest.Info("no key read while held: that check skipped");
                         else
                         {
@@ -476,14 +575,14 @@ namespace GK2DonkeyAPI
                 SelfTest.Skip("no Settings window");
                 yield break;
             }
-            MountSettingsPage.Row mounts = page.HasMountRow ? RowWhere(page, r => r.OpensPanel) : null;
+            SettingsPage.Row mounts = page.HasMountRow ? RowWhere(page, r => r.OpensOwnerWindow) : null;
             try
             {
                 // 1. the Settings window's button
                 settings.onClosed = null;
                 settings.Open(null);
                 yield return SelfTest.Frames(2);
-                UIDialogWindowButton button = SettingsButtons.ButtonOf(settings, page);
+                UIDialogWindowButton button = SettingsButtons.ButtonOf(settings, page.Page);
                 string text = SettingsButtons.TextOf(button);
                 SelfTest.Check(button != null && button.gameObject.activeInHierarchy && text == page.Title + " options", $"the Settings window has the button \"{text}\"");
                 if (button == null) yield break;
@@ -517,7 +616,7 @@ namespace GK2DonkeyAPI
                 // 3. the journal's Options button and the options' Mounts button back to it
                 MountsPanel.Open(page, toggle: false);
                 yield return SelfTest.Frames(2);
-                OptionsWindow.Open(page); // what the journal's Options button does
+                OptionsWindow.Open(page.Page); // what the journal's Options button does
                 yield return SelfTest.Frames(2);
                 SelfTest.Check(OptionsWindow.IsShown && OptionsWindow.IsOverPanel && !MountsPanel.IsOpen, "the journal's Options button: the options open over the journal, which waits under them");
                 OptionsWindow.TestShowSection(ShownName(mounts));
@@ -533,7 +632,7 @@ namespace GK2DonkeyAPI
                 settings.onClosed = null;
                 settings.Open(null);
                 yield return SelfTest.Frames(2);
-                OptionsWindow.Open(page);
+                OptionsWindow.Open(page.Page);
                 yield return SelfTest.Frames(2);
                 OptionsWindow.TestShowSection(ShownName(mounts));
                 yield return SelfTest.Frames(1);

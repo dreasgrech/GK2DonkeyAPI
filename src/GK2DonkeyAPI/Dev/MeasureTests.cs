@@ -42,7 +42,7 @@ namespace GK2DonkeyAPI
             }
             MountCompanion pc = page.TestCompanion;
             ConfigEntryBase skinRow = null;
-            foreach (MountSettingsPage.Row r in page.Rows)
+            foreach (SettingsPage.Row r in page.Rows)
             {
                 if (r.Entry != null && r.Entry.Definition.Key == "Skin_" + MountCatalog.DonkeyId) { skinRow = r.Entry; break; }
             }
@@ -223,7 +223,7 @@ namespace GK2DonkeyAPI
             ConfigEntryBase skinRow = null;
             if (page != null)
             {
-                foreach (MountSettingsPage.Row r in page.Rows)
+                foreach (SettingsPage.Row r in page.Rows)
                 {
                     if (r.Entry != null && r.Entry.Definition.Key == "Skin_" + MountCatalog.DonkeyId) { skinRow = r.Entry; break; }
                 }
@@ -364,7 +364,7 @@ namespace GK2DonkeyAPI
             var skinRows = new List<(string Mount, ConfigEntryBase Row, object Was)>();
             foreach (MountInfo m in Mounts.Catalog.All)
             {
-                foreach (MountSettingsPage.Row r in page.Rows)
+                foreach (SettingsPage.Row r in page.Rows)
                 {
                     if (r.Entry != null && r.Entry.Definition.Key == "Skin_" + m.Id) { skinRows.Add((m.Id, r.Entry, r.Entry.BoxedValue)); break; }
                 }
@@ -406,9 +406,9 @@ namespace GK2DonkeyAPI
                         yield return SelfTest.Until(() => MountsPanel.TestColoursTexture != null && PreviewStage.TestDrawnRect(PreviewStage.TestHide.Nothing, out _, out _, out _, out _, out _, out _, alone: PreviewStage.TestIsAloneView(MountsPanel.TestColoursTexture)), 10f);
                         yield return SelfTest.Frames(6);
                         int rows = 0, shown = 0;
-                        foreach (MountSettingsPage.Row r in page.Rows)
+                        foreach (SettingsPage.Row r in page.Rows)
                         {
-                            if (r.Entry == null || !r.IsLook || r.RowKind != MountSettingsPage.RowKind.Choice || !string.Equals(r.SkinId, id, StringComparison.OrdinalIgnoreCase)) continue;
+                            if (r.Entry == null || !r.IsLook || r.RowKind != SettingsPage.RowKind.Choice || !string.Equals(MountSettingsPage.Info(r).SkinId, id, StringComparison.OrdinalIgnoreCase)) continue;
                             bool visible = (r.Visible == null || r.Visible()) && (r.Shown == null || r.Shown());
                             bool live = r.Enabled == null || r.Enabled();
                             lines.Add(string.Join("\t", mount, label, r.Entry.Definition.Key, Texts.Label(r), Texts.Choice(r, 0), r.Entry.BoxedValue?.ToString() ?? "-", visible ? "shown" : "left out", live ? "live" : "greyed"));

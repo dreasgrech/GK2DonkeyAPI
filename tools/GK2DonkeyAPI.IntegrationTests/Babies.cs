@@ -26,14 +26,14 @@ namespace GK2DonkeyAPI.IntegrationTests
             bool all = true;
             foreach (string k in keys)
             {
-                MountSettingsPage.Row row = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == k);
+                SettingsPage.Row row = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == k);
                 all &= row != null && row.ShownSection == "Mount" && row.IsLook; // the mount's own, in the Mounts panel's journal (2026-10-26)
                 where.Add(k + " " + (row == null ? "missing" : row.ShownSection));
             }
             Check(all, $"Saddle Up's babies rows are the mount's, in the Mounts panel's journal ({string.Join(", ", where)})");
             Check(!saddle.Rows.Exists(x => x.Entry != null && x.Entry.Definition.Key.StartsWith("FoalsWearSkin", System.StringComparison.Ordinal)) && saddle.IsRetired("Mount", "FoalsWearSkin"),
                 "no \"Babies are the same mount and skin\" row; its key is retired (the babies always look like their parent)");
-            MountSettingsPage.Row follow = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "FoalsFollow");
+            SettingsPage.Row follow = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "FoalsFollow");
             MountCompanion me = Mounts.Companion("dreas.gk2.saddleup");
             bool on = follow?.Entry is BepInEx.Configuration.ConfigEntry<bool> fe && fe.Value;
             Check(follow != null && me.OwnOf(MountCatalog.DonkeyId).FoalsFollowOnFoot == on, $"\"Babies follow you on foot\" reaches the donkey's own ({(on ? "on" : "off")})");
@@ -80,7 +80,7 @@ namespace GK2DonkeyAPI.IntegrationTests
                 Info("Saddle Up's page isn't shown: its Leave your mounts row not checked");
                 yield break;
             }
-            MountSettingsPage.Row row = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "LeaveMounts");
+            SettingsPage.Row row = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "LeaveMounts");
             Check(row != null && row.ShownSection == "Mount" && !row.IsLook && saddle.InOptions(row), $"the row is in the options window's Mount section ({(row == null ? "missing" : row.ShownSection + (row.IsLook ? ", a look row" : ""))})");
             if (row?.Entry is ConfigEntry<bool> e)
             {
@@ -88,7 +88,7 @@ namespace GK2DonkeyAPI.IntegrationTests
                 Check(Equals(e.DefaultValue, false), $"off by default ({e.DefaultValue})");
                 Check(me.LeaveMountsInWorld == e.Value, $"the companion has the row's value ({e.Value})");
                 bool was = e.Value;
-                MountSettingsPage.Row home = saddle.Rows.Find(x => x.RowKind == MountSettingsPage.RowKind.Button && x.Label == "Send your other mounts home");
+                SettingsPage.Row home = saddle.Rows.Find(x => x.RowKind == SettingsPage.RowKind.Button && x.Label == "Send your other mounts home");
                 Check(home != null && home.ShownSection == "Mount" && saddle.InOptions(home), $"the button \"Send your other mounts home\" is in the Mount section ({home?.ShownSection ?? "missing"})");
                 // the button shows only while the row is on (the user, 2026-11-05: off, no mount stays left)
                 bool Shows() => home?.Visible != null && home.Visible();

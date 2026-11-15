@@ -10,6 +10,9 @@ its packs. Fails on any name of a higher layer in a lower one: code, strings and
   skins and ids). Larry is Saddle Up's own.
 - the built API DLL (src/GK2DonkeyAPI/bin/Release, or dist/ when given --dist): none of the API's names in its strings
   (UTF-16, as .NET stores them).
+- lib/GK2DreasUI/src (the window library, a submodule compiled into the API and into the other mods,
+  docs/ui-library.md, 2026-11-15): its code names nothing of the API (its namespace, its types, its mounts): a comment
+  may say "the API's", the code may not. Comments are stripped before the look; strings count.
 An exception is a line in ALLOWED: the file, the text, and why.
 """
 import os, re, sys
@@ -24,15 +27,28 @@ ALLOWED = [
     ("src/GK2DonkeyAPI/LooksGame.cs", "docs/gerry-mount.md", "a doc's file name (the investigation of mounts drawn from the game's own characters)"),
 ]
 DLL_TERMS = ["Saddle Up", "saddleup", "Hellfire", "hellfire", "Larry", "Gerry", "dragon", "critters", "royal-parade"]
+# the window library's code (comments stripped): no type or namespace of the API, nothing of mounts
+LIBRARY_TERMS = [r"\bGK2DonkeyAPI\b", r"\bMountsPanel\b", r"\bMountSettingsPage\b", r"\bMountCompanion\b", r"\bKeyActions\b",
+                 r"\bLooks\b", r"\bCatalog\b", r"\bDevTools\b", r"\bSkinTones\b", r"\bSkinRegions\b", r"\bUiWords\b",
+                 r"\bPlugin\b", r"\bPerf\b", r"\bSoundBank\b", r"\bMountRegistry\b", r"\bMount\b", r"\bdonkey\b", r"\bmounts?\b", r"\bskins?\b"]
+
+
+def code_only(line):
+    """The line without its // comment (a // inside a string is rare here and would only hide a term, never invent one)."""
+    s = line.strip()
+    if s.startswith("//"):
+        return ""
+    at = line.find("//")
+    return line if at < 0 else line[:at]
 
 
 def allowed(rel, line):
     return any(rel == f and text in line for f, text, _ in ALLOWED)
 
 
-def scan(root, terms):
+def scan(root, terms, code=False):
     hits = []
-    rx = re.compile("|".join(terms), re.IGNORECASE)
+    rx = re.compile("|".join(terms), 0 if code else re.IGNORECASE)  # the library's terms are identifiers: their case counts (a local "plugin" is no Plugin)
     for dirpath, dirs, files in os.walk(os.path.join(REPO, root)):
         dirs[:] = [d for d in dirs if d not in ("bin", "obj")]
         for f in files:
@@ -41,7 +57,7 @@ def scan(root, terms):
             p = os.path.join(dirpath, f)
             rel = os.path.relpath(p, REPO).replace("\\", "/")
             for n, line in enumerate(open(p, encoding="utf-8-sig").read().splitlines(), 1):
-                m = rx.search(line)
+                m = rx.search(code_only(line) if code else line)
                 if m and not allowed(rel, line):
                     hits.append(f"{rel}:{n}: '{m.group(0)}': {line.strip()[:140]}")
     return hits
@@ -50,9 +66,10 @@ def scan(root, terms):
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # a test's look-alike letters (a Cyrillic a in an id)
     bad = 0
-    for root, terms, what in (("src/GK2DonkeyAPI", API_TERMS, "the API names Saddle Up or its content"),
-                              ("src/SaddleUp", SADDLEUP_TERMS, "Saddle Up names a pack or its content")):
-        hits = scan(root, terms)
+    for root, terms, what, code in (("src/GK2DonkeyAPI", API_TERMS, "the API names Saddle Up or its content", False),
+                                    ("src/SaddleUp", SADDLEUP_TERMS, "Saddle Up names a pack or its content", False),
+                                    ("lib/GK2DreasUI/src", LIBRARY_TERMS, "the window library names the API or its mounts", True)):
+        hits = scan(root, terms, code)
         for h in hits:
             print("FAIL", what + ":", h)
         bad += len(hits)

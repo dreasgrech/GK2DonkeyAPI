@@ -29,12 +29,12 @@ namespace GK2DonkeyAPI.IntegrationTests
                 if (saddle == null) Info("Saddle Up's page isn't shown: its Freeplay rows not checked");
                 else
                 {
-                    MountSettingsPage.Row Row(string key) => saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == key && x.ShownSection == "Freeplay");
-                    MountSettingsPage.Row cargoRow = Row("MaxCargo"), sameRow = Row("SameSpeed"), speedRow = Row("Speed");
-                    Check(cargoRow != null && sameRow != null && speedRow != null && cargoRow.RowKind == MountSettingsPage.RowKind.Toggle && sameRow.RowKind == MountSettingsPage.RowKind.Toggle && speedRow.RowKind == MountSettingsPage.RowKind.Choice,
+                    SettingsPage.Row Row(string key) => saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == key && x.ShownSection == "Freeplay");
+                    SettingsPage.Row cargoRow = Row("MaxCargo"), sameRow = Row("SameSpeed"), speedRow = Row("Speed");
+                    Check(cargoRow != null && sameRow != null && speedRow != null && cargoRow.RowKind == SettingsPage.RowKind.Toggle && sameRow.RowKind == SettingsPage.RowKind.Toggle && speedRow.RowKind == SettingsPage.RowKind.Choice,
                         $"Saddle Up's Freeplay section has the two switches and the speed dropdown ({(cargoRow != null ? "max cargo" : "no max cargo")}, {(sameRow != null ? "same speed" : "no same speed")}, {(speedRow != null ? "speed " + speedRow.RowKind : "no speed")})");
-                    MountSettingsPage.Row lastRow = null;
-                    foreach (MountSettingsPage.Row x in saddle.Rows) if (!x.IsLook && !string.IsNullOrEmpty(x.ShownSection)) lastRow = x;
+                    SettingsPage.Row lastRow = null;
+                    foreach (SettingsPage.Row x in saddle.Rows) if (!x.IsLook && !string.IsNullOrEmpty(x.ShownSection)) lastRow = x;
                     Check(lastRow != null && lastRow.ShownSection == "Freeplay", $"Freeplay is the page's last section ({lastRow?.ShownSection})");
                     if (cargoRow != null && sameRow != null && speedRow != null)
                     {
@@ -97,21 +97,21 @@ namespace GK2DonkeyAPI.IntegrationTests
                 yield break;
             }
             var tabs = new List<string>();
-            foreach (MountSettingsPage.Row r in saddle.Rows) if (saddle.InOptions(r) && !tabs.Contains(r.ShownSection)) tabs.Add(r.ShownSection);
+            foreach (SettingsPage.Row r in saddle.Rows) if (saddle.InOptions(r) && !tabs.Contains(r.ShownSection)) tabs.Add(r.ShownSection);
             Check(string.Join(", ", tabs) == "Keys, Mount, Cart, Safe spot, Freeplay", $"Saddle Up's options have five tabs ({string.Join(", ", tabs)})");
             // the Mount tab's rows in the window's order: keys by their cfg key, a heading as "# <label>", a button by its label
             var mount = new List<string>();
-            foreach (MountSettingsPage.Row r in saddle.Rows)
+            foreach (SettingsPage.Row r in saddle.Rows)
             {
                 if (r.ShownSection != "Mount" || !saddle.InOptions(r)) continue;
-                mount.Add(r.RowKind == MountSettingsPage.RowKind.Note ? "# " + r.Label : r.Entry != null ? r.Entry.Definition.Key : r.Label);
+                mount.Add(r.RowKind == SettingsPage.RowKind.Note ? "# " + r.Label : r.Entry != null ? r.Entry.Definition.Key : r.Label);
             }
             const string expected = "Mount Journal, KeepWithSaves, LeaveMounts, Send your other mounts home, # Mount Behaviour, MountIndoors, CartIndoors, ShowMessages, IdleShuffle, # Sound, Brays, StandingSounds";
             Check(string.Join(", ", mount) == expected, $"the Mount tab: its rows and headings in order ({string.Join(", ", mount)})");
-            MountSettingsPage.Row journal = saddle.Rows.Find(x => x.OpensPanel);
+            SettingsPage.Row journal = saddle.Rows.Find(x => x.OpensOwnerWindow);
             Check(journal != null && journal.Label == "Mount Journal" && journal.ShownSection == "Mount", $"the journal's button is labelled as the window ({journal?.Label ?? "missing"})");
             var keys = new List<string>();
-            foreach (MountSettingsPage.Row r in saddle.Rows) if (r.RowKind == MountSettingsPage.RowKind.Key && r.ShownSection == "Keys") keys.Add(r.Entry.Definition.Key);
+            foreach (SettingsPage.Row r in saddle.Rows) if (r.RowKind == SettingsPage.RowKind.Key && r.ShownSection == "Keys") keys.Add(r.Entry.Definition.Key);
             int ride = keys.IndexOf("RideKey"), cart = keys.IndexOf("CartKey"), away = keys.IndexOf("SendAwayKey");
             Check(ride >= 0 && cart == ride + 1 && away == cart + 1, $"Send your mount away comes after the two keys that call the mount ({string.Join(", ", keys)})");
 
@@ -125,7 +125,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             try
             {
                 if (leave != null) leave.Value = true; // every row shown: the most the tab holds
-                OptionsWindow.Open(saddle);
+                OptionsWindow.Open(saddle.Page);
                 yield return Frames(2);
                 if (!OptionsWindow.IsShown || !OptionsWindow.TestShowSection("Mount"))
                 {

@@ -1,5 +1,6 @@
 using System.Text;
 using GK2DonkeyAPI;
+using GK2DreasUI;
 
 // The translation reader without the game (docs/localization.md, "Translator mistakes"):
 // 1. the translator mistake catalogue (TranslationTests.RunCatalogue, the same the in-game self-test runs): every case
