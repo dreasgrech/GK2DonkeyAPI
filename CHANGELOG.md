@@ -24,6 +24,20 @@ For players:
 
 Development:
 
+- The first full self-test run after the fix above failed one check (2026-11-15, 2147/1): the Settings scenario's
+  "lantern back on: the earlier framing again" compared the cart picture's width at the journal's density (744) with
+  a baseline read at the colours window's (992: the two windows share one density number, and the colours window had
+  just closed). Measured with a probe (`PreviewStage.TestDetailState`, kept): the journal's density is asked inside
+  the stage's render and applied at the next tick, one frame later, every time; the baseline was read in that frame.
+  The scenario now takes its baseline once no density is pending (`TestDetailPending`); the stage is unchanged. A dev
+  log line says when a pending density was applied and how long it waited.
+- The key rows' clash lines against another mod's key (the library's `KeyCapture.Clash`, 2026-11-15, the first other
+  consumer's window: Tech Tree Search's "Key to start a search (Ctrl + F)" said "Clashes with GK2 Donkey API:
+  DescendKey (Left Ctrl)"): a mod's key on a modifier is taken as held, as every such key known is (Climb, Descend),
+  never as going off on the way into ours (the API's own window had decided that for its own rows on 2026-10-30; the
+  rule now holds in both directions); and "their combination with more modifiers does ours too" applies only to an
+  owner reading keys the API's way, since one reading BepInEx's own IsDown (`UiOwner.KeysExact`) fires on the exact
+  combination alone. Two checks in the options scenario (`docs/options-window.md` A).
 - **The window code is a library inside the API** (2026-11-15; `docs/ui-library.md`, the user's ask of 2026-11-13: the
   options window for the other mods too, where GK2 Mod Framework, Nexus-only, is no help to Steam players):
   `src/GK2DonkeyAPI/GK2DreasUI/` holds the windows (`UiKit`, `RowControls`, `OptionsWindow`, `SettingsButtons`,

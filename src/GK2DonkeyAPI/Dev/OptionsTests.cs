@@ -499,6 +499,22 @@ namespace GK2DonkeyAPI
                         line = OptionsWindow.TestClashLine(k);
                         SelfTest.Check(line == $"Clashes with Some Other Mod: TheirCombo ({KeyCapture.Words(theirs)})",
                             $"another mod's {KeyCapture.Words(theirs)} does '{k.Label}' on {KeyCapture.Words(freeK)} too: the row says so (\"{line}\")");
+                        // an owner reading the exact combination (BepInEx's IsDown, UiOwner.KeysExact: Tech Tree Search): their
+                        // combination with more modifiers can't do ours: no line (2026-11-15)
+                        UiOwner.KeysExact = true;
+                        string exactLine;
+                        try { exactLine = KeyCapture.Clash(k); }
+                        finally { UiOwner.KeysExact = false; }
+                        SelfTest.Check(exactLine == null || !exactLine.Contains("TheirCombo"), $"... but not for an owner reading the exact combination (KeysExact): no line ({exactLine ?? "none"})");
+                        // another mod's key on a modifier alone (held, as every such key known: the API's Climb and Descend) against
+                        // ours on that modifier + a key: no line (Tech Tree Search's Ctrl + F against the API's Descend on Left Ctrl, 2026-11-15)
+                        KeyCapture.TestAddOther("Some Other Mod: HeldModifier", new KeyboardShortcut(KeyCode.RightControl));
+                        OptionsWindow.TestSetKey(k, new KeyboardShortcut(freeK.MainKey, KeyCode.RightControl));
+                        yield return SelfTest.Frames(1);
+                        OptionsWindow.TestRefresh();
+                        yield return SelfTest.Frames(1);
+                        line = OptionsWindow.TestClashLine(k);
+                        SelfTest.Check(line == null || !line.Contains("HeldModifier"), $"another mod's key on Right Ctrl alone (held) against '{k.Label}' on Right Ctrl + {KeyCapture.Words(freeK)}: no line ({line ?? "none"})");
                         // a key of ours read while held (not on its press), on a lone modifier, against another mod's combination
                         // holding that modifier: no line (Descend on Left Ctrl met Tech Tree Search's Ctrl + F, the log 2026-10-30)
                         SettingsPage.Row held = RowWhere(page, r => r.RowKind == SettingsPage.RowKind.Key && !r.HasPress && r.Entry != null);

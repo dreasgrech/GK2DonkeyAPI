@@ -3566,9 +3566,14 @@ namespace GK2DonkeyAPI
                     {
                         MountLook pl = pc.LookOf(page.SkinChosen(withCart));
                         bool had = pl.Lantern;
-                        yield return Until(() => !PreviewStage.TestCartMeasuring, 6f);
+                        // the baseline once the journal's density is drawn: the colours window just closed asked its own (8 on the
+                        // Mount tab; the cart picture 992 wide), the journal's 6 (744) is asked inside the stage's render and applied
+                        // at the next tick, one frame later (measured 2026-11-15: asked 40775, applied 40776, the baseline read in
+                        // between said 992 and "back to the earlier framing" compared 744 against it)
+                        yield return Until(() => !PreviewStage.TestCartMeasuring && !PreviewStage.TestDetailPending, 6f);
                         int rf0 = PreviewStage.TestCartReframes, w0 = PreviewStage.TestCartPictureWidth;
                         string v0 = PreviewStage.TestCartVariant;
+                        Info($"lantern baseline: {PreviewStage.TestDetailState}; cart view: {PreviewStage.TestCartState}");
                         pl.Lantern = !had;
                         yield return Frames(3);
                         {
@@ -3582,19 +3587,19 @@ namespace GK2DonkeyAPI
                         int w1 = PreviewStage.TestCartPictureWidth;
                         string v1 = PreviewStage.TestCartVariant;
                         // the lamp hangs at the cart's back end: the picture is wider with it (as tall as the mount's ears either way)
-                        Check(PreviewStage.TestCartReframes > rf0 && v1 != v0 && (had ? w1 < w0 : w1 > w0), $"the lantern toggled {(had ? "off" : "on")} on the previewed skin: the picture framed again for what is drawn ({v0}, {w0} px wide -> {v1}, {w1} px)");
+                        Check(PreviewStage.TestCartReframes > rf0 && v1 != v0 && (had ? w1 < w0 : w1 > w0), $"the lantern toggled {(had ? "off" : "on")} on the previewed skin: the picture framed again for what is drawn ({v0}, {w0} px wide -> {v1}, {w1} px; {PreviewStage.TestDetailState})");
                         int rf1 = PreviewStage.TestCartReframes;
                         pl.Lantern = had;
                         yield return Until(() => PreviewStage.TestCartReframes > rf1, 8f);
                         yield return Frames(2);
-                        Check(PreviewStage.TestCartReframes > rf1 && !PreviewStage.TestCartMeasuring && PreviewStage.TestCartPictureWidth == w0 && PreviewStage.TestCartVariant == v0, $"and back: the earlier framing again, kept, not measured ({PreviewStage.TestCartVariant}, {PreviewStage.TestCartPictureWidth} px)");
+                        Check(PreviewStage.TestCartReframes > rf1 && !PreviewStage.TestCartMeasuring && PreviewStage.TestCartPictureWidth == w0 && PreviewStage.TestCartVariant == v0, $"and back: the earlier framing again, kept, not measured ({PreviewStage.TestCartVariant}, {PreviewStage.TestCartPictureWidth} px; was {v0}, {w0} px; {PreviewStage.TestDetailState})");
                     }
                     MountsPanel.TestSelect(was);
                     yield return Frames(2);
                 }
                 // the journal's picture: as large as it has room for up to its scale, at a whole number of screen pixels per
                 // art pixel, drawn by the stage at that many (2026-11-13: whole panel units were 4.5 screen pixels at 1920x1080)
-                yield return Until(() => !PreviewStage.TestAloneMeasuring && !PreviewStage.TestCartMeasuring, 5f);
+                yield return Until(() => !PreviewStage.TestAloneMeasuring && !PreviewStage.TestCartMeasuring && !PreviewStage.TestDetailPending, 5f);
                 yield return Frames(2);
                 {
                     var (js, jroom, jpx, jmax) = MountsPanel.TestJournalScale();
@@ -3649,7 +3654,7 @@ namespace GK2DonkeyAPI
                 {
                     if (tabCount > 1 && !MountsPanel.TestShowColourTab(ti)) continue;
                     yield return Frames(2);
-                    yield return Until(() => !PreviewStage.TestAloneMeasuring && !PreviewStage.TestCartMeasuring, 5f);
+                    yield return Until(() => !PreviewStage.TestAloneMeasuring && !PreviewStage.TestCartMeasuring && !PreviewStage.TestDetailPending, 5f);
                     yield return Frames(2);
                     bool cartTab = MountsPanel.TestColourTabHasCart;
                     string pic = MountsPanel.TestColoursPicture();

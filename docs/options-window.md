@@ -375,7 +375,13 @@ Built:
   combination: ours on a lone modifier counts only when it acts on its press (the log at the defaults, 23:13:
   "Descend (hold) (Left Ctrl): Clashes with GK2 Tech Tree Search: FocusKey (Ctrl + F)"; fixed 23:15).
   Against a mod's shortcut: the same combination, its exact press doing ours (the same main key, our modifiers among
-  its), or a main key that is the other's modifier. Against a mod's KeyCode setting: our main key or one of our
+  its), or ours acting on its press on a modifier of its. Since 2026-11-15 (the library's first other consumer, Tech
+  Tree Search, whose window saw the API's rows as another mod's: "Key to start a search (Ctrl + F): Clashes with GK2
+  Donkey API: DescendKey (Left Ctrl)"): the mod's own key on a modifier is taken as held, as every such key known is
+  (Climb, Descend, Move Building's modifier read their main key while held: a dip on the way at worst), never on the
+  way into ours; and "its exact press doing ours" applies only to an owner reading keys the API's way (keys held
+  beside the modifiers ignored): an owner reading BepInEx's own IsDown says so (`UiOwner.KeysExact`, Tech Tree
+  Search does) and fires on the exact combination alone. Against a mod's KeyCode setting: our main key or one of our
   modifiers. Against the game, for a row acting on its press: our main key, one's held keys among the other's.
 - **B** `KeyActions.Shadowed(k)` / `MoreSpecific(o, k)`: the key poll, flying's jump and fly keys and the safe spot's
   key skip a press when another key row has the same main key, k's modifiers and more, all held now.

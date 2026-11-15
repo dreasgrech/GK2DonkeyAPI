@@ -292,15 +292,38 @@ namespace GK2DonkeyAPI
         // A detail asked while a picture renders (the journal's Refit from Unity's willRenderCanvases, fired by the stage
         // camera's own Render): applied at the next tick, never as a render inside the render (RenderLit).
         private static bool detailPending;
+        // The probe (2026-11-15: a self-test read the cart picture at the colours window's density after the journal was shown
+        // again): when the pending detail was asked and applied, and why a view's last ApplyDetail did nothing.
+        private static int pendingSinceFrame = -1, pendingAppliedFrame = -1, pendingWaitedFrames;
+        private static string lastDetailSkip = "-";
 
         private static void ApplyDetail(View v)
         {
-            if (inRenderLit) { detailPending = true; return; }
-            if (failed || copy == null || v.Cam == null || v.Rt == null || v.ArtW <= 0 || v.TightenStep >= 0) return;
-            if (DetailFor(v) == v.RtDetail) return;
+            if (inRenderLit)
+            {
+                if (!detailPending) pendingSinceFrame = Time.frameCount;
+                detailPending = true;
+                lastDetailSkip = $"{v.Name}: asked inside a render (depth {renderDepth}) at frame {Time.frameCount}: pending";
+                return;
+            }
+            if (failed || copy == null || v.Cam == null || v.Rt == null || v.ArtW <= 0 || v.TightenStep >= 0)
+            {
+                lastDetailSkip = $"{v.Name}: not applied at frame {Time.frameCount} (failed {failed}, copy {(copy != null)}, texture {(v.Rt != null)}, art {v.ArtW}, measuring {v.TightenStep})";
+                return;
+            }
+            if (DetailFor(v) == v.RtDetail)
+            {
+                lastDetailSkip = $"{v.Name}: already at {v.RtDetail} (frame {Time.frameCount})";
+                return;
+            }
             Resize(v);
+            lastDetailSkip = $"{v.Name}: resized to {v.RtDetail} ({v.Rt.width}x{v.Rt.height}) at frame {Time.frameCount}";
             if (v.Drawn && dressedAs != null) Photo(v, dressedAs); // the resized texture is empty: its photo now, not a frame later
         }
+
+        // The self-tests: the density asked and drawn, and the pending detail's timing (the probe above).
+        internal static string TestDetailState => $"wanted {wantedDetail}; cart at {cartView.RtDetail} ({TestCartPictureWidth}x{TestCartPictureHeight}), alone at {donkeyView.RtDetail} ({(donkeyView.Rt != null ? donkeyView.Rt.width : 0)}x{(donkeyView.Rt != null ? donkeyView.Rt.height : 0)}); pending {detailPending} (asked frame {pendingSinceFrame}, applied frame {pendingAppliedFrame} after {pendingWaitedFrames}); render depth {renderDepth}; last: {lastDetailSkip}; frame {Time.frameCount}";
+        internal static bool TestDetailPending => detailPending;
 
         // The texture for a framing measured at MeasureDetail (w x h of its pixels): a whole number of art pixels (rounded
         // up: an art pixel's margin at most), each DetailFor pixels; the camera covers exactly those art pixels, its centre
@@ -339,7 +362,10 @@ namespace GK2DonkeyAPI
             if (detailPending)
             {
                 detailPending = false;
+                pendingAppliedFrame = Time.frameCount;
+                pendingWaitedFrames = Time.frameCount - pendingSinceFrame;
                 foreach (View v in views) ApplyDetail(v); // asked during a render: now
+                if (DevTools.Unlocked) Plugin.Log.LogInfo($"[preview] a detail asked inside a render at frame {pendingSinceFrame} applied at frame {pendingAppliedFrame} ({pendingWaitedFrames} frame(s) later): {TestDetailState}");
             }
             // the watchdog of 2026-11-15: a cart renderer off between renders (nothing of ours but the alone render switches one
             // off, and that one puts it back): said once, with the stage's facts; looked at once a second
