@@ -1,0 +1,4 @@
+{
+  "english": "game",
+  "plugins": ["src/GK2DonkeyAPI", "src/SaddleUp", "packs/*"]
+}

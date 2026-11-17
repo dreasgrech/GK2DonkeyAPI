@@ -13,15 +13,15 @@ options.only_in_game,Only in a game.,Only in a game.,after a greyed button's des
 options.not_now,Not available right now.,Not available right now.,after a greyed option's description
 options.and_then,{0} {1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
 options.page_button,{0} options,{0} options,"the button in the game's Settings window; {0}: the mod's name"
-row.open,Open,Open,a button that opens the Mounts panel
+row.open,Open,Open,a button that opens a window of the mod's
 row.go,Go,Go,a mod's button
 row.press_a_key,Press a key...,Press a key...,a key option while it waits for the key
 row.none,None,None,"a key option with no key; an empty name; no babies"
+row.no_choice,(none),(none),a list with nothing to choose
 key.same_as,Same key as {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,Clashes with {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
 row.skin,Skin,Skin,
 row.default_skin,Default,Default,the Skin list: a mount's own look
-row.no_choice,(none),(none),a list with nothing to choose
 row.babies,Babies,Babies,
 row.babies_follow,Babies follow you on foot,Babies follow you on foot,
 row.babies_indoors,Babies come indoors,Babies come indoors,

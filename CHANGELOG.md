@@ -24,6 +24,42 @@ For players:
 
 Development:
 
+- Translations for the other mods, studied (2026-11-15, nothing built; `docs/ui-library.md` section 11): the reader
+  and the lookup are already in the window library and compiled into every consumer; what a consumer lacks is around
+  them (the window's own 21 words translated only in the API's files, the QOL repo's loose deploy sharing one
+  `Languages` folder, no English template without a dev switch, the mods' texts outside their page as literals, the
+  sync tool and the zip steps in this repo only). A second pass measured it (section 11.3): a file of only the
+  window's 21 words reads whole in all 10 languages with no warning, also beside a mod's untranslated lines and under
+  a translator's partial file; two mods sharing one `Languages` folder get a warning and each other's file name; a
+  mod's table reads in about 1 ms; the mistake catalogue compiled with the library's sources alone passes 231 of 231;
+  the sync tool holds the reader's parsing rules a second time, so it belongs with the reader; a status row's value is
+  drawn raw, so statuses are English everywhere today; the five QOL mods have about 120 lines between them. A
+  third pass tried what the second had only
+  reasoned about (section 11.4): a mod's `en.csv` written from its built DLL with no game start (Tech Tree Search 36
+  lines, Event Decorations 97); the window's words built into the DLL as an alternative to merging them into each
+  mod's files (43 changed lines around the reader, the catalogue still 231 of 231, an owner with no folder translated
+  in all 10 languages); a status translated by the mod alone, no library change; the Framework's translation files
+  decompiled (its own folder, per mod id); and, read from the game's files, the label Tech Tree Search copies its font
+  from always wears `tiny_font` (311 characters, no Japanese, Chinese or Korean, no fallback), so its result list is
+  expected to show boxes in those three languages today. A fourth pass took the decisions one by one (section
+  11.5): the whole offline scan passes on a DLL holding the library alone, with and without the built-in words (the
+  API baseline's counts, and the corpus phase); the QOL mods' labels and descriptions fit the window's measured room
+  in every language (five descriptions drawn smaller at 1.6 times the length, none cut); 6 of their 77 short texts
+  are the game's own words; no released window of ours shows a status row; where the Framework's Settings button
+  opens our window its menu shows only the mod's name and description; and every font family of the tech tree page
+  swaps to the Japanese, Chinese and Korean fonts for a label that is not static, so the search box's fix is to ask
+  for the language's font. Steps in 11.7, six decisions in 11.8.
+- Translations for the other mods, phase 1 built (2026-11-16; `docs/ui-library.md` section 11.9): the window
+  library gained its own words in the 10 languages (the lines of this repository's files), a general
+  `tools/l10n-sync.py` (it also writes those words into every mod's files and checks them), `tools/EnglishDump` (a
+  mod's `en.csv` from its built DLL, no game), the code-page and glyph tools, the mistake catalogue (`dev\`) and the
+  offline scan (`tests\`). Here only `tools/l10n.json` is new (this repository's plugins, English from the game):
+  the library's tools were proved on this repository's files by path (the scan ALL PASS with the baseline's counts,
+  the check "same" five times, a write that changes nothing, the 50 language reports identical to the old tool's).
+  This repository's own copies of the tools and tests go in phase 2, once its library pointer has moved.
+- `l10n-sync.py --check` was failing since the library split (2026-11-15): the API's `en.csv` differed from the dev
+  run's in one translator note (`row.open`, reworded for the library) and the place of `row.no_choice`. Synced; no
+  translation changed. `tests/TranslationScan` no longer warns of an unused variable.
 - The first full self-test run after the fix above failed one check (2026-11-15, 2147/1): the Settings scenario's
   "lantern back on: the earlier framing again" compared the cart picture's width at the journal's density (744) with
   a baseline read at the colours window's (992: the two windows share one density number, and the colours window had

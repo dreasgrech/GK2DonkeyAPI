@@ -873,7 +873,7 @@ internal static class Program
     private static int SmallFiles(string repo, List<string> files)
     {
         string tmp = Path.Combine(Path.GetTempPath(), "GK2-TranslationSmall-" + Environment.ProcessId);
-        int fails = 0, reads = 0, refused = 0, limit = 0;
+        int fails = 0, reads = 0, limit = 0;
         bool quiet = Texts.TestQuiet;
         bool? forced = Texts.TestForced;
         string languageWas = Texts.LanguageOverride;

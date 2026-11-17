@@ -446,3 +446,359 @@ Block 1 is done. Left for the user: one more full F11 (the new checks in the who
   stop with `Safety.StopOnChangedGameCode`), where the API decides per feature. Not yet: the window seen in the game
   for Tech Tree Search, the two-copies check with Saddle Up installed (one holder object, two buttons in the Settings
   window), a full F11 here.
+
+## 11. Translations for the other mods (studied 2026-11-15; nothing built)
+
+The user's question: can the localization system of Saddle Up and the API go into the library, so the other mods use
+it. This revisits §2 and §8.7, which left the QOL mods English-only with the `Languages\` folder optional.
+
+### 11.1 What a consumer has already
+
+The translation code moved with the windows in block 1 and is compiled into every consumer: `Texts` (the lookup at
+draw time, the folders, the report, the test language), `TranslationFiles` and `LegacyText` (the reader of what
+translators do to a file), `Term`/`Word`/`Words` (a mod's own words, templates). `UiHost.LateUpdate` ticks
+`Texts.TickWarm`. A consumer's page rows, sections and title are looked up under its own GUID
+(`Texts.Of(owner, key, english)`), the Settings button retitles on a language change. Nothing of the reader is the
+API's any more; the API adds only its mounts' and skins' English through `UiOwner.MoreEnglish`/`MoreOwners`.
+
+### 11.2 Why Tech Tree Search's window is still English in every language (read from the code and the folders)
+
+| # | Gap | Fact |
+|---|---|---|
+| G1 | The window's own 21 words have no translation in a consumer | their owner is the mod the windows are compiled into (`Term.Owner` = `UiOwner.Guid`); their 10 translations exist only as 21 of the 193 lines of the API's `Languages\<id>.csv`. `FilesFor` reads only `<lang>.csv` in a folder (a second file, `de.window.csv`, is refused and said). |
+| G2 | The QOL dev deploy is loose | `plugins\GK2TechTreeSearch.dll`: `Texts.BundledFolder` is `Languages\` beside the DLL, so all five loose mods would share `plugins\Languages` and each warn about the others' keys. The release zips are already a folder per mod. |
+| G3 | No English template | `Texts.Published` writes `BepInEx\GK2-l10n\<guid>\en.csv` only when `UiOwner.DevUnlocked` says so; no QOL mod sets it (nor `TestLanguage`, `TranslationReport`). |
+| G4 | The mods' texts outside the page are literals | Tech Tree Search: "Search...", the statuses ("Active", "Off (...)", made in `Awake`, where the language is always English); Owned Count: "Owned: " glued to a number; Event Decorations' notices. |
+| G5 | The pipeline is the API repo's | `tools/l10n-sync.py` names `src/GK2DonkeyAPI`, `src/SaddleUp`, `packs/*` and carries the API's own check (a bubble said with a literal); `DeployToGame.targets`, `make-release-zip.py` and `release-versions.py` carry `Languages\` there; the QOL zip maker and its Workshop staging ship the DLL alone. |
+| G6 | The tests are the API's | the mistake catalogue (`TranslationTests.RunCatalogue`, 6 references to the API in it), the in-game Translations group, `tests/TranslationScan` (built against the API's DLL). |
+
+### 11.3 Second pass: measured (2026-11-15; the user: "investigate these findings more before we make decisions")
+
+Two throwaway programs against the reader as built (not repo tools), the tools read line by line, an inventory of the
+five QOL mods' texts by a subagent (spot-checked), the folders of the game.
+
+**The reader with a consumer's files** (a harness on the API's Release DLL, through `Texts`' own test handles):
+
+| | What | Result |
+|---|---|---|
+| E1 | a file holding only the window's 21 words, cut from the API's file, for an owner whose English is those words; all 10 languages | 21 of 21 shown in each, 0 warnings |
+| E2 | a small mod (12 own lines + the 21), its file the 21 only | 21 of 21, its own 12 English, 0 warnings, in all 10 |
+| E3 | the same with its own lines still the English in the file (12, then 60 of them) | 21 of 21, 0 warnings (the "copy of the English" rule touches only the lines still English) |
+| E4 | mod B reading a `Languages` folder whose `de.csv` is mod A's (the loose deploy) | never a wrong text (A's `page.title` has another English: English shown), but a warning: "has 11 key(s) the mod doesn't have"; and the two mods' files have the same name, so one overwrites the other |
+| E5 | a translator's `Translations\<guid>\de.csv` with 3 of the mod's lines over the bundled 21 | 3 + 21 shown: files merge key by key |
+| E6 | times | parsing the API's 193-line file 0.45 ms, a 21-line file 0.11 ms; a small mod's whole table 0.35 ms, 1.04 ms with the search of the game's 12 plugin folders for `Translations\`. One read per mod and language change, one mod a frame (`TickWarm`). |
+
+**The baseline before anything moves**: `tests/TranslationScan` on today's build: ALL PASS, the catalogue 231 of 231,
+143,000 reads of the 55 shipped files saved wrong ways with 0 failing, 7 min 27 s (the headers phase alone 153 s). Its
+corpus phase was skipped: `GK2_L10N_CORPUS` names no folder (the game's tables lie in the 2026-10-31 session's job
+folder, nowhere durable). Its build warned of an unused variable (`refused`, CS0219): removed.
+
+**The library tests itself, tried**: the mistake catalogue (415 lines cut from the API's `Dev/TranslationTests.cs`: the
+cases and `RunCatalogue`, without the in-game wrapper) compiled with the library's sources alone through
+`GK2DreasUI.targets`, no API in the process: 0 errors, 0 warnings, **231 of 231**. The layering scan's library rule
+run over the cut file finds one line (a test value, "donkey", in the noun case): one word to change. Moving it is
+mechanical; the API must still compile it (the F11 Mistakes scenario and the offline scan run it), so it sits outside
+`src\` and a consumer asks for it. The offline scan's own ties to this repo are three lines (the stale-build check,
+`src` and `packs`).
+
+**The sync tool, read whole** (363 lines): about 45 are this repo's (the three source folders; the check for a bubble
+said with a literal). About 150 are a second implementation of the reader's parsing in Python (`clean`, `sniff`,
+`columns`, `is_key`, `damaged`, `foreign`, `csv_rows`: "as the mod reads them"), so the tool is tied to the reader's
+version and belongs where the reader is: a copy in the QOL repo would drift from it. `l10n-codepages.py` writes
+`LegacyText.cs` (library source); `l10n-glyphs.py` lists characters the game's own text never draws.
+
+**The check was failing, found on the way**: `l10n-sync.py --check` said the API's `en.csv` differed from the last dev
+run's (2026-11-15 04:22, the first after block 1): `row.open`'s note reworded for the library and `row.no_choice`
+moved up among the window's words. Notes and order only, no translation touched; synced (the standing step), all five
+"same" again, against that dump: the next dev start confirms it. It shows the check does catch a change of the
+library's words.
+
+**The window's words over time**: made on 2026-11-01, their English not changed since (git, the 21 keys in `en.csv`);
+block 1 changed one note. They are 21 of 26 keys under `options.`, `row.`, `key.` in the API's file: the API has five
+of its own under the same prefixes (`row.skin`, `row.babies`...), so the library's words are told by its list, not by
+a prefix. A 21-line file is 1.4 to 1.8 KB a language, 15 KB for the ten (the layering rule finds nothing in them).
+
+**The library's English is not only the 21 words** (its sources searched for literals that reach a window): the
+default Status row, `SettingsPage.Status()`, has a label and a description of its own ("Status", "What the mod is
+doing right now."), looked up under the page's keys (`info.status.label`, `.desc`). No shipped file has them (Saddle
+Up's page has no Status row), so they were never translated: two lines to write in the 10 languages, and part of the
+common set, 23 lines in all. The key names (Shift, Ctrl, Enter, Num 1) are literals by design, English in the API's
+windows too.
+
+**The dev switch exists already**: the API's dev tools unlock by a marker file, `BepInEx\config\dreas.gk2.dev` (on the
+dev machine since 2026-10-13). A QOL mod can read the same file for `UiOwner.DevUnlocked`: no cfg entry, nothing a
+player can switch on. The translators' report is another matter: in the API it is a cfg entry (`[Translations] Report`).
+
+**The five mods' texts** (the subagent's inventory, file and line for each; counts are texts a player sees):
+
+| Mod | Uses the library | Page rows + descriptions | Texts it draws itself | Through what | Glued |
+|---|---|---|---|---|---|
+| Tech Tree Search | yes | 8 + 5 | "Search...", "No visible tech matches", "+N more: type more letters" | its own TMP labels, the font read once from a page label | "+" + n + " more..." |
+| Event Decorations | yes | 39 + 31 | none (the "On today" line is an Info value) | - | the "On today" line, from about 8 pieces |
+| Owned Count | no | (7 + 7 in the Framework menu) | "Owned: N (all grades: N)", "on you N · in storage N (N chests)", the per-area line | the game's tooltip widget and style | all three, with an English plural (chest/chests) |
+| Global Storage | no | (5 + 5) | none | - | - |
+| Built Count | no | (1 + 1) | " (N)" after the game's name, no words | the game's own label | - |
+
+About 120 lines for the five (Saddle Up and the API: 291), 70 of them Event Decorations'.
+
+Three findings from it:
+
+- **G7: a status is drawn raw.** `RowControls.InfoValue` shows what the owner's function returns
+  (`RowControls.cs:461`), so a Status or Info row's value never goes through `Texts`: the mods' statuses, Event
+  Decorations' "On today", and the API's own status line (`GameCode.Status`, literals) are English in every language
+  today. And `Plugin.Status` is
+  program logic in all five mods (compared with "Active"): a status can only be translated where it is drawn.
+- **G8: the five mods share texts of their own.** `src\Shared\GameDependencies.cs` makes the same five status
+  sentences in each (with a count and "member(s)"), and four of them say `Off ("<a row's label>" is unchecked)`,
+  quoting a label that would be translated. The same question as the window's words, one level up: one set of words,
+  several owners.
+- **Fonts.** Owned Count and Built Count write into the game's own widgets (the game's font for the language). Tech
+  Tree Search's result rows are new labels with a font read once from a label of the page (`SearchBox.cs:69`; a
+  comment there says that font has no check mark). The rows already show the game's own tech names, so with the game
+  in Japanese, Chinese or Korean they either work today or are already broken: not known, to see in the game (one look
+  with the game in Japanese, before any translation of "Search...").
+
+**The Framework's menu**: its translations are JSON in the Framework's own folder,
+`plugins\GK2.Framework\Localization\<mod id>\<lang>.json`, keys `mod.description`, `sections.<Section>`,
+`settings.<Section>.<Key>.name` and `.description` (seen: another author's mod ships 11 languages there; the
+Framework's language ids differ from the game's: `pt`, `zh`, `it`). The labels and descriptions our mods pass are the
+same sentences as their page rows (Tech Tree Search: 3 labels and 2 descriptions word for word), so such files could
+be written from our CSVs by a tool, with no second translation. Not looked into: how a mod's zip puts files into the
+Framework's folder.
+
+**What it costs a mod**: the reader is already in every consumer (27.5 KB of IL; Tech Tree Search's DLL is 258 KB with
+the library, 55 KB before); translations add files only.
+
+**The translation-writing tools of 2026-11-01** (the validating writer, the review brief, the terms, the character
+checks) lie in that session's temporary scratchpad, nowhere in a repo.
+
+Not tried: writing a mod's `en.csv` without the game (a plugin can't be made outside Unity; the page would have to be
+built by reflection). The dev start with the marker is the way that exists and works for every owner.
+
+### 11.4 Third pass: what the second only reasoned about, tried (2026-11-15; the user: still more investigating)
+
+Four more throwaway programs (job folder, not repo tools), the Framework and the game's font code decompiled, the
+game's asset files read (UnityPy). Three statements of the second pass were wrong or untested; each is corrected here.
+
+**A mod's English file without the game: works** (the second pass said "not tried", expecting it could not). A
+console program loads the mod's built DLL, makes its plugin object without its constructor, gives it a scratch config,
+calls its own `BindConfig` and asks the library copy inside that DLL (`Texts.EnglishOf`, `EnglishCsv`) by reflection:
+
+| Mod | Lines written | Its own | Game assemblies it pulled in |
+|---|---|---|---|
+| Tech Tree Search | 36 | 15 (title, 2 sections, the Status row's 2, 5 labels, 5 descriptions) | Unity's only |
+| Event Decorations | 97 | 76 | Unity's and Assembly-CSharp |
+
+About 70 lines of code, no dev marker, no game start; the template comes from the build, so the check no longer
+depends on the last game run. It needs a page built in one method from the config alone (both mods' are). A text the
+mod draws itself appears once it is a `Word` listed through `UiOwner.OwnWords`. Not tried on the API (its mounts and
+skins register in the game, and its packs' texts come with them); its dev start stays. Seen in the output: the translator's note of `row.none` says "no
+babies", an API word in a library note.
+
+**Embedding the window's words, built** (the second pass called it a change to the reader "for no gain"). In a scratch
+copy of the library: the ten 21-line files as resources of the DLL through the targets file, read after every file by
+the same reader and the same `Take`, only for the owner the copy is compiled into. 29 changed lines in `Texts.cs` (two
+in `Load`, a new method), 14 in `TranslationFiles.cs` (`Read` split so bytes can be read), nothing in the parsing.
+Results: the catalogue 231 of 231; an owner with no `Languages` folder at all shows 21 of 21 in all 10 languages with
+no warning; a translator's line of a key wins over the built-in one; another owner gets nothing. The DLL grows by
+18 KB. Not run on it: the offline scan's sweep, the in-game group.
+
+| | Merged into each mod's files by the tool | Built into the DLL |
+|---|---|---|
+| Library sources | untouched | 43 lines around the reader, not in the parsing |
+| A mod with no files | English | the window's words translated |
+| Where the words live | 21 lines x 10 languages in every consumer's folder (and in git), kept alike by the check | once, in the library |
+| A player changing a word | edits the mod's `Languages\de.csv`, as the README and the 0.15.0 note say | adds the line to that file (it is not in it) |
+| Out of step with the code | possible (an old folder under a new DLL: English for the changed line) | not possible |
+| Tools | the sync tool learns "a set of words written into every owner" | the sync tool's report learns the built-in lines are not missing |
+
+The window's words alone give a window that is half translated (its buttons and hints, not its rows); the rows need
+the mod's files and the pipeline either way. So building in saves no pipeline work for a mod that is translated at
+all. Both work; the choice is where the 21 lines live.
+
+**A status needs no library change** (the second pass said it did). The owner's status function runs each time the
+row is drawn (`RowControls.InfoValue`), after the language is known: a mod that keeps its state apart from its words
+returns `word.Text` or `word.Format(...)` there, and its words are listed through `UiOwner.OwnWords`. The API's way
+for sentences that also travel as English (`Word.Make`, then `UiWords.Shown` finds the translation by the English:
+35 lines, the ring of the last 8 for bubbles said within a frame) is not needed for a status kept as a word and its
+values.
+
+**The Framework's menu, decompiled** (`FrameworkLocalization`): it reads only
+`BepInEx\plugins\GK2.Framework\Localization\<mod id, lower case>\<language>.json`, the language as the game's id in
+lower case with `-` as `_` (`pt_br`, then `pt`, then `en`), keys `mod.name`, `mod.description`, `sections.<Section>`,
+`settings.<Section>.<Key>.name` and `.description`. A status value is the mod's function, not looked up. So a mod's
+zip would carry files into the Framework's folder; on the Workshop, where the Framework is not, that would leave a
+`GK2.Framework` folder with no DLL, so such files belong in the Nexus zip only.
+
+**Tech Tree Search's font: its result rows can't draw Japanese, Chinese or Korean, by the files** (not yet seen in
+the game). The label it copies its font from (`redSpheresLabel`, the object "Red") has a text style component
+(`staticFont` 0, no `StaticFontLabel`) whose style asset is `tiny_font-perk_techpoint_cost` with `isAlwaysStaticFont`
+1. The game's `LazyFontData.GetFontAssetFor(lang, staticFont)` returns a language's own font only when not static; so
+this label wears `tiny_font` in every language. `tiny_font`: 311 characters, a fixed atlas, no fallback fonts; it has
+Latin, Turkish and Cyrillic letters and none of the Japanese, Chinese or Korean test characters (nor the check mark,
+as the code's comment says). `small_font` (332) is the same. The rows show the game's own tech names, so this is not
+about our translations: with the game in one of the three languages the released mod's result list is expected to
+show boxes (TextMeshPro's global fallback list is in the player data and could not be read: the one thing that could
+save it). The window library already makes labels in the language's font (`UiKit`, from the Settings row, restyled
+for the language): the search box can take its font the same way, or a style from the page that is not static (by
+the component's flag 291 of the page's 301 labels are not; their styles' own flags were not read). The game's Japanese,
+Chinese and Korean fonts are not among the bundles' font assets (three found: `small_font`, `small_font_bold`,
+`tiny_font`); the game loads them by path.
+
+**Who plays in other languages: no numbers.** The store lists the 11 languages and 4,436 English reviews; the two
+requests the rate rule allows gave no count per language.
+
+### 11.5 Fourth pass: the decisions, one by one (2026-11-15; the user: "can we still investigate these decisions")
+
+**D1, where the window's words live.** The whole offline scan, not only the catalogue, run on a DLL holding the
+library alone, as it is and with the built-in words: both ALL PASS with the API baseline's counts (231 of 231; 3,015,
+36,036, 4,314, 43,475 and 56,000 reads, 0 failing) and the corpus phase the baseline skipped (85 reads of the game's
+own tables, 0 failing). So the built-in variant breaks nothing in the reading of files. What "the window's words
+only" looks like, Tech Tree Search in German with either way and its own lines untranslated:
+
+| Where | Shown |
+|---|---|
+| the button in the game's Settings window | "Optionen für GK2 Tech Tree Search" (German template, English name) |
+| title, the tabs General and Safety, the six rows' labels and descriptions | English |
+| the hint under the rows, the buttons | "Zeige auf eine Option...", "Standardwerte", "Fertig" |
+| setting the key, the Defaults question | "Drücke eine Taste ...", "Zurücksetzen", "Abbrechen" |
+
+**D2, the tests.** The scan's `Program.cs` runs on the library alone with two path lines changed and a four-line
+stand-in for the API's class name; it took 2 min 19 s (the API's run, with other jobs going, 7 min 27 s). In the
+game: of the ten Translations scenarios two are free of the API (Files, Mistakes); the other eight drive the API's
+windows, bubbles and packs and stay where they are, and they are what covers the library in the game. The QOL repo
+has no in-game self-test at all (its tests are offline scans and Harmony harnesses).
+
+**D3, the mods' own texts.** Lines, from the build's own dump or the inventory: Tech Tree Search 15, Event
+Decorations 76, Owned Count about 19, Global Storage 11, Built Count 3. Only 6 of their 77 short texts are words the
+game has (Village, Tavern, Barracks, chest, Storage twice): nothing to reuse at run time, though the game's tables
+give translators the terms. Room, against the last test run's measurements: their longest label is 32 characters
+(Saddle Up's, measured with room for 1.8 times, 40); the description box (572 x 40) holds about 380 characters at
+full size and at least 765 shrunk; their longest descriptions are 278 (Tech Tree Search) and 329 (Event
+Decorations), Saddle Up's 255. None is cut in any language; at 1.6 times the length one of Tech Tree Search's and
+four of Event Decorations' are drawn smaller.
+
+**D4, statuses.** Saddle Up's page has no Status row, so no released window of ours shows a status: the only places
+are the QOL mods' new pages and the Framework's menu. A player normally reads one word, "Active"; the sentences
+appear after a game update, and the longest holds a list of game members no translation helps with. Each mod has
+about 9 status texts, 5 of them the shared ones.
+
+**D5, the Framework's menu.** A setting's key is `settings.<Section>.<Key>`, the cfg's own names, so a tool that
+has the page (the English dump has it) can write the JSON. But where the Framework's Settings button opens our
+window (Saddle Up and Event Decorations do that with a prefix on its `OpenSettingsPage`), its menu shows of the mod
+only its name and description, and one button as a fallback: nothing of the rows. Tech Tree Search still registers
+its rows there (7 of its 10 texts are in its CSV word for word); pointing its button at the window is the open
+decision of its release. If the other mods follow, D5 is one sentence a mod, the description in the list.
+
+**D6, the search box's font.** The page's 301 labels wear 30 styles: 19 follow the language, 11 always keep one
+font, among them `tiny_font-perk_techpoint_cost` on the three point counters (Red, Blue, Green), the one the mod
+copies from. All three font families of the page (`tiny_font`, `small_font`, `small_font_bold`) swap to
+`Fonts & Materials/japanese`, `chinese`, `korean` for ja, zh_cn, ko when a label is not static. So the fix is small:
+ask the same style's font data for the language's font (`GetFontAssetFor(lang, staticFont: false)`), or wear one of
+the page's `tiny_font` styles that follow the language (`tiny_font-item_cost`, on its 14 price labels).
+
+### 11.6 What the measurements change
+
+- The window's words: merged or built in, both proven. Merged keeps the library's sources untouched and the promise
+  "every text is in the mod's CSV"; built in keeps one copy and can't fall out of step. Recommended: merged, because
+  every translated mod ships files anyway and players were told to edit them.
+- If merged, the merge is general: "a set of words with a master file, written into every owner that carries them".
+- The tool cannot be copied: it holds the reader's rules. It moves to the library with the master files.
+- The tests can move at no risk (231 of 231 on the library alone, one test value to rename).
+- The QOL deploy must become a folder per mod before the first `Languages` file is deployed (E4).
+- The English template of a QOL mod can come from the build, with no game start and no dev marker.
+- A status can be translated by the mod alone; whether it should is still a decision (it is English in the API).
+- Owned Count's tooltip lines have to become templates without a noun after a number (the rule of 2026-11-01) before
+  they can be translated.
+- Tech Tree Search's rows need their font fixed first, translations or not; one look in the game in Japanese
+  confirms it.
+
+### 11.7 The steps, in the order the data gives
+
+1. Library: `Languages/<id>.csv` (the 21 words x 10, cut from the API's files by a script, and the Status row's two
+   lines, new), `tools/` (the sync tool made general, with the word sets; the English dump from a built DLL; the
+   code-page and glyph tools; the 2026-11-01 writing tools saved from the scratchpad), `tests/` (the catalogue
+   outside `src\` and the offline scan). No change under `src\` if the words are merged.
+2. API: its tools become the library's; its literal check stays as its own step; proof as in the rule above (the scan,
+   the check "same" five times, F11 Translations 362/0/0).
+3. QOL pipeline: deploy by folder, `Languages\` in the zip and the Workshop folder, the dump, the check and the scan
+   in `release-scans.sh`.
+4. Tech Tree Search: its `en.csv` from the build, the window's words merged in: its window's own words in 10
+   languages, its rows English until translated. A look in the game in German, and in Japanese for the font.
+5. By decision: the mods' own texts (rows first; then the texts they draw themselves, after the templates and the
+   font), statuses, the Framework's JSON.
+
+### 11.8 The user's decisions
+
+- D1: the window's words merged into each mod's files by the tool (recommended), or built into the DLL (both built,
+  both pass the whole scan).
+- D2: steps 1 to 4 now with the offline tests (the catalogue and the scan) moved in step 1 (recommended: run on the
+  library alone, ALL PASS), or left in the API for now. The in-game scenarios stay in the API either way.
+- D3: after step 4, which of the mods' own texts get the 10 languages: none yet; the page rows (Tech Tree Search 15
+  lines, Event Decorations 76, about 100 over the five mods as they become consumers); or also what they draw
+  themselves (Owned Count's tooltip, the search box).
+- D4: statuses stay English (recommended: they are for support, and the API's is English too), or are translated
+  (the mod's own work, no library change).
+- D5: the Framework's menu stays English (recommended for now), or gets JSON written from our CSVs, in the Nexus zip
+  only. It hangs on the release's own question, whether every mod's Settings button there opens our window: if so,
+  only the description in its list is left to translate.
+- D6 (new): the search box's font in Tech Tree Search: fix it with the next version whatever the rest (recommended,
+  after the look in Japanese), or leave it.
+
+### 11.9 Built, phase 1 (2026-11-16; the user: "ok lets do it")
+
+Taken as said: D1 merged, D2 the offline tests with the tools, D4 statuses English, D6 the font fixed. D3 (which of
+the mods' own texts) and D5 (the Framework's menu) are not decided: no new translation was written, the default
+Status row's two lines included.
+
+**The library** (edited in the QOL repository's copy, the one on `main`; this repository's copy is on the old commit
+until its pointer moves, and nothing of this repository's own changed for it):
+
+- `Languages/<id>.csv`, ten files: the window's 21 words, the lines cut from this repository's files byte for byte.
+- `tools/l10n-sync.py`: the general tool. A repository says in `tools/l10n.json` where its plugins are and where
+  their English comes from (`"game"`: the dev start's files, as here; `"build"`: `tools/EnglishDump`, below). It
+  writes each plugin's `en.csv` and the window's words into its `<id>.csv` wherever the plugin's English has that key
+  with that English (a line replaced, added at the end, or the file made; every other line and each line's own ending
+  kept); `--check` fails where anything would change. The reader's rules it holds are the same functions as before.
+- `tools/EnglishDump`: a mod's `en.csv` from its built DLL (exit codes for a stale DLL, a missing method, a page that
+  can't be built without the game, a DLL without the window code).
+- `tools/l10n-codepages.py` (it still named this repository's old path and namespace for `LegacyText.cs`; it now
+  writes the library's, keeps the file's line endings and has `--check`: "same") and `tools/l10n-glyphs.py` (`--repo`).
+- `dev/TranslationCatalogue.cs` (the catalogue; "donkey" in the noun case is "ox") and the opt-in in
+  `GK2DreasUI.targets` (`<GK2DreasUIDev>true</GK2DreasUIDev>`); `tests/TranslationScan` (the scan's program with the
+  repository as its argument, the library's own files read too).
+
+**Proved on this repository's files, by path, before anything else** (`tools/l10n.json` is the one file added here):
+
+| | Result |
+|---|---|
+| the library's scan on the 55 shipped files | ALL PASS: 231 of 231; 3,015, 36,036, 4,314, 43,475 and 56,000 reads, 0 failing (the baseline's counts); the corpus phase 85 reads, 0 failing; the library's own 10 files read clean |
+| the general tool's `--check` | "same" five times, the window's words in step |
+| the general tool writing | nothing changed: `git status` shows no language file of this repository touched |
+| its 50 language reports against the old tool's | identical, line for line |
+| the code-page tool's `--check`, the glyph tool's Japanese listing | the library's file reproduced exactly; the old tool's output |
+
+**The QOL repository**: `tools/l10n.json` (Tech Tree Search and Event Decorations, English from the build); the
+deploy by folder with `Languages\`; the zip and the Workshop staging with `Languages/`, the refusal of uncommitted
+files and `--dry-run` (the writing tried in a scratch folder: 16 entries, 11 language files, each way); the sync
+check and the library's scan at the end of `release-scans.sh`. Both mods have `Languages/` now: `en.csv` (36 and 97
+lines) and ten files of the 21 words; deployed beside their DLLs.
+
+**The search box** (`SearchBox.ReadFont`): the counter label's style is asked for the language's font
+(`CurrentTextStyle.Font.GetFontAssetFor(language, false)`), each game call in a no-inline method inside a `try`; the
+counter's own font stays the fallback; read again when the language changed; the dot between a tab and an unlock is
+a hyphen where the language's font has none (the game's Japanese and Korean text never uses that dot); with the dev
+marker one log line a language names both fonts and the letters of the first result's name each can't draw
+(`HasCharacters` with fallbacks and adding, the test of this repository's Fonts scenario). Found beside it, not
+fixed: 26 of the game's 51 Japanese tech lines and 32 of the 51 Chinese hold an invisible break mark (U+200B) inside
+the name, and the search compares letter for letter, so the whole name typed finds nothing.
+
+**Phase 2, after the pointer here has moved**: this repository takes the library's tools and tests (its
+`tools/l10n-sync.py` becomes the literal check alone, `tools/l10n-codepages.py`, `tools/l10n-glyphs.py` and
+`tests/TranslationScan` go, the catalogue leaves `Dev/TranslationTests.cs` for the library's `dev\` with the opt-in,
+the layering scan reads `dev\`, `release-scans.sh` calls the library's), then F11 Translations. Until then both
+copies exist and this repository runs on its own, unchanged.
+
+**For the user to look at**: Tech Tree Search's options window with the game in German (the window's words German,
+its rows English; the log's "Translations: dreas.gk2.techtreesearch in de: 21 line(s) read ..." line), and its search
+list with the game in Japanese (the names drawn; the `[dev]` line with both fonts).
