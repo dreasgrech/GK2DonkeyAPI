@@ -21,7 +21,8 @@ Donkey API inside, and each external pack. Every item is laid out as the game's 
 
     BepInEx/plugins/<Mod>/<Mod>.dll     a folder per plugin (Saddle Up's zip: GK2DonkeyAPI and GK2SaddleUp)
     BepInEx/plugins/<Mod>/Languages/    its translation files, when its source folder has any (docs/localization.md): the
-                                        English template en.csv (tools/l10n-sync.py) and the bundled translations, CSV only
+                                        English template en.csv (lib/GK2DreasUI/tools/l10n-sync.py) and the bundled
+                                        translations, CSV only
     modinfo.json                        the Workshop folder only: id (the plugin GUID), name, version for the game's Mods window
 
 The plugin files are the same bytes on both channels (the lab run of 2026-10-30 in the report):

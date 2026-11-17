@@ -49,6 +49,20 @@ Development:
   opens our window its menu shows only the mod's name and description; and every font family of the tech tree page
   swaps to the Japanese, Chinese and Korean fonts for a label that is not static, so the search box's fix is to ask
   for the language's font. Steps in 11.7, six decisions in 11.8.
+- Translations, phase 2 (2026-11-17; `docs/ui-library.md` section 11.10): this repository's translation tools and
+  offline tests are the window library's now (pointer at its `d7d8eb6`). Gone from here: `tests/TranslationScan`,
+  `tools/l10n-sync.py`, `tools/l10n-codepages.py`, `tools/l10n-glyphs.py`, and the 413 lines of the mistake catalogue
+  in `Dev/TranslationTests.cs` (its `Mistakes` scenario runs the library's `TranslationCatalogue`, compiled in
+  through `<GK2DreasUIDev>`); the `InternalsVisibleTo("TranslationScan")` with them. New: `tools/l10n-literals.py`,
+  the one check that was the API's own (a bubble or a prompt said with a literal), its code unchanged.
+  `tools/release-scans.sh` calls the library's scan, merge test and sync check, then the literal check;
+  `tools/layering-scan.py` reads the library's `dev`, `tests` and `tools` too. No text a player reads changed.
+- `tools/log-scenarios.py` counts each scenario's checks (2026-11-17): the full run after phase 2 was green with 13
+  checks fewer than the one before (2137 against 2150), and nothing could say which, the game's log being
+  overwritten at every start. The tool now compares two logs scenario by scenario (`--diff old.log [new.log]`; Unity's
+  `Player-prev.log` holds the session before the last) and keeps a run's counts for the next report (`--keep`, into
+  `BepInEx\GK2-selftest-counts.tsv` of the game folder). Against the run of 2026-11-11 today's makes as many checks
+  or more in every scenario but one that depends on the save (a baby out).
 - Translations for the other mods, phase 1 built (2026-11-16; `docs/ui-library.md` section 11.9): the window
   library gained its own words in the 10 languages (the lines of this repository's files), a general
   `tools/l10n-sync.py` (it also writes those words into every mod's files and checks them), `tools/EnglishDump` (a

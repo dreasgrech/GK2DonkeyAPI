@@ -68,7 +68,10 @@ def main():
     bad = 0
     for root, terms, what, code in (("src/GK2DonkeyAPI", API_TERMS, "the API names Saddle Up or its content", False),
                                     ("src/SaddleUp", SADDLEUP_TERMS, "Saddle Up names a pack or its content", False),
-                                    ("lib/GK2DreasUI/src", LIBRARY_TERMS, "the window library names the API or its mounts", True)):
+                                    ("lib/GK2DreasUI/src", LIBRARY_TERMS, "the window library names the API or its mounts", True),
+                                    ("lib/GK2DreasUI/dev", LIBRARY_TERMS, "the window library's mistake catalogue names the API or its mounts", True),
+                                    ("lib/GK2DreasUI/tests", LIBRARY_TERMS, "the window library's tests name the API or its mounts", True),
+                                    ("lib/GK2DreasUI/tools", LIBRARY_TERMS, "the window library's tools name the API or its mounts", True)):
         hits = scan(root, terms, code)
         for h in hits:
             print("FAIL", what + ":", h)

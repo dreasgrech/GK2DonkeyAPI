@@ -7,7 +7,6 @@ using HarmonyLib;
 using UnityEngine;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("PackerScan")] // tests/PackerScan runs the cargo packer without the game
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("TranslationScan")] // tests/TranslationScan runs the translation reader's mistake catalogue without the game
 
 namespace GK2DonkeyAPI
 {

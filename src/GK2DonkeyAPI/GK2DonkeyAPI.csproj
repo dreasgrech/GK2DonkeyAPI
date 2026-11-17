@@ -14,6 +14,10 @@
          4.2.0.0, yet it ships 4.0.0.0 in Managed (no 4.2.0.0 exists anywhere), and Mono unifies them at load. The mod
          uses none of it. Checked 2026-10-03 by referencing the game's copy: the conflict only moved to 4.0.0.0. -->
     <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
+    <!-- The window library's dev\ compiled in too (the translator mistake catalogue, GK2DreasUI.targets): the F11
+         Translations group runs it in the game (Dev/TranslationTests.Mistakes), as the library's own
+         tests/TranslationScan runs it without. -->
+    <GK2DreasUIDev>true</GK2DreasUIDev>
   </PropertyGroup>
 
   <ItemGroup>

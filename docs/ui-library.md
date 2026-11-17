@@ -799,6 +799,38 @@ the name, and the search compares letter for letter, so the whole name typed fin
 the layering scan reads `dev\`, `release-scans.sh` calls the library's), then F11 Translations. Until then both
 copies exist and this repository runs on its own, unchanged.
 
+### 11.10 Built, phase 2 (2026-11-17, after the pointer moved to the library's `d7d8eb6`)
+
+This repository uses the library's tools and tests; its own copies are gone:
+
+- `tests/TranslationScan`, `tools/l10n-codepages.py`, `tools/l10n-glyphs.py` and `tools/l10n-sync.py` deleted. What
+  was the API's own in the sync tool, the check for a bubble or a prompt said with a literal, is
+  `tools/l10n-literals.py` (the same patterns and walk, compared line for line with the old tool's before it went).
+- The catalogue (413 lines) left `Dev/TranslationTests.cs`; `Mistakes()` calls the library's
+  `TranslationCatalogue.RunCatalogue`. The project sets `<GK2DreasUIDev>true</GK2DreasUIDev>`; the
+  `InternalsVisibleTo("TranslationScan")` is gone (the library's scan compiles the sources itself).
+- `tools/release-scans.sh` runs the library's scan with this repository as its argument, the sync tool's merge test,
+  `lib/GK2DreasUI/tools/l10n-sync.py --check` and `tools/l10n-literals.py`. `tools/layering-scan.py` reads the
+  library's `dev`, `tests` and `tools` folders as well as `src` (all four: no higher layer named).
+- `docs/release-checklist.md` section 2 and a table at the head of `docs/localization.md` say where each thing is now.
+- The API and its IntegrationTests rebuilt (0 warnings) and deployed.
+- `tools/release-scans.sh`: 31 of 31 green.
+
+**The in-game run (the user, 2026-11-17 15:52, full F11): 2137 passed, 0 failed, 0 warnings.** All 187 scenarios
+left their lines; no warning or error before the run's start, and the log's 55 are the tests' own. The mistake
+catalogue, now the library's, 231 of 231 on the game's Mono. While the Translations group switched the game through
+its languages, the two QOL mods' copies of the reader read their new files: Tech Tree Search "21 line(s) read ...
+of its 36 lines", Event Decorations "of its 97 lines", in each of the 10 languages, no warning: the English written
+from the builds without the game (36 and 97 lines) is what the game counts.
+
+The total is 13 under the run before (2150, 2026-11-15), and which checks those were can't be said: the game's log
+is overwritten at every start. What can be said: against the last full log that survives (Unity's
+`Player-prev.log`, the run of 2026-11-11, 2108) every scenario makes as many checks or more, but one ("Saddle Up has
+1 baby out: its own babies not compared"), and every check line added to the test code since shows in the counts
+except three in the Settings scenario; the surplus of 2026-11-15 was checks that depend on the save. So that it can
+be said next time, `tools/log-scenarios.py` counts each scenario's checks, compares two logs (`--diff`) and keeps a
+run's counts for the next (`--keep`; today's are kept).
+
 **For the user to look at**: Tech Tree Search's options window with the game in German (the window's words German,
 its rows English; the log's "Translations: dreas.gk2.techtreesearch in de: 21 line(s) read ..." line), and its search
 list with the game in Japanese (the names drawn; the `[dev]` line with both fonts).

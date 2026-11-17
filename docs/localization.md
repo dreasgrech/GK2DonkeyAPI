@@ -1,5 +1,17 @@
 # Translating Saddle Up: what the game offers, what it would take, and the decisions
 
+**Where things are now (2026-11-17).** This report is the history; file names in it are as they were when each part
+was written. The reader (`Texts`, `TranslationFiles`, `LegacyText`, `Words`) moved into the window library on
+2026-11-15 (`lib/GK2DreasUI/src`), and its tools and offline tests followed on 2026-11-17 so every mod that carries
+the windows uses the same ones (`docs/ui-library.md`, section 11):
+
+| Named in this report | Now |
+|---|---|
+| `tools/l10n-sync.py` | `lib/GK2DreasUI/tools/l10n-sync.py` (this repository's part of it: `tools/l10n.json`); its check for a bubble said with a literal: `tools/l10n-literals.py` |
+| `tools/l10n-codepages.py`, `tools/l10n-glyphs.py` | `lib/GK2DreasUI/tools/` |
+| `tests/TranslationScan` | `lib/GK2DreasUI/tests/TranslationScan` (run with this repository as its argument) |
+| the mistake catalogue in `Dev/TranslationTests.cs` (`RunCatalogue`) | `lib/GK2DreasUI/dev/TranslationCatalogue.cs`; `Dev/TranslationTests.Mistakes` runs it in the game |
+
 An investigation, 2026-10-31, in two passes. **Nothing was built or changed.** A player asked for "an English file" in
 the mod so that other people can add their own translations; the game itself comes in 11 languages.
 
