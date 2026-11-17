@@ -831,6 +831,113 @@ except three in the Settings scenario; the surplus of 2026-11-15 was checks that
 be said next time, `tools/log-scenarios.py` counts each scenario's checks, compares two logs (`--diff`) and keeps a
 run's counts for the next (`--keep`; today's are kept).
 
+**The search box's font, seen (the user, 2026-11-17 17:41, two screenshots).** With the game switched to Japanese
+in the running session, the tech tree's search list for 鍛冶 draws its eight results and the box's own text in the
+game's Japanese font; the mod's dev line: `language "ja", first result "鍛冶場 I": the rows wear japanese (has every
+letter); the page's counter label wears tiny_font (LACKS 鍛冶場); between a tab and an unlock the rows put "·"`. So
+the fault read from the game's files was real (the counter's font can't draw the names), the fix draws them, the
+re-read on a language change works, and the Japanese font has the separator dot. In German the rows wear
+`tiny_font` as before ("Kleidung I", "Landwirtschaft · Lieferung: Kleidung I"). The mod's own two row texts
+("+3 more: type more letters") stay English: D3. The repositories after the user's git: library `d7d8eb6`, QOL
+`f6812cf`, this one `1bd90ad`, all pushed and clean.
+
 **For the user to look at**: Tech Tree Search's options window with the game in German (the window's words German,
 its rows English; the log's "Translations: dreas.gk2.techtreesearch in de: 21 line(s) read ..." line), and its search
 list with the game in Japanese (the names drawn; the `[dev]` line with both fonts).
+
+### 11.11 The open decisions taken, and both mods translated (2026-11-17, the evening)
+
+The user: "ok then lets fix the decisions still open". Asked, they chose:
+
+- **D3: both mods, all texts.** Tech Tree Search and Event Decorations in the game's 10 other languages, the search
+  box's own texts included.
+- **D5: the Framework's Settings button opens our window** for Tech Tree Search too (Saddle Up's and Event
+  Decorations' way). Its `FrameworkLink` registers one button and redirects the framework's private
+  `ModsMenuWindow.OpenSettingsPage(RegisteredMod)`; the Mods menu lists no rows of the mod's own any more.
+- D4 stays as decided on 2026-11-16: statuses and Event Decorations' "On today" value are English.
+
+Built for it in Tech Tree Search: the search box's three texts are `Word`s (`SearchWords.cs`, given to the library
+with `UiOwner.OwnWords`), re-read when the language changes; the invisible break marks of the game's Japanese and
+Chinese names are dropped (U+200B, section 11.10's follow-up: a whole name typed now finds its tech).
+
+**The work.** 93 lines a language: the library's Status row 2 (`Languages/en.csv` is new in the library: its 21
+words and that row), Tech Tree Search 16, Event Decorations 75. One translator a language, then one proofreader a
+language who had not seen the translator's reasoning (all Claude Opus), then one line sent back to six of them. The
+translators worked from a brief, the work list `l10n-write.py <id> --todo` writes (each line with its English, where
+it shows and its room) and the game's own words (`l10n-terms.py`); each file had to pass `l10n-write.py --check`
+before it came back. The proofreaders changed 1 to 10 lines a language (Korean 33, 28 of them one respelling):
+
+| What the proofreading found | Where |
+|---|---|
+| The English said "Inside the astrologer's house"; the game's place is the Astrologer's Tower | the English (`Halloween.cs`), then all 10 |
+| `true` on a switch row written as a bare cfg word | de fr pt-br ru pl tr ja ko zh_cn |
+| "game member" translated word for word reads as a person or an in-game thing | de pl zh_cn, then es fr pt-br ru ja ko in a second round |
+| "their tabs" (the window's sections) not given the word the window's own lines use for a section | de fr ru pl |
+| A word bent around the old character rule (below): a "flying squirrel" for a bat, a "bird-scaring doll" for a scarecrow, 분류 for a tab, 할로윈 for 핼러윈, 適用 for 反映 | zh_cn ko ja |
+| Place names as the game writes them (Kışla'nın, Grundstück, wieża astrologa in lower case) | tr de pl es |
+
+**The fonts decide what a translation may use, and the tools now read them.** Two faults of the first check:
+
+1. *Japanese, Chinese, Korean.* The writer allowed only characters the game's own text draws. The fonts hold more:
+   read from the game's `resources.assets` (`l10n-fonts.py`: TextMeshPro font assets, the character table found by
+   its shape), Chinese 4,075 characters against 2,358 used, Japanese 3,966, Korean 1,552. The reading agrees with
+   the in-game font test of 2026-11-01 on every character that test found missing or drawn. The writer checks
+   against the font's file now; the proofreaders put the ordinary words back.
+2. *Every other language.* Nothing was checked, and the Latin fonts lack more than one expects:
+
+   | Font | Characters | Lacks, of what a translator would type | Draws |
+   |---|---|---|---|
+   | `small_font` | 332 | „ ’ ‘ | the window's rows, choices, descriptions, questions (`UiKit.Font`, read from the game's Settings row; measured in the game: `BepInEx\GK2-l10n-fonts.tsv`) |
+   | `small_font_bold` | 308 | „ ” “ – ’ ‘ | its tabs, headings and buttons (`UiKit.BoldFont`, the game's button's font: read from the code, not measured) |
+   | `header_font` | 275 | „ « » · ’ ‘ | its title (the game's window header's font: read from the code and the name, not measured) |
+   | `tiny_font` | 311 | „ ” “ – ’ ‘ | Tech Tree Search's result rows and box (the page's counter font; seen in the game's log) |
+
+   Whichever of them draws a short text, no shipped tab, heading, button or title of either repository uses a
+   character outside all four.
+
+   The Polish file quoted its example as „piwo”: a box for the opening quote. It has straight quotes now. The
+   game's own Polish shows the same gap: its 25 quoting lines open with a straight quote and close with the curly
+   one ("zrób z nas wino”), never „. Russian's «» in descriptions and in the Defaults question
+   are in `small_font` and ship in Saddle Up already. The writer checks each text against the font that draws it
+   (by the key's kind, as its room; a mod's `tools/l10n.json` names the font of a text it draws itself with
+   `"font"`), and `l10n-glyphs.py` reads the same files instead of listing what the game's text never draws. With
+   them the shipped files of both repositories have no character their font lacks (this repository's 396 lines a
+   language included, which the game had already shown). A font's own table is read, not its fallbacks: the game
+   stays the judge.
+
+The game has a second font for Chinese and Japanese, `ch_jp_12` (3,898 characters: 70 fewer than `japanese`, 179
+fewer than `chinese`), and which texts it draws is not read yet. It doesn't matter for these files: no tab, heading,
+button or title of the new translations uses a character it lacks; the two short texts that do (競 in the window's
+"clashes with" line, 旗 in Event Decorations' Garlands row label) are of the kinds that already ship with such
+characters in Saddle Up and are drawn in the game (鑑 in a row label and the journal's title, 铜 in a choice). The
+writer checks Japanese, Chinese and Korean against the language's main font only.
+
+A third fault, found while adding the second: the writer looked a text's room up under the folder-prefixed name, so
+the rooms of tabs, titles and a mod's own (`"room"`) were never enforced. Fixed; all ten languages pass under the
+enforced rooms (the translators had kept to the work list's).
+
+**Checks.** The library's new `tests/l10n-write-test.py` (13 cases on a scratch mod with made-up fonts: a
+character each font lacks, the rooms, a dropped `{0}`, a missing key, the writing) is in both repositories'
+`tools/release-scans.sh`. QOL: 19 of 20 green, the one failure the known one (`check-dist`: Event Decorations has
+no dist DLL, it has no release yet). Against the changed library, run from the QOL copy on this repository:
+`l10n-sync.py --check` in step, `tests/TranslationScan` ALL PASS; nothing in this repository's `Languages` changes
+(its files have no Status row of the library's). Both mods rebuilt (0 warnings) and deployed with their files.
+
+**Not seen in the game yet** (the user's looks): both options windows in a translated language (German: no English
+left but the Status value and "On today"'s value; a row's description fully translated); the search box's
+"Search..." and "No visible tech matches" in the game's language, also after a switch in the running game; a whole
+Japanese name (鉄の鍛冶) finding its tech; the Mods menu's Settings button for Tech Tree Search opening our window.
+Three looks that prove the font tables for every later translation, since they are the first characters outside the
+game's own text that only the tables vouch for: Chinese, Event Decorations' Bats, Scarecrows and Garlands rows (蝙蝠,
+稻草人, 旗); Korean, its 핼러윈 tab; Polish, Tech Tree Search's "also match what a tech unlocks" description (straight
+quotes, no box).
+
+The briefs the translators and proofreaders worked from, the notes on unclear English and the ten JSON files are
+kept outside the repositories (`GK2-l10n-briefs-2026-11-17` beside the game's word tables' folder): the next mods'
+translations start from them.
+
+**Left for a native speaker** (the proofreaders' own doubts, none blocking): Korean 핼러윈 (the standard spelling)
+against 할로윈 (common in games); Japanese なし for the choice "Never" (the same word as the window's "None");
+German "Orte" for the Areas heading (it was "Bereiche", which the window uses for a section); Spanish "Ninguna
+tecnología visible encaja" (the natural "coincide" is one character over the box's room); Russian Хеллоуин against
+Хэллоуин; "Display only." kept short in every language.

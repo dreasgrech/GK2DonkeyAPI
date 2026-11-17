@@ -41,6 +41,7 @@ run "$REPO" "face pixels: the eye and nostril list matches rig.json and the donk
 # the translations (the window library's tools; tools/l10n.json names this repository's plugins, their English from a
 # dev start in the game), then the API's own check of its game code
 run "$REPO" "translations: the sync tool's writing, on scratch files" python -I lib/GK2DreasUI/tests/l10n-sync-merge-test.py
+run "$REPO" "translations: the writer's checks (fonts, room, placeholders), on scratch files" python -I lib/GK2DreasUI/tests/l10n-write-test.py
 run "$REPO" "translations: the English templates match the last dev run, the window's words the library's (docs/localization.md)" python -I lib/GK2DreasUI/tools/l10n-sync.py --check
 run "$REPO" "translations: no bubble or prompt said with a literal" python -I tools/l10n-literals.py
 for d in "$REPO"/src/*/assets/mounts/*/skins/*/ "$REPO"/packs/*/gk2mounts/*/skins/*/; do  # built in, then the external packs (tools/skins/skinroots.py)

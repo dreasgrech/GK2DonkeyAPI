@@ -52,6 +52,7 @@ every mod that carries the windows; `tools/l10n.json` here names this repository
 comes from the game): `lib/GK2DreasUI/tests/TranslationScan` (the translator mistake catalogue and every shipped
 `Languages/*.csv` read as the game reads it and saved every wrong way, no warning allowed),
 `lib/GK2DreasUI/tests/l10n-sync-merge-test.py` (the sync tool's writing, on scratch files),
+`lib/GK2DreasUI/tests/l10n-write-test.py` (the translation writer's checks, on scratch files; since 2026-11-17),
 `lib/GK2DreasUI/tools/l10n-sync.py --check` (since 2026-10-31: every plugin's `Languages/en.csv` is the English the
 last dev start wrote, so start the game once with the dev tools after the last text change; the window's own words
 in each file are the library's; every shipped translation's `{0}` matching its English, its counts of translated,

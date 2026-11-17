@@ -24,6 +24,20 @@ For players:
 
 Development:
 
+- Translations for the other mods, written (2026-11-17; `docs/ui-library.md` section 11.11; the user's decisions:
+  both QOL mods in all 10 languages, the Framework's Settings button opening Tech Tree Search's own window). Nothing
+  of this repository's code or `Languages` changes; what reaches it is the window library at its next pointer move:
+  - `Languages/en.csv` (the library's 21 words and the default Status row's label and description) and that row in
+    its 10 language files. This repository's files have no such row: `l10n-sync.py --check` stays in step.
+  - `tools/l10n-write.py` (a translator's JSON checked and written; `--todo`), `tools/l10n-terms.py` (the game's own
+    words for ours), `tools/l10n-fonts.py` (the characters of the game's fonts, read from its files into the folder
+    of the game's word tables). The writer checks every text against the font that draws it: the language's own for
+    Japanese, Chinese and Korean (they hold more than the game's text uses), the game's Latin fonts for the rest
+    (none has the low opening quote U+201E; the bold and the tiny one no curly quotes or en dash).
+    `tools/l10n-glyphs.py` reads the same font files: this repository's shipped translations have no character
+    their font lacks (396 lines a language).
+  - `tests/l10n-write-test.py`, in `tools/release-scans.sh` here from the pointer move on (it is not in the library
+    commit this repository points at before).
 - Translations for the other mods, studied (2026-11-15, nothing built; `docs/ui-library.md` section 11): the reader
   and the lookup are already in the window library and compiled into every consumer; what a consumer lacks is around
   them (the window's own 21 words translated only in the API's files, the QOL repo's loose deploy sharing one
