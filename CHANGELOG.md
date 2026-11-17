@@ -53,6 +53,18 @@ Development:
     runner (15:59 the same day, 2137; `tools/log-scenarios.py`: 0 scenarios differ, 0 make fewer). No warning or
     error before the run's start. The bench's panel cost 1.5 microseconds a frame on average over the run's 83,323
     frames, the worst 0.55 ms.
+  - **The audit of the move** (2026-11-17; `docs/self-tests-migration-audit.md`; the user: "make sure we have
+    migrated ALL tests ... without skipping or assuming about a single one"). `tools/selftest-migration-audit.py`
+    reads every scenario from the code at the last commit with the old runner (`a6d45c4`) and now, and from the
+    runs' logs: the two lists entry by entry (187 and 187, each the same group, name, body and hides-the-panel
+    flag), the order the bench ran them in (the old runner's, all 187), every source file of the tests (85 of 92
+    the same byte for byte; each differing line of the other seven listed: the runner's own blocks, one line that
+    prints the same text, comments, the Tests tab), each scenario's number of checks (0 of 187 differ), and an old
+    runner's whole log of 2026-11-11 line by line (176 scenarios in the same order; 124 say every check in the very
+    same words, 41 more but for measured numbers, the other 11 each read: the game's update, releases and checks
+    added since). The old `Run` and `Drive` were compared with the new steps statement by statement. The document
+    also says what a green run can't show (a throw, an abort, a run of one group, a refusal, the hidden panels) and
+    how each is covered. Nothing was found that differs; no code of the API or the tests changed.
 - Translations for the other mods, written (2026-11-17; `docs/ui-library.md` section 11.11; the user's decisions:
   both QOL mods in all 10 languages, the Framework's Settings button opening Tech Tree Search's own window). Nothing
   of this repository's code or `Languages` changes; what reaches it is the window library at its next pointer move:
