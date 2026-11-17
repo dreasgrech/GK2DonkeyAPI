@@ -14,87 +14,45 @@ namespace GK2DonkeyAPI
     // animator's facing, which cart parts are on, whose materials the sprites wear, the counters. Every bug of the
     // levels and view reuse found by hand on 2026-10-01 is one of them, so a fix can't pass by luck.
     //
-    // Run from the panel's Tests tab: all of them, one group, or one scenario; every run has the same start and
-    // finish. Test donkeys belong to SelfTest.Owner, are never kept with the save and are removed after each
+    // Run from GK2 Mod Test Bench's panel (F4): all of them, one group, or one scenario; every run has the same start
+    // and finish. Test donkeys belong to SelfTest.Owner, are never kept with the save and are removed after each
     // scenario; the keeper is put back where he stood; nothing is saved. Results go to the log as [test] PASS / FAIL /
-    // WARN / INFO lines and a summary, and to the panel (each scenario's own tally while the run goes on).
+    // WARN / INFO lines and a summary, and to the bench's panel (each scenario's own tally while the run goes on).
     internal static partial class SelfTest
     {
         internal const string Owner = "dreas.gk2.donkeyapi.selftest";
 
+        // A run of the scenarios goes on (HoldRun to LetRunGo): the mod's own code asks it where a test needs another
+        // behaviour (MountCompanion, Sounds, Perf).
         internal static bool Running { get; private set; }
-        internal static string Status { get; private set; } = "Not run this session.";
-        internal static readonly List<string> Lines = new List<string>();
 
-        internal static int pass, fail, warn, skip;
-        internal static bool abort;
         internal static int spawnSeq;
 
-        // The run as a whole, for the panel's progress: the scenarios in it, how many are done, when it started, and
-        // the tallies so far.
-        internal static int PassCount => pass;
-        internal static int FailCount => fail;
-        internal static int WarnCount => warn;
-        internal static int RunCount { get; private set; }
-        internal static int RunDone { get; private set; }
-        internal static float RunStarted { get; private set; }
-        internal static Scenario Current => running;
+        // ------------------------------------------------------------------ the runner's side
+        //
+        // The scenarios are run by GK2 Mod Test Bench, a developer's plugin with a repository of its own: one runner
+        // and one panel for every mod's in-game tests (since 2026-11-17; until then the runner was here, with a Tests
+        // tab in the F11 panel). The API knows nothing of the bench. A dev plugin that knows both
+        // (tools/GK2DonkeyAPI.IntegrationTests) hands the bench every scenario listed here and gives this class the
+        // bench's ends: where a check goes (the sinks), whether the run was asked to stop. What is the API's own
+        // around a run stays here, as plain steps that plugin calls from the bench's hooks:
+        //   HoldRun / LetRunGo   the whole run: the flags the mod's code reads; LetRunGo also puts back whatever a run
+        //                        ended from outside left held (it can't wait over frames)
+        //   StartRun             once before the first scenario: the keeper free and on a test spot, the settings held
+        //   BeforeScenario, AfterScenario   around each: the levels' settings, the cleanup, the stage looked at
+        //   FinishRun            once after the last: the settings back, the keeper back, a spot that passed remembered
+        internal static Action<string> PassSink, FailSink, WarnSink, InfoSink, SkipSink;
+        internal static Func<bool> AbortSource;
 
-        internal static bool startRequested;
-        internal static Func<Scenario, bool> pick; // which scenarios the requested run takes; null = all
-
-        // The panel's buttons: the run starts on the next frame (PollStart), not inside the GUI event. All of them,
-        // one group, or one scenario; every run has the same start and finish (the test spot, cleanup, the world's
-        // own donkeys checked).
-        internal static void RequestStart() => RequestStart((Func<Scenario, bool>)null);
-
-        internal static void RequestStart(Scenario one) => RequestStart(s => s == one);
-
-        internal static void RequestStartGroup(string group) => RequestStart(s => s.Group == group);
-
-        internal static void RequestStart(Func<Scenario, bool> which)
-        {
-            if (Running)
-            {
-                return;
-            }
-            pick = which;
-            startRequested = true;
-        }
-
-        internal static void PollStart()
-        {
-            if (!startRequested)
-            {
-                return;
-            }
-            startRequested = false;
-            if (Running || Plugin.Instance == null)
-            {
-                return;
-            }
-            Running = true; // at once, so the panel shows Abort from the next event on
-            Plugin.Instance.StartCoroutine(Drive(Run()));
-        }
-
-        internal static void Abort() => abort = true;
-
-        // ------------------------------------------------------------------ the runner
-
-        internal enum RunState { NotRun, Running, Done }
+        // The run was asked to stop: the waits end, and a scenario's own loops should.
+        internal static bool abort => AbortSource != null && AbortSource();
 
         internal sealed class Scenario
         {
             internal string Name;
             internal string Group;
             internal Func<IEnumerator> Body;
-            internal bool HidesPanel;   // the panel hidden while it runs (its own cost would be in the measurement)
-            // Its last run: the state and the tally; kept until it runs again, so a run of one group or one scenario
-            // leaves the others' results standing.
-            internal RunState State;
-            internal int Pass, Fail, Warn;
-            internal bool Skipped;      // not run in this setup (Skip): neither a pass nor a warning
-            internal float Started, Elapsed;
+            internal bool HidesPanel;   // the panels hidden while it runs (their own cost would be in the measurement)
         }
 
         internal const string GroupCore = "API, side file, carts, colours";
@@ -115,7 +73,7 @@ namespace GK2DonkeyAPI
         internal const string GroupAfter = "After the run";
         internal const string AfterRunName = "the world's own donkeys came through unchanged, no test donkey left behind";
 
-        // Every scenario, in run order (docs/self-tests.md). The panel's Tests tab lists them from here. The API's own;
+        // Every scenario, in run order (docs/self-tests.md). GK2 Mod Test Bench's panel lists them from here. The API's own;
         // a dev test plugin adds its scenarios at its start (AddScenarios).
         internal static readonly List<Scenario> Scenarios = new List<Scenario>
         {
@@ -290,16 +248,92 @@ namespace GK2DonkeyAPI
             return g.ToArray();
         }
 
-        internal static Scenario running;
+        // ---- the run's own state, between StartRun and FinishRun
 
-        internal static IEnumerator Run()
+        private static bool held;               // HoldRun to LetRunGo
+        private static bool runStarted;         // StartRun came through: FinishRun has something to finish
+        private static bool lodHeld, slotHeld, standingHeld, languageHeld, panelHidden;
+        private static bool lodOn, idleOff;
+        private static int perFrame, slotFloorWas;
+        private static BehaviourHeld[] freeplayWas;
+        private static BehaviourHeld standingWas;
+        private static string languageWas;
+        private static bool? testLanguageWas;
+        private static bool armourWas, panelWasHidden;
+        private static string originPreset, runScene;
+        private static Vector3 origin;
+        private static float originFacing;
+        private static int bodiesAtStart;
+        private static string stageBefore, cartBefore;
+        private static string cartLastDrawnAfter; // the stage's cart in its picture: the last scenario after which it was drawn (2026-11-15)
+        private static bool cartGoneSaid;
+
+        // The run begins (before StartRun): the flags the mod's own code reads for the whole run.
+        internal static void HoldRun()
         {
-            abort = false;
-            Lines.Clear();
-            pass = fail = warn = skip = 0;
+            if (held) return;
+            held = true;
+            Running = true;
+            MountCompanion.HeldForTests = true; // with it: no test's pick leaves the player's mount in the world (MountCompanion)
+        }
+
+        // The run is over, however it ended (after FinishRun; also when the bench ends the run from outside, where
+        // FinishRun can't run): whatever is still held goes back, and the flags.
+        internal static void LetRunGo()
+        {
+            RestoreSettings();
+            if (panelHidden)
+            {
+                panelHidden = false;
+                Plugin.TuningWindowHidden = panelWasHidden;
+            }
+            runStarted = false;
+            MountCompanion.HeldForTests = false;
+            Running = false;
+            held = false;
+        }
+
+        // What StartRun held, put back: each part once (a second call does nothing). The order is the old runner's.
+        private static void RestoreSettings()
+        {
+            if (languageHeld)
+            {
+                languageHeld = false;
+                Texts.LanguageOverride = languageWas;
+                Texts.TestForced = testLanguageWas;
+            }
+            if (lodHeld)
+            {
+                lodHeld = false;
+                Lod.On = lodOn;
+                Lod.IdleSwitchesOff = idleOff;
+                Lod.SpawnsPerFrame = perFrame;
+            }
+            if (slotHeld)
+            {
+                slotHeld = false;
+                Cargo.SlotFloor = slotFloorWas;
+            }
+            if (freeplayWas != null)
+            {
+                foreach (BehaviourHeld h in freeplayWas) h.Restore();
+                freeplayWas = null;
+            }
+            if (standingHeld)
+            {
+                standingHeld = false;
+                standingWas.Restore();
+            }
+        }
+
+        // Once, before the first scenario of a run. refuse: the run can't start (said with the reason; no scenario
+        // runs, and FinishRun does nothing).
+        internal static IEnumerator StartRun(Action<string> refuse)
+        {
+            runStarted = false;
             if (!Mount.Instance.IsInGame(out PlayerController pc, out GameScene scene) || !Mounts.IsGameReady)
             {
-                Status = "Not in a game (load a save first).";
+                refuse("not in a game (load a save first)");
                 yield break;
             }
             if (Mounts.IsMounted)
@@ -307,44 +341,47 @@ namespace GK2DonkeyAPI
                 Mounts.Dismount("self-test");
                 yield return null;
             }
-            // The panel stays up during the run (its Tests tab shows each scenario's progress); only the frame-time
-            // scenario hides it, its own cost would be in the measurement.
+            // The panels stay up during the run (the bench's shows each scenario's progress); only the frame-time
+            // scenario hides them, their own cost would be in the measurement.
             autoReloadAtStart = Plugin.SkinPackAutoReload != null && Plugin.SkinPackAutoReload.Value;
-            bool lodOn = Lod.On, idleOff = Lod.IdleSwitchesOff;
-            int perFrame = Lod.SpawnsPerFrame;
+            lodOn = Lod.On;
+            idleOff = Lod.IdleSwitchesOff;
+            perFrame = Lod.SpawnsPerFrame;
+            lodHeld = true;
             // A test load left on the cart from the panel (TestLoads.Put, e.g. the review's Load it) holds every cart at
             // its size until Take off; the scenarios check the setting alone, so the floor is off for the run and back
             // after it. Found 2026-10-16: "two off: the size follows the setting (2 on it, 3 slots)" after a review session.
-            int slotFloorWas = Cargo.SlotFloor;
+            slotFloorWas = Cargo.SlotFloor;
             Cargo.SlotFloor = 0;
+            slotHeld = true;
             // The run's own starting state, wherever it was started; each part put back at the end.
             // Free: a conversation, a script or work holds him (it can't be broken off from here): waited for.
             yield return Until(() => pc.IsControlsEnabled && pc.Ssm?.CurState is FreePlayerState && (pc.MovementComponent == null || !pc.MovementComponent.IsMoving), 15f);
             if (!pc.IsControlsEnabled || !(pc.Ssm?.CurState is FreePlayerState))
             {
-                Cargo.SlotFloor = slotFloorWas;
-                Status = "Not started: the game holds the keeper (a conversation, a script, work) and didn't let go within 15 s. Start the run when he walks freely.";
-                Line("[test] " + Status);
+                RestoreSettings();
+                refuse("the game holds the keeper (a conversation, a script, work) and didn't let go within 15 s. Start the run when he walks freely.");
                 yield break;
             }
             // A player's Freeplay (every cart the most cargo, every mount one speed) would change what the scenarios check:
             // held off for the run, back after it (the Freeplay scenario sets its own).
-            BehaviourHeld[] freeplayWas = HoldFreeplayOff();
-            var standingWas = new BehaviourHeld("StandingSounds"); // the sound scenarios set it as the test's own (SetStandingSounds); the holder's back after the run
+            freeplayWas = HoldFreeplayOff();
+            standingWas = new BehaviourHeld("StandingSounds"); // the sound scenarios set it as the test's own (SetStandingSounds); the holder's back after the run
+            standingHeld = true;
             // Out of the armour view (a fight's look: the cart is refused in it); the fight scenarios put it on themselves.
-            bool armourWas = Mount.Instance.InArmour(pc);
+            armourWas = Mount.Instance.InArmour(pc);
             if (armourWas)
             {
                 pc.SetArmorView(false);
                 yield return Frames(2);
             }
             // His light (the game writes its name into the save): the run's is outdoor, his comes back with him.
-            string originPreset = EnvironmentEngine.Instance?.TimesOfDay?.name;
+            originPreset = EnvironmentEngine.Instance?.TimesOfDay?.name;
             // Where the keeper stood: he is put back there at the end. The run itself starts from the remembered spot
             // (Debug.SelfTestSpot, written by a run that passed everywhere) when it is in this scene.
-            Vector3 origin = Keeper();
-            float originFacing = pc.PlayerData.Direction.x >= 0f ? 1f : -1f;
-            current = "start";
+            origin = Keeper();
+            originFacing = pc.PlayerData.Direction.x >= 0f ? 1f : -1f;
+            runScene = scene.Id;
             if (TryParseSpot(Plugin.SelfTestSpot.Value, out string spotScene, out Vector3 spot) && spotScene == scene.Id && Vector3.Distance(spot, origin) > 1f && !InAnyBuilding(spot, scene))
             {
                 PutKeeper(spot, originFacing);
@@ -394,11 +431,11 @@ namespace GK2DonkeyAPI
             }
             home = Keeper();
             homeFacing = originFacing;
-            int bodiesAtStart = MainGame.PlayerData.GetResInt("cur_bodies_count");
+            bodiesAtStart = MainGame.PlayerData.GetResInt("cur_bodies_count");
             corpseDrops.Clear();
             WorldZoneData startZone = ZoneAt(home, scene);
             string zone = startZone?.id ?? MainGame.PlayerData.CurrentWorldZoneData?.Definition?.id;
-            Line($"[test] start: {scene.Id} at {home:F1} ({(startZone != null ? "container zone " + zone : zone != null ? "zone " + zone + ", not a container zone" : "no zone")}), {Mount.All.Count} instance(s) in the world; levels {(lodOn ? "on" : "off")}, idle {(idleOff ? "switched off" : "frozen")}.");
+            Info($"{scene.Id} at {home:F1} ({(startZone != null ? "container zone " + zone : zone != null ? "zone " + zone + ", not a container zone" : "no zone")}), {Mount.All.Count} instance(s) in the world; levels {(lodOn ? "on" : "off")}, idle {(idleOff ? "switched off" : "frozen")}.");
             if (startZone == null)
             {
                 Warn("this spot is in no container zone and none could be reached: the chest scenarios will skip. Start the run inside a built-up area with chests (the yard).");
@@ -407,100 +444,69 @@ namespace GK2DonkeyAPI
             // The world's own instances (not the tests'): all must come through the run as they were (AfterTheRun).
             worldBefore = WorldSnapshot();
 
-            // The scenarios of this run (all, one group, or one): their last results are cleared, the others' stand.
-            var scenarios = new List<Scenario>();
-            foreach (Scenario c in Scenarios)
-            {
-                if (pick == null || pick(c)) scenarios.Add(c);
-            }
-            pick = null;
-            // the run's own checks, always last (a group or one scenario too), never twice: every scenario of the group
-            // in its order, the world's check the very last (it took the group's first alone until a second joined the
-            // group, 2026-11-04: the atlas probe's page check ran and the world's check was left out, "158 of 159")
-            scenarios.RemoveAll(c => c.Group == GroupAfter);
-            foreach (Scenario c in Scenarios) if (c.Group == GroupAfter && c.Name != AfterRunName) scenarios.Add(c);
-            Scenario afterRun = Scenarios.Find(c => c.Name == AfterRunName);
-            if (afterRun != null) scenarios.Add(afterRun);
-            bool full = scenarios.Count == Scenarios.Count;
-            foreach (Scenario c in scenarios)
-            {
-                c.State = RunState.NotRun;
-                c.Pass = c.Fail = c.Warn = 0;
-                c.Elapsed = 0f;
-            }
-            RunCount = scenarios.Count;
-            RunDone = 0;
-            RunStarted = Time.unscaledTime;
-            if (!full)
-            {
-                Line($"[test] this run: {scenarios.Count} of {Scenarios.Count} scenario(s): {string.Join("; ", scenarios.ConvertAll(c => c.Name))}");
-            }
             // The windows' words in English for the run, whatever the game's language or Debug.TestLanguage: the scenarios
             // check English texts (the translations scenario sets its own and puts these back).
-            string languageWas = Texts.LanguageOverride;
-            bool? testLanguageWas = Texts.TestForced;
+            languageWas = Texts.LanguageOverride;
+            testLanguageWas = Texts.TestForced;
             Texts.LanguageOverride = "en";
             Texts.TestForced = false;
-            string cartLastDrawnAfter = null; // the stage's cart in its picture: the last scenario after which it was drawn (2026-11-15)
-            bool cartGoneSaid = false;
-            foreach (Scenario s in scenarios)
-            {
-                if (abort)
-                {
-                    break;
-                }
-                Status = $"Running: {s.Name}";
-                current = s.Name;
-                running = s;
-                s.State = RunState.Running;
-                s.Started = Time.unscaledTime;
-                Lod.On = true;
-                Lod.IdleSwitchesOff = idleOff;
-                Lod.SpawnsPerFrame = perFrame;
-                bool panelWasHidden = Plugin.TuningWindowHidden;
-                if (s.HidesPanel)
-                {
-                    Plugin.TuningWindowHidden = true;
-                }
-                string stageBefore = PreviewStage.TestCartPartsState(), cartBefore = PreviewStage.TestCartDrawn(); // the stage's cart parts and the cart in its picture as the scenario found them (2026-11-15: a run left the cart out)
-                yield return s.Body();
-                // Between scenarios: everything back.
-                yield return CleanUp();
-                string stageAfter = PreviewStage.TestCartPartsState(), cartAfter = PreviewStage.TestCartDrawn();
-                if (stageBefore != "no stage" && stageAfter != stageBefore) Warn($"{s.Name}: the stage's cart parts are not as the scenario found them ({stageBefore} -> {stageAfter})");
-                if (cartBefore.StartsWith("drawn", StringComparison.Ordinal) && cartAfter.StartsWith("NOT drawn", StringComparison.Ordinal)) Warn($"{s.Name}: the cart is gone from the stage's picture over the scenario ({cartBefore} -> {cartAfter}); {PreviewStage.TestCartFacts()}");
-                // the stage dressed as a cartless mount hides it meanwhile: the range since the cart was last seen drawn
-                if (cartAfter.StartsWith("drawn", StringComparison.Ordinal)) { cartLastDrawnAfter = s.Name; cartGoneSaid = false; }
-                else if (cartAfter.StartsWith("NOT drawn", StringComparison.Ordinal) && !cartGoneSaid) { cartGoneSaid = true; Warn($"{s.Name}: the stage's picture has no cart after this scenario ({cartAfter}); it was last drawn after {cartLastDrawnAfter ?? "no scenario yet"}; {PreviewStage.TestCartFacts()}"); }
-                if (s.HidesPanel)
-                {
-                    Plugin.TuningWindowHidden = panelWasHidden;
-                }
-                s.Elapsed = Time.unscaledTime - s.Started;
-                s.State = RunState.Done;
-                running = null;
-                RunDone++;
-            }
-            running = null;
-            Texts.LanguageOverride = languageWas;
-            Texts.TestForced = testLanguageWas;
-            Lod.On = lodOn;
+            languageHeld = true;
+            cartLastDrawnAfter = null;
+            cartGoneSaid = false;
+            runStarted = true;
+        }
+
+        // Before each scenario: the levels as the run found them, the panel hidden for a measurement, the stage looked at.
+        internal static void BeforeScenario(Scenario s)
+        {
+            Lod.On = true;
             Lod.IdleSwitchesOff = idleOff;
             Lod.SpawnsPerFrame = perFrame;
-            Cargo.SlotFloor = slotFloorWas;
-            foreach (BehaviourHeld h in freeplayWas) h.Restore();
-            standingWas.Restore();
+            panelWasHidden = Plugin.TuningWindowHidden;
+            if (s.HidesPanel)
+            {
+                Plugin.TuningWindowHidden = true;
+                panelHidden = true;
+            }
+            stageBefore = PreviewStage.TestCartPartsState(); // the stage's cart parts and the cart in its picture as the scenario found them (2026-11-15: a run left the cart out)
+            cartBefore = PreviewStage.TestCartDrawn();
+        }
+
+        // After each scenario, also one that threw. Between scenarios: everything back.
+        internal static IEnumerator AfterScenario(Scenario s)
+        {
+            yield return CleanUp();
+            string stageAfter = PreviewStage.TestCartPartsState(), cartAfter = PreviewStage.TestCartDrawn();
+            if (stageBefore != "no stage" && stageAfter != stageBefore) Warn($"{s.Name}: the stage's cart parts are not as the scenario found them ({stageBefore} -> {stageAfter})");
+            if (cartBefore.StartsWith("drawn", StringComparison.Ordinal) && cartAfter.StartsWith("NOT drawn", StringComparison.Ordinal)) Warn($"{s.Name}: the cart is gone from the stage's picture over the scenario ({cartBefore} -> {cartAfter}); {PreviewStage.TestCartFacts()}");
+            // the stage dressed as a cartless mount hides it meanwhile: the range since the cart was last seen drawn
+            if (cartAfter.StartsWith("drawn", StringComparison.Ordinal)) { cartLastDrawnAfter = s.Name; cartGoneSaid = false; }
+            else if (cartAfter.StartsWith("NOT drawn", StringComparison.Ordinal) && !cartGoneSaid) { cartGoneSaid = true; Warn($"{s.Name}: the stage's picture has no cart after this scenario ({cartAfter}); it was last drawn after {cartLastDrawnAfter ?? "no scenario yet"}; {PreviewStage.TestCartFacts()}"); }
+            if (panelHidden)
+            {
+                panelHidden = false;
+                Plugin.TuningWindowHidden = panelWasHidden;
+            }
+        }
+
+        // Once, after the last scenario of a run (also an aborted one). full: every scenario was in the run; clean: no
+        // check failed and none warned.
+        internal static IEnumerator FinishRun(bool full, bool clean, bool aborted)
+        {
+            if (!runStarted) yield break;
+            runStarted = false;
+            RestoreSettings();
             if (corpseDrops.Count > 0)
             {
                 // A corpse scenario that threw after its drop: its bodies are real, so they go now, not at the next load.
-                current = "corpse bodies left by a failed scenario";
+                Info("corpse bodies left by a failed scenario are taken away");
                 yield return RemoveCorpseDrops(bodiesAtStart);
             }
             // Only a full run that passed everywhere remembers its spot: a passing group or scenario says nothing about
             // the others' ground.
-            if (full && !abort && fail == 0 && warn == 0)
+            if (full && !aborted && clean)
             {
-                string remembered = scene.Id + "|" + home.x.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + home.y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + home.z.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+                string remembered = runScene + "|" + home.x.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + home.y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + home.z.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
                 if (Plugin.SelfTestSpot.Value != remembered)
                 {
                     Plugin.SelfTestSpot.Value = remembered;
@@ -519,87 +525,29 @@ namespace GK2DonkeyAPI
             {
                 PC.SetArmorView(true);
             }
-            string summary = $"{(abort ? "aborted" : "done")}{(full ? "" : $" ({scenarios.Count} of {Scenarios.Count} scenarios)")}: {pass} passed, {fail} failed, {warn} warning(s){(skip > 0 ? $", {skip} scenario(s) skipped" : "")}.";
-            Line("[test] " + summary);
-            Status = summary;
         }
 
-        // Runs a coroutine with its nested coroutines itself, so an exception anywhere ends only that scenario (FAIL)
-        // and the run goes on (Unity would stop the whole coroutine).
-        internal static IEnumerator Drive(IEnumerator root)
+        // ---- the checks: each goes to the bench (its line in the log, its tally on the scenario), through the sinks the
+        // dev plugin gave. Without that plugin nothing runs a scenario; a check made anyway is said in the log.
+
+        private static void Say(Action<string> sink, string kind, string what)
         {
-            Running = true; // set and cleared here only
-            MountCompanion.HeldForTests = true; // with it: no test's pick leaves the player's mount in the world (MountCompanion)
-            GameQuiet.Begin(); // the game's own story held: no test starts a quest's event (GameQuiet.cs, F11 of 2026-11-06)
-            TestZoom.Begin(); // the camera at the game's own zoom, a zoom mod held off (TestZoom.cs, F11 of 2026-11-12)
-            var stack = new Stack<IEnumerator>();
-            stack.Push(root);
-            while (stack.Count > 0)
-            {
-                IEnumerator top = stack.Peek();
-                object cur = null;
-                bool more;
-                try
-                {
-                    more = top.MoveNext();
-                    if (more) cur = top.Current;
-                }
-                catch (Exception e)
-                {
-                    more = false;
-                    Fail("threw " + e.GetType().Name + ": " + e.Message);
-                    Plugin.Log.LogWarning("[test] " + e);
-                    // The scenario that threw ends; the runner (the bottom of the stack) goes on with its cleanup. Each
-                    // coroutine unwound is disposed: its own finally (the language, the windows put back) runs then.
-                    while (stack.Count > 1)
-                    {
-                        IEnumerator unwound = stack.Pop();
-                        try
-                        {
-                            (unwound as IDisposable)?.Dispose();
-                        }
-                        catch (Exception d)
-                        {
-                            Fail("its cleanup threw " + d.GetType().Name + ": " + d.Message);
-                        }
-                    }
-                    continue;
-                }
-                if (!more)
-                {
-                    stack.Pop();
-                    continue;
-                }
-                if (cur is IEnumerator nested)
-                {
-                    stack.Push(nested);
-                    continue;
-                }
-                yield return cur;
-            }
-            MountCompanion.HeldForTests = false;
-            GameQuiet.End();
-            TestZoom.End();
-            Running = false;
+            if (sink != null) sink(what);
+            else Plugin.Log.LogInfo($"[test] {kind} (no test bench: GK2 Mod Test Bench and the integration tests' plugin aren't installed): {what}");
         }
 
-        internal static string current = "";
+        // A line of a test's own. The old runner's "[test] " start goes: the bench puts its own before every line.
+        internal static void Line(string s) => Info(s != null && s.StartsWith("[test] ", StringComparison.Ordinal) ? s.Substring(7) : s);
 
-        internal static void Line(string s)
-        {
-            Lines.Add(s);
-            Plugin.Log.LogInfo(s);
-        }
+        internal static void Pass(string what) => Say(PassSink, "PASS", what);
 
-        internal static void Pass(string what) { pass++; if (running != null) running.Pass++; Line($"[test] PASS {current}: {what}"); }
+        internal static void Fail(string what) => Say(FailSink, "FAIL", what);
 
-        internal static void Fail(string what) { fail++; if (running != null) running.Fail++; Line($"[test] FAIL {current}: {what}"); }
+        internal static void Warn(string what) => Say(WarnSink, "WARN", what);
 
-        internal static void Warn(string what) { warn++; if (running != null) running.Warn++; Line($"[test] WARN {current}: {what}"); }
-
-        internal static void Info(string what) => Line($"[test] INFO {current}: {what}");
+        internal static void Info(string what) => Say(InfoSink, "INFO", what);
         // A scenario that can't run in this setup (the mounts switched off, say): said, counted apart, not a warning.
-        internal static void Skip(string why) { skip++; if (running != null) running.Skipped = true; Line($"[test] SKIP {current}: {why}"); }
+        internal static void Skip(string why) => Say(SkipSink, "SKIP", why);
 
         internal static void Check(bool ok, string what)
         {

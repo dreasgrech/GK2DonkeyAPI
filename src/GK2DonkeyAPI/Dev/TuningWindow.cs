@@ -1616,129 +1616,15 @@ namespace GK2DonkeyAPI
 
         // ------------------------------------------------------------------ Tests tab
 
+        // The scenarios are run from GK2 Mod Test Bench's panel since 2026-11-17 (one runner and one panel for every GK2
+        // mod's tests); this tab says where they went and what the API has for the bench.
         private static void DrawTests()
         {
             Header("Self-tests");
-            GUILayout.Label("Scripted checks that drive the game over frames (docs/self-tests.md): the per-mod API, the side file, hitching, shared colours, the levels, view reuse, foals following, the spawn cap and leaks, the chest on the cart, the morgue door, the corpses at the crossroads. All of them take about 4 minutes; a group or one scenario alone has the same start and finish (the keeper moved to the test spot and put back, every test donkey removed, the world's own donkeys checked). They spawn their own test donkeys (never kept) and save nothing. Don't touch the keys while they run. Each scenario's tally shows here as it runs; the full [test] lines are in the log.", small);
-            GUILayout.BeginHorizontal();
-            if (!SelfTest.Running && GUILayout.Button(Tip("Run all", "Starts every self-test scenario on the next frame, about 4 minutes. Test donkeys are never kept, nothing is saved; keep your hands off the keys."), Wd(110f)))
-            {
-                SelfTest.RequestStart(); // started on the next frame (SelfTest.PollStart), not inside this GUI event
-            }
-            if (SelfTest.Running && GUILayout.Button(Tip("Abort", "Stops the running self-tests at the next step; the keeper is put back and the test donkeys removed."), Wd(110f)))
-            {
-                SelfTest.Abort();
-            }
-            GUILayout.Label(SelfTest.Status, wrapLabel);
-            GUILayout.EndHorizontal();
-            if (SelfTest.Running)
-            {
-                int done = SelfTest.RunDone, total = SelfTest.RunCount;
-                ProgressBar(total > 0 ? (float)done / total : 0f);
-                GUILayout.Label($"{done} of {total} scenario(s) done after {Mathf.FloorToInt(Time.unscaledTime - SelfTest.RunStarted)} s; so far {SelfTest.PassCount} passed, {SelfTest.FailCount} failed, {SelfTest.WarnCount} warning(s).", small);
-            }
-            // Every group starts folded (60 scenarios made the tab a long scroll, the user 2026-10-20): the header
-            // carries the group's count and its last results and the Run group button; a click on the name unfolds it.
-            foreach (string g in SelfTest.Groups)
-            {
-                GUILayout.Box(GUIContent.none, rule, ExpandW);
-                int count = 0, passed = 0, failed = 0, warned = 0, running = 0;
-                foreach (SelfTest.Scenario s in SelfTest.Scenarios)
-                {
-                    if (s.Group != g) continue;
-                    count++;
-                    if (s.State == SelfTest.RunState.Running) running++;
-                    else if (s.State == SelfTest.RunState.Done)
-                    {
-                        if (s.Fail > 0) failed++;
-                        else if (s.Warn > 0) warned++;
-                        else passed++;
-                    }
-                }
-                bool open = testGroupOpen.TryGetValue(g, out bool o) && o;
-                string summary = passed + failed + warned + running == 0 ? $"{count} scenarios"
-                    : $"{count} scenarios: {passed} passed" + (failed > 0 ? $", {failed} FAILED" : "") + (warned > 0 ? $", {warned} with warnings" : "") + (running > 0 ? ", running" : "");
-                GUILayout.BeginHorizontal();
-                // the title in the group's colour (the user, 2026-10-24): white with no result yet (a run resets them at
-                // its start), green when every scenario run passed, yellow when one warned, red when one failed
-                string colour = failed > 0 ? "#ff6666" : warned > 0 ? "#ffd84d" : passed > 0 && running == 0 ? "#7fe07f" : "#ffffff";
-                if (GUILayout.Button($"<color={colour}>{(open ? "\u25BE " : "\u25B8 ")}{g}</color>", header, ExpandW))
-                {
-                    testGroupOpen[g] = !open;
-                }
-                GUILayout.Label(summary, failed > 0 ? bad : small, Wd(W * 0.34f));
-                if (!SelfTest.Running && GUILayout.Button(Tip("Run group", "Runs only this group's scenarios, with the same start and finish as a full run. Nothing is saved."), Wd(90f)))
-                {
-                    SelfTest.RequestStartGroup(g);
-                }
-                GUILayout.EndHorizontal();
-                if (!open) continue;
-                foreach (SelfTest.Scenario s in SelfTest.Scenarios)
-                {
-                    if (s.Group != g)
-                    {
-                        continue;
-                    }
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Label(ScenarioState(s, out GUIStyle st), st, Wd(W * 0.36f));
-                    GUILayout.Label(s.Name, wrapLabel, ExpandW);
-                    if (!SelfTest.Running && GUILayout.Button(Tip("Run", "Runs this one scenario alone; the keeper is moved to the test spot and put back afterwards. Nothing is saved."), Wd(48f)))
-                    {
-                        SelfTest.RequestStart(s);
-                    }
-                    GUILayout.EndHorizontal();
-                }
-            }
-
-            Header("Failures and warnings of the last run");
-            int shown = 0;
-            for (int k = SelfTest.Lines.Count - 1; k >= 0 && shown < 40; k--)
-            {
-                string l = SelfTest.Lines[k];
-                if (l.Contains(" FAIL ") || l.Contains(" WARN "))
-                {
-                    GUILayout.Label(l, l.Contains(" FAIL ") ? bad : warnWrap);
-                    shown++;
-                }
-            }
-            if (shown == 0)
-            {
-                GUILayout.Label(SelfTest.Lines.Count == 0 ? "No run this session." : "None.", small);
-            }
-        }
-
-        // One scenario's state for its row: not run, running (with its time so far), or its tally, coloured.
-        private static readonly Dictionary<string, bool> testGroupOpen = new Dictionary<string, bool>(); // the Tests tab: which groups are unfolded
-
-        private static string ScenarioState(SelfTest.Scenario s, out GUIStyle style)
-        {
-            switch (s.State)
-            {
-                case SelfTest.RunState.Running:
-                    style = warnWrap;
-                    return $"running, {Mathf.FloorToInt(Time.unscaledTime - s.Started)} s";
-                case SelfTest.RunState.Done:
-                    if (s.Fail > 0)
-                    {
-                        style = bad;
-                        return $"FAIL {s.Fail}, {s.Pass} passed{(s.Warn > 0 ? $", {s.Warn} warn" : "")}";
-                    }
-                    if (s.Warn > 0)
-                    {
-                        style = warnWrap;
-                        return $"WARN {s.Warn}, {s.Pass} passed";
-                    }
-                    if (s.Skipped)
-                    {
-                        style = small;
-                        return "SKIP (not in this setup)";
-                    }
-                    style = good;
-                    return $"PASS {s.Pass} ({s.Elapsed:F0} s)";
-                default:
-                    style = small;
-                    return "not run";
-            }
+            GUILayout.Label("The scripted checks of the API and of the mods built on it (docs/self-tests.md) are run from GK2 Mod Test Bench, the developer's test panel every GK2 mod's tests are in: F4, then the suite \"GK2 Donkey API\". Its Run buttons start all of them, one group or one scenario, and each row shows its result while the run goes on.", wrapLabel);
+            GUILayout.Label($"{SelfTest.Scenarios.Count} scenario(s) in {SelfTest.Groups.Length} group(s) are listed here for the bench" +
+                (SelfTest.PassSink != null ? "." : "; the bench or the integration tests' plugin isn't installed, so nothing runs them."), small);
+            GUILayout.Label("The spot a full run that passed everywhere remembers (Debug.SelfTestSpot): " + (string.IsNullOrEmpty(Plugin.SelfTestSpot.Value) ? "none yet" : Plugin.SelfTestSpot.Value), small);
         }
 
         // ------------------------------------------------------------------ Performance tab

@@ -3,16 +3,34 @@
 These are scripted checks that run inside the game (`src/GK2DonkeyAPI/Dev/SelfTest.cs`). They were written on 2026-10-01
 so that the levels and view reuse can be tested without someone watching for each detail.
 
-**Two plugins, one runner** (since 2026-10-27; the user: the API knows nothing of Saddle Up). The runner is the API's
-(`src/GK2DonkeyAPI/Dev/SelfTest*.cs`), and its 127 scenarios test the API alone, with temp mounts and skins of their
+**The runner is GK2 Mod Test Bench** (since 2026-11-17; the user: the other mods need in-game tests too, from one
+shared place with one window). It is a developer's plugin with a repository of its own (`GK2ModTestBench`): one run
+loop and one panel (F4) for every GK2 mod's tests. Until then the runner was here, with a Tests tab in the F11 panel.
+
+- What stayed in the API: every scenario and its helpers (`src/GK2DonkeyAPI/Dev/SelfTest*.cs` and the other test
+  classes), the list of them (`SelfTest.Scenarios`), and the API's own steps around a run, as plain methods:
+  `HoldRun` / `LetRunGo`, `StartRun`, `BeforeScenario`, `AfterScenario`, `FinishRun`. The API knows nothing of the
+  bench: a check goes out through a sink (`SelfTest.PassSink` and the rest), and without one it is only said in the log.
+- What went: the run loop (`Run`, `Drive`), the Tests tab, and the two things a run holds that every mod's tests
+  need, now the bench's own: the game's story (`Dev/GameQuiet.cs`) and the camera's zoom (`Dev/TestZoom.cs`).
+- The hook-up is `tools/GK2DonkeyAPI.IntegrationTests/Bench.cs`: the plugin that knows both hands the bench every
+  scenario as a test of one suite, "GK2 Donkey API", in the list's order (the order they have always run in; the
+  bench lists them by group), the checks of the whole run as the suite's closing checks, and the API's steps as the
+  suite's hooks and hold. Without that plugin and the bench in the game nothing runs the scenarios.
+- The proof of the move is the count of checks each scenario makes (`tools/log-scenarios.py`): the same lines under
+  either runner, compared with the counts kept from the last F11 run (2026-11-17 15:59: 2137 passed).
+
+**Two plugins, one list** (since 2026-10-27; the user: the API knows nothing of Saddle Up). The list is the API's
+(`src/GK2DonkeyAPI/Dev/SelfTest*.cs`), and its 140 scenarios test the API alone, with temp mounts and skins of their
 own (the API's own test picture in `assets\testmounts`, never another mod's art). The scenarios that test GK2 Saddle Up
 or its packs (the Dragon, the Critters, the Donkey Skins, Larry) are a dev-only plugin,
 `tools/GK2DonkeyAPI.IntegrationTests/` (`GK2DonkeyAPI.IntegrationTests.dll`, `dreas.gk2.donkeyapi.integrationtests`):
-39 scenarios (33 at the split: 20 moved whole and 13 split off scenarios that mixed the two), marked "(integration tests)" in the table
+47 scenarios (33 at the split: 20 moved whole and 13 split off scenarios that mixed the two), marked "(integration tests)" in the table
 below. It is never shipped, and a plain build doesn't deploy it: build it with `-p:Deploy=true` (the game closed),
-after a Release build of the API (it references the API's `bin\Release` DLL). At its start it adds its scenarios to
-the runner (`SelfTest.AddScenarios`): each runs in its group, after the API's own of that group, under the same start
-and finish, and the Tests tab lists them with the rest. The API grants it its internals by name only
+after a Release build of the API (it references the API's `bin\Release` DLL) and with the bench deployed (it
+references the bench's DLL in the game). At its start it adds its scenarios to the API's list
+(`SelfTest.AddScenarios`): each after the API's own of its group, under the same start and finish, and the bench's
+panel lists them with the rest. The API grants it its internals by name only
 (`src/GK2DonkeyAPI/Dev/AssemblyInfo.cs`, `InternalsVisibleTo("GK2DonkeyAPI.IntegrationTests")`); the helpers that name
 our mounts and skins (`M`, `Sk`, `ShippedMounts`, `MissingPack`, which knows the Donkey Skins pack too) are the
 plugin's. A scenario whose mod or pack isn't installed skips with the reason. Without the plugin a run is the API's
@@ -27,7 +45,7 @@ seen:
 
 A fix can't pass because the case happened not to show.
 
-The Tests tab (the dev panel): every group folded, its title white with no result, green when every scenario run passed, yellow when one warned, red when one failed; a run (all, a group, one scenario) resets what it runs. The runner moves the keeper to the remembered spot `Debug.SelfTestSpot` first (a run that passed everywhere writes it); clear it in the API cfg to run from where you stand.
+The bench's panel (F4): everything folded, a row's result white with none, green when every scenario run passed, yellow when one warned, red when one failed; a run (the suite, a group, one scenario) resets what it runs. The run moves the keeper to the remembered spot `Debug.SelfTestSpot` first (a run of the whole suite that passed everywhere writes it); clear it in the API cfg to run from where you stand.
 
 ## How to run
 
@@ -39,20 +57,23 @@ The Tests tab (the dev panel): every group folded, its title white with no resul
    be reached. **A run that passes everywhere remembers its spot** (`Debug.SelfTestSpot` in the API's cfg, `scene|x,y,z`):
    the next run in that scene moves the keeper there first and puts him back where he stood at the end, so after one
    good run it no longer matters where you start it from.
-2. Open the panel (F11), go to the **Tests** tab and press **Run all**. It takes about 4 minutes. The tab lists every
-   scenario by group (API and carts; levels and views; chest; morgue; corpses), each with **Run** and each group with
-   **Run group**: a group or one scenario alone has the same start and finish as the full run (the test spot, the
-   cleanup between scenarios, the world's own donkeys checked), and the others' last results stay on the tab. Only a
-   full run remembers its spot (below). The summary of a partial run says so (`done (3 of 30 scenarios): ...`).
+2. Open the bench's panel (F4) and press **Run** on the row **GK2 Donkey API**. It takes about 4 minutes. (**Run
+   all** runs every mod's suite, this one among them.) Opened, the suite lists every scenario by group (API and
+   carts; levels and views; chest; morgue; corpses), each row with a **Run**: a group or one scenario alone has the
+   same start and finish as the whole suite (the test spot, the cleanup between scenarios, the world's own donkeys
+   checked), and the others' last results stay. Only a run of the whole suite remembers its spot (below). The
+   summary of a partial run says so (`done (3 of 204 tests): ...`).
 3. **Don't touch the keys while it runs.** The tests move the keeper, ride and dismount. **Abort** stops after the
    current step.
-4. **Progress and results:** the panel stays up during the run (only the frame-time scenario hides it, its own cost
-   would be in the measurement): a bar and "k of N scenarios done", and every scenario's row says `running, 12 s`,
-   then `PASS 9 (14 s)`, `WARN 1, 3 passed`, or `FAIL 1, 8 passed`. In `BepInEx\LogOutput.log`: `[test] PASS`,
-   `FAIL`, `WARN`, `INFO` and `SKIP` lines and a summary, `[test] done: N passed, M failed, K warning(s)` (and `, S
-   scenario(s) skipped` when some can't run in this setup: the tab shows `SKIP (not in this setup)`, not a warning).
-   The tab ends with
-   the failures and warnings of the last run.
+4. **Progress and results:** the bench's panel stays up during the run (only the frame-time scenario hides it and the
+   F11 panel, their own cost would be in the measurement): a bar and "k of N done", and every scenario's row says
+   `running, 12 s`, then `PASS 9 (14 s)`, `WARN 1, 3 passed`, or `FAIL 1, 8 passed`. In `BepInEx\LogOutput.log`:
+   `[test] PASS`, `FAIL`, `WARN`, `INFO` and `SKIP` lines and a summary, `[test] done: N passed, M failed, K
+   warning(s)` (and `, S test(s) skipped` when some can't run in this setup: the row shows `SKIP`, not a warning);
+   the same lines in a file of the run's own, `BepInEx\GK2ModTestBench-runs\<date>-<time>.log`. The panel's lower
+   pane has the failures and warnings of the last run, or the lines of the scenario clicked.
+5. **After the run:** `python tools/log-scenarios.py` says which scenarios left no line and how each one's number of
+   checks compares with the counts kept last (`--keep` keeps this run's).
 
 **Safety:**
 - **Test donkeys** belong to `dreas.gk2.donkeyapi.selftest`. They're never kept with the save and are removed after each
@@ -61,7 +82,8 @@ The Tests tab (the dev panel): every group folded, its title white with no resul
 - **The panel's state** (`Debug.TuningWindowHidden`) is left as it was: hidden for the frame-time scenario only, and
   back afterwards.
 - **Nothing is saved.**
-- **The camera is at the game's own zoom (100%) for the run** (`Dev/TestZoom.cs`, since 2026-11-12). A zoom mod's
+- **The camera is at the game's own zoom (100%) for the run** (the bench's `ZoomHold.cs` since 2026-11-17; the API's
+  `Dev/TestZoom.cs` from 2026-11-12 until then). A zoom mod's
   zoom is held off: two postfixes of ours on `CameraSystem.CalculateOrthographicSize`, the first of all keeping the
   game's value and the last of all giving it back (Grave Zoom 1.3.1 zooms with a postfix on that method), then
   `OnResolutionChanged` applies it. The zoom keys do nothing during the run. Nothing of the other mod is touched; at
@@ -70,8 +92,10 @@ The Tests tab (the dev panel): every group folded, its title white with no resul
   - Why: F11 of 2026-11-12 ran at Grave Zoom's remembered 400%. A test's pen 3.5 from the keeper was off screen
     (x 2680 of 2560), a baby rightly caught up out of sight, and the test failed; the user: "always run the test at
     normal 100% zoom and make sure grave zoom is disabled during the tests".
-- **The game's own story is held for the run** (`Dev/GameQuiet.cs`, since 2026-11-06). It is patched at the run's start
-  and unpatched at its end, so a player's game is never hooked.
+- **The game's own story is held for the run** (the bench's `StoryHold.cs` since 2026-11-17; the API's
+  `Dev/GameQuiet.cs` from 2026-11-06 until then). It is patched at the run's start and unpatched at its end, so a
+  player's game is never hooked; in the bench the patches also do nothing unless a run goes on, and are taken off
+  when a run is ended from outside.
   - No quest trigger fires (`GlobalEventsSystem.FireTrigger`: every quest start, finish and fail).
   - No zone runs its own script (`GDZone.ExecuteEvent`).
   - The world zones the run's walks visit are taken off the save's visited list again.
@@ -331,6 +355,7 @@ change to the packer, the layout file format or the panel's cargo editors ([carg
 
 | Date | Result | Notes |
 |---|---|---|
+| 2026-11-17, 22:13 (the whole suite, the first run from GK2 Mod Test Bench: the proof of the move) | **2137 passed, 0 failed, 0 warnings** | every one of the 187 scenarios left its lines, and each made as many checks as in the last run of the API's own runner the same day (15:59, 2137; `tools/log-scenarios.py`: 0 scenarios differ). No warning or error before the run's start; the log's 55 are the tests' own, as at 15:59. The bench's panel during the run: 83,323 frames, 1.5 microseconds a frame on average, the worst 0.55 ms. Run with Run on the suite's row (`done (187 of 204 tests)`: the other 17 are the bench's and the QOL mods'). |
 | 2026-11-05, 23:20 (the whole set with the twelfth place fixed) | **2000 passed, 0 failed, 0 warnings** | the 22:50 set plus the slow stand-in's 2: Larry spawned with a skin not installed is Larry, and his own look (44 frames to build) is worn though his rig was refreshed every frame meanwhile; no warning outside the run |
 | 2026-11-05, 22:50 (the whole set with the missing-skin fix and the 0.16.0 fixture) | **1998 passed, 0 failed, 0 warnings** | the new scenario's 10 (the rule's cases; the test mount with a missing skin is itself, in its own look, its baby too, the choice kept; the donkey's missing skin the plain donkey; the log's "the leave test's own look ... is worn instead") and the integration's 4 (Saddle Up's dragon row: the choice kept, `SkinChosen` the dragon's default, its Coat row on the page, put back); 6 more from the new 0.16.0 fixture in the two upgrade tests (its 487 API keys and 303 defaults bound and typed; its 274 Saddle Up values land on the live page). 1978 + 14 + 6 = 1998 |
 | 2026-11-05, 19:19 (the whole set with "a called mount brings its babies") | **1978 passed, 0 failed, 0 warnings** | the new scenario: the journal's baby out of reach placed by its mount in the call (14.6 -> 0.7) and still by it ridden; one within reach (6.4) not moved by the call, trotted over; the ride key's (16.4 -> 0.6); "came to the keeper with 1 baby(ies) from out of their reach". The safe spot: the ridden donkey's baby placed by it (0.6; "[safe-spot] 1 baby(ies) ... came back with it"). 9 more than 18:21 for 10 new checks: one elsewhere varies run to run, as at 17:55 |

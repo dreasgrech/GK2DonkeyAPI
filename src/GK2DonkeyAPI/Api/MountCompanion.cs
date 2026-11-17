@@ -1258,7 +1258,7 @@ namespace GK2DonkeyAPI.Api
             return true;
         }
 
-        // A self-test run (SelfTest.Drive sets it for the run): every companion's mount changes in place as before the left
+        // A self-test run (SelfTest.HoldRun sets it for the run): every companion's mount changes in place as before the left
         // mounts, no left one taken back or its cart taken off it, so a test's pick and put-back on the player's own
         // companion (the Mounts panel's scenarios) leaves his world as he left it. The left mounts' own scenarios free their
         // test companion (TestFamiliesFree).

@@ -960,7 +960,7 @@ namespace GK2DonkeyAPI
                 Check(hm != null && unityErrors.Count == 0, hm == null ? "Emit(mount) played nothing" : $"the 0.2 s clip plays with no Unity error logged ({unityErrors.Count}: {string.Join(" | ", unityErrors.ToArray())})");
                 // the guard: a start past the clip's end asked for directly is dropped (one warning of the mod's), not seeked
                 unityErrors.Clear();
-                Line("[test] INFO " + current + ": the next \"not longer than its start offset\" warning is this test's own");
+                Info("the next \"not longer than its start offset\" warning is this test's own");
                 SoundHandler hp = Sounds.PlayId(mid, PC.transform, 1f, 1f, 5f);
                 yield return null;
                 yield return null;

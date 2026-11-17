@@ -431,7 +431,6 @@ namespace GK2DonkeyAPI
 
         public static void Tick()
         {
-            SelfTest.PollStart();
             Perf.BeginFrame();
             using (Perf.MeasureAlloc())
             using (Perf.Measure(Perf.S.Tick))

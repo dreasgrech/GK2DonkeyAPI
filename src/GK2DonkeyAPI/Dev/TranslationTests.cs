@@ -17,7 +17,7 @@ namespace GK2DonkeyAPI
     // each has at 1.6 times its length measured (TextRoom). Bubbles: the keeper's sentences, the prompts on foot and the
     // crossroads notice. PackNames: the mounts' and skins' names in their owners' files. Mistakes: the translator mistake
     // catalogue (the window library's TranslationCatalogue, also run without the game by its tests/TranslationScan).
-    // All put back the run's English (SelfTest.Run sets it).
+    // All put back the run's English (SelfTest.StartRun sets it).
     internal static class TranslationTests
     {
         private const string Owner = "test.gk2.l10n";

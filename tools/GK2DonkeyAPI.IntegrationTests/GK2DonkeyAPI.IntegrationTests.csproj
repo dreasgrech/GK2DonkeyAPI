@@ -1,9 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Dev-only: the in-game integration tests of the mods built on the GK2 Donkey API (GK2 Saddle Up and its packs),
-       run by the API's self-test runner (F11's Tests tab) next to the API's own scenarios. Moved out of the API on
-       2026-10-27 (the user: the API "doesnt know" about Saddle Up): the API knows only that its tests exist
-       (Dev/AssemblyInfo.cs, InternalsVisibleTo), never the mods they test. Never shipped. -->
+       and the plugin that hands the API's scenarios and these to GK2 Mod Test Bench, which runs them (F4; until
+       2026-11-17 the API had a runner of its own under F11's Tests tab). Moved out of the API on 2026-10-27 (the user:
+       the API "doesnt know" about Saddle Up): the API knows only that its tests exist (Dev/AssemblyInfo.cs,
+       InternalsVisibleTo), never the mods they test, nor the bench. Never shipped.
+       Build order: the bench deployed into the game (its own repository: dotnet build -c Release -p:Deploy=true),
+       the API built in Release, then this with -p:Deploy=true (the game closed). -->
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>GK2DonkeyAPI.IntegrationTests</AssemblyName>
@@ -20,6 +23,8 @@
     <!-- The API's own build output, not a ProjectReference: building the tests must never rebuild the API (the dist copy
          and the release scans read that folder). Build the API first. -->
     <Reference Include="GK2DonkeyAPI"><HintPath>$(MSBuildThisFileDirectory)..\..\src\GK2DonkeyAPI\bin\Release\netstandard2.1\GK2DonkeyAPI.dll</HintPath><Private>false</Private></Reference>
+    <!-- GK2 Mod Test Bench as deployed in the game (Directory.Build.props, TestBenchDll): the runner and the panel. -->
+    <Reference Include="GK2ModTestBench"><HintPath>$(TestBenchDll)</HintPath><Private>false</Private></Reference>
     <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="LazyBearTechnology"><HintPath>$(Managed)\LazyBearTechnology.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Sirenix.Serialization"><HintPath>$(Managed)\Sirenix.Serialization.dll</HintPath><Private>false</Private></Reference>

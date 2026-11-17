@@ -1,9 +1,10 @@
-"""After an F11 run: which self-test scenarios left no line in the game's log (a scenario that never ran), how many
+"""After a run of the scenarios (GK2 Mod Test Bench, F4: Run on the suite "GK2 Donkey API"; until 2026-11-17 the
+F11 panel's Tests tab): which scenarios left no line in the game's log (a scenario that never ran), how many
 warnings or errors the log has before the run started (a startup warning is never the tests' doing), and how many
 checks each scenario made, against the run before.
 
     python tools/log-scenarios.py                # the game's BepInEx\\LogOutput.log (the game folder from Directory.Build.props)
-    python tools/log-scenarios.py some.log       # a saved log
+    python tools/log-scenarios.py some.log       # a saved log, or a run's own file from BepInEx\\GK2ModTestBench-runs
     python tools/log-scenarios.py --diff old.log [new.log]   # the scenarios whose number of checks differs between two logs
     python tools/log-scenarios.py --keep         # after the usual report: remember this run's counts for the next comparison
 
@@ -18,6 +19,10 @@ a look. Without arguments the report compares the log with the counts kept last 
 the game folder, written by --keep; never by a plain run), when there are any. Unity's own Player-prev.log
 (%USERPROFILE%\\AppData\\LocalLow\\Lazy Bear Games\\Graveyard Keeper 2) holds the session before the last one and can
 be given to --diff.
+
+The lines are the same under either runner ("[test] PASS <scenario>: <what>"), so counts kept before the move to the
+bench compare with runs after it. Run the API's suite alone for a comparison: a run of every suite has the other
+mods' tests in the log too, and each shows here as a line of no scenario of this repository's lists.
 """
 import collections
 import os
@@ -126,7 +131,7 @@ def main(argv):
     else:
         print(f"checks: {sum(now.values())} now; no counts kept yet (--keep writes {kept})")
     if keep:
-        done = re.search(r"\[test\] done: [^\n]*", log)
+        done = re.search(r"\[test\] (?:done|aborted)[^\n]*", log)  # "done: ...", and the bench's "done (187 of 204 tests): ..." for one suite
         with open(kept, "w", encoding="utf-8", newline="\n") as f:
             f.write(f"# {time.strftime('%Y-%m-%d %H:%M', time.localtime(os.path.getmtime(path)))}, {done.group(0) if done else 'no summary line'}\n")
             for n in sorted(now):

@@ -167,7 +167,9 @@ the run and its expected lines in `docs/mods-window-and-workshop.md` section 11.
 Rehearse the first start on a clean config, with the game closed. `tools/rehearsal.sh` does the staging (`stage-a`,
 `capture-a`, `stage-b <saddleup.cfg>`, `restore`; it refuses while the game runs, and refuses a cfg that would switch
 the API off or has numpad keys); `tools/fixture-live.py` makes a fixture's Saddle Up cfg fit to stage (keys L/H/G, a
-real skin worn with `--skin`); `tools/log-scenarios.py` lists the scenarios an F11 run left no line for. By hand:
+real skin worn with `--skin`); `tools/log-scenarios.py` lists the scenarios a run of the self-tests left no line
+for (the runs are GK2 Mod Test Bench's since 2026-11-17: F4, Run on the suite "GK2 Donkey API"; every "full F11" below
+is such a run from then on, docs/self-tests.md). By hand:
 
 1. Move `BepInEx\config\dreas.gk2.donkeyapi.cfg` and `dreas.gk2.saddleup.cfg` aside (they come back afterwards).
    Move the dev tools aside too (a player has none): `plugins\GK2ShowcaseDirector\`, `plugins\GK2PerfRunner\`,

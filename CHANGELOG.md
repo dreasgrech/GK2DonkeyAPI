@@ -24,6 +24,35 @@ For players:
 
 Development:
 
+- **The self-tests are run by GK2 Mod Test Bench** (2026-11-17; `docs/self-tests.md`; the user: the other mods need
+  in-game tests too, from one shared place with a single window every mod's tests hook into). The bench is a
+  developer's plugin with a repository of its own (`GK2ModTestBench`, never shipped): one run loop and one panel
+  (F4) for every GK2 mod's tests. Nothing changes for players.
+  - Stays in the API: every scenario (140 of the API's own, with the integration tests' 47: 187) and every helper,
+    untouched, and the list of them. The API's own steps around a run are plain methods now (`SelfTest.HoldRun`,
+    `LetRunGo`, `StartRun`, `BeforeScenario`, `AfterScenario`, `FinishRun`), cut out of the old `Run` in its order,
+    and a check goes out through a sink (`SelfTest.PassSink` and the rest). The API names nothing of the bench in
+    its code.
+  - Gone from the API: the run loop (`SelfTest.Run`, `Drive`, the start from `Mounts.Tick`), the Tests tab of the
+    F11 panel (it says where the tests are now), `Dev/GameQuiet.cs` and `Dev/TestZoom.cs` (the bench holds the
+    game's story and the camera's zoom for every mod's run, with patches that do nothing unless a run goes on and
+    that come off also when a run is ended from outside).
+  - The hook-up: `tools/GK2DonkeyAPI.IntegrationTests/Bench.cs` (the dev plugin that knows both) gives the bench one
+    suite, "GK2 Donkey API", with every scenario in the list's order, the checks of the whole run as its closing
+    checks (the world's check the very last), and the API's steps as its hooks and its hold.
+    `Directory.Build.props` names the bench's deployed DLL (`TestBenchDll`).
+  - Found on the way: the list has one group, "Skins and effects", in two parts with Translations and Measurements
+    between them. The bench ran a group's tests together; it runs tests in the order they were added now and lists
+    them by group, so the scenarios run in the order they always have.
+  - `tools/log-scenarios.py` reads the bench's lines (the same `[test] PASS <scenario>: <what>`), its summary of one
+    suite's run, and a run's own file from `BepInEx\GK2ModTestBench-runs`.
+  - Checked without the game: the API, the plugin, GK2PerfRunner and GK2ShowcaseDirector build with 0 warnings;
+    `tools/release-scans.sh` 32 of 32 green.
+  - **The proof, in the game** (the user, 2026-11-17 22:13, Run on the suite's row): **2137 passed, 0 failed, 0
+    warnings**; all 187 scenarios left their lines, and every one made as many checks as in the last run of the old
+    runner (15:59 the same day, 2137; `tools/log-scenarios.py`: 0 scenarios differ, 0 make fewer). No warning or
+    error before the run's start. The bench's panel cost 1.5 microseconds a frame on average over the run's 83,323
+    frames, the worst 0.55 ms.
 - Translations for the other mods, written (2026-11-17; `docs/ui-library.md` section 11.11; the user's decisions:
   both QOL mods in all 10 languages, the Framework's Settings button opening Tech Tree Search's own window). Nothing
   of this repository's code or `Languages` changes; what reaches it is the window library at its next pointer move:
