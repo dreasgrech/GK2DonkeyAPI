@@ -380,6 +380,53 @@ the Dragons Mount Pack 1.2.0 and the Donkey Skin Pack 1.2.0, Critters held.
     a bug for after the release (docs/open-items.md), the user's call.
 - **Restore:** everything back, the saves identical; the dev builds rebuilt (`--no-incremental`) and deployed at 20:26.
 
+Run 2026-11-18 for 0.17.2 / API 0.45.2 (the game's 1.012.9 update of that day, Steam 26734308, disables every earlier
+build: `SaveSystem.Save` changed; `docs/game-update-26734308.md`), the three packs kept as committed.
+- **What ships** (the user: the head as 0.17.2): everything since 0.17.1. For players: the build for 1.012.9 and the
+  Mount Journal's picture keeping the cart and the lantern. Inside: the window code built from the GK2DreasUI library
+  (the same windows), the self-tests run by GK2 Mod Test Bench. Saddle Up's own code is 0.17.1's; the public API
+  surface is unchanged (`tests/ApiSurface`).
+- **Before the release build:** rebuilt against 1.012.9 and deployed (12:47); the first run in the game (13:14): every
+  mod's own check passed, 15 of 15 donkeys and carts back, the API's 187 scenarios 2141 passed, 0 failed, 0 warnings
+  (two scenarios with another number of checks than before the update, by their own rules: night, the world's views).
+- **The release build (13:33 to 13:44):** `release-versions.py set saddleup 0.17.2 --api 0.45.2`, the pins moved to
+  26734308 / 1.012.9 (`release-versions.py`, the READMEs, this checklist, the probe's two MVIDs, the store texts), the
+  editorial pieces written, `release.sh` whole: 32 of 32, `GK2-Saddle-Up-0.17.2.zip` 1,266,137 bytes, its DLLs
+  `dist/`'s, the API's manifest 924 entries identical against the installed 1.012.9; the Workshop folder staged (its
+  description 7,976 of 8,000 bytes).
+- **The fixture:** none added. The player files are 0.17.1's: the API's cfg has the same 489 keys as the 0.17.1
+  fixture (the live cfg compared key by key, `[Debug]` left out), Saddle Up's code and `defaults.cfg` are unchanged,
+  `page-carryover.py`: 0 lost. The 0.17.1 fixture stands for it (docs/compatibility.md section 4).
+- **Rehearsal A staged 13:45** (`tools/rehearsal.sh stage-a`; the game's two DLLs are `dist/`'s byte for byte; the
+  Dragons 1.3.0 and Donkey Skin Pack 1.3.2 zips extracted, Critters never released). The script's list of dev plugins
+  gained GK2ModTestBench and GK2QOLMods.Tests (new since the last rehearsal; a player has neither).
+- **Rehearsal A, the fresh install (the user, 13:58 to 14:09):** `GK2 Donkey API 0.45.2 loaded`, `GK2 Saddle Up 0.17.2
+  loaded (GK2 Donkey API 0.45.2): ride H, cart G`, Donkey Skins 1.3.2 (4 skins and the effect) and Dragon 1.3.0 (2
+  skins) registered, the cargo layout from embedded, every mod's own check passed, no `Dev tools unlocked`; **no
+  warning, error or exception in 550 lines**. The save's 15 donkeys and carts back; the cart driven and loaded to 6 of
+  6 (the seventh log dropped in front of the keeper), set down behind the cart piece by piece, two logs on again; H
+  left the cart standing with its 2 items and G hitched the same cart with them, twice (carts #86 and #87, one in the
+  world each time); the Mount Journal opened for the donkey, Larry and the dragon, the colours window for the
+  donkey. The options window left no line (not opened, or it writes none): asked again in B. The fresh cfgs:
+  the API's without `[Debug]`, and both with exactly the 0.17.1 fixture's keys (489 and 359), so that fixture stands
+  for this release by the files themselves.
+- **Rehearsal B, the upgrade (the user, to 14:13):** the same release DLLs over the user's own Saddle Up cfg of before
+  the rehearsal (keys L, H, G; the API's cfg A wrote; `capture-a`, `stage-b`). **No warning, error or exception in 592
+  lines.** The file's values held: with "Leave your mounts in the world" on, as their file has it, the dragon was the
+  keeper's mount again and the donkey stayed where it was left (in A, on defaults, the left mounts went home); the
+  cart left and hitched again with its item, the dragon ridden, the Mount Journal opened. Afterwards the cfg has its
+  582 value lines, 580 as before and two changed in the journal during the run (the mount chosen, the donkey's
+  skin); it has fewer comment lines (the rows of the Critters pack, not installed in the rehearsal, keep their values
+  without their descriptions).
+- **Not seen in either rehearsal: the options window** (no "the options of GK2 Saddle Up opened" line in A or B). It
+  is the same code as the dev build's, whose options scenarios passed that day (33 and 13 checks); the release build
+  differs from it by `ForDist` alone.
+- **`restore` (14:1x):** everything back, the saves identical; the dev builds rebuilt at 0.45.2 / 0.17.2 with
+  `--no-incremental` and deployed, the tools with `-p:Deploy=true`. The zip, `workshop/GK2SaddleUp` and `dist/` hold
+  the same two DLLs byte for byte; `check-dist` and `release-versions.py check` green.
+- **Left for the user:** the commit with `dist/` and the zip, the tag `saddleup-0.17.2`, Nexus (mods/391) and the
+  Workshop item.
+
 Run 2026-11-13 for 0.17.1 / API 0.45.1 with the Donkey Skin Pack 1.3.2 (0.17.0 and 1.3.1, built and committed with
 their zips on 2026-11-12, were never uploaded: the game's 1.012 update of 2026-11-13 came first and disables every build
 made before it; `docs/game-update-26624074.md`), Dragons 1.3.0 kept as committed, Critters held.
@@ -467,7 +514,7 @@ Released versions are never reused (0.9.0 went public 2026-10-16): a release wit
   release that heading becomes `<Saddle Up version> (GK2 Donkey API <version>), <date>` and a new empty Unreleased
   goes on top. Its "For players" part is the Nexus changelog text for that version.
 - **Hand-off**: the user commits, tags (`saddleup-<version>`; 0.9.0 is commit `6be69a2`) and uploads
-  `release/GK2-Saddle-Up-<version>.zip` with the changelog entry; the release notes name the game build (`26624074`,
-  1.012.7 as of 2026-11-13) and what `docs/open-items.md` still lists as unseen in game. On the Steam Workshop (once
+  `release/GK2-Saddle-Up-<version>.zip` with the changelog entry; the release notes name the game build (`26734308`,
+  1.012.9 as of 2026-11-18) and what `docs/open-items.md` still lists as unseen in game. On the Steam Workshop (once
   the items exist): Shift+F11, the item's Upload button with `workshop/<Item>/` as its linked folder; the change
   note comes from `_changenote.txt`; a pack's Required item (GK2 Saddle Up) is set once on its Steam page.

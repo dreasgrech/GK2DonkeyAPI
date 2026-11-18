@@ -33,7 +33,7 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GAME_BUILD, GAME_VERSION = "26624074", "1.012.7"
+GAME_BUILD, GAME_VERSION = "26734308", "1.012.9"
 PACKS = os.path.join(ROOT, "packs")
 
 

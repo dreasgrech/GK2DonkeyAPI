@@ -18,12 +18,12 @@ namespace GK2DonkeyProbe
         public const string Guid = "dreas.gk2.donkeyprobe";
         public const string Version = "0.1.0";
 
-        // The game build this probe is pinned to (1.012.7, Steam 26624074). A plain pin, on purpose: the probe is a
+        // The game build this probe is pinned to (1.012.9, Steam 26734308). A plain pin, on purpose: the probe is a
         // dev tool that is never deployed by a plain build (Deploy=false in its csproj) and whose job after an update is
         // to dump the new build, so "the game changed, running anyway" is the wanted answer; the shipped mods carry the
         // dependency manifest instead (docs/dependency-check.md).
-        private static readonly System.Guid AuditedGameMvid = new System.Guid("c69d845c-001c-4bd4-9adf-7b288a697087");
-        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("53b976b3-a36d-477a-bea4-e43c6634914e");
+        private static readonly System.Guid AuditedGameMvid = new System.Guid("ff3601f5-c129-4b53-9ebb-78e5d294090e");
+        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("982a437a-540c-4521-ba19-c9efaa43dec1");
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;

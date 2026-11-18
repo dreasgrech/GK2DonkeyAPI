@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.45.1** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.45.2** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -1166,6 +1166,10 @@ History:
   starts it at 0 unless its line says `start` (it inherited the base's `MountSoundStart` before; docs/mount-sounds.md),
   and `Sounds.PlayId` drops a start offset at or past the clip's end with one warning instead of seeking past it.
   The `DismountIndoors` setting's text says the cart has no collider indoors.
+- 0.45.2 (2026-11-18; no change to the public surface, `tests/ApiSurface`): the build for game 1.012.9 (Steam 26734308,
+  `docs/game-update-26734308.md`). The windows' code is built from the GK2DreasUI library (`docs/ui-library.md`; the
+  same windows, `MountSettingsPage` keeps every public member), and the Mount Journal's picture no longer loses the
+  cart and the lantern for the session.
 - 0.45.1 (2026-11-13; no change to the public surface, `tests/ApiSurface`): the build for game 1.012 (Steam 26624074,
   `docs/game-update-26624074.md`): 0.45.0 was never released and ships in this one.
 - 0.45.0 (unreleased; additions only, so a minor; `tests/ApiSurface`): `MountCompanion.Ride()` and `Drive()`, the ride and

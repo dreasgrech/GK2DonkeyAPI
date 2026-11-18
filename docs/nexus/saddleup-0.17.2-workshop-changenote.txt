@@ -1,0 +1,5 @@
+GK2 Saddle Up 0.17.2
+
+- Works with the game's update of 18 November (1.012.9): an earlier version of the mod turns itself off on it, with a note in the log.
+- Fixed the Mount Journal's picture losing the cart and its lantern until the game was restarted.
+- Your settings and saves carry over.

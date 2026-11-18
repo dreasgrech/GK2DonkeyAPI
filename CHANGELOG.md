@@ -10,6 +10,14 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.17.2 (GK2 Donkey API 0.45.2), 2026-11-18
+
+The game's update of 2026-11-18 (1.012.9, Steam build 26734308) changed its save code, and every build made before
+it is disabled by the start check. 0.17.2 is the head of the repository built for it: one fix for players, and the
+window code, unchanged for players, built from the shared window library.
+
 For players:
 
 - **Built for game 1.012.9** (Steam build 26734308, the game's update of 2026-11-18). That update changed the
@@ -28,6 +36,11 @@ For players:
 
 Development:
 
+- **The release of 0.17.2** (2026-11-18; `docs/release-checklist.md`, the run of that day): the versions raised
+  (`release-versions.py set saddleup 0.17.2 --api 0.45.2`), the game pins moved to 26734308 / 1.012.9, `release.sh`
+  whole (32 of 32 scans), no new fixture (the player files have 0.17.1's keys: the API's 489 compared one by one).
+  `tools/rehearsal.sh` moves GK2ModTestBench and GK2QOLMods.Tests aside with the other dev plugins: they are new
+  since the last rehearsal, and a player has neither.
 - **Game update 1.012.9 (Steam build 26734308), re-audited 2026-11-18** (`docs/game-update-26734308.md`; no patch
   notes on Steam). `Assembly-CSharp` 56 changed members, 246 added, 3 named ones removed; the donkey's art, the
   balance and the fonts' characters unchanged. Of the 922 game members the API uses one changed, `SaveSystem.Save`
