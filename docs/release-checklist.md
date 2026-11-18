@@ -424,8 +424,10 @@ build: `SaveSystem.Save` changed; `docs/game-update-26734308.md`), the three pac
 - **`restore` (14:1x):** everything back, the saves identical; the dev builds rebuilt at 0.45.2 / 0.17.2 with
   `--no-incremental` and deployed, the tools with `-p:Deploy=true`. The zip, `workshop/GK2SaddleUp` and `dist/` hold
   the same two DLLs byte for byte; `check-dist` and `release-versions.py check` green.
-- **Left for the user:** the commit with `dist/` and the zip, the tag `saddleup-0.17.2`, Nexus (mods/391) and the
-  Workshop item.
+- **Released (the user, about 14:25):** committed as `43ec3df` with `dist/` and the zip, tagged `saddleup-0.17.2`,
+  uploaded to Nexus (mods/391) and to the Workshop item 3830136851 from the game's creator. The packs' pages and the
+  QOL mods needed nothing. The Workshop page was not read back (Steam answered the one read with 429); the look as a
+  subscriber (the Mods window's line for the item) is still open.
 
 Run 2026-11-13 for 0.17.1 / API 0.45.1 with the Donkey Skin Pack 1.3.2 (0.17.0 and 1.3.1, built and committed with
 their zips on 2026-11-12, were never uploaded: the game's 1.012 update of 2026-11-13 came first and disables every build

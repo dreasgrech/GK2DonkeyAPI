@@ -36,7 +36,9 @@ players since this version (0.10.0 shipped them off); which mounts a player has 
 Sizes 2026-11-18 13:44 (the game's 1.012.9 update of that day: GK2 Saddle Up 0.17.2 with GK2 Donkey API 0.45.2
 raised, the three packs their committed bytes; `bash tools/release.sh`, 32 of 32 release scans green):
 `GK2-Saddle-Up-0.17.2.zip` 1,266,137 bytes (`GK2DonkeyAPI.dll` 3,438,592 bytes, `GK2SaddleUp.dll` 36,864, each with
-its `Languages\` of 11 files), staged with its `modinfo.json` in `workshop\GK2SaddleUp\`. Not uploaded yet.
+its `Languages\` of 11 files), staged with its `modinfo.json` in `workshop\GK2SaddleUp\`. Uploaded 2026-11-18 about 14:25 (the user: Saddle Up
+0.17.2 on Nexus mods/391, and the Workshop item 3830136851 from the game's creator); committed as `43ec3df`, tagged
+`saddleup-0.17.2`. The Workshop page was not read back (Steam answered the one read with 429).
 
 Sizes 2026-11-13 17:15 (the game's 1.012 update of that day: GK2 Saddle Up 0.17.1 with GK2 Donkey API 0.45.1 and the
 Donkey Skin Pack 1.3.2 raised, the never-uploaded 0.17.0 and 1.3.1 zips left committed, Dragons 1.3.0 and Critters
