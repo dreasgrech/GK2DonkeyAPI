@@ -244,7 +244,7 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    - **An unanchored read**: a fresh reviewer (a subagent) gets the page's frames and the user's complaints, not the
      fix's explanation, and says which frames look wrong; its findings are fixed before the hand-off.
 6. **Build and deploy** with the game closed (`dotnet build src/SaddleUp/SaddleUp.csproj` for Saddle Up's packs); the self-tests
-   (F11, Tests tab, "Skins and effects") cover the drawing with readbacks; wear it, walk, turn, graze; then run F11
+   (F4, GK2 Mod Test Bench, "Skins and effects") cover the drawing with readbacks; wear it, walk, turn, graze; then run them
    (its Measurements group writes every skin as built since 2026-11-05) or press "Export every skin as built" (F11,
    Mounts tab) and rebuild the page: it shows the game's
    own export and counts where its composite would differ (0 = the page shows what the game shows).

@@ -491,7 +491,7 @@ worked". `ArmourDump.cs` removed again; its assertions live on in the fight self
 
 ### 9.8 Self-tests and the first passes (2026-10-14, 10:45)
 
-Five scenarios in the group "Fights from the saddle" (`Dev/SelfTest.Fight.cs`, the panel's Tests tab): the armour on
+Five scenarios in the group "Fights from the saddle" (`Dev/SelfTest.Fight.cs`, run from GK2 Mod Test Bench's panel, F4): the armour on
 and off while riding (pose Idle/Walk, body drawn with an armour frame, no rod, weapons at rest height over the body,
 the pose back when the armour goes off); mounting in armour with every cart path refused by the same words (a donkey
 with its cart, a hitch on foot, the style switch, a hitch from the saddle) and the hitch working again once the armour

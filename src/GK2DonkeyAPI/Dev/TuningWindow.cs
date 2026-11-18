@@ -42,13 +42,14 @@ namespace GK2DonkeyAPI
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
-        private static readonly string[] TabNames = { "General", "Riding", "Cargo", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Tests", "Performance", "Sources", "Mounts", "Flying" };
-        private const int TabCargo = 2, TabInstances = 6, TabDebug = 7, TabTests = 8, TabPerformance = 9, TabMounts = 11, TabFlying = 12;
+        private static readonly string[] TabNames = { "General", "Riding", "Cargo", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Performance", "Sources", "Mounts", "Flying" };
+        // No Tests tab: the self-tests are run from GK2 Mod Test Bench's panel (F4) since 2026-11-17 (docs/self-tests.md).
+        private const int TabCargo = 2, TabInstances = 6, TabDebug = 7, TabPerformance = 8, TabMounts = 10, TabFlying = 11;
         private const int TabsPerRow = 6; // rows of six: eleven names in one row of 470 would be cut short
         // The tabs of the mod's settings rows (General, Riding, Cargo, Lantern, Sounds, Colors, Debug, Sources, Flying),
-        // which get the footer; the tools' tabs don't: Tests, Performance, Instances (one donkey's own values) and Mounts
+        // which get the footer; the tools' tabs don't: Performance, Instances (one donkey's own values) and Mounts
         // (a pack's files, its own buttons).
-        private static bool HasSettingsRows(int t) => t != TabTests && t != TabPerformance && t != TabInstances && t != TabMounts;
+        private static bool HasSettingsRows(int t) => t != TabPerformance && t != TabInstances && t != TabMounts;
 
         // Whether the panel draws this frame: in a game, switched on, not hidden by its key, and not while the cargo sheet
         // photographs the cart. Plugin.LateUpdate switches Unity's layout pass off when it doesn't (useGUILayout).
@@ -558,7 +559,6 @@ namespace GK2DonkeyAPI
                     case 5: DrawColors(); break;
                     case TabInstances: DrawInstances(); break;
                     case TabDebug: DrawDebug(); break;
-                    case TabTests: DrawTests(); break;
                     case TabPerformance: DrawPerformance(); break;
                     case TabMounts: DrawMounts(); break;
                     case TabFlying: DrawFlying(); break;
@@ -579,7 +579,7 @@ namespace GK2DonkeyAPI
             using var footer = Perf.Measure(Perf.S.WinFooter);
             // the footer is the settings rows' (what differs from the mod defaults, the session values, the style's reset,
             // the right-click hint): under the tabs that have such rows, not the tools' (the user, 2026-11-05, on the
-            // Tests tab: "why is that on the tests tab")
+            // Tests tab the window had then: "why is that on the tests tab")
             if (HasSettingsRows(tab))
             {
                 GUILayout.Space(8f);
@@ -1380,7 +1380,7 @@ namespace GK2DonkeyAPI
             debugHelp = GUILayout.Toggle(debugHelp, " explanations", Wd(110f));
             GUILayout.EndHorizontal();
             helpShown = help;
-            Help("The self-tests and the performance readout have their own tabs (Tests, Performance).");
+            Help("The performance readout has its own tab (Performance); the self-tests are run from GK2 Mod Test Bench's panel (F4).");
             switch (group)
             {
                 case 0: DrawDebugCargo(); break;
@@ -1611,20 +1611,7 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.DumpColliders());
             }
             GUILayout.EndHorizontal();
-            Help("By hand, on the chest the keeper faces (or the nearest within 6 m); use an empty test chest and reload without saving afterwards. The same three moves run scripted in \"Run self-tests\" above (the three \"chest:\" scenarios make their own test chest and remove it), so these buttons are for looking at things by eye. Hide/move/show is the set-down mechanism: the chest should appear at the new spot from near and far, also after walking away and back. Zone out and in should leave a workbench nearby still seeing the chest's items and villagers pathing around it. Stand-in: each press destroys the last and makes a new preview-style copy in front of the keeper.");
-        }
-
-        // ------------------------------------------------------------------ Tests tab
-
-        // The scenarios are run from GK2 Mod Test Bench's panel since 2026-11-17 (one runner and one panel for every GK2
-        // mod's tests); this tab says where they went and what the API has for the bench.
-        private static void DrawTests()
-        {
-            Header("Self-tests");
-            GUILayout.Label("The scripted checks of the API and of the mods built on it (docs/self-tests.md) are run from GK2 Mod Test Bench, the developer's test panel every GK2 mod's tests are in: F4, then the suite \"GK2 Donkey API\". Its Run buttons start all of them, one group or one scenario, and each row shows its result while the run goes on.", wrapLabel);
-            GUILayout.Label($"{SelfTest.Scenarios.Count} scenario(s) in {SelfTest.Groups.Length} group(s) are listed here for the bench" +
-                (SelfTest.PassSink != null ? "." : "; the bench or the integration tests' plugin isn't installed, so nothing runs them."), small);
-            GUILayout.Label("The spot a full run that passed everywhere remembers (Debug.SelfTestSpot): " + (string.IsNullOrEmpty(Plugin.SelfTestSpot.Value) ? "none yet" : Plugin.SelfTestSpot.Value), small);
+            Help("By hand, on the chest the keeper faces (or the nearest within 6 m); use an empty test chest and reload without saving afterwards. The same three moves run scripted in the self-tests (GK2 Mod Test Bench's panel, F4: the three \"chest:\" scenarios make their own test chest and remove it), so these buttons are for looking at things by eye. Hide/move/show is the set-down mechanism: the chest should appear at the new spot from near and far, also after walking away and back. Zone out and in should leave a workbench nearby still seeing the chest's items and villagers pathing around it. Stand-in: each press destroys the last and makes a new preview-style copy in front of the keeper.");
         }
 
         // ------------------------------------------------------------------ Performance tab
@@ -1637,7 +1624,7 @@ namespace GK2DonkeyAPI
             Perf.LogEvery10s = GUILayout.Toggle(Perf.LogEvery10s, " Write this to the log every 10 s ([perf] lines; keeps going with the panel closed)");
             Perf.ExpNoShuffle = GUILayout.Toggle(Perf.ExpNoShuffle, " Experiment: standing donkeys don't shuffle or follow (the mod's movement work off)");
             Perf.ExpHideViews = GUILayout.Toggle(Perf.ExpHideViews, " Experiment: hide standing donkeys (no drawing, no animation: the game's cost of showing them)");
-            GUILayout.Label("The levels (far and off-screen donkeys doing less) are tuned on the Debug tab; the \"frame time by mode\" self-test on the Tests tab measures them.", small);
+            GUILayout.Label("The levels (far and off-screen donkeys doing less) are tuned on the Debug tab; the \"frame time by mode\" self-test (GK2 Mod Test Bench's panel, F4) measures them.", small);
         }
 
         // Your settings (saved as you change them) against the mod defaults (defaults.cfg, shipped in the DLL).

@@ -222,10 +222,10 @@ covered as said:
 | What | How it is covered | Seen in the game |
 |---|---|---|
 | A scenario that throws: a FAIL, its cleanup still runs, the next scenario runs | the same loop as the old `Drive`; the bench's offline test (`tests/RunnerTest`: a body, a nested step and each hook throwing) | no |
-| A run of one group or of one scenario: the same start and finish, the checks of the whole run with it, the spot not remembered | the bench's offline test (partial runs, `run.Full`); the hook-up passes `run.Full` to `FinishRun` | no |
-| Abort | the bench's offline test (the waits end, the cleanup and the finish run) | no |
+| A run of one group or of one scenario: the same start and finish, the checks of the whole run with it, the spot not remembered | the bench's offline test (partial runs, `run.Full`); the hook-up passes `run.Full` to `FinishRun` | **yes**, 2026-11-17 23:57 (below) |
+| Abort | the bench's offline test (the waits end, the cleanup and the finish run) | **yes**, 2026-11-17 23:57 (below) |
 | The run refused while the game holds the keeper | the bench's offline test (a refusal from `BeforeRun`); the wait and the reason are the old lines | no |
-| The six scenarios that hide the panels (frame time by mode and five surveys) | the flag is in the list (section 1) and handed to the bench by the hook-up; the F11 panel is hidden by the same lines as before. The run's log did not say it; since this audit the bench writes a line when its panel goes and comes back | no |
+| The six scenarios that hide the panels (frame time by mode and five surveys) | the flag is in the list (section 1) and handed to the bench by the hook-up; the F11 panel is hidden by the same lines as before. The run's log did not say it; since this audit the bench writes a line when its panel goes and comes back | **yes**, 2026-11-18 12:04, with one frame's difference found and fixed (below) |
 | A run ended from outside (stalled, the game closing) | new with the bench: the settings and flags come back through `LetRunGo`; the bench's offline test | no |
 
 To see the rest in the game, four short looks (F4, the suite "GK2 Donkey API" opened):
@@ -237,10 +237,53 @@ To see the rest in the game, four short looks (F4, the suite "GK2 Donkey API" op
    donkeys are gone.
 4. A run of the suite to its end: the log has "the bench's panel is hidden while this test runs" six times.
 
+**Looks 1 to 3, done by the user 2026-11-17 23:57** (one session; the three runs' files and the game's log are kept
+with the audit's inputs). Every scenario that ran made as many checks as under the old runner's last run:
+
+| Look | The summary | What ran | Around it |
+|---|---|---|---|
+| 1. One scenario ("hitch and unhitch") | `done (3 of 204 tests): 20 passed, 0 failed, 0 warning(s)` | hitch and unhitch (16 checks, 16 before), then the two closing checks (2 and 2): "all 5 came through unchanged", "no test donkey left behind (0)" | the same start lines as a full run (the keeper to the test spot, the light, the zone, 12 instances); the story and the zoom held and given back; no warning in the log |
+| 2. One group (Morgue) | `done (4 of 204 tests): 19 passed, 0 failed, 0 warning(s)` | the group's two scenarios (7 and 8 checks, as before) in the list's order, then the two closing checks | the same |
+| 3. The suite, aborted | `aborted (187 of 204 tests): 106 passed, 0 failed, 0 warning(s). (aborted from the bench)` | the first eight scenarios in the list's order, each with its old number of checks (10, 10, 6, 3, 16, 6, 10, 45); the abort came during the eighth ("the run is stopping (aborted from the bench); the cleanup still runs") | its cleanup ran (the test donkeys, cart, skin and mount of that scenario removed), no closing check ran (the old loop left at an abort before them too), the story and the zoom given back; the log's 4 warnings are the first scenarios' own, as in the full run |
+
+After each of the three: the player's cart was called back beside the spot the keeper started from (the API's finish
+put him back), the world held 12 instances as before the run, and `Debug.SelfTestSpot` in the cfg is the spot it
+was (a run that isn't whole and clean doesn't write it).
+
+**Look 4, done by the user 2026-11-18 12:04** (a run of the suite to its end, with the F11 window's Tests tab gone):
+`done (187 of 204 tests): 2137 passed, 0 failed, 0 warning(s)`. The audit tool on this run's file: all 187 in the
+old runner's order, each scenario's lines together, 0 of 187 make another number of checks than under the old
+runner. No warning or error in the log before the run or after it; the 55 during it are the tests' own, each naming
+the self-test or its made-up thing. The story and the zoom were held and given back.
+
+The panel was hidden for all six measuring scenarios: every line of each lies inside a stretch of the log between
+the bench's "hidden" and "shown again" lines (frame time by mode in one; the garbage survey, the mount crowd, the
+views survey, the journal survey and the skin builds compared, which run one after another, in a second that lasts
+through all five). The run showed one difference from the old runner, and two faults of the new log lines:
+
+- **One frame.** The old runner hid its panel in the same step that started a scenario. The F11 window is still
+  hidden that way (`BeforeScenario`). The bench hid its own panel in the panel's `Tick`, the frame after the test
+  began: it was drawn in the first frame of a measuring scenario (the garbage survey's first line stands one line
+  before the "hidden" line). No check depends on it (the counts are the same), and a survey's numbers are taken
+  over hundreds of frames, but it is not what the old runner did. Fixed in the bench the same day: the runner tells
+  the host the moment a test begins, before the suite's step and the test's first, and the panel goes there.
+- The "shown again" line was also written when the panel was opened again by hand (line 615 of that log, before the
+  run), and five scenarios in a row got one "hidden" line. Fixed with it: a line a measuring scenario, "shown again"
+  only after one.
+
+The fix is built, tested offline and deployed; the six lines, each at its scenario's start, are to be read in the
+next full run.
+
+Still not seen in the game: a scenario that throws, a refused start, a run ended from outside. They can't be made
+to happen by pressing Run on a healthy game; they stay covered by the code's comparison (section 5) and the bench's
+offline test.
+
 ## 8. What is still under F11
 
-- **The Tests tab**: four lines (where the tests are, how many scenarios the API lists for the bench, the remembered
-  spot). No button, no runner. It can go altogether.
+- **The Tests tab**: at the time of the audit, four lines (where the tests are, how many scenarios the API lists for
+  the bench, the remembered spot), no button, no runner. **Taken out 2026-11-18** (the user: "the tests tab in the
+  f11 window is still there"): the window has twelve tabs, and its three texts that named the tab name the bench's
+  panel (F4). The remembered spot is still the Debug tab's `SelfTestSpot` row.
 - **The other tabs** (Cargo, Review, Flying, Debug, ...): the developer's tools, each started by hand: the cargo
   loads and the review, the probes (shapes, reach, held items, the lantern), the surveys, the script dumps. They
   were never scenarios of the runner and make no PASS or FAIL; their files are among the 85 that are the same byte

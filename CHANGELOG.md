@@ -65,6 +65,24 @@ Development:
     added since). The old `Run` and `Drive` were compared with the new steps statement by statement. The document
     also says what a green run can't show (a throw, an abort, a run of one group, a refusal, the hidden panels) and
     how each is covered. Nothing was found that differs; no code of the API or the tests changed.
+  - **Three of those seen in the game** (the user, 2026-11-17 23:57; the audit's section 7): one scenario alone
+    (`done (3 of 204 tests): 20 passed`: it and the two closing checks), one group (Morgue, `done (4 of 204 tests):
+    19 passed`), and the suite aborted during its eighth scenario (`aborted (187 of 204 tests): 106 passed, 0
+    failed`; that scenario's cleanup ran, no closing check, as under the old runner). Every scenario that ran made
+    as many checks as under the old runner; after each run the keeper and the player's cart were back, the world
+    held its 12 instances, and the remembered spot was not written. Still unseen in the game: a scenario that
+    throws, a refused start, and the bench's "panel is hidden" lines for the six measuring scenarios.
+  - **The F11 window's Tests tab is gone** (2026-11-18; the user: "the tests tab in the f11 window is still there").
+    Since the move it only said where the tests are. Twelve tabs now (`TabPerformance` 8, `TabMounts` 10, `TabFlying`
+    11); the Debug tab's help, the chest tools' help and the Performance tab's line name GK2 Mod Test Bench's panel
+    (F4) instead of the tab, and so do the four documents that sent the reader to it (`docs/reference.md`'s list
+    of the window's tabs, `mounted-combat.md`, `portable-chest.md`, `sprite-tools.md`).
+  - **A full run with the tab gone** (the user, 2026-11-18 12:04): 2137 passed, 0 failed, 0 warnings; the audit
+    tool on its file: the old runner's order, 0 of 187 scenarios with another number of checks. The panels were
+    hidden for all six measuring scenarios. One difference from the old runner came out of it: the bench hid its
+    own panel a frame after a measuring scenario began (the old runner, and still the F11 window, in the step that
+    starts it). Fixed in the bench (its changelog): the panel goes the moment the test begins. To be read in the
+    next full run: one "hidden" line at each of the six scenarios' start.
 - Translations for the other mods, written (2026-11-17; `docs/ui-library.md` section 11.11; the user's decisions:
   both QOL mods in all 10 languages, the Framework's Settings button opening Tech Tree Search's own window). Nothing
   of this repository's code or `Languages` changes; what reaches it is the window library at its next pointer move:
