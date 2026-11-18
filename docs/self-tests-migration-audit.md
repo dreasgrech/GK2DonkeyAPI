@@ -271,8 +271,9 @@ through all five). The run showed one difference from the old runner, and two fa
   run), and five scenarios in a row got one "hidden" line. Fixed with it: a line a measuring scenario, "shown again"
   only after one.
 
-The fix is built, tested offline and deployed; the six lines, each at its scenario's start, are to be read in the
-next full run.
+The fix is built, tested offline and deployed. **Seen in the next full run** (2026-11-18 13:14, on game 1.012.9;
+2141 passed, 0 failed, 0 warnings, `docs/game-update-26734308.md`): six "hidden" lines, each the line before its
+scenario's first line, and "shown again" after frame time by mode and after the last of the five in a row.
 
 Still not seen in the game: a scenario that throws, a refused start, a run ended from outside. They can't be made
 to happen by pressing Run on a healthy game; they stay covered by the code's comparison (section 5) and the bench's

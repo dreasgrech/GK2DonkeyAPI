@@ -12,6 +12,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Built for game 1.012.9** (Steam build 26734308, the game's update of 2026-11-18). That update changed the
+  game's save code, which this mod hooks, so every earlier version turns itself off on it (the game runs unmodified,
+  the donkeys, carts and their loads stay in the save). Nothing in the mod had to change for it.
+
 - **The Mount Journal's picture no longer loses the cart and the lantern for the session** (2026-11-15): the pictures
   are drawn on a stage of their own, the mount alone with every cart part switched off for that one photo and on
   again after. Unity fires its canvas pre-render callback inside that photo, the journal refits its picture there,
@@ -24,6 +28,25 @@ For players:
 
 Development:
 
+- **Game update 1.012.9 (Steam build 26734308), re-audited 2026-11-18** (`docs/game-update-26734308.md`; no patch
+  notes on Steam). `Assembly-CSharp` 56 changed members, 246 added, 3 named ones removed; the donkey's art, the
+  balance and the fonts' characters unchanged. Of the 922 game members the API uses one changed, `SaveSystem.Save`
+  (a save made from a loaded backup slot is redirected to the slot it belongs to, or to a new one): a core member,
+  so the gate disables every earlier build, the public 0.17.1 too. Our prefix needs no change: the side file is
+  written from the game's "saved" callback with the same slot object, so it takes the redirected name. Everything
+  compiles; rebuilt and deployed for the new build (the API's manifest 924 entries, identical); scans 31 of 32, the
+  one failure `check-dist` on the committed `dist/` DLL until the re-release. Near the mods, to see in the game: the
+  keeper's edge walls are probed ahead by his speed and stay on 5 physics steps after he leaves the ground (the
+  jump and flying scenarios measure it); the game's systems are un-paused later at a load; the Mods window marks a
+  Workshop code mod "Failed to start" when the plugin wrote an Error line before the main menu (the gate's
+  "DISABLED" line will show there; two Error lines of ours are written while the mod runs, to decide). What was in
+  hand before the update is in `docs/pending-2026-11-18.md`.
+  **First run in the game on 1.012.9** (the user, 13:14): every mod's own check passed at the start, the save's 15
+  donkeys and carts came back, and the API's 187 scenarios ran green: 2141 passed, 0 failed, 0 warnings. Against
+  the run before the update (2137) two scenarios make another number of checks, both by their own rules: the
+  colours scenario leaves out its as-drawn hue check by night (7 → 6), and the mount crowd compared its five
+  counters this time because the world's own mounts had the same number of views at the end (1 → 6). The jump and
+  flying scenarios pass as before. Still owed: the bench's other suites on the new build, and the hand checks.
 - **The self-tests are run by GK2 Mod Test Bench** (2026-11-17; `docs/self-tests.md`; the user: the other mods need
   in-game tests too, from one shared place with a single window every mod's tests hook into). The bench is a
   developer's plugin with a repository of its own (`GK2ModTestBench`, never shipped): one run loop and one panel
