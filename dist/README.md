@@ -37,7 +37,11 @@ Sizes 2026-11-18 22:14 (GK2 Saddle Up 0.17.3 with GK2 Donkey API 0.45.3 raised: 
 every text at the font's size, the Settings window's rows; the three packs their committed bytes; `bash
 tools/release.sh`, 32 of 32 release scans green): `GK2-Saddle-Up-0.17.3.zip` 1,281,806 bytes (`GK2DonkeyAPI.dll`
 3,482,624 bytes, `GK2SaddleUp.dll` 36,864, each with its `Languages\` of 11 files), staged with its `modinfo.json`
-in `workshop\GK2SaddleUp\`. Not uploaded yet.
+in `workshop\GK2SaddleUp\`. Uploaded 2026-11-18 about 22:35 (the user: Saddle Up 0.17.3 on Nexus mods/391 with its
+page text, and the Workshop item 3830136851 from the game's creator; Steam's own file details at 22:36: updated
+22:33:43, 3,934,985 bytes, which is the staged folder's two DLLs, 22 language files and `modinfo.json` to the byte, and
+its description the staged one, the new picture in it; the Nexus page refuses automated readers, so it stands on the
+user's word); committed as `01ab041`, tagged `saddleup-0.17.3`.
 
 Sizes 2026-11-18 13:44 (the game's 1.012.9 update of that day: GK2 Saddle Up 0.17.2 with GK2 Donkey API 0.45.2
 raised, the three packs their committed bytes; `bash tools/release.sh`, 32 of 32 release scans green):
