@@ -10,6 +10,15 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.17.3 (GK2 Donkey API 0.45.3), 2026-11-18
+
+A fix for a fault seen in 0.17.2 the day it went out (the Mount Journal's and the options window's titles and bold
+texts in the wrong font until the game's Settings window had been opened once), and with it the windows' texts at
+the size the game's pixel font is made for, and a row in the game's Settings window in place of the button above its
+OK button. Built for game 1.012.9 (Steam build 26734308), as 0.17.2. No change to the Donkey API's public surface.
+
 For players:
 
 - **The Mount Journal's and the options window's titles and bold texts are right in every session** (2026-11-18).
@@ -22,8 +31,37 @@ For players:
   bold font; a description, a second line and a value are a little larger than they were. A text too long for its
   place in a language still shrinks before it is cut.
 
+- **Saddle Up's options open from a row in the game's Settings window** (2026-11-18), where a red button above OK
+  did. The row stands under the game's own rows and looks like them: the mod's name, and a box saying "Open" with an
+  arrow. Other mods of ours stand there too, one row each, in the order of their names; with more than eight, the
+  rows scroll and the window stops growing.
+
 Development:
 
+- **The release of 0.17.3** (2026-11-18; `docs/release-checklist.md`): the versions raised (`release-versions.py set
+  saddleup 0.17.3 --api 0.45.3`; the Donkey API and Saddle Up raised, the three packs kept), `bash tools/release.sh`
+  whole: the release build, 32 of 32 release scans green, `release/GK2-Saddle-Up-0.17.3.zip` 1,281,806 bytes
+  (`GK2DonkeyAPI.dll` 3,482,624, `GK2SaddleUp.dll` 36,864), the Workshop folder staged. The first-start rehearsal
+  with that zip (`tools/rehearsal.sh stage-a`, the user playing): 0.45.3 and 0.17.3 loaded with the Dragons and
+  Donkey Skins packs, the cargo layout from embedded, no `Dev tools unlocked`, the fresh API cfg without `[Debug]`,
+  no warning, error or exception in 445 lines; the Mount Journal opened before the Settings window with its title and
+  buttons in the bold font (the fault this release fixes); the Settings window with Saddle Up's one row, the options
+  opened from it; the cart left with 4 items and the same cart hitched again with 4 of 4. Restored, the saves
+  identical. No new fixture: the fresh cfgs have the 0.17.1 fixture's keys, line for line (489 and 99). The
+  rehearsal now sets the mods repository's two unreleased builds aside too (each would add a row of its own).
+  The pages' picture of the Settings window is new (`media/settings-row.png`, the gallery's `settings-row.jpg`, from
+  the user's screenshot of that rehearsal); the old one of the button stays in the repository.
+- **The Settings window's rows** (2026-11-18; `docs/options-window.md` section 15 has the investigation, the ten
+  layouts drawn, the user's pick and what was built; the library's README the contract between the mods' copies).
+  `SettingsRows` in the window library, `SettingsButtons` kept as its fallback; `Debug.ExampleOptionRows`; the
+  scenario `Dev/SettingsRowsTests.cs` (8, 9, 20 and 40 made-up rows, pictures) and the three scenarios that looked
+  at the button moved to the row; `game-code.txt` sorts the two new classes; `Directory.Build.props`'s
+  `GK2DreasUIDir` used for the builds. Built with 0 warnings, the scans pass, deployed.
+  **Seen and run in the game (the user, 2026-11-18): the three mods' rows in the main menu's Settings window (a
+  screenshot), then every suite in one run, 251 tests in 4 suites, 2475 checks passed, 0 failed, 0 warnings**, the
+  rows' scenario at 8, 9, 20 and 40 rows in it (the window as high at 40 as at 8, the wheel a row a notch) and its
+  pictures as the mock-ups. Open: the look of a row at the strip's edges under the mouse and the gamepad, and the
+  user's word on eight rows in view and on "Open" in the box.
 - **The window library: the title and bold fonts from the game's own styles, every text at the font's size**
   (2026-11-18, the library's own checkout; the user's yes to both after the runs below).
   - `UiKit.ReadBold`: the game's OK button styles its own label (`LazyButton.RefreshTextTransitions`, as it does

@@ -387,3 +387,52 @@ Built:
   key skip a press when another key row has the same main key, k's modifiers and more, all held now.
 - Self-tests: the smoke test (the more specific rule; Ctrl + a free key over the key: no line; Right Alt alone and
   Right Alt + the key: both lines) and "among other mods" (another mod's Ctrl + Alt + the key over ours).
+
+## 15. Rows instead of buttons in the game's Settings window (2026-11-18)
+
+The user, of the Settings window with three mods' buttons above OK, each as wide as its words: "not really scalable
+... a bit sloppy when having multiple buttons. Can we investigate ways we can improve that?" Ten layouts were drawn
+on the user's own screenshot, the words in the game's own fonts (the review page's tools:
+`C:\ClaudeCodeTemp\GK2-settings-buttons-2026-11-18`), with a switch from 1 to 40 mods. The user's pick: "go with 3
+[a row per mod, as the game's own] but we need to test how it would look with an exaggerated amount of items".
+
+**What the numbers were.** The window without mods is about 369 of the screen's 720 units high. A button is 32 units,
+a row 22. Buttons fit up to 10 mods, plain rows up to 15; at 20 rows the window would be about 818 units, at 40 about
+1258. So the rows got a cap: at most eight in view, the rest scrolling in their own strip (about 564 units at any
+number).
+
+**Built** (`lib/GK2DreasUI/src/SettingsRows.cs`; the library's README has the contract between the mods' copies):
+- A row is a copy of one of the game's "< value >" rows for its looks alone: made under an inactive holder, cleaned
+  of other mods' parts, its `UISwitchButton` removed before it wakes. Not the Language row, whose value has a style
+  of its own. Our press is on the arrow, the box and the gamepad's Select; the left arrow is hidden.
+- The word in the box is "Open" (`row.open`, a word the library already had in every language).
+- The rows of every mod stand in one strip, in the order of their names, under the game's last setting row and above
+  its OK button. Past eight rows the strip scrolls: a bar at its right, the wheel a row a notch.
+- The buttons above OK (`SettingsButtons`) stay as the fallback where a row can't be made.
+- `Debug.ExampleOptionRows` (the API's cfg, 0 by default) and `SettingsRows.SetExampleRows` add made-up rows.
+- Scenarios: "the mods' rows in the game's Settings window at 8, 9, 20 and 40 mods" (`Dev/SettingsRowsTests.cs`: it
+  makes the rows up itself, checks the strip and the window at each number, scrolls at 40, and saves
+  `GK2-panel-shots\settings-rows-<n>.png`); "among other mods", "the way back" and "the row in every language" look
+  at the row where they looked at the button.
+
+**Seen and run in the game (the user, 2026-11-18).**
+- The main menu's Settings window, by hand (a screenshot, 21:33): three rows under Language, GK2 Event Decorations,
+  GK2 Saddle Up, GK2 Tech Tree Search, "Open" in each box, the game's arrow, OK the only red button. The log: the
+  Donkey API made the strip and keeps it, the other two mods' copies each put one row into it; no warning.
+- Every suite in one run (21:51): **251 tests in 4 suites, 2475 checks passed, 0 failed, 0 warnings.** In it the
+  rows' scenario at 8, 9, 20 and 40 rows (the three installed and made-up ones): all in one strip and in order at
+  each number; the strip as high as eight rows from eight on, the scroll bar shown from nine; the whole window on
+  the screen and exactly as high at 9, 20 and 40 as at 8; at 40 a wheel notch one row, the end at 32 rows down with
+  the last row inside the strip, back to the top; a made-up row's arrow opens nothing. "Among other mods": the row
+  copied is the game's Screen Size row (`ResolutionSwitchBtn`), a part planted on it stays off our copy, the game's
+  switch is not on ours, our row taken away is back within the check. "The way back": the row's one arrow opens the
+  options. "The row in every language": 11 of 11, the name and the word in the game's own rows' fonts, the word
+  inside its box, the name whole.
+- The pictures of that run (`BepInEx\GK2-panel-shots\settings-rows-*.png`, side by side in
+  `C:\ClaudeCodeTemp\GK2-settings-buttons-2026-11-18\crop-settings-rows-all.png`): as the mock-ups. The made-up
+  names sort as words do ("Example Mod 1", "Example Mod 10", ...): real names are not numbered.
+
+**Still only a person's to judge:** a row under the mouse and under the gamepad's frame at the strip's top and
+bottom edge; the gamepad stepping down past the eighth row; whether eight is the right number of rows in view; the
+word in the box ("Open" is in every language already; "Options" would need its translations). A released Saddle Up
+0.17.2 beside a newer mod keeps its own button above OK: a mix until it is updated.

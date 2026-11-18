@@ -19,7 +19,7 @@
 # MountsKey, RideKey and CartKey must be keys a keyboard has (a fixture's are on the numpad). A file that fails is not
 # staged.
 set -e
-SADDLEUP_ZIP="GK2-Saddle-Up-0.17.2.zip"
+SADDLEUP_ZIP="GK2-Saddle-Up-0.17.3.zip"
 PACK_ZIPS="GK2-Saddle-Up-Dragons-Mount-Pack-1.3.0.zip GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip GK2-Saddle-Up-Donkey-Skin-Pack-1.3.2.zip"
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,7 +33,10 @@ STAGED="$B/rehearsal-staged"
 ASIDE=""
 [ -f "$STAGED" ] && ASIDE="$B/$(cat "$STAGED")"
 SAVES="$(cygpath -u "$USERPROFILE")/AppData/LocalLow/Lazy Bear Games/Graveyard Keeper 2"
-DEVPLUG="GK2DonkeyAPI GK2SaddleUp GK2SaddleUpCrittersMountPack GK2SaddleUpDragonsMountPack GK2SaddleUpDonkeySkinPack GK2DonkeyAPI.IntegrationTests GK2ModTestBench GK2QOLMods.Tests GK2ShowcaseDirector GK2PerfRunner GK2AssetProbe PerformanceHog gk2mounts"
+DEVPLUG="GK2DonkeyAPI GK2SaddleUp GK2SaddleUpCrittersMountPack GK2SaddleUpDragonsMountPack GK2SaddleUpDonkeySkinPack GK2DonkeyAPI.IntegrationTests GK2ModTestBench GK2QOLMods.Tests GK2ShowcaseDirector GK2PerfRunner GK2AssetProbe PerformanceHog gk2mounts GK2EventDecorations GK2TechTreeSearch"
+# (the last two: the mods repository's builds on this machine that no player has as they are, Event Decorations never
+# released and Tech Tree Search ahead of its public version; each would add a row of its own to the game's Settings
+# window, and the rehearsal is of Saddle Up as a player has it)
 CFGS="dreas.gk2.donkeyapi.cfg dreas.gk2.saddleup.cfg"
 
 running() { [ "$(tasklist | grep -ic graveyard)" != 0 ]; }

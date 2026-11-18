@@ -372,7 +372,7 @@ namespace GK2DonkeyAPI
         public const string Guid = "dreas.gk2.donkeyapi";
         // The one version of this mod: the plugin's and the API's (Mounts.ApiVersion is read from it). Minor for additions
         // to the API, major for breaking changes; the public and the internal number never differ (decided 2026-10-13).
-        public const string Version = "0.45.2";
+        public const string Version = "0.45.3";
 
         // No pinned game build: at start GameCode compares every game member this DLL uses (the gk2deps.txt manifest
         // tools/DepManifest embedded after the build) with the installed game, feature by feature; docs/dependency-check.md.
@@ -469,6 +469,7 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<bool> CargoTabTint;
         internal static ConfigEntry<bool> SkinPackAutoReload;
         internal static ConfigEntry<bool> JumpTraceOn;
+        internal static ConfigEntry<int> ExampleOptionRows; // dev: made-up rows in the game's Settings window (the strip at many mods), 0 by default
         internal static ConfigEntry<bool> UiProbeOn; // dev: the UI probe (Dev/UiProbe.cs), off by default // dev: the jump probe's files (JumpProbe.cs), off by default
         internal static ConfigEntry<bool> TestLanguageOn; // dev: the translations' test language (Texts), off by default
         internal static ConfigEntry<bool> TranslationReport; // [Translations] Report: the lines still to translate written out for translators (Texts), off by default
@@ -714,6 +715,10 @@ namespace GK2DonkeyAPI
             CargoSeatOnShapes.SettingChanged += (_, __) => Cargo.RefreshViews();
             CargoTabTint = dbg.Bind("Debug", "CargoTabTint", true,
                 "The panel's Cargo tab tints the items on the ridden cart like the names in it: blue the first item of a layer, orange the second (or one alone on top), lighter the higher the layer. Off: no tint.");
+            ExampleOptionRows = dbg.Bind("Debug", "ExampleOptionRows", 0,
+                "For looking at the game's Settings window with many mods: this many made-up rows (\"Example Mod 1\" on) stand among the mods' options rows there. They open nothing. 0: none. Set in this file, it is read when the game starts; changed while the game runs (a config editor), it takes effect at once.");
+            ExampleOptionRows.SettingChanged += (_, __) => SettingsRows.SetExampleRows(ExampleOptionRows.Value);
+            if (ExampleOptionRows.Value > 0) SettingsRows.SetExampleRows(ExampleOptionRows.Value);
             UiProbeOn = dbg.Bind("Debug", "UiProbe", false,
                 "The UI probe: when the Mounts panel is built, BepInEx\\GK2-ui-probe.txt gets the game's Settings window layout, its dialog button, the panel's font and the loaded buttons' fonts (open the game's pause menu once first). Measures only.");
             TestLanguageOn = dbg.Bind("Debug", "TestLanguage", false,

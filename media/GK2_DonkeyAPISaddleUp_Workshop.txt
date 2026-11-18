@@ -86,9 +86,9 @@ All keys can be changed. You get off by yourself for work, ladders, fishing, sle
 [hr][/hr]
 [h2]Settings[/h2]
 
-The game's [b]Settings[/b] window (pause menu or main menu) has a [b]GK2 Saddle Up options[/b] button. The Mount Journal (L) has an [b]Options[/b] button too. Five tabs: Keys, Mount, Cart, Safe spot and Freeplay (one speed and the most cargo for every mount). Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.
+The game's [b]Settings[/b] window (pause menu or main menu) has a [b]GK2 Saddle Up[/b] row. The Mount Journal (L) has an [b]Options[/b] button too. Five tabs: Keys, Mount, Cart, Safe spot and Freeplay (one speed and the most cargo for every mount). Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.
 
-[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/settings-button.png?v=2[/img]
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/settings-row.png[/img]
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/options-window.png?v=3[/img]
 

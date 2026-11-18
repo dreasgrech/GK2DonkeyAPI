@@ -1132,26 +1132,27 @@ namespace GK2DonkeyAPI
                 {
                     Switch(gs, id);
                     yield return SelfTest.Frames(1);
-                    UIDialogWindowButton ours = SettingsButtons.ButtonOf(settings, page.Page);
-                    UIDialogWindowButton ok = UiKit.OkButtonOf(settings);
-                    // the OK button keeps its font until its state changes (a hover; "OK" reads in the Latin font): restyled
-                    // here as a hover would, the font the game's own button style gives the language
-                    ok?.LazyButton?.RefreshTextTransitions();
-                    TextMeshProUGUI label = ours != null ? ours.GetComponentInChildren<TextMeshProUGUI>(true) : null;
-                    TextMeshProUGUI okLabel = ok != null ? ok.GetComponentInChildren<TextMeshProUGUI>(true) : null;
-                    if (label == null)
+                    GameObject ours = SettingsRows.RowOf(settings, page.Page);
+                    SettingsRows.TestTexts(ours, out TextMeshProUGUI label, out TextMeshProUGUI value);
+                    SettingsRows.TestGameTexts(settings, out TextMeshProUGUI gameLabel, out TextMeshProUGUI gameValue);
+                    if (label == null || value == null)
                     {
-                        wrong.Add(id + ": no button");
+                        wrong.Add(id + ": no row");
                         continue;
                     }
                     checkedLanguages++;
-                    string want = UiWords.PageOptions.Format(Texts.Title(page.Page));
-                    float wants = label.GetPreferredValues(label.text, float.PositiveInfinity, float.PositiveInfinity).x, has = label.rectTransform.rect.width;
-                    if (label.text != want) wrong.Add($"{id}: the words \"{label.text}\", not \"{want}\"");
-                    if (okLabel != null && label.font != okLabel.font) wrong.Add($"{id}: the font {(label.font != null ? label.font.name : "none")}, the OK button's {(okLabel.font != null ? okLabel.font.name : "none")}");
-                    if (wants > has + 0.5f) wrong.Add($"{id}: the text wants {wants:0} of {has:0}");
+                    string want = Texts.Title(page.Page), word = Words.Open.Text;
+                    label.ForceMeshUpdate();
+                    value.ForceMeshUpdate();
+                    float wants = value.GetPreferredValues(value.text, float.PositiveInfinity, float.PositiveInfinity).x, has = value.rectTransform.rect.width;
+                    if (label.text != want) wrong.Add($"{id}: the row's name \"{label.text}\", not \"{want}\"");
+                    if (value.text != word) wrong.Add($"{id}: the word in its box \"{value.text}\", not \"{word}\"");
+                    if (gameLabel != null && label.font != gameLabel.font) wrong.Add($"{id}: the name's font {(label.font != null ? label.font.name : "none")}, the game's rows' {(gameLabel.font != null ? gameLabel.font.name : "none")}");
+                    if (gameValue != null && value.font != gameValue.font) wrong.Add($"{id}: the word's font {(value.font != null ? value.font.name : "none")}, the game's rows' {(gameValue.font != null ? gameValue.font.name : "none")}");
+                    if (wants > has + 0.5f) wrong.Add($"{id}: the word wants {wants:0} of {has:0}");
+                    if (label.isTextTruncated) wrong.Add($"{id}: the row's name is cut");
                 }
-                SelfTest.Check(checkedLanguages == ids.Count && wrong.Count == 0, $"every language ({checkedLanguages} of {ids.Count}): the button's words, its font the OK button's and its width right at the switch, before any hover{(wrong.Count > 0 ? "; NOT: " + string.Join("; ", wrong) : "")}");
+                SelfTest.Check(checkedLanguages == ids.Count && wrong.Count == 0, $"every language ({checkedLanguages} of {ids.Count}): the row's name and the word in its box, their fonts the game's own rows', the word's width and the name whole, right at the switch{(wrong.Count > 0 ? "; NOT: " + string.Join("; ", wrong) : "")}");
             }
             finally
             {

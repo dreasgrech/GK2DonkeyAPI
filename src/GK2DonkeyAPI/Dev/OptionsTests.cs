@@ -442,25 +442,36 @@ namespace GK2DonkeyAPI
             ForeignPart planted = null;
             try
             {
-                // 1. the window's own OK button; a part of another mod's on it stays off our copy; our button re-added
+                // 1. our row among the window's own; a part of another mod's on the row copied stays off our copy; our row re-added
                 settings.onClosed = null;
                 settings.Open(null);
                 yield return SelfTest.Frames(2);
                 ok = UiKit.OkButtonOf(settings);
-                UIDialogWindowButton ours = SettingsButtons.ButtonOf(settings, page.Page);
-                SelfTest.Check(ok != null && !ok.name.StartsWith("GK2DonkeyAPI", StringComparison.Ordinal) && ours != null && ours.transform.parent == ok.transform.parent
-                    && ours.transform.GetSiblingIndex() < ok.transform.GetSiblingIndex(),
-                    $"the button copied is the window's own OK ({ok?.name}), ours stands above it");
-                if (ok == null || ours == null) yield break;
-                planted = ok.gameObject.AddComponent<ForeignPart>();
-                UnityEngine.Object.DestroyImmediate(ours.gameObject); // as a mod rebuilding the window would
-                SettingsButtons.TestCheckNow();
+                GameObject ours = SettingsRows.RowOf(settings, page.Page);
+                UISwitchButton language = UiKit.SwitchOf(settings), copied = SettingsRows.TestTemplate(settings);
+                Transform gameRows = language != null ? UiKit.ContentOf(language.transform) : null;
+                GameObject stripNow = SettingsRows.TestStrip(settings);
+                SelfTest.Check(!SettingsRows.TestFailed && ours != null && stripNow != null && ours.transform.IsChildOf(stripNow.transform) && gameRows != null && stripNow.transform.parent == gameRows
+                    && SettingsRows.TestStripCount(settings) == 1,
+                    $"our row stands in the mods' strip, one strip, among the window's own rows ({(SettingsRows.TestKeepsStrip ? "this mod keeps the strip" : "another mod keeps the strip")})");
+                if (ours == null || stripNow == null || copied == null) yield break;
+                int stripAt = stripNow.transform.GetSiblingIndex(), languageAt = UiKit.RowGameObject(language.transform, gameRows).transform.GetSiblingIndex();
+                SelfTest.Check(stripAt > languageAt && (ok == null || !ok.transform.IsChildOf(gameRows) || stripAt < UiKit.RowGameObject(ok.transform, gameRows).transform.GetSiblingIndex()),
+                    "the strip stands under the game's Language row and above its OK button");
+                SelfTest.Check(copied != language && !copied.name.StartsWith(UiOwner.CommonPrefix, StringComparison.Ordinal),
+                    $"the row copied is one of the window's own, not its Language row and none of ours ({UiKit.RowGameObject(copied.transform, gameRows).name})");
+                GameObject copiedRow = UiKit.RowGameObject(copied.transform, gameRows);
+                planted = copiedRow.AddComponent<ForeignPart>();
+                UnityEngine.Object.DestroyImmediate(ours); // as a mod rebuilding the window would
+                SettingsRows.TestCheckNow();
                 yield return SelfTest.Frames(1);
-                ours = SettingsButtons.ButtonOf(settings, page.Page);
-                SelfTest.Check(ours != null && ours.gameObject.activeInHierarchy && SettingsButtons.TextOf(ours) == page.Title + " options",
-                    "our button taken away: the watchdog adds it again while the Settings window is on top");
-                SelfTest.Check(ours != null && ours.GetComponentInChildren<ForeignPart>(true) == null && ok.GetComponent<ForeignPart>() != null,
-                    "another mod's part on the OK button is left off our copy (and stays on OK)");
+                ours = SettingsRows.RowOf(settings, page.Page);
+                SelfTest.Check(ours != null && ours.activeInHierarchy && SettingsRows.LabelOf(ours) == page.Title && SettingsRows.WordOf(ours) == Words.Open.Text,
+                    $"our row taken away: the watchdog adds it again while the Settings window is on top (\"{SettingsRows.LabelOf(ours)}\", \"{SettingsRows.WordOf(ours)}\")");
+                SelfTest.Check(ours != null && ours.GetComponentInChildren<ForeignPart>(true) == null && copiedRow.GetComponent<ForeignPart>() != null,
+                    "another mod's part on the row copied is left off our copy (and stays on the game's row)");
+                SelfTest.Check(ours != null && ours.GetComponentInChildren<UISwitchButton>(true) == null && copied != null && copiedRow.GetComponentInChildren<UISwitchButton>(true) == copied,
+                    "the game's own switch is not on our row (nothing of the game's steps it), and is still on the game's");
                 UnityEngine.Object.DestroyImmediate(planted);
                 planted = null;
                 settings.Close();
@@ -594,15 +605,16 @@ namespace GK2DonkeyAPI
             SettingsPage.Row mounts = page.HasMountRow ? RowWhere(page, r => r.OpensOwnerWindow) : null;
             try
             {
-                // 1. the Settings window's button
+                // 1. the Settings window's row
                 settings.onClosed = null;
                 settings.Open(null);
                 yield return SelfTest.Frames(2);
-                UIDialogWindowButton button = SettingsButtons.ButtonOf(settings, page.Page);
-                string text = SettingsButtons.TextOf(button);
-                SelfTest.Check(button != null && button.gameObject.activeInHierarchy && text == page.Title + " options", $"the Settings window has the button \"{text}\"");
-                if (button == null) yield break;
-                button.LazyButton.onClick.Invoke();
+                GameObject row = SettingsRows.RowOf(settings, page.Page);
+                string text = SettingsRows.LabelOf(row);
+                SelfTest.Check(row != null && row.activeInHierarchy && text == page.Title && SettingsRows.WordOf(row) == Words.Open.Text,
+                    $"the Settings window has the row \"{text}\" with \"{SettingsRows.WordOf(row)}\" in its box");
+                if (row == null) yield break;
+                SelfTest.Check(SettingsRows.TestClickArrow(row), "the row has one arrow shown, and it is pressed");
                 yield return SelfTest.Frames(2);
                 SelfTest.Check(OptionsWindow.IsShown && LazyWindowsStackController.IsWindowOpened(settings) && !settings.gameObject.activeSelf,
                     "pressed: the options open over the Settings window, which waits underneath, still open, switched off");
