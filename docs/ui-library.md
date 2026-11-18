@@ -941,3 +941,50 @@ against 할로윈 (common in games); Japanese なし for the choice "Never" (the
 German "Orte" for the Areas heading (it was "Bereiche", which the window uses for a section); Spanish "Ninguna
 tecnología visible encaja" (the natural "coincide" is one character over the box's room); Russian Хеллоуин against
 Хэллоуин; "Display only." kept short in every language.
+
+## 12. Fonts and sizes: what the windows take from the game, and the rules (2026-11-18)
+
+Written after a fault found in the released 0.17.2 (the user: the Mount Journal's title "thin", then the test bench's
+panel "weird and extremely aliased"). Read this before touching a text's font, size or style.
+
+**The game's fonts are pixel fonts.** `small_font` (labels), `small_font_bold` (buttons, titles) and `tiny_font` are
+TextMeshPro font assets of point size 16 in a 256x256 atlas that is drawn point by point (shader TextMeshPro/Sprite;
+read from `resources.assets`). The game's own UI draws them at 16 on a 1280x720 canvas (twice that on a 2560x1440
+screen). At any other size a letter's pixels come out one or two screen pixels wide by turns; TextMeshPro's bold
+style on such a font is the same letters set wider apart, its italic the same pixels sheared.
+
+**Where a text of the game's gets its font.** Not from its saved state: the game gives a text its font, material and
+colour when the text is switched on, so a window that hasn't been shown yet in a session holds texts with no font at
+all (measured on the Settings window's header and its OK button's label), and after a language switch with the
+window closed they wear the last language's.
+- A text with a `TextStyleComponent` (the Settings header, the Settings row): `ApplyStyle()` gives it its style for
+  the language now.
+- A button's label has none: its `LazyButton` gives it a style by the button's state (its text transitions;
+  `RefreshTextTransitions()` applies the one for the state now; at rest the OK button's is
+  `small_font_bold-btn_red_active`).
+- A text handed no font (`text.font = null`) is drawn in TextMeshPro's default font, `tiny_font`.
+
+**What `UiKit` does** (`Read`, on every opening of a window): the Settings row's label styled, then read (`Font`,
+`FontMaterial`, `FontColor`, `FontSize`); the OK button asked to style its label, then read (`BoldFont`,
+`BoldMaterial`, `ButtonTextColor`); the header styled, then read (`TitleFont`, `TitleMaterial`, `TitleSize`,
+`TitleColor`). A font that isn't there is never handed to a text.
+
+**The rules.**
+- Every text at the game's own size: `UiKit.Text` takes whole steps (1, 2) and nothing between.
+- What stands out does so by the bold font (`UiKit.Bold`) or its colour; what stands back by its colour. Never a
+  text style (`FontStyles.Bold`, `Italic`).
+- The chosen one of several (a section, a card, a tab, a choice) is told by its face and its colour, in the font it
+  has: the bold font holds fewer characters than the labels', and a translation is checked against the font that
+  draws it.
+- The long-text rule stands: a label that doesn't fit shrinks (to 80%, a description to 75%) before it is cut. Only
+  then is a text off the font's size, and the tests say which.
+
+**The tests that hold this.** Both make the worst case themselves (the fonts taken off the game's header and OK
+label, as before their first showing, put back afterwards), so they don't depend on what the session did before:
+the API's `Dev/TitleTests.cs` (two scenarios: the titles and the bold font; the sizes) over the journal and the
+options window, and GK2 Mod Test Bench's `PanelTests.cs` over its own panel, which is built from the library's own
+checkout and so proves a change of the library before any pointer moves. `Directory.Build.props`'s `GK2DreasUIDir`
+builds the API against that checkout for one try in the game.
+
+**Not established:** which game update stopped saving fonts on texts that were never shown (on 2026-10-27 the
+never-shown header still had `small_font_bold`); 1.012's notes mention the fonts' materials.

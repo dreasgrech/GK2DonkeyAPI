@@ -10,7 +10,100 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
-Nothing yet.
+For players:
+
+- **The Mount Journal's and the options window's titles and bold texts are right in every session** (2026-11-18).
+  Until the game's Settings window had been opened once after starting the game, the two windows' titles were drawn
+  in a small stand-in font, and their tabs, headings and buttons in a stretched regular font. Seen in 0.17.2 (which
+  earlier versions had it is not established).
+- **Sharper text in the Mount Journal, its colours window and the options window** (2026-11-18): every text is at the
+  size the game's pixel font is made for. Some were a little smaller or larger and came out with uneven pixels. A
+  mount's name over its picture and a section's heading are as large as the other texts now and stand out by the
+  bold font; a description, a second line and a value are a little larger than they were. A text too long for its
+  place in a language still shrinks before it is cut.
+
+Development:
+
+- **The window library: the title and bold fonts from the game's own styles, every text at the font's size**
+  (2026-11-18, the library's own checkout; the user's yes to both after the runs below).
+  - `UiKit.ReadBold`: the game's OK button styles its own label (`LazyButton.RefreshTextTransitions`, as it does
+    when the Settings window is shown) before the label's font, material and colour are read. `UiKit.ReadTitle`:
+    the Settings header is given its own text style for the language (`TextStyleComponent.ApplyStyle`, as the
+    Settings row already was) before its font, material, size and colour are read; the title now takes the header's
+    material too (it had the buttons'). A font that isn't there is never handed to a text (that is what made
+    TextMeshPro draw the titles in its default font).
+  - No text is given TextMeshPro's bold or italic style any more: on a pixel font "bold" is the same letters set
+    wider apart and "italic" the same pixels sheared. The chosen one of several (a section, a mount's card, a tab,
+    a number, a choice in a list) is told by its face and colour, in the font it has; "press a key" and a text box's
+    hint by their colour. Without the game's bold font (said once in the log) a heading stays in the labels' font.
+  - `UiKit.Text` takes its size in whole steps of the game's own (anything else is the nearest, 1 at least), and
+    every text of the library and of the journal is asked for at 1: the mount's name (1.35), the options window's
+    heading and the "not installed" note (1.1), labels, values and the abilities' names (0.95), the stats' labels,
+    the description under the name, the slots' labels and the text boxes (0.9), the options window's description
+    and the colour field (0.85), a key's clash line (0.8), the abilities' lines (0.78). The long-text rule stands
+    (a label that doesn't fit shrinks to 80% before it is cut): the sizes scenario judges such a text by the size
+    it has when its words fit and says the shrunk ones.
+  - The options window's bottom band is 52 high (40): four lines of a description at the font's size, about 430
+    characters where three lines held about 320; the longest descriptions shipped are 255 (Saddle Up), 329 (Event
+    Decorations) and 278 (Tech Tree Search) in English, 377 in a translation. Reckoned from the band measured at
+    the old sizes; in the run below the longest description of Saddle Up's has 1.3 times its length in room in
+    German and 1.1 in French, at full size. The translation writer's room for a description follows (600, from 700).
+  - `Directory.Build.props`: `GK2DreasUIDir` (the submodule by default) names another checkout of the library for
+    one build, to try a change of it in the game before it is committed there. The builds of this entry in the game
+    were made so.
+  - Built with 0 warnings (the bench and the API against the library's checkout), the game-code, no-LINQ, public
+    surface and layering scans pass, deployed.
+  - **Seen and run in the game (the user, 2026-11-18, a fresh start, the Settings window never opened).** The journal
+    and the options window opened first: both titles in the game's bold title font, the headings and buttons in the
+    bold font, the rows even (two screenshots). The bench's own suite, 19:26: 32 checks passed, 0 failed (its fonts
+    test on the game's texts made as never shown). **The whole suite, 19:43: 189 scenarios, 2157 checks passed, 0
+    failed, 0 warnings.** In it: the titles scenario green (both titles `small_font_bold` with
+    `en:[small_font_bold-header_1-text_1]`, the bold font the game's own for its buttons,
+    `small_font_bold-btn_red_active`, 11 texts of the journal and 4 of the options window in it, none widened or
+    slanted); the sizes scenario green (48 and 30 texts, all at 16).
+  - The room with the larger texts, from that run's `GK2-text-room.tsv` (8,394 measurements, every one at 16): in
+    English, in the test language at 1.6 times and in each of the ten languages every text fits at its full size,
+    777 measurements a language; the one exception is the self-test's own made-up skin name in Korean (0.98 of its
+    room in the Skin row's list, and it shrinks). The least room among the real texts: German "Mit dem Karren
+    fahren" on its button, exactly its room. No layout change was needed beyond the options window's band.
+- **Two scenarios for how our windows' texts are drawn, after a fault found in the released 0.17.2** (2026-11-18;
+  `Dev/TitleTests.cs`, in the group "Skins and effects"). The user's report the day 0.17.2 went out: the Mount
+  Journal's title is thin where the release screenshot has it bold, "and no test picked it up".
+  - What a first form of the scenario measured, run alone on a fresh start (18:14): before the game's Settings
+    window was shown for the first time in a session, its header text and its OK button's text have no font (the
+    game gives a text its font when it is switched on). The window code's title bar copies the header's font, none,
+    and TextMeshPro then draws the title in its default font, `tiny_font`; the bold font, read off the OK button, is
+    none too, so tabs, headings and buttons are the labels' font widened. Both our windows' titles were in
+    `tiny_font`. Once the Settings window was shown in the session everything is right, which is why the
+    screenshots taken through it were. Not caused by our drawing code (the same since 2026-10-30) or by the game's
+    update of that day (compared byte by byte); which earlier update stopped saving those fonts is not verified.
+  - The first scenario (the titles and the bold font) makes that worst case itself, whatever happened earlier in
+    the session: it takes the fonts off the game's header and OK button text, opens the journal and the options
+    window on that, and puts the fonts back (from a `finally`). It checks each title's font against the one the
+    game's own title style gives for the language, every character drawn from it, its material; the window code's
+    bold font against the game's own for its buttons; that no text is a widened regular font. **It fails as the
+    code is now**; the fix is the window library's and is to be agreed.
+  - The second (the sizes) checks that every text of the two windows in a pixel font is at the size the font is
+    made for or a whole multiple (the game's `small_font`, `small_font_bold` and `tiny_font` are pixel fonts of
+    size 16, drawn without smoothing: read from its files; at another size a letter's pixels come out unevenly
+    wide). **It is expected to fail as the code is now**, on the texts our windows draw at 0.78 to 1.35 of the
+    font's size; whether those change is the user's decision. Two scenarios, so the fix of the first shows green
+    by itself.
+  - Neither asks for a window to be closed first: ours are closed, a game window is waited for (10 s), then the
+    scenario is skipped with the window's name.
+  - `MountsPanel.TestUi` (the journal's window code, for the scenario); the project names
+    `UnityEngine.TextCoreFontEngineModule` at compile time (a font's own size); `game-code.txt` lists the new class
+    as dev. Built with 0 warnings, `tests/CecilScan-DonkeyAPI` green, deployed.
+  - **Run in the game (the user, 2026-11-18 18:53), each scenario alone.** The titles and the bold font: 7 checks
+    failed, as expected: no bold font held, both titles in `tiny_font` with its material where the game's are
+    `small_font_bold` with `en:[small_font_bold-header_1-text_1]`, 13 texts of the journal and 5 of the options
+    window in a widened regular font. The sizes: 28 of the journal's 48 texts and 12 of the options window's 30
+    are off the font's size (21.6, 17.6, 15.2, 14.4 and others in a font made for 16).
+  - What that run added: the game's OK button's label has no text style of its own; its button gives it one by
+    the button's state when the button is live (`LazyButton`'s text transitions, read from the game's code). So the
+    window code's bold font can't come from a style on that text: the fix asks the button. The scenario now asks the
+    button for the style its label has at rest and checks the bold font against that (built and deployed after the
+    run, not run again yet; the dependency manifest has 929 members with it).
 
 ## 0.17.2 (GK2 Donkey API 0.45.2), 2026-11-18
 

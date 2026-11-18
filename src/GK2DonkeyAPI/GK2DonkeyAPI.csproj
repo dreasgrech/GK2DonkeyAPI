@@ -78,12 +78,15 @@
     <Reference Include="Unity.Addressables"><HintPath>$(Managed)\Unity.Addressables.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Unity.ResourceManager"><HintPath>$(Managed)\Unity.ResourceManager.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Unity.TextMeshPro"><HintPath>$(Managed)\Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
+    <!-- A font's own size (FaceInfo), for the dev test of our windows' texts (Dev/TitleTests.cs); compile-time only. -->
+    <Reference Include="UnityEngine.TextCoreFontEngineModule"><HintPath>$(Managed)\UnityEngine.TextCoreFontEngineModule.dll</HintPath><Private>false</Private></Reference>
     <!-- Optional at runtime: only FrameworkLink uses it, and only when the framework is installed. -->
     <Reference Include="GK2.Framework"><HintPath>$(FrameworkDll)</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
-  <!-- The window code (the options window, the settings page, the texts): the GK2DreasUI submodule, compiled in (docs/ui-library.md). -->
-  <Import Project="$(MSBuildThisFileDirectory)..\..\lib\GK2DreasUI\GK2DreasUI.targets" />
+  <!-- The window code (the options window, the settings page, the texts): the GK2DreasUI submodule, compiled in
+       (docs/ui-library.md; Directory.Build.props: GK2DreasUIDir). -->
+  <Import Project="$(GK2DreasUIDir)GK2DreasUI.targets" />
   <!-- The dependency check: shared sources, Mono.Cecil, and the manifest embedded after every build (docs/dependency-check.md). -->
   <Import Project="$(MSBuildThisFileDirectory)..\..\DependencyManifest.targets" />
   <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->

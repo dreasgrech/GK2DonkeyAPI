@@ -416,8 +416,8 @@ namespace GK2DonkeyAPI
             headerIcon.raycastTarget = false;
             UiKit.Rect(headerIcon.gameObject, 0f, 4f, HeaderIconPx, HeaderIconPx);
             headerIcon.gameObject.SetActive(false);
-            headerName = ui.Bold(ui.Text(rightArea, "name", "", 1.35f, TextAlignmentOptions.Left, false, HeaderIconPx + 12f, 0f, rw - HeaderIconPx - 12f, 32f));
-            headerDesc = ui.Text(rightArea, "description", "", 0.9f, TextAlignmentOptions.TopLeft, true, HeaderIconPx + 12f, 32f, rw - HeaderIconPx - 12f, HeaderH - 32f);
+            headerName = ui.Bold(ui.Text(rightArea, "name", "", 1f, TextAlignmentOptions.Left, false, HeaderIconPx + 12f, 0f, rw - HeaderIconPx - 12f, 32f));
+            headerDesc = ui.Text(rightArea, "description", "", 1f, TextAlignmentOptions.TopLeft, true, HeaderIconPx + 12f, 32f, rw - HeaderIconPx - 12f, HeaderH - 32f);
             headerDesc.overflowMode = TextOverflowModes.Ellipsis;
             // one line under the name (HeaderH): a longer line shrinks a little to fit, down to 80%, before it is cut
             headerDesc.enableAutoSizing = true;
@@ -435,7 +435,7 @@ namespace GK2DonkeyAPI
             picture.gameObject.SetActive(false);
             // a chosen mount that isn't installed: no picture (the donkey drawn under another mount's name read as a mix-up,
             // the user 2026-10-27), this line in its place
-            stageNote = ui.Text(stage, "not installed note", UiWords.NotInstalled.Text, 1.1f, TextAlignmentOptions.Center, true, 24f, 0f, StageW - 48f, StageH);
+            stageNote = ui.Text(stage, "not installed note", UiWords.NotInstalled.Text, 1f, TextAlignmentOptions.Center, true, 24f, 0f, StageW - 48f, StageH);
             stageNote.gameObject.SetActive(false);
 
             StepTrace.Mark("build: the stage");
@@ -457,9 +457,9 @@ namespace GK2DonkeyAPI
                     div.GetComponent<Image>().color = new Color(UiKit.EdgeColor.r, UiKit.EdgeColor.g, UiKit.EdgeColor.b, UiKit.EdgeColor.a * 0.5f);
                     div.GetComponent<Image>().raycastTarget = false;
                 }
-                TextMeshProUGUI l = ui.Text(statsCard, "stat label " + i, "", 0.9f, TextAlignmentOptions.Left, false, 12f, ly, statsW * 0.42f, StatLineH);
+                TextMeshProUGUI l = ui.Text(statsCard, "stat label " + i, "", 1f, TextAlignmentOptions.Left, false, 12f, ly, statsW * 0.42f, StatLineH);
                 l.color = new Color(ui.FontColor.r, ui.FontColor.g, ui.FontColor.b, 0.7f);
-                TextMeshProUGUI v = ui.Text(statsCard, "stat value " + i, "", 0.95f, TextAlignmentOptions.Right, false, statsW * 0.42f, ly, statsW * 0.58f - 12f, StatLineH);
+                TextMeshProUGUI v = ui.Text(statsCard, "stat value " + i, "", 1f, TextAlignmentOptions.Right, false, statsW * 0.42f, ly, statsW * 0.58f - 12f, StatLineH);
                 v.color = ui.ButtonTextColor;
                 statLines.Add((l, v));
             }
@@ -478,10 +478,10 @@ namespace GK2DonkeyAPI
                 RawImage ai = ui.Node("ability icon " + i, abilitiesCard, typeof(RawImage)).GetComponent<RawImage>();
                 ai.raycastTarget = false;
                 UiKit.Rect(ai.gameObject, 12f, ly + (AbilityLineH - AbilityIconPx) / 2f - 2f, AbilityIconPx, AbilityIconPx);
-                TextMeshProUGUI an = ui.Text(abilitiesCard, "ability name " + i, "", 0.95f, TextAlignmentOptions.BottomLeft, false, 12f + AbilityIconPx + 10f, ly, statsW - 34f - AbilityIconPx, 20f);
+                TextMeshProUGUI an = ui.Text(abilitiesCard, "ability name " + i, "", 1f, TextAlignmentOptions.BottomLeft, false, 12f + AbilityIconPx + 10f, ly, statsW - 34f - AbilityIconPx, 20f);
                 ui.Bold(an);
                 an.color = ui.ButtonTextColor;
-                TextMeshProUGUI al = ui.Text(abilitiesCard, "ability line " + i, "", 0.78f, TextAlignmentOptions.TopLeft, true, 12f + AbilityIconPx + 10f, ly + 20f, statsW - 34f - AbilityIconPx, AbilityLineH - 20f);
+                TextMeshProUGUI al = ui.Text(abilitiesCard, "ability line " + i, "", 1f, TextAlignmentOptions.TopLeft, true, 12f + AbilityIconPx + 10f, ly + 20f, statsW - 34f - AbilityIconPx, AbilityLineH - 20f);
                 al.color = new Color(ui.FontColor.r, ui.FontColor.g, ui.FontColor.b, 0.75f);
                 al.overflowMode = TextOverflowModes.Ellipsis;
                 abilityLines.Add((ai, an, al));
@@ -605,7 +605,6 @@ namespace GK2DonkeyAPI
                 if (label != null)
                 {
                     label.color = on ? ui.ButtonTextColor : ui.FontColor;
-                    label.fontStyle = on ? FontStyles.Bold : FontStyles.Normal;
                 }
             }
         }
@@ -908,7 +907,6 @@ namespace GK2DonkeyAPI
                 if (label != null)
                 {
                     label.color = on ? ui.ButtonTextColor : ui.FontColor;
-                    label.fontStyle = on ? FontStyles.Bold : FontStyles.Normal;
                 }
             }
         }
@@ -1154,7 +1152,7 @@ namespace GK2DonkeyAPI
             // left on the column's edge, as the own rows' labels and the headings (2026-10-26); wrapping, the row as tall as it needs
             float labelW = Mathf.Max(40f, left - 10f - lay.LabelX);
             string labelText = Texts.Label(r) ?? ""; // in the player's language (Texts)
-            TextMeshProUGUI label = ui.Text(go.transform, "label", labelText, 0.95f, TextAlignmentOptions.Left, true, lay.LabelX, 0f, labelW, 30f);
+            TextMeshProUGUI label = ui.Text(go.transform, "label", labelText, 1f, TextAlignmentOptions.Left, true, lay.LabelX, 0f, labelW, 30f);
             height = Mathf.Max(2f * px + SwatchGap + 6f, Mathf.Ceil(label.GetPreferredValues(labelText, labelW, 0f).y) + 8f);
             UiKit.Rect(go, 0f, 0f, lay.ColW, height);
             UiKit.Rect(label.gameObject, lay.LabelX, 0f, labelW, height);
@@ -1421,7 +1419,7 @@ namespace GK2DonkeyAPI
             float labelW = Mathf.Max(40f, stepperX - 10f - 10f);
             GameObject go = ui.Node("colour " + choice.Entry.Definition.Key, coloursRoot, typeof(Image), typeof(UnityEngine.UI.Button), typeof(GamepadNavigationItem));
             string labelText = Texts.Label(choice) ?? "";
-            TextMeshProUGUI label = ui.Text(go.transform, "label", labelText, 0.95f, TextAlignmentOptions.Left, true, 10f, 0f, labelW, PartRowH);
+            TextMeshProUGUI label = ui.Text(go.transform, "label", labelText, 1f, TextAlignmentOptions.Left, true, 10f, 0f, labelW, PartRowH);
             p.Height = Mathf.Max(PartRowH, Mathf.Ceil(label.GetPreferredValues(labelText, labelW, 0f).y) + 10f);
             UiKit.Rect(go, 0f, 0f, lay.ColW, p.Height);
             UiKit.Rect(label.gameObject, 10f, 0f, labelW, p.Height);
@@ -1456,7 +1454,7 @@ namespace GK2DonkeyAPI
             UiKit.Rect(sheen, 0f, 0f, FieldW - 2f, 1f);
             sheen.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.10f);
             sheen.GetComponent<Image>().raycastTarget = false;
-            p.FieldText = ui.Text(frame.transform, "value", "", 0.85f, TextAlignmentOptions.Center, false, 2f, 0f, FieldW - 4f, FieldH);
+            p.FieldText = ui.Text(frame.transform, "value", "", 1f, TextAlignmentOptions.Center, false, 2f, 0f, FieldW - 4f, FieldH);
             p.FieldText.enableAutoSizing = true; // a long name in another language: smaller, never cut
             p.FieldText.fontSizeMax = p.FieldText.fontSize;
             p.FieldText.fontSizeMin = Mathf.Max(8f, p.FieldText.fontSize * 0.6f);
@@ -1765,13 +1763,13 @@ namespace GK2DonkeyAPI
         // A wide slot: the colour square, then its name (Original, a kept named colour).
         private static Image WideSlot(Transform parent, string name, string hex, string text, float x, float y, Action click, out float w)
         {
-            TextMeshProUGUI probe = ui.Text(parent, "probe", text ?? "", 0.9f, TextAlignmentOptions.Left, false, 0f, 0f, 200f, SlotPx);
+            TextMeshProUGUI probe = ui.Text(parent, "probe", text ?? "", 1f, TextAlignmentOptions.Left, false, 0f, 0f, 200f, SlotPx);
             float tw = Mathf.Ceil(probe.GetPreferredValues(text ?? "").x);
             probe.gameObject.SetActive(false);
             UnityEngine.Object.Destroy(probe.gameObject);
             w = Mathf.Min(partColW, SlotPx + tw + 12f);
             Image outer = Slot(parent, name, hex, x, y, w, SlotPx, click);
-            ui.Text(outer.transform, "label", text ?? "", 0.9f, TextAlignmentOptions.Left, false, SlotPx, 0f, w - SlotPx - 6f, SlotPx);
+            ui.Text(outer.transform, "label", text ?? "", 1f, TextAlignmentOptions.Left, false, SlotPx, 0f, w - SlotPx - 6f, SlotPx);
             return outer;
         }
 
@@ -2040,6 +2038,7 @@ namespace GK2DonkeyAPI
         }
         internal static int TestColourRows => colourRows.Count;
         internal static Transform TestRoot(bool coloursWindow) => coloursWindow ? (colours != null ? colours.transform : null) : (panel != null ? panel.transform : null);
+        internal static UiKit TestUi => ui; // the window code's kit as the journal read it (TitleTests)
         internal static int TestEntries => entries.Count;
         internal static string TestBuiltFor => builtFor;
         internal static void TestSelect(string id) => Select(id);
